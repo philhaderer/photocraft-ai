@@ -343,6 +343,11 @@ class App:
         state = "normal" if self.v_workflow.get() == BUILTIN else "disabled"
         for w in self.recipe_widgets:
             w.configure(state=state)
+        # Fooocus inpaint only exists in the built-in graph
+        if state == "normal":
+            self.cb_fooocus.grid()
+        else:
+            self.cb_fooocus.grid_remove()
         # the text model applies to custom workflows (nodes tagged pc:clip), not to the built-in graph
         self.cb_clip.configure(state="readonly" if state == "disabled" else "disabled")
 
