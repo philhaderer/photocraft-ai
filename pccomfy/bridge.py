@@ -17,6 +17,7 @@ the original, then the same as inpaint.
 
 from __future__ import annotations
 
+import json
 import os
 import random
 import threading
@@ -56,7 +57,54 @@ class Request:
     layer_mask: str = "soft"             # "soft" = same mask the model got, "selection" = hard selection, "none"
 
 
-Progress = Callable[[float, str], None]
+# progress(overall_fraction, message, phase="", phase_fraction=-1.0, elapsed=0.0)
+#   phase is "prepare", "prompt" (a text model writes the prompt), "image" (the image model) or "place".
+#   phase_fraction is -1 when the phase has no real progress (the UI then shows elapsed time / an estimate).
+Progress = Callable[..., None]
+
+WRITER_SKIP = ("TextEncode", "CLIPTextEncode")
+
+
+def prompt_phase_nodes(graph: dict) -> set[str]:
+    """Ids of the nodes that belong to "writing the prompt": a pc:prompt node that is a text model
+    (not a plain text encoder) and everything upstream of it (loaders, image, system prompt)."""
+    import re
+    writers = [nid for nid, n in graph.items()
+               if "prompt" in re.findall(r"pc:\s*([a-z]+)", n.get("_meta", {}).get("title", "").lower())
+               and not n.get("class_type", "").startswith(WRITER_SKIP)]
+    seen: set[str] = set()
+    todo = list(writers)
+    while todo:
+        nid = todo.pop()
+        if nid in seen or nid not in graph:
+            continue
+        seen.add(nid)
+        for v in graph[nid].get("inputs", {}).values():
+            if isinstance(v, list) and v and isinstance(v[0], str):
+                todo.append(v[0])
+    return seen if writers else set()
+
+
+def after_prompt_nodes(graph: dict) -> set[str]:
+    """Ids of the nodes that consume the written prompt (text encoder, sampler, decode, output ...)."""
+    import re
+    done = {nid for nid, n in graph.items()
+            if "prompt" in re.findall(r"pc:\s*([a-z]+)", n.get("_meta", {}).get("title", "").lower())
+            and not n.get("class_type", "").startswith(WRITER_SKIP)}
+    if not done:
+        return set()
+    after: set[str] = set()
+    changed = True
+    while changed:
+        changed = False
+        for nid, n in graph.items():
+            if nid in after or nid in done:
+                continue
+            links = [v[0] for v in n.get("inputs", {}).values() if isinstance(v, list) and v and isinstance(v[0], str)]
+            if any(l in done or l in after for l in links):
+                after.add(nid)
+                changed = True
+    return after
 
 
 class Bridge:
@@ -76,7 +124,7 @@ class Bridge:
     # ---------- main operation ----------
 
     def run(self, req: Request, progress: Progress | None = None) -> dict:
-        progress = progress or (lambda f, m: None)
+        progress = progress or (lambda f, m, **kw: None)
         self._cancel.clear()
         if req.mode not in MODES:
             raise BridgeError(f"Unknown mode: {req.mode}")
@@ -92,6 +140,57 @@ class Bridge:
         finally:
             self._cleanup()
 
+    # ---------- waiting for ComfyUI, with separate prompt / image phases ----------
+
+    def _timings_file(self) -> Path:
+        return self.exchange / "timings.json"
+
+    def _load_timings(self) -> dict:
+        try:
+            return json.loads(self._timings_file().read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+
+    def _save_timing(self, key: str, seconds: float) -> None:
+        t = self._load_timings()
+        t[key] = round(seconds, 1)
+        try:
+            self._timings_file().write_text(json.dumps(t, indent=1), encoding="utf-8")
+        except OSError:
+            pass
+
+    def _wait(self, prompt_id, graph, wf, start, span, suffix, progress):
+        """comfy.wait with the work split in "prompt" (text model) and "image" (the image model), each with its
+        own fraction, elapsed time and, once a run has been timed, an estimate for the text phase."""
+        writer = prompt_phase_nodes(graph)
+        after = after_prompt_nodes(graph)
+        key = (Path(wf).stem if wf else "builtin") + ":prompt"
+        expected = self._load_timings().get(key)
+        t0 = time.monotonic()
+        marks = {"phase": None, "since": t0, "prompt_secs": None}
+
+        def on(f, msg, node=None):
+            now = time.monotonic()
+            if writer and node in after and marks["prompt_secs"] is None:
+                marks["prompt_secs"] = now - t0
+                self._save_timing(key, marks["prompt_secs"])
+            phase = "prompt" if (writer and marks["prompt_secs"] is None) else "image"
+            if phase != marks["phase"]:
+                marks["phase"], marks["since"] = phase, now
+            elapsed = now - marks["since"] if phase == "prompt" else now - t0 - (marks["prompt_secs"] or 0)
+            if phase == "prompt":
+                pf = min(0.95, elapsed / expected) if expected else -1.0
+                text = f"Writing the prompt… {elapsed:.0f} s" + (f" (usually ~{expected:.0f} s)" if expected else "")
+                overall = start + span * 0.3 * (pf if pf >= 0 else 0)
+            else:
+                pf = f
+                text = (msg or "Generating the image…") if f >= 0 else f"Generating the image… {elapsed:.0f} s"
+                share = 0.3 if writer else 0.0
+                overall = start + span * (share + (1 - share) * f) if f >= 0 else -1
+            progress(overall, text + suffix, phase=phase, phase_fraction=pf, elapsed=elapsed)
+
+        return self.comfy.wait(prompt_id, on_progress=on, cancelled=self._cancel.is_set)
+
     def _run(self, req: Request, p: workflows.GenParams, tag: str, progress: Progress) -> dict:
         pc = self.pc.connect()
         sess = pc.session()
@@ -102,7 +201,7 @@ class Bridge:
         doc = pc.document()
 
         if req.mode == "outpaint":
-            progress(0.02, "Expanding the canvas")
+            progress(0.02, "Expanding the canvas", phase="prepare")
             self._expand_canvas(req)
             doc = pc.document()
 
@@ -113,7 +212,7 @@ class Bridge:
 
         src = mask = None
         if req.mode != "txt2img" or has_sel:
-            progress(0.05, "Exporting the image from PhotoCraft")
+            progress(0.05, "Exporting the image from PhotoCraft", phase="prepare")
             src, mask = self._export(orig, tag, need_mask=has_sel)
 
         if req.mode in ("inpaint", "outpaint"):
@@ -128,7 +227,7 @@ class Bridge:
 
         gw, gh = imaging.gen_size(region.w, region.h, req.base_res)
         p.width, p.height = gw, gh
-        progress(0.1, f"Sending to ComfyUI ({gw}×{gh})")
+        progress(0.1, f"Sending to ComfyUI ({gw}×{gh})", phase="prepare")
 
         image_name = mask_name = None
         if req.mode != "txt2img":
@@ -150,14 +249,11 @@ class Bridge:
             graph, out_node = self._graph(req, p, image_name, mask_name, wf)
             prompt_id = self.comfy.queue(graph)
             start, span = 0.15 + 0.75 * k / n_wf, 0.75 / n_wf
-            progress(start, f"Queued in ComfyUI ({self.pipeline}{suffix})")
-            hist = self.comfy.wait(
-                prompt_id,
-                on_progress=lambda f, m, s=start, w=span, x=suffix: progress(s + w * f if f >= 0 else -1, m + x),
-                cancelled=self._cancel.is_set)
+            progress(start, f"Queued in ComfyUI ({self.pipeline}{suffix})", phase="prepare")
+            hist = self._wait(prompt_id, graph, wf, start, span, suffix, progress)
             results.append((label, self.comfy.output_images(hist, out_node)[: max(1, req.variants)]))
 
-        progress(0.92, "Placing the result in PhotoCraft")
+        progress(0.92, "Placing the result in PhotoCraft", phase="place")
         orig = self._find_doc(orig, orig_name)
         base = (p.prompt.strip() or req.mode)[:40]
         layer_mask = None
@@ -177,7 +273,7 @@ class Bridge:
                                           layer_mask=layer_mask))
         if has_sel:
             self._try("select.reselect")  # selection comes back, ready for another generation
-        progress(1.0, f"Done (seed {p.seed})")
+        progress(1.0, f"Done (seed {p.seed})", phase="place")
         return {"seed": p.seed, "layers": layers, "region": region.__dict__, "size": [gw, gh], "pipeline": self.pipeline}
 
     # ---------- ComfyUI ----------
