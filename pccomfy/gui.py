@@ -386,7 +386,8 @@ class App:
                 except (tk.TclError, ValueError, TypeError):
                     notes.append("expand")
         for widget, key in ((self.t_prompt, "prompt"), (self.t_neg, "negative")):
-            if key in s:
+            # an empty prompt in a preset means "not part of the preset": never wipe what was typed
+            if str(s.get(key, "")).strip():
                 widget.delete("1.0", "end")
                 widget.insert("1.0", str(s[key]))
         self._on_mode_ui()
