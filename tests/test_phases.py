@@ -32,3 +32,11 @@ from pccomfy.bridge import mask_is_used
 assert not mask_is_used(g)
 assert Bridge._vgl_text(g, {"outputs": {"13": {"text": ["{\"a\": 1}"]}}}) == '{"a": 1}'
 print("ALL OK (vgl, mask)")
+
+from pccomfy.bridge import placement_hint
+from pccomfy.imaging import Box
+h = placement_hint(Box(100, 100, 100, 100), Box(0, 0, 1000, 1000))
+assert "upper left" in h and "1%" in h, h
+assert "centre" in placement_hint(Box(450, 450, 100, 100), Box(0, 0, 1000, 1000))
+assert "bottom centre" in placement_hint(Box(450, 800, 100, 100), Box(0, 0, 1000, 1000))
+print("ALL OK (hint)")

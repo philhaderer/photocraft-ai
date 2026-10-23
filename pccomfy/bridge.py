@@ -17,6 +17,7 @@ the original, then the same as inpaint.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
 import random
@@ -92,6 +93,17 @@ def mask_is_used(graph: dict) -> bool:
            if "mask" in re.findall(r"pc:\s*([a-z]+)", n.get("_meta", {}).get("title", "").lower())}
     return any(isinstance(v, list) and v and str(v[0]) in ids
                for n in graph.values() for v in n.get("inputs", {}).values())
+
+
+def placement_hint(sel: "imaging.Box", crop: "imaging.Box") -> str:
+    """Where the selection lies inside the crop, in words, for instruction-based editors that only see the crop."""
+    cx = (sel.center[0] - crop.x) / max(1, crop.w)
+    cy = (sel.center[1] - crop.y) / max(1, crop.h)
+    horiz = "left" if cx < 0.38 else "right" if cx > 0.62 else "centre"
+    vert = "upper" if cy < 0.38 else "lower" if cy > 0.62 else "middle"
+    where = "centre" if (horiz == "centre" and vert == "middle") else f"{vert} {horiz}".replace("middle left", "left").replace("middle right", "right").replace("upper centre", "top centre").replace("lower centre", "bottom centre")
+    share = round(100 * sel.w * sel.h / max(1, crop.w * crop.h))
+    return f" (Apply this only at the {where} of the image, in an area of roughly {share}% of the image; leave everything else as it is.)"
 
 
 def after_prompt_nodes(graph: dict) -> set[str]:
@@ -232,6 +244,7 @@ class Bridge:
             progress(0.05, "Exporting the image from PhotoCraft", phase="prepare")
             src, mask = self._export(orig, tag, need_mask=has_sel)
 
+        bbox = None
         if req.mode in ("inpaint", "outpaint"):
             bbox = imaging.mask_bbox(mask)
             if bbox is None:
@@ -256,6 +269,7 @@ class Bridge:
             mask_name = self.comfy.upload_image(m.convert("RGB"), f"pcc-{tag}-mask.png")
 
         wf_paths = workflows.resolve(req.workflow) if req.workflow else [None]
+        hint = placement_hint(bbox, region) if (req.mode == "inpaint" and has_sel and bbox) else ""
         n_wf = len(wf_paths)
         results: list[tuple[str, list[Image.Image]]] = []
         for k, wf in enumerate(wf_paths):
@@ -263,7 +277,10 @@ class Bridge:
             label = Path(wf).stem.split("-")[-1] if (wf and n_wf > 1) else ""
             suffix = f" [{label}]" if label else ""
             self.pipeline = "workflow" if wf else req.mode
-            graph, out_node = self._graph(req, p, image_name, mask_name, wf)
+            gp = p
+            if hint and wf and prompt_phase_nodes(workflows.load_template(wf)):
+                gp = dataclasses.replace(p, prompt=p.prompt.strip() + hint)  # text-model workflows only
+            graph, out_node = self._graph(req, gp, image_name, mask_name, wf)
             prompt_id = self.comfy.queue(graph)
             start, span = 0.15 + 0.75 * k / n_wf, 0.75 / n_wf
             progress(start, f"Queued in ComfyUI ({self.pipeline}{suffix})", phase="prepare")
