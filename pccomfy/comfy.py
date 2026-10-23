@@ -160,10 +160,13 @@ class ComfyUI:
     def history(self, prompt_id: str) -> dict | None:
         return self._json(f"/history/{prompt_id}").get(prompt_id)
 
-    def wait(self, prompt_id: str, on_progress: Callable[[float, str], None] | None = None,
+    def wait(self, prompt_id: str, on_progress: Callable[..., None] | None = None,
              cancelled: Callable[[], bool] | None = None, timeout: float = 1800) -> dict:
         """Wait for the job to finish. Progress via websocket when available, else poll /history."""
-        on_progress = on_progress or (lambda f, msg: None)
+        # on_progress(fraction, message, node=<id of the node ComfyUI is executing, or None>);
+        # fraction is -1 when the node reports no progress (e.g. a text model writing the prompt).
+        on_progress = on_progress or (lambda f, msg, node=None: None)
+        current = None
         cancelled = cancelled or (lambda: False)
         deadline = time.monotonic() + timeout
         ws = None
@@ -183,6 +186,7 @@ class ComfyUI:
                         msg = ws.recv()
                     except websocket.WebSocketTimeoutException:
                         msg = None
+                        on_progress(-1, "", current)  # heartbeat (~1/s): lets the UI show elapsed time
                     except Exception:
                         ws = None
                         msg = None
@@ -191,8 +195,12 @@ class ComfyUI:
                         d = m.get("data", {})
                         if d.get("prompt_id") not in (None, prompt_id):
                             continue
-                        if m["type"] == "progress" and d.get("max"):
-                            on_progress(d["value"] / d["max"], f"step {d['value']}/{d['max']}")
+                        if m["type"] == "executing" and d.get("node") is not None:
+                            current = str(d["node"])
+                            on_progress(-1, "", current)
+                        elif m["type"] == "progress" and d.get("max"):
+                            on_progress(d["value"] / d["max"], f"step {d['value']}/{d['max']}",
+                                        str(d.get("node") or current or "") or None)
                         elif m["type"] == "execution_error":
                             raise ComfyError(f"Error in node {d.get('node_type')}: {d.get('exception_message')}")
                         elif m["type"] == "executing" and d.get("node") is None:
@@ -207,7 +215,7 @@ class ComfyUI:
                         h["status"].get("completed") or h["status"].get("status_str") == "error"):
                     break
                 if ws is None:
-                    on_progress(-1, "generating…")
+                    on_progress(-1, "generating…", current)
             else:
                 raise ComfyError("Timed out waiting for ComfyUI.")
         finally:
