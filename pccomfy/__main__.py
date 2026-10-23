@@ -42,6 +42,22 @@ def cmd_check(cfg: dict) -> int:
     return 0 if ok else 1
 
 
+def cmd_probe(cfg: dict) -> int:
+    """Debug: show what this PhotoCraft build answers on the control channel."""
+    b = make(cfg)
+    for label, fn in (("ui.inspect", lambda: b.pc.call("ui.inspect")),
+                      ("session.inspect", lambda: b.pc.execute("session.inspect")),
+                      ("document.inspect", lambda: b.pc.execute("document.inspect"))):
+        try:
+            res = fn()
+            text = json.dumps(res, ensure_ascii=False)
+            print(f"{label}: OK, top-level keys: {list(res) if isinstance(res, dict) else type(res).__name__}")
+            print("   " + text[:600] + (" ..." if len(text) > 600 else ""))
+        except PhotoCraftError as e:
+            print(f"{label}: ERROR - {e}")
+    return 0
+
+
 def cmd_run(cfg: dict, a) -> int:
     d = cfg["defaults"]
     p = GenParams(prompt=a.prompt, negative=a.negative if a.negative is not None else d["negative"],
@@ -79,6 +95,7 @@ def main(argv=None) -> int:
     sub = ap.add_subparsers(dest="cmd")
     sub.add_parser("gui", help="bridge window (default)")
     sub.add_parser("check", help="check connections and list models")
+    sub.add_parser("probe", help="debug: print what PhotoCraft answers on the control channel")
     r = sub.add_parser("run", help="one generation from the command line")
     r.add_argument("mode", choices=MODES)
     r.add_argument("-p", "--prompt", default="")
@@ -100,6 +117,8 @@ def main(argv=None) -> int:
     cfg = cfgmod.load(a.config)
     if a.cmd == "check":
         return cmd_check(cfg)
+    if a.cmd == "probe":
+        return cmd_probe(cfg)
     if a.cmd == "run":
         return cmd_run(cfg, a)
     from .gui import run_gui

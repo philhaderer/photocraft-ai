@@ -121,7 +121,12 @@ class PhotoCraft:
         """{"active": index, "documents": [{index, name, width, height, ...}]}"""
         if self.headless:
             return self.call("session.list")
-        return self.call("ui.inspect")["session"]
+        try:
+            return self.call("ui.inspect")["session"]
+        except (PhotoCraftError, KeyError, TypeError):
+            # newer PhotoCraft builds: the same data as an engine command
+            res = self.execute("session.inspect")
+            return res.get("session", res) if isinstance(res, dict) else res
 
     def document(self) -> dict:
         return self.execute("document.inspect")
@@ -139,9 +144,12 @@ class PhotoCraft:
         self.execute("file.close")
         if not self.headless:
             # If the app asks about unsaved changes after all, answer "Don't Save".
-            dialogs = self.call("ui.inspect").get("dialogs", [])
-            if any(d.get("id") == "discard" for d in dialogs):
-                self.call("ui.dialog.confirm", {"dialog": "discard", "choice": "dontSave"})
+            try:
+                dialogs = self.call("ui.inspect").get("dialogs", [])
+                if any(d.get("id") == "discard" for d in dialogs):
+                    self.call("ui.dialog.confirm", {"dialog": "discard", "choice": "dontSave"})
+            except PhotoCraftError:
+                pass
 
     def activate(self, index: int) -> None:
         self.execute("document.activate", {"document": index})

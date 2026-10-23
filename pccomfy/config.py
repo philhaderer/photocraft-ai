@@ -8,7 +8,23 @@ import os
 import tomllib
 from pathlib import Path
 
-CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", "~/.config")).expanduser() / "pccomfy"
+_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _config_dir() -> Path:
+    """PCCOMFY_HOME wins. On Windows everything lives in <bridge folder>\\data (portable, like PhotoCraft)."""
+    env = os.environ.get("PCCOMFY_HOME")
+    if env:
+        return Path(env).expanduser()
+    if os.name == "nt":
+        return _ROOT / "data"
+    return Path(os.environ.get("XDG_CONFIG_HOME", "~/.config")).expanduser() / "pccomfy"
+
+
+CONFIG_DIR = _config_dir()
+# Windows: the workflows shipped next to the code; elsewhere: ~/.config/pccomfy/workflows
+WORKFLOWS_DIR = _ROOT / "workflows" if os.name == "nt" else CONFIG_DIR / "workflows"
+EXCHANGE_DIR = CONFIG_DIR / "exchange" if os.name == "nt" else Path("~/.cache/pccomfy/exchange")
 CONFIG_FILE = CONFIG_DIR / "config.toml"
 STATE_FILE = CONFIG_DIR / "state.json"
 
@@ -17,12 +33,12 @@ DEFAULTS = {
         "host": "127.0.0.1",
         "port": 7878,
         "token_file": str(CONFIG_DIR / "photocraft.token"),
-        "exchange_dir": "~/.cache/pccomfy/exchange",
+        "exchange_dir": str(EXCHANGE_DIR),
         "headless": False,
     },
     "comfyui": {
         "url": "http://127.0.0.1:8188",
-        "workflows_dir": str(CONFIG_DIR / "workflows"),
+        "workflows_dir": str(WORKFLOWS_DIR),
     },
     "defaults": {
         "checkpoint": "",
@@ -60,7 +76,7 @@ def load(path: str | Path | None = None) -> dict:
 
 def load_state() -> dict:
     try:
-        return json.loads(STATE_FILE.read_text())
+        return json.loads(STATE_FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
 
@@ -68,6 +84,6 @@ def load_state() -> dict:
 def save_state(state: dict) -> None:
     try:
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        STATE_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False))
+        STATE_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
     except OSError:
         pass
