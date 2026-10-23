@@ -38,6 +38,23 @@ mode, workflow, text model, denoise, base res., context, mask grow/blur, variant
 Work happens on the `windows-fibo` branch. `main` is the untouched upstream version.
 `git log --oneline` shows the steps, `git revert <commit>` or `git checkout <commit> -- <file>` undoes one.
 
+## VGL workflows from the prompt-writer benchmark
+
+Benchmark (two test images, 5 prompt writers, blind-rated results, thinking off): the base Qwen 3.5 9B convrot
+inside ComfyUI wrote the cleanest VGL and was the fastest valid option. The Flux3 prompt-upsampler wrote invalid JSON
+every time, so `fibo2-edit-vgl.json` (and the `both` group that uses it) is kept only for reference.
+
+| Workflow | Prompt writer | Preset |
+|---|---|---|
+| `fibo2-edit-vgl-qwen35-convrot.json` | ComfyUI `TextGenerate` + `qwen3.5_9b_int8_convrot` (about 6 s on top of Fibo) | Fibo VGL Qwen9B convrot nativ |
+| `fibo2-edit-vgl-bionic-qwen35-9b.json` | Bionic, `qwen3.5-9b-uncensored-hauhaucs-aggressive` | Fibo VGL Bionic Qwen9B |
+| `fibo2-edit-vgl-bionic-gemma4-12b.json` | Bionic, `gemma-4-12b-heretic-abliterated` | Fibo VGL Bionic Gemma12B |
+| `fibo2-edit-plain-vs-convrot.group.json` | plain prompt, then the convrot VGL, as two layers | Fibo plain und VGL convrot Vergleich |
+
+- The Bionic workflows need the ComfyUI custom node `ComfyUI-VGL-Bionic` and Bionic's local server (`http://localhost:1235/v1`).
+  The node unloads the model afterwards so Fibo gets the VRAM. The bridge's "Text model" dropdown only affects the native workflow.
+- `pc:prompt` fills the `instruction` field of the Bionic node, so you still type the edit as a plain instruction.
+
 ## VGL writer
 
 `fibo2-edit-vgl.json` uses `qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors` as the local LLM (the one in your
