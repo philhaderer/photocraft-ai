@@ -228,8 +228,17 @@ class App:
         self.b_stop = ttk.Button(bf, text="Cancel", command=self.stop, state="disabled")
         self.b_stop.pack(side="left", padx=(6, 0))
 
-        self.pb = ttk.Progressbar(r, mode="determinate", maximum=1.0)
-        self.pb.pack(fill="x", padx=10, pady=(6, 0))
+        # two bars: the text model writing the prompt, and the image model generating
+        self.v_pl, self.v_il = tk.StringVar(value="Prompt"), tk.StringVar(value="Image")
+        self.bars = {}
+        for key, var in (("prompt", self.v_pl), ("image", self.v_il)):
+            row = ttk.Frame(r)
+            row.pack(fill="x", padx=10, pady=(6 if key == "prompt" else 2, 0))
+            ttk.Label(row, textvariable=var, width=34, style="Muted.TLabel").pack(side="left")
+            bar = ttk.Progressbar(row, mode="determinate", maximum=1.0)
+            bar.pack(side="left", fill="x", expand=True)
+            self.bars[key] = bar
+        self.pb = self.bars["image"]  # overall/fallback bar
         ttk.Label(r, textvariable=self.v_status, wraplength=400, justify="left").pack(anchor="w", padx=10, pady=(4, 0))
         foot = ttk.Frame(r)
         foot.pack(fill="x", side="bottom", padx=10, pady=6)
@@ -491,10 +500,10 @@ class App:
         self._save_state(req)
         self.b_go.configure(state="disabled")
         self.b_stop.configure(state="normal")
-        self.pb.configure(mode="determinate", value=0)
+        self._reset_bars()
 
-        def progress(f, msg):
-            self.events.put(("progress", (f, msg)))
+        def progress(f, msg, phase="", phase_fraction=-1.0, elapsed=0.0):
+            self.events.put(("progress", (f, msg, phase, phase_fraction, elapsed)))
 
         def work():
             try:
@@ -519,15 +528,15 @@ class App:
             while True:
                 kind, data = self.events.get_nowait()
                 if kind == "progress":
-                    f, msg = data
-                    if f < 0:
-                        self.pb.configure(mode="indeterminate")
-                        self.pb.step(0.05)
-                    else:
-                        self.pb.configure(mode="determinate", value=f)
-                    self.v_status.set(msg)
+                    f, msg, phase, pf, elapsed = data
+                    if phase in self.bars:
+                        self._set_bar(phase, pf, msg, elapsed)
+                        if phase == "image":  # the prompt is finished once the image phase starts
+                            self._set_bar("prompt", 1.0, None, None)
+                    if msg:
+                        self.v_status.set(msg)
                 elif kind == "done":
-                    self.pb.configure(mode="determinate", value=0)
+                    self._reset_bars(keep=not data.startswith(("Error", "Cancel", "Unexpected")))
                     self.v_status.set(data)
                     self.b_go.configure(state="normal")
                     self.b_stop.configure(state="disabled")
@@ -536,6 +545,31 @@ class App:
         except queue.Empty:
             pass
         self.root.after(100, self._poll)
+
+    def _reset_bars(self, keep: bool = False):
+        for key, bar in self.bars.items():
+            bar.stop()
+            bar.configure(mode="determinate", value=bar["maximum"] if keep else 0)
+        self.v_pl.set("Prompt")
+        self.v_il.set("Image")
+
+    def _set_bar(self, key: str, fraction: float, msg: str | None, elapsed: float | None):
+        bar, var = self.bars[key], (self.v_pl if key == "prompt" else self.v_il)
+        if fraction < 0:
+            if str(bar["mode"]) != "indeterminate":
+                bar.configure(mode="indeterminate")
+                bar.start(40)
+        else:
+            if str(bar["mode"]) == "indeterminate":
+                bar.stop()
+                bar.configure(mode="determinate")
+            bar.configure(value=fraction)
+        if msg is not None:
+            label = "Prompt: " if key == "prompt" else "Image: "
+            var.set(label + (f"{elapsed:.0f} s" if elapsed is not None and fraction < 0 else (msg.split("…")[0] or "")))
+        elif key == "prompt":
+            bar.stop()
+            bar.configure(mode="determinate", value=1.0)
 
     def _save_state(self, req: Request):
         p = req.params

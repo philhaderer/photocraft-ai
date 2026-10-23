@@ -76,7 +76,7 @@ def cmd_run(cfg: dict, a) -> int:
             print(f"Error: {e}", file=sys.stderr)
             return 1
 
-    def progress(f, msg):
+    def progress(f, msg, **_kw):
         pct = "   " if f < 0 else f"{int(f * 100):3d}%"
         print(f"\r{pct} {msg:<50}", end="", flush=True)
 
