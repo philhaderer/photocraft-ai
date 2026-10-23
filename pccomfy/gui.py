@@ -240,6 +240,9 @@ class App:
             self.bars[key] = bar
         self.pb = self.bars["image"]  # overall/fallback bar
         ttk.Label(r, textvariable=self.v_status, wraplength=400, justify="left").pack(anchor="w", padx=10, pady=(4, 0))
+        ttk.Label(r, text="Prompt written by the text model (VGL)", style="Muted.TLabel").pack(anchor="w", padx=10, pady=(6, 0))
+        self.t_vgl = tk.Text(r, height=6, wrap="word", state="disabled", font=(FONT, 8))
+        self.t_vgl.pack(fill="x", padx=10)
         foot = ttk.Frame(r)
         foot.pack(fill="x", side="bottom", padx=10, pady=6)
         ttk.Label(foot, textvariable=self.v_conn, style="Muted.TLabel").pack(side="left")
@@ -508,6 +511,7 @@ class App:
         def work():
             try:
                 res = self.bridge.run(req, progress)
+                self.events.put(("vgl", res.get("vgl", "")))
                 self.events.put(("done", f"Done ({res['pipeline']}) – seed {res['seed']}, layers: {len(res['layers'])}"))
             except Cancelled:
                 self.events.put(("done", "Cancelled."))
@@ -540,6 +544,11 @@ class App:
                     self.v_status.set(data)
                     self.b_go.configure(state="normal")
                     self.b_stop.configure(state="disabled")
+                elif kind == "vgl":
+                    self.t_vgl.configure(state="normal")
+                    self.t_vgl.delete("1.0", "end")
+                    self.t_vgl.insert("1.0", data)
+                    self.t_vgl.configure(state="disabled")
                 elif kind == "refresh":
                     self._apply_refresh(data)
         except queue.Empty:
