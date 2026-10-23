@@ -64,3 +64,10 @@ every time, so `fibo2-edit-vgl.json` (and the `both` group that uses it) is kept
 
 `python tests/test_group_workflows.py` (fake PhotoCraft and fake ComfyUI, no GPU, no PhotoCraft needed)
 `python tests/test_gui_presets.py` (preset logic with a stubbed Tk, no window needed)
+
+## Progress display, prompt visibility and edge handling
+
+- The window has two bars: **Prompt** (the text model writes the VGL; shows elapsed seconds, and after the first run an estimate from `timings.json` in the exchange folder) and **Image** (the sampler steps).
+- The box "Prompt written by the text model (VGL)" shows what the writer produced (workflows with a `pc:vgl` node).
+- A text-model workflow with an empty instruction is refused. Loading a preset never clears the typed prompt.
+- For workflows that ignore the mask (all Fibo ones) the layer mask is feathered tightly (grow ≤ 3, blur ≤ 2 px), so the new object keeps sharp edges. In inpaint mode the instruction also gets the selection's position and size.
