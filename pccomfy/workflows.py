@@ -166,7 +166,8 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
     """Fill parameters into `pc:*` nodes. Returns (graph, output node id or None).
 
     A title may carry several tags (e.g. "pc:prompt pc:size" for one node that takes the prompt and the size).
-    `pc:prompt` fills the node's `text` field, or its `prompt` field (TextGenerate, TextEncodeFibo2, ...).
+    `pc:prompt` fills the node's `text` field, else its `instruction` field (VGLBionicEditPrompt), else its `prompt` field
+    (TextGenerate, TextEncodeFibo2, ...).
     """
     g = json.loads(json.dumps(graph))  # deep copy
     out_node = None
@@ -188,7 +189,7 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
                     raise ValueError("The workflow has a pc:mask node, but this mode has no mask (selection).")
                 inp["image"] = mask_name
             elif tag == "prompt":
-                key = "text" if "text" in inp else "prompt"
+                key = next((k for k in ("text", "instruction", "prompt") if k in inp), "prompt")
                 inp[key] = p.prompt
             elif tag == "negative":
                 key = "text" if "text" in inp else "negative_prompt"
