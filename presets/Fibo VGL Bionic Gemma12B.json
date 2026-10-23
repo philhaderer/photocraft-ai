@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "name": "Fibo VGL Bionic Gemma12B",
+  "saved": "2026-10-23T19:40:47",
+  "settings": {
+    "mode": "inpaint",
+    "workflow": "fibo2-edit-vgl-bionic-gemma4-12b.json",
+    "clip": "",
+    "denoise": 1.0,
+    "variants": 1,
+    "base_res": 1024,
+    "context": 0.4,
+    "mask_grow": 8,
+    "mask_blur": 8,
+    "overlap": 48,
+    "layer_mask": "soft",
+    "prompt": "",
+    "negative": ""
+  }
+}
