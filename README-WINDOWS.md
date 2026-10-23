@@ -22,6 +22,22 @@ It sees the selection plus some surrounding context (the "Context" setting) and 
 
 Modes that fit the Fibo workflows: Generative fill and Image to image. Text to image and Expand have no source image for Fibo.
 
+## Presets (save and load)
+
+The **Preset** row at the top of the window saves and loads everything in the window, including the prompt:
+mode, workflow, text model, denoise, base res., context, mask grow/blur, variants, layer mask and so on.
+
+- Pick a preset in the dropdown to load it.
+- **Save** overwrites the selected preset, **Save as...** creates a new one, **Delete** removes it.
+- Presets are plain JSON files in `presets\`. Git tracks them, so you can share or revert them.
+- If a preset refers to a workflow or text model this machine does not have, the rest is still applied and the
+  status line lists what was skipped.
+
+## Git
+
+Work happens on the `windows-fibo` branch. `main` is the untouched upstream version.
+`git log --oneline` shows the steps, `git revert <commit>` or `git checkout <commit> -- <file>` undoes one.
+
 ## VGL writer
 
 `fibo2-edit-vgl.json` uses `qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors` as the local LLM (the one in your
@@ -29,4 +45,5 @@ Modes that fit the Fibo workflows: Generative fill and Image to image. Text to i
 
 ## Tests
 
-`python tests/test_group_workflows.py` (fake PhotoCraft and fake ComfyUI, no GPU, no PhotoCraft needed).
+`python tests/test_group_workflows.py` (fake PhotoCraft and fake ComfyUI, no GPU, no PhotoCraft needed)
+`python tests/test_gui_presets.py` (preset logic with a stubbed Tk, no window needed)

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import os
 import queue
+import re
 import threading
 import tkinter as tk
+from datetime import datetime
 from pathlib import Path
-from tkinter import ttk
+from tkinter import messagebox, simpledialog, ttk
 
 from . import config as cfgmod
 from .bridge import Bridge, BridgeError, Request
@@ -26,6 +29,12 @@ LAYER_MASKS = {"soft": "soft (same as the model's)", "selection": "hard (from se
 
 FONT = "Segoe UI" if os.name == "nt" else "Sans"
 CLIP_DEFAULT = "(workflow default)"
+
+
+def preset_stem(name: str) -> str:
+    """File-name-safe preset name."""
+    return re.sub(r"[^\w .\-]", "_", name.strip(), flags=re.UNICODE).strip(". ") or "preset"
+
 BG, PANEL, FG, MUTED, ACCENT = "#16181d", "#1f2229", "#e6e8ee", "#8a90a0", "#7c5cff"
 
 
@@ -39,6 +48,7 @@ class App:
         self.comfy = ComfyUI(cc["url"])
         self.bridge = Bridge(self.pc, self.comfy, pcc["exchange_dir"])
         self.workflows_dir = Path(cc["workflows_dir"]).expanduser()
+        self.presets_dir = cfgmod.PRESETS_DIR
         self.events: queue.Queue = queue.Queue()
         self.worker: threading.Thread | None = None
 
@@ -52,6 +62,7 @@ class App:
         self.v_mode = tk.StringVar(value=g("mode", "inpaint"))
         self.v_workflow = tk.StringVar(value=g("workflow", BUILTIN))
         self.v_ckpt = tk.StringVar(value=g("checkpoint", d["checkpoint"]))
+        self.v_preset = tk.StringVar(value=g("preset", ""))
         self.v_clip = tk.StringVar(value=g("clip", "") or CLIP_DEFAULT)
         self.v_steps = tk.IntVar(value=g("steps", d["steps"]))
         self.v_cfg = tk.DoubleVar(value=g("cfg", d["cfg"]))
@@ -77,6 +88,7 @@ class App:
         self._on_top()
         self.root.after(100, self._poll)
         self.root.after(200, self.refresh)
+        self.refresh_presets()
         self.root.protocol("WM_DELETE_WINDOW", self._quit)
 
     # ---------- UI ----------
@@ -121,6 +133,17 @@ class App:
     def _build(self, d):
         r = self.root
         pad = {"padx": 10, "pady": 4}
+
+        pf = ttk.Frame(r)
+        pf.pack(fill="x", **pad)
+        pf.columnconfigure(1, weight=1)
+        ttk.Label(pf, text="Preset").grid(row=0, column=0, sticky="w")
+        self.cb_preset = ttk.Combobox(pf, textvariable=self.v_preset, state="readonly")
+        self.cb_preset.bind("<<ComboboxSelected>>", lambda e: self.load_preset(self.v_preset.get()))
+        self.cb_preset.grid(row=0, column=1, sticky="ew", padx=6)
+        ttk.Button(pf, text="Save", width=6, command=self.save_preset).grid(row=0, column=2)
+        ttk.Button(pf, text="Save as…", command=self.save_preset_as).grid(row=0, column=3, padx=(4, 0))
+        ttk.Button(pf, text="Delete", width=7, command=self.delete_preset).grid(row=0, column=4, padx=(4, 0))
 
         modes = ttk.Frame(r)
         modes.pack(fill="x", **pad)
@@ -217,13 +240,17 @@ class App:
         self.root.bind("<Control-Return>", lambda e: (self.generate(), "break")[1])
         self.root.bind("<Escape>", lambda e: self.stop())
 
-    def _on_mode(self):
+    def _on_mode_ui(self):
         mode = self.v_mode.get()
         if mode == "outpaint":
             self.f_out.pack(fill="x", padx=10, pady=4, before=self.f_adv)
         else:
             self.f_out.pack_forget()
         self.w_denoise.configure(state="disabled" if mode == "txt2img" else "normal")
+
+    def _on_mode(self):
+        self._on_mode_ui()
+        mode = self.v_mode.get()
         if mode in ("inpaint", "outpaint"):
             self.v_denoise.set(1.0)  # full denoise inside the mask; lower it to keep more of the original
         elif mode == "img2img" and self.v_denoise.get() >= 0.99:
@@ -290,6 +317,150 @@ class App:
         self._on_workflow()
         if info.get("err"):
             self.v_status.set(info["err"])
+
+    # ---------- presets (save / load everything, incl. the prompt) ----------
+
+    def _collect(self) -> dict:
+        """Every setting in the window, as plain JSON values."""
+        clip = self.v_clip.get().strip()
+        return {
+            "mode": self.v_mode.get(), "workflow": self.v_workflow.get(),
+            "clip": "" if clip in ("", CLIP_DEFAULT) else clip,
+            "checkpoint": self.v_ckpt.get().strip(), "steps": int(self.v_steps.get()), "cfg": float(self.v_cfg.get()),
+            "denoise": float(self.v_denoise.get()), "seed": int(self.v_seed.get()), "variants": int(self.v_variants.get()),
+            "sampler": self.v_sampler.get(), "scheduler": self.v_scheduler.get(),
+            "base_res": int(self.v_res.get()), "context": float(self.v_context.get()),
+            "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
+            "expand": [int(v.get()) for v in self.v_expand], "fooocus": bool(self.v_fooocus.get()),
+            "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "soft"),
+            "prompt": self.t_prompt.get("1.0", "end").strip(), "negative": self.t_neg.get("1.0", "end").strip(),
+        }
+
+    def _apply_settings(self, s: dict) -> list[str]:
+        """Put a saved preset into the window. Returns notes about anything that could not be applied."""
+        notes: list[str] = []
+
+        def put(var, key, conv=lambda v: v):
+            if key in s:
+                try:
+                    var.set(conv(s[key]))
+                except (tk.TclError, ValueError, TypeError):
+                    notes.append(key)
+
+        put(self.v_mode, "mode", str)
+        wf = s.get("workflow")
+        if wf is not None:
+            if wf == BUILTIN or wf in list(self.cb_workflow["values"]):
+                self.v_workflow.set(wf)
+            else:
+                notes.append(f"workflow {wf} not found")
+        if "clip" in s:
+            clip, known = s["clip"], list(self.cb_clip["values"])
+            if not clip:
+                self.v_clip.set(CLIP_DEFAULT)
+            elif not known or clip in known:
+                self.v_clip.set(clip)
+            else:
+                self.v_clip.set(CLIP_DEFAULT)
+                notes.append(f"text model {clip} not found")
+        put(self.v_ckpt, "checkpoint", str)
+        put(self.v_steps, "steps", int)
+        put(self.v_cfg, "cfg", float)
+        put(self.v_denoise, "denoise", float)
+        put(self.v_seed, "seed", int)
+        put(self.v_variants, "variants", int)
+        put(self.v_sampler, "sampler", str)
+        put(self.v_scheduler, "scheduler", str)
+        put(self.v_res, "base_res", int)
+        put(self.v_context, "context", float)
+        put(self.v_grow, "mask_grow", int)
+        put(self.v_blur, "mask_blur", int)
+        put(self.v_overlap, "overlap", int)
+        put(self.v_fooocus, "fooocus", bool)
+        if "layer_mask" in s:
+            self.v_lmask.set(LAYER_MASKS.get(s["layer_mask"], LAYER_MASKS["soft"]))
+        if "expand" in s:
+            for var, val in zip(self.v_expand, s["expand"]):
+                try:
+                    var.set(int(val))
+                except (tk.TclError, ValueError, TypeError):
+                    notes.append("expand")
+        for widget, key in ((self.t_prompt, "prompt"), (self.t_neg, "negative")):
+            if key in s:
+                widget.delete("1.0", "end")
+                widget.insert("1.0", str(s[key]))
+        self._on_mode_ui()
+        self._on_workflow()
+        return notes
+
+    def _preset_path(self, name: str) -> Path:
+        return self.presets_dir / (preset_stem(name) + ".json")
+
+    def refresh_presets(self, select: str | None = None):
+        names = sorted(p.stem for p in self.presets_dir.glob("*.json")) if self.presets_dir.is_dir() else []
+        self.cb_preset["values"] = names
+        if select is not None:
+            self.v_preset.set(select)
+        elif self.v_preset.get() not in names:
+            self.v_preset.set("")
+
+    def save_preset(self):
+        name = self.v_preset.get().strip()
+        if not name:
+            self.save_preset_as()
+        else:
+            self._write_preset(name)
+
+    def save_preset_as(self):
+        name = simpledialog.askstring("Save preset", "Preset name:", parent=self.root, initialvalue=self.v_preset.get())
+        if not name or not name.strip():
+            return
+        if self._preset_path(name).exists() and preset_stem(name) != self.v_preset.get():
+            if not messagebox.askyesno("Save preset", f"A preset named “{preset_stem(name)}” exists. Overwrite it?", parent=self.root):
+                return
+        self._write_preset(name)
+
+    def _write_preset(self, name: str):
+        try:
+            settings = self._collect()
+        except (tk.TclError, ValueError) as e:
+            self.v_status.set(f"Invalid value, preset not saved: {e}")
+            return
+        stem = preset_stem(name)
+        data = {"format": 1, "name": stem, "saved": datetime.now().isoformat(timespec="seconds"), "settings": settings}
+        try:
+            self.presets_dir.mkdir(parents=True, exist_ok=True)
+            self._preset_path(stem).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        except OSError as e:
+            self.v_status.set(f"Could not save the preset: {e}")
+            return
+        self.refresh_presets(select=stem)
+        self.v_status.set(f"Saved preset “{stem}”.")
+
+    def load_preset(self, name: str):
+        if not name:
+            return
+        try:
+            data = json.loads(self._preset_path(name).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            self.v_status.set(f"Could not load the preset: {e}")
+            return
+        notes = self._apply_settings(data.get("settings", data) if isinstance(data, dict) else {})
+        self.v_status.set(f"Loaded preset “{name}”." + (f" Not applied: {'; '.join(notes)}." if notes else ""))
+
+    def delete_preset(self):
+        name = self.v_preset.get().strip()
+        if not name:
+            return
+        if not messagebox.askyesno("Delete preset", f"Delete the preset “{name}”?", parent=self.root):
+            return
+        try:
+            self._preset_path(name).unlink()
+        except OSError as e:
+            self.v_status.set(f"Could not delete the preset: {e}")
+            return
+        self.refresh_presets(select="")
+        self.v_status.set(f"Deleted preset “{name}”.")
 
     # ---------- generation ----------
 
@@ -372,7 +543,7 @@ class App:
             "negative": p.negative, "steps": p.steps, "cfg": p.cfg, "denoise": self.v_denoise.get(),
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap,
-            "expand": list(req.outpaint), "on_top": bool(self.v_top.get()), "fooocus": req.fooocus, "layer_mask": req.layer_mask,
+            "expand": list(req.outpaint), "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "fooocus": req.fooocus, "layer_mask": req.layer_mask,
         })
 
     def _quit(self):
