@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import queue
 import threading
 import tkinter as tk
@@ -23,6 +24,8 @@ MODE_LABELS = [
 BUILTIN = "Built-in (checkpoint)"
 LAYER_MASKS = {"soft": "soft (same as the model's)", "selection": "hard (from selection)", "none": "none"}
 
+FONT = "Segoe UI" if os.name == "nt" else "Sans"
+CLIP_DEFAULT = "(workflow default)"
 BG, PANEL, FG, MUTED, ACCENT = "#16181d", "#1f2229", "#e6e8ee", "#8a90a0", "#7c5cff"
 
 
@@ -49,6 +52,7 @@ class App:
         self.v_mode = tk.StringVar(value=g("mode", "inpaint"))
         self.v_workflow = tk.StringVar(value=g("workflow", BUILTIN))
         self.v_ckpt = tk.StringVar(value=g("checkpoint", d["checkpoint"]))
+        self.v_clip = tk.StringVar(value=g("clip", "") or CLIP_DEFAULT)
         self.v_steps = tk.IntVar(value=g("steps", d["steps"]))
         self.v_cfg = tk.DoubleVar(value=g("cfg", d["cfg"]))
         self.v_denoise = tk.DoubleVar(value=g("denoise", d["denoise"]))
@@ -81,9 +85,9 @@ class App:
         s = ttk.Style(self.root)
         s.theme_use("clam")
         s.configure(".", background=BG, foreground=FG, fieldbackground=PANEL, bordercolor="#2c303a",
-                    lightcolor=PANEL, darkcolor=PANEL, troughcolor=PANEL, focuscolor=ACCENT, font=("Sans", 10))
+                    lightcolor=PANEL, darkcolor=PANEL, troughcolor=PANEL, focuscolor=ACCENT, font=(FONT, 10))
         s.configure("TLabel", background=BG, foreground=FG)
-        s.configure("Muted.TLabel", foreground=MUTED, font=("Sans", 9))
+        s.configure("Muted.TLabel", foreground=MUTED, font=(FONT, 9))
         s.configure("TLabelframe", background=BG, bordercolor="#2c303a")
         s.configure("TLabelframe.Label", background=BG, foreground=MUTED)
         s.configure("TRadiobutton", background=BG, foreground=FG)
@@ -93,7 +97,7 @@ class App:
                   indicatorforeground=[("selected", "white")])
         s.configure("TButton", background=PANEL, foreground=FG, padding=6)
         s.map("TButton", background=[("active", "#2a2e38")])
-        s.configure("Accent.TButton", background=ACCENT, foreground="white", font=("Sans", 10, "bold"))
+        s.configure("Accent.TButton", background=ACCENT, foreground="white", font=(FONT, 10, "bold"))
         s.map("Accent.TButton", background=[("active", "#6a4cf0"), ("disabled", "#3a3550")])
         s.configure("TCombobox", fieldbackground=PANEL, background=PANEL, foreground=FG, arrowcolor=FG)
         s.map("TCombobox", fieldbackground=[("readonly", PANEL)], foreground=[("readonly", FG)],
@@ -108,7 +112,7 @@ class App:
     def _text(self, parent, height):
         t = tk.Text(parent, height=height, wrap="word", bg=PANEL, fg=FG, insertbackground=FG,
                     relief="flat", highlightthickness=1, highlightbackground="#2c303a", highlightcolor=ACCENT,
-                    font=("Sans", 10), padx=6, pady=4)
+                    font=(FONT, 10), padx=6, pady=4)
         return t
 
     def _spin(self, parent, var, frm, to, inc=1.0, width=6):
@@ -143,6 +147,9 @@ class App:
         ttk.Label(mf, text="Model").grid(row=1, column=0, sticky="w", pady=(4, 0))
         self.cb_ckpt = ttk.Combobox(mf, textvariable=self.v_ckpt)
         self.cb_ckpt.grid(row=1, column=1, sticky="ew", padx=6, pady=(4, 0))
+        ttk.Label(mf, text="Text model").grid(row=2, column=0, sticky="w", pady=(4, 0))
+        self.cb_clip = ttk.Combobox(mf, textvariable=self.v_clip, state="readonly")
+        self.cb_clip.grid(row=2, column=1, sticky="ew", padx=6, pady=(4, 0))
 
         sf = ttk.Frame(r)
         sf.pack(fill="x", **pad)
@@ -227,6 +234,8 @@ class App:
         state = "normal" if self.v_workflow.get() == BUILTIN else "disabled"
         for w in self.recipe_widgets:
             w.configure(state=state)
+        # the text model applies to custom workflows (nodes tagged pc:clip), not to the built-in graph
+        self.cb_clip.configure(state="readonly" if state == "disabled" else "disabled")
 
     def _on_top(self):
         self.root.attributes("-topmost", bool(self.v_top.get()))
@@ -246,6 +255,7 @@ class App:
             try:
                 info["ckpts"] = self.comfy.checkpoints()
                 info["samplers"] = self.comfy.samplers()
+                info["clips"] = self.comfy.clips()
                 info["scheds"] = self.comfy.schedulers()
                 info["fooocus"] = self.comfy.fooocus_inpaint()
                 info["comfy"] = "ComfyUI ●"
@@ -261,6 +271,10 @@ class App:
             self.cb_ckpt["values"] = info["ckpts"]
             if self.v_ckpt.get() not in info["ckpts"]:
                 self.v_ckpt.set(info["ckpts"][0])
+        if info.get("clips"):
+            self.cb_clip["values"] = [CLIP_DEFAULT] + info["clips"]
+            if self.v_clip.get() not in self.cb_clip["values"]:
+                self.v_clip.set(CLIP_DEFAULT)
         if info.get("samplers"):
             self.cb_sampler["values"] = info["samplers"]
         if info.get("scheds"):
@@ -286,6 +300,7 @@ class App:
                       checkpoint=self.v_ckpt.get().strip(), steps=int(self.v_steps.get()), cfg=float(self.v_cfg.get()),
                       sampler=self.v_sampler.get(), scheduler=self.v_scheduler.get(), seed=int(self.v_seed.get()),
                       denoise=1.0 if self.v_mode.get() == "txt2img" else float(self.v_denoise.get()))
+        p.clip = "" if self.v_clip.get() in ("", CLIP_DEFAULT) else self.v_clip.get().strip()
         return Request(mode=self.v_mode.get(), params=p, workflow=wf_path, base_res=int(self.v_res.get()),
                        context=float(self.v_context.get()), mask_grow=int(self.v_grow.get()),
                        mask_blur=int(self.v_blur.get()), outpaint=tuple(int(v.get()) for v in self.v_expand),
@@ -353,7 +368,7 @@ class App:
     def _save_state(self, req: Request):
         p = req.params
         cfgmod.save_state({
-            "mode": req.mode, "workflow": self.v_workflow.get(), "checkpoint": p.checkpoint, "prompt": p.prompt,
+            "mode": req.mode, "workflow": self.v_workflow.get(), "clip": p.clip, "checkpoint": p.checkpoint, "prompt": p.prompt,
             "negative": p.negative, "steps": p.steps, "cfg": p.cfg, "denoise": self.v_denoise.get(),
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap,

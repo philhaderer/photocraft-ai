@@ -139,31 +139,41 @@ class Bridge:
             m = m.resize((gw, gh), Image.BILINEAR)
             mask_name = self.comfy.upload_image(m.convert("RGB"), f"pcc-{tag}-mask.png")
 
-        self.pipeline = "workflow" if req.workflow else req.mode
-        graph, out_node = self._graph(req, p, image_name, mask_name)
-        prompt_id = self.comfy.queue(graph)
-        progress(0.15, f"Queued in ComfyUI ({self.pipeline})")
-        hist = self.comfy.wait(
-            prompt_id,
-            on_progress=lambda f, m: progress(0.15 + 0.75 * f if f >= 0 else -1, m),
-            cancelled=self._cancel.is_set)
-        images = self.comfy.output_images(hist, out_node)
+        wf_paths = workflows.resolve(req.workflow) if req.workflow else [None]
+        n_wf = len(wf_paths)
+        results: list[tuple[str, list[Image.Image]]] = []
+        for k, wf in enumerate(wf_paths):
+            # several workflows (a group) run one after another with the same crop, mask and seed
+            label = Path(wf).stem.split("-")[-1] if (wf and n_wf > 1) else ""
+            suffix = f" [{label}]" if label else ""
+            self.pipeline = "workflow" if wf else req.mode
+            graph, out_node = self._graph(req, p, image_name, mask_name, wf)
+            prompt_id = self.comfy.queue(graph)
+            start, span = 0.15 + 0.75 * k / n_wf, 0.75 / n_wf
+            progress(start, f"Queued in ComfyUI ({self.pipeline}{suffix})")
+            hist = self.comfy.wait(
+                prompt_id,
+                on_progress=lambda f, m, s=start, w=span, x=suffix: progress(s + w * f if f >= 0 else -1, m + x),
+                cancelled=self._cancel.is_set)
+            results.append((label, self.comfy.output_images(hist, out_node)[: max(1, req.variants)]))
 
         progress(0.92, "Placing the result in PhotoCraft")
         orig = self._find_doc(orig, orig_name)
         base = (p.prompt.strip() or req.mode)[:40]
-        images = images[: max(1, req.variants)]
         layer_mask = None
         if has_sel and req.layer_mask == "soft":
             # the same soft mask the model got: the result blends exactly where the model blended it
             layer_mask = imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
         mode = req.layer_mask if has_sel else "none"
+        items = [(label, i, im, len(ims)) for label, ims in results for i, im in enumerate(ims)]
         layers = []
-        # last variant first: #1 ends up on top, visible and active, the others hidden below it
-        for n, i in enumerate(reversed(range(len(images)))):
-            im = images[i].convert("RGB").resize((region.w, region.h), Image.LANCZOS)
-            name = f"AI {req.mode}: {base} [{p.seed}]" + (f" #{i + 1}" if len(images) > 1 else "")
-            layers.insert(0, self._import(orig, im, region, mode, name, tag, i, first=(n == 0), hidden=(i > 0),
+        # last item first: #1 ends up on top, visible and active, the others hidden below it
+        for n, g in enumerate(reversed(range(len(items)))):
+            label, i, raw, count = items[g]
+            im = raw.convert("RGB").resize((region.w, region.h), Image.LANCZOS)
+            name = (f"AI {req.mode}" + (f" [{label}]" if label else "") + f": {base} [{p.seed}]"
+                    + (f" #{i + 1}" if count > 1 else ""))
+            layers.insert(0, self._import(orig, im, region, mode, name, tag, g, first=(n == 0), hidden=(g > 0),
                                           layer_mask=layer_mask))
         if has_sel:
             self._try("select.reselect")  # selection comes back, ready for another generation
@@ -172,9 +182,9 @@ class Bridge:
 
     # ---------- ComfyUI ----------
 
-    def _graph(self, req: Request, p, image_name, mask_name):
-        if req.workflow:
-            tpl = workflows.load_template(req.workflow)
+    def _graph(self, req: Request, p, image_name, mask_name, wf: str | None = None):
+        if wf:
+            tpl = workflows.load_template(wf)
             return workflows.apply_template(tpl, p, image_name, mask_name)
         if not p.checkpoint:
             raise BridgeError("Pick a model (checkpoint) or a custom workflow.")

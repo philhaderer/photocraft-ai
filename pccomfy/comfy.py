@@ -102,6 +102,9 @@ class ComfyUI:
     def checkpoints(self) -> list[str]:
         return self._choices("CheckpointLoaderSimple", "ckpt_name")
 
+    def clips(self) -> list[str]:
+        return self._choices("CLIPLoader", "clip_name")
+
     def samplers(self) -> list[str]:
         return self._choices("KSampler", "sampler_name")
 

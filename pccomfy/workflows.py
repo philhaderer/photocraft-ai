@@ -24,6 +24,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -39,6 +40,7 @@ class GenParams:
     scheduler: str = "karras"
     seed: int = -1
     denoise: float = 1.0
+    clip: str = ""            # text model for nodes tagged pc:clip (e.g. the VGL writer); empty = the workflow's own
     width: int = 1024
     height: int = 1024
     batch: int = 1
@@ -140,7 +142,7 @@ def inpaint_fooocus(p: GenParams, image_name: str, mask_name: str, head: str, pa
 # ---------- custom (templates) ----------
 
 def load_template(path: str | Path) -> dict:
-    data = json.loads(Path(path).read_text())
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
     if "nodes" in data and "links" in data:
         raise ValueError(f"{Path(path).name}: this is a UI-format save. In ComfyUI use Workflow → Export (API).")
     if not all(isinstance(v, dict) and "class_type" in v for v in data.values()):
@@ -148,39 +150,62 @@ def load_template(path: str | Path) -> dict:
     return data
 
 
+def resolve(path: str | Path) -> list[str]:
+    """A normal workflow is itself; a `*.group.json` ({"workflows": [...]}) expands to several, run one after another."""
+    p = Path(path)
+    if p.name.lower().endswith(".group.json"):
+        data = json.loads(p.read_text(encoding="utf-8"))
+        names = data.get("workflows") if isinstance(data, dict) else None
+        if not names:
+            raise ValueError(f"{p.name}: a group file needs a non-empty \"workflows\" list.")
+        return [str(p.parent / n) for n in names]
+    return [str(p)]
+
+
 def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name: str | None) -> tuple[dict, str | None]:
-    """Fill parameters into `pc:*` nodes. Returns (graph, output node id or None)."""
+    """Fill parameters into `pc:*` nodes. Returns (graph, output node id or None).
+
+    A title may carry several tags (e.g. "pc:prompt pc:size" for one node that takes the prompt and the size).
+    `pc:prompt` fills the node's `text` field, or its `prompt` field (TextGenerate, TextEncodeFibo2, ...).
+    """
     g = json.loads(json.dumps(graph))  # deep copy
     out_node = None
     seen = set()
     for nid, node in g.items():
         title = node.get("_meta", {}).get("title", "").strip().lower()
-        if not title.startswith("pc:"):
+        tags = re.findall(r"pc:\s*([a-z]+)", title)
+        if not tags:
             continue
-        tag, inp = title[3:].strip(), node.setdefault("inputs", {})
-        seen.add(tag)
-        if tag == "image":
-            if image_name is None:
-                raise ValueError("The workflow has a pc:image node, but this mode sends no image.")
-            inp["image"] = image_name
-        elif tag == "mask":
-            if mask_name is None:
-                raise ValueError("The workflow has a pc:mask node, but this mode has no mask (selection).")
-            inp["image"] = mask_name
-        elif tag == "prompt":
-            inp["text"] = p.prompt
-        elif tag == "negative":
-            inp["text"] = p.negative
-        elif tag == "sampler":
-            for k, v in (("seed", p.seed), ("noise_seed", p.seed), ("denoise", p.denoise)):
-                if k in inp and not isinstance(inp[k], list):
-                    inp[k] = v
-        elif tag in ("latent", "size"):
-            for k, v in (("width", p.width), ("height", p.height), ("batch_size", p.batch)):
-                if k in inp and not isinstance(inp[k], list):
-                    inp[k] = v
-        elif tag == "output":
-            out_node = nid
+        inp = node.setdefault("inputs", {})
+        for tag in tags:
+            seen.add(tag)
+            if tag == "image":
+                if image_name is None:
+                    raise ValueError("The workflow has a pc:image node, but this mode sends no image.")
+                inp["image"] = image_name
+            elif tag == "mask":
+                if mask_name is None:
+                    raise ValueError("The workflow has a pc:mask node, but this mode has no mask (selection).")
+                inp["image"] = mask_name
+            elif tag == "prompt":
+                key = "text" if "text" in inp else "prompt"
+                inp[key] = p.prompt
+            elif tag == "negative":
+                key = "text" if "text" in inp else "negative_prompt"
+                inp[key] = p.negative
+            elif tag == "sampler":
+                for k, v in (("seed", p.seed), ("noise_seed", p.seed), ("denoise", p.denoise)):
+                    if k in inp and not isinstance(inp[k], list):
+                        inp[k] = v
+            elif tag in ("latent", "size"):
+                for k, v in (("width", p.width), ("height", p.height), ("batch_size", p.batch)):
+                    if k in inp and not isinstance(inp[k], list):
+                        inp[k] = v
+            elif tag == "clip":
+                if p.clip and "clip_name" in inp:
+                    inp["clip_name"] = p.clip
+            elif tag == "output":
+                out_node = nid
     if image_name is not None and "image" not in seen:
         raise ValueError("The workflow has no LoadImage node titled pc:image.")
     if mask_name is not None and "mask" not in seen:
