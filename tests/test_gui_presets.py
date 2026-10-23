@@ -88,7 +88,7 @@ tk.Tk = tk.Toplevel = Widget
 tk.StringVar, tk.IntVar, tk.DoubleVar, tk.BooleanVar = Var, IntVar, DoubleVar, Var
 tk.Text, tk.TclError = Text, TclError
 for n in ("Frame", "Label", "Combobox", "Button", "Radiobutton", "Checkbutton", "Spinbox", "LabelFrame",
-          "Progressbar", "Style", "Notebook"):
+          "Progressbar", "Style", "Notebook", "Scale"):
     setattr(ttk, n, Widget)
 mb.askyesno = lambda *a, **k: True
 sd.askstring = lambda *a, **k: None

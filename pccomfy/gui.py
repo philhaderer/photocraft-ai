@@ -27,6 +27,38 @@ MODE_LABELS = [
 BUILTIN = "Built-in (checkpoint)"
 LAYER_MASKS = {"soft": "soft (same as the model's)", "selection": "hard (from selection)", "none": "none"}
 
+class Tooltip:
+    """Small hover tooltip for any tk/ttk widget."""
+
+    def __init__(self, widget, text: str, delay: int = 450):
+        self.widget, self.text, self.delay, self.tip, self._job = widget, text, delay, None, None
+        widget.bind("<Enter>", self._schedule, add="+")
+        widget.bind("<Leave>", self._hide, add="+")
+        widget.bind("<ButtonPress>", self._hide, add="+")
+
+    def _schedule(self, _e=None):
+        self._hide()
+        self._job = self.widget.after(self.delay, self._show)
+
+    def _show(self):
+        if self.tip or not self.text:
+            return
+        x, y = self.widget.winfo_rootx() + 12, self.widget.winfo_rooty() + self.widget.winfo_height() + 4
+        self.tip = tk.Toplevel(self.widget)
+        self.tip.wm_overrideredirect(True)
+        self.tip.wm_geometry(f"+{x}+{y}")
+        tk.Label(self.tip, text=self.text, justify="left", wraplength=340, background="#ffffe0", foreground="#000000",
+                 relief="solid", borderwidth=1, padx=6, pady=4, font=("Segoe UI" if os.name == "nt" else "Sans", 9)).pack()
+
+    def _hide(self, _e=None):
+        if self._job:
+            self.widget.after_cancel(self._job)
+            self._job = None
+        if self.tip:
+            self.tip.destroy()
+            self.tip = None
+
+
 FONT = "Segoe UI" if os.name == "nt" else "Sans"
 CLIP_DEFAULT = "(workflow default)"
 
@@ -78,6 +110,7 @@ class App:
         self.v_overlap = tk.IntVar(value=g("overlap", d["overlap"]))
         self.v_expand = [tk.IntVar(value=v) for v in g("expand", [0, 0, 256, 0])]
         self.v_top = tk.BooleanVar(value=g("on_top", True))
+        self.v_feather = tk.DoubleVar(value=g("feather_pct", 2.0))
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
         self.v_lmask = tk.StringVar(value=LAYER_MASKS.get(g("layer_mask", "soft"), LAYER_MASKS["soft"]))
         self.v_status = tk.StringVar(value="Ready")
@@ -151,6 +184,21 @@ class App:
             ttk.Radiobutton(modes, text=label, value=key, variable=self.v_mode, command=self._on_mode).grid(
                 row=i // 2, column=i % 2, sticky="w", padx=(0, 16), pady=1)
 
+        ff = ttk.Frame(r)
+        ff.pack(fill="x", **pad)
+        ff.columnconfigure(1, weight=1)
+        lbl_f = ttk.Label(ff, text="Edge feather")
+        lbl_f.grid(row=0, column=0, sticky="w")
+        sc = ttk.Scale(ff, from_=0, to=10, variable=self.v_feather, command=self._on_feather)
+        sc.grid(row=0, column=1, sticky="ew", padx=8)
+        self.lbl_feather = ttk.Label(ff, width=22, style="Muted.TLabel")
+        self.lbl_feather.grid(row=0, column=2, sticky="e")
+        self._on_feather()
+        for w in (lbl_f, sc):
+            Tooltip(w, "How soft the edge of the new layer is, as a percentage of the selection's shorter side "
+                       "(2 % is the default, 0 = hard edge).\nApplies to the layer mask the result is pasted with. "
+                       "A feather you set in PhotoCraft (Weiche Kante) is kept as it is, this one is then ignored.")
+
         ttk.Label(r, text="Prompt").pack(anchor="w", padx=10)
         self.t_prompt = self._text(r, 4)
         self.t_prompt.pack(fill="x", padx=10)
@@ -167,13 +215,9 @@ class App:
         self.cb_workflow = ttk.Combobox(mf, textvariable=self.v_workflow, state="readonly")
         self.cb_workflow.bind("<<ComboboxSelected>>", lambda e: self._on_workflow())
         self.cb_workflow.grid(row=0, column=1, sticky="ew", padx=6)
-        self.lbl_model = ttk.Label(mf, text="Model")
-        self.lbl_model.grid(row=1, column=0, sticky="w", pady=(4, 0))
-        self.cb_ckpt = ttk.Combobox(mf, textvariable=self.v_ckpt)
-        self.cb_ckpt.grid(row=1, column=1, sticky="ew", padx=6, pady=(4, 0))
-        ttk.Label(mf, text="Text model").grid(row=2, column=0, sticky="w", pady=(4, 0))
+        ttk.Label(mf, text="Text model").grid(row=1, column=0, sticky="w", pady=(4, 0))
         self.cb_clip = ttk.Combobox(mf, textvariable=self.v_clip, state="readonly")
-        self.cb_clip.grid(row=2, column=1, sticky="ew", padx=6, pady=(4, 0))
+        self.cb_clip.grid(row=1, column=1, sticky="ew", padx=6, pady=(4, 0))
 
         sf = ttk.Frame(r)
         sf.pack(fill="x", **pad)
@@ -188,8 +232,7 @@ class App:
         self.w_denoise = items[2][1]
         self.recipe_widgets = [items[0][1], items[1][1]]
 
-        sm = self.f_sampler = ttk.Frame(r)
-        self.f_steps = sf
+        sm = ttk.Frame(r)
         sm.pack(fill="x", **pad)
         sm.columnconfigure((1, 3), weight=1)
         ttk.Label(sm, text="Sampler", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
@@ -198,7 +241,7 @@ class App:
         ttk.Label(sm, text="Scheduler", style="Muted.TLabel").grid(row=0, column=2, sticky="w")
         self.cb_sched = ttk.Combobox(sm, textvariable=self.v_scheduler, width=12)
         self.cb_sched.grid(row=0, column=3, sticky="ew", padx=6)
-        self.recipe_widgets += [self.cb_ckpt, self.cb_sampler, self.cb_sched]
+        self.recipe_widgets += [self.cb_sampler, self.cb_sched]
 
         self.f_out = ttk.LabelFrame(r, text="Expand by (px)")
         for i, lbl in enumerate(("Left", "Top", "Right", "Bottom")):
@@ -209,19 +252,40 @@ class App:
 
         self.f_adv = ttk.LabelFrame(r, text="Advanced")
         self.f_adv.pack(fill="x", **pad)
+        tips = {
+            "Base res.": "Side (px) of the square whose area the model works at. Flux/Fibo/SDXL: 1024, SD 1.5: 512-768. "
+                         "Higher = more detail but slower.",
+            "Context": "How much of the surroundings the model sees around the selection, as a fraction of the selection's "
+                       "longer side (0.4 = 40 %). More context fits the scene better, but the area you fill gets smaller in the crop.",
+            "Mask grow": "Grows the mask the model gets by this many px so the generation overlaps the edge. Only for workflows "
+                         "that use the mask (not Fibo, which regenerates the whole crop).",
+            "Mask blur": "Softens the edge of the mask the model gets by this many px. Same as above: not used by Fibo.",
+        }
         for i, (lbl, var, lo, hi, inc) in enumerate((("Base res.", self.v_res, 256, 2048, 64),
                                                     ("Context", self.v_context, 0, 2, 0.1),
                                                     ("Mask grow", self.v_grow, 0, 128, 2),
                                                     ("Mask blur", self.v_blur, 0, 128, 2))):
-            ttk.Label(self.f_adv, text=lbl, style="Muted.TLabel").grid(row=0, column=i, sticky="w", padx=6)
-            self._spin(self.f_adv, var, lo, hi, inc, 6).grid(row=1, column=i, padx=6, pady=(0, 6))
+            lb = ttk.Label(self.f_adv, text=lbl, style="Muted.TLabel")
+            lb.grid(row=0, column=i, sticky="w", padx=6)
+            sp = self._spin(self.f_adv, var, lo, hi, inc, 6)
+            sp.grid(row=1, column=i, padx=6, pady=(0, 6))
+            Tooltip(lb, tips[lbl])
+            Tooltip(sp, tips[lbl])
         self.cb_fooocus = ttk.Checkbutton(self.f_adv, text="Fooocus inpaint (SDXL, as in Krita AI Diffusion)", variable=self.v_fooocus)
         self.cb_fooocus.grid(row=2, column=0, columnspan=4, sticky="w", padx=6, pady=(0, 6))
+        Tooltip(self.cb_fooocus, "Only for the built-in inpaint graph with an SDXL checkpoint (Fooocus inpaint patch). "
+                                 "Has no effect with a workflow such as the Fibo ones.")
         lm = ttk.Frame(self.f_adv)
         lm.grid(row=3, column=0, columnspan=4, sticky="w", padx=6, pady=(0, 6))
-        ttk.Label(lm, text="Layer mask", style="Muted.TLabel").pack(side="left")
-        ttk.Combobox(lm, textvariable=self.v_lmask, values=list(LAYER_MASKS.values()), state="readonly",
-                     width=24).pack(side="left", padx=6)
+        lb = ttk.Label(lm, text="Layer mask", style="Muted.TLabel")
+        lb.pack(side="left")
+        cb_lm = ttk.Combobox(lm, textvariable=self.v_lmask, values=list(LAYER_MASKS.values()), state="readonly", width=24)
+        cb_lm.pack(side="left", padx=6)
+        for w in (lb, cb_lm):
+            Tooltip(w, "How the result is blended into your image.\n"
+                       "soft: a feathered mask (see Edge feather) - recommended.\n"
+                       "hard (from selection): the selection exactly as PhotoCraft has it, incl. a feather you set there.\n"
+                       "none: the whole generated area replaces the pixels, no mask.")
 
         bf = ttk.Frame(r)
         bf.pack(fill="x", padx=10, pady=(8, 2))
@@ -270,21 +334,15 @@ class App:
         elif mode == "img2img" and self.v_denoise.get() >= 0.99:
             self.v_denoise.set(0.6)
 
+    def _on_feather(self, _value=None):
+        v = round(float(self.v_feather.get()) * 2) / 2
+        self.lbl_feather.configure(text="hard edge" if v <= 0 else f"{v:g} % of the shorter side")
+
     def _on_workflow(self):
         # a custom workflow carries its own model/steps/CFG/sampler – these fields apply to the built-in one only
         state = "normal" if self.v_workflow.get() == BUILTIN else "disabled"
         for w in self.recipe_widgets:
             w.configure(state=state)
-        # the checkpoint list (often only unrelated files) and sampler/scheduler only matter for the built-in graph
-        if state == "normal":
-            self.lbl_model.grid()
-            self.cb_ckpt.grid()
-            if not self.f_sampler.winfo_manager():
-                self.f_sampler.pack(fill="x", padx=10, pady=4, after=self.f_steps)
-        else:
-            self.lbl_model.grid_remove()
-            self.cb_ckpt.grid_remove()
-            self.f_sampler.pack_forget()
         # the text model applies to custom workflows (nodes tagged pc:clip), not to the built-in graph
         self.cb_clip.configure(state="readonly" if state == "disabled" else "disabled")
 
@@ -318,10 +376,8 @@ class App:
 
     def _apply_refresh(self, info):
         self.v_conn.set(f"{info['pc']}   {info['comfy']}")
-        if info.get("ckpts"):
-            self.cb_ckpt["values"] = info["ckpts"]
-            if self.v_ckpt.get() not in info["ckpts"]:
-                self.v_ckpt.set(info["ckpts"][0])
+        if info.get("ckpts") and self.v_ckpt.get() not in info["ckpts"]:
+            self.v_ckpt.set(info["ckpts"][0])  # only used by the built-in graph; there is no picker any more
         if info.get("clips"):
             self.cb_clip["values"] = [CLIP_DEFAULT] + info["clips"]
             if self.v_clip.get() not in self.cb_clip["values"]:
@@ -357,6 +413,7 @@ class App:
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
             "expand": [int(v.get()) for v in self.v_expand], "fooocus": bool(self.v_fooocus.get()),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "soft"),
+            "feather_pct": round(float(self.v_feather.get()), 1),
             "prompt": self.t_prompt.get("1.0", "end").strip(), "negative": self.t_neg.get("1.0", "end").strip(),
         }
 
@@ -401,6 +458,8 @@ class App:
         put(self.v_blur, "mask_blur", int)
         put(self.v_overlap, "overlap", int)
         put(self.v_fooocus, "fooocus", bool)
+        put(self.v_feather, "feather_pct", float)
+        self._on_feather()
         if "layer_mask" in s:
             self.v_lmask.set(LAYER_MASKS.get(s["layer_mask"], LAYER_MASKS["soft"]))
         if "expand" in s:
@@ -502,7 +561,8 @@ class App:
                        mask_blur=int(self.v_blur.get()), outpaint=tuple(int(v.get()) for v in self.v_expand),
                        overlap=int(self.v_overlap.get()), variants=int(self.v_variants.get()),
                        fooocus=bool(self.v_fooocus.get()),
-                       layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "soft"))
+                       layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "soft"),
+                       feather_pct=round(float(self.v_feather.get()) * 2) / 2)
 
     def generate(self):
         if self.worker and self.worker.is_alive():
