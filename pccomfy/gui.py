@@ -633,6 +633,7 @@ class App:
         self.root.after(100, self._poll)
 
     def _reset_bars(self, keep: bool = False):
+        self._bar_state = {}
         for key, bar in self.bars.items():
             bar.stop()
             bar.configure(mode="determinate", value=bar["maximum"] if keep else 0)
@@ -640,22 +641,29 @@ class App:
         self.v_il.set("Image")
 
     def _set_bar(self, key: str, fraction: float, msg: str | None, elapsed: float | None):
+        """Update one bar. Idempotent: Tk only gets touched when something really changed - stop()/mode switches
+        reset the bar for a moment, which showed up as blinking when done on every progress tick."""
         bar, var = self.bars[key], (self.v_pl if key == "prompt" else self.v_il)
-        if fraction < 0:
-            if str(bar["mode"]) != "indeterminate":
-                bar.configure(mode="indeterminate")
-                bar.start(40)
-        else:
-            if str(bar["mode"]) == "indeterminate":
-                bar.stop()
-                bar.configure(mode="determinate")
-            bar.configure(value=fraction)
+        state = getattr(self, "_bar_state", None)
+        if state is None:
+            state = self._bar_state = {}
+        want = ("ind", None) if fraction < 0 else ("det", round(fraction, 3))
+        if state.get(key) != want:
+            if fraction < 0:
+                if state.get(key, ("",))[0] != "ind":
+                    bar.configure(mode="indeterminate")
+                    bar.start(40)
+            else:
+                if state.get(key, ("",))[0] == "ind":
+                    bar.stop()
+                    bar.configure(mode="determinate")
+                bar.configure(value=fraction)
+            state[key] = want
         if msg is not None:
             label = "Prompt: " if key == "prompt" else "Image: "
-            var.set(label + (f"{elapsed:.0f} s" if elapsed is not None and fraction < 0 else (msg.split("…")[0] or "")))
-        elif key == "prompt":
-            bar.stop()
-            bar.configure(mode="determinate", value=1.0)
+            text = label + (f"{elapsed:.0f} s" if elapsed is not None and fraction < 0 else (msg.split("…")[0] or ""))
+            if var.get() != text:
+                var.set(text)
 
     def _save_state(self, req: Request):
         p = req.params
