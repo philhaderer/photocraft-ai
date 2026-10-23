@@ -167,7 +167,8 @@ class App:
         self.cb_workflow = ttk.Combobox(mf, textvariable=self.v_workflow, state="readonly")
         self.cb_workflow.bind("<<ComboboxSelected>>", lambda e: self._on_workflow())
         self.cb_workflow.grid(row=0, column=1, sticky="ew", padx=6)
-        ttk.Label(mf, text="Model").grid(row=1, column=0, sticky="w", pady=(4, 0))
+        self.lbl_model = ttk.Label(mf, text="Model")
+        self.lbl_model.grid(row=1, column=0, sticky="w", pady=(4, 0))
         self.cb_ckpt = ttk.Combobox(mf, textvariable=self.v_ckpt)
         self.cb_ckpt.grid(row=1, column=1, sticky="ew", padx=6, pady=(4, 0))
         ttk.Label(mf, text="Text model").grid(row=2, column=0, sticky="w", pady=(4, 0))
@@ -187,7 +188,8 @@ class App:
         self.w_denoise = items[2][1]
         self.recipe_widgets = [items[0][1], items[1][1]]
 
-        sm = ttk.Frame(r)
+        sm = self.f_sampler = ttk.Frame(r)
+        self.f_steps = sf
         sm.pack(fill="x", **pad)
         sm.columnconfigure((1, 3), weight=1)
         ttk.Label(sm, text="Sampler", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
@@ -273,6 +275,16 @@ class App:
         state = "normal" if self.v_workflow.get() == BUILTIN else "disabled"
         for w in self.recipe_widgets:
             w.configure(state=state)
+        # the checkpoint list (often only unrelated files) and sampler/scheduler only matter for the built-in graph
+        if state == "normal":
+            self.lbl_model.grid()
+            self.cb_ckpt.grid()
+            if not self.f_sampler.winfo_manager():
+                self.f_sampler.pack(fill="x", padx=10, pady=4, after=self.f_steps)
+        else:
+            self.lbl_model.grid_remove()
+            self.cb_ckpt.grid_remove()
+            self.f_sampler.pack_forget()
         # the text model applies to custom workflows (nodes tagged pc:clip), not to the built-in graph
         self.cb_clip.configure(state="readonly" if state == "disabled" else "disabled")
 
