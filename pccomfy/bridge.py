@@ -212,10 +212,15 @@ class Bridge:
                 text = f"Writing the prompt… {elapsed:.0f} s" + (f" (usually ~{expected:.0f} s)" if expected else "")
                 overall = start + span * 0.3 * (pf if pf >= 0 else 0)
             else:
-                pf = f
-                text = (msg or "Generating the image…") if f >= 0 else f"Generating the image… {elapsed:.0f} s"
+                if f >= 0:
+                    marks["img_f"] = f
+                    marks["img_msg"] = msg
+                # between two sampler steps ComfyUI is silent: keep the last real value instead of flipping
+                # the bar back to "unknown" (that made it blink)
+                pf = marks.get("img_f", -1.0)
+                text = (marks.get("img_msg") or "Generating the image…") if pf >= 0 else f"Generating the image… {elapsed:.0f} s"
                 share = 0.3 if writer else 0.0
-                overall = start + span * (share + (1 - share) * f) if f >= 0 else -1
+                overall = start + span * (share + (1 - share) * pf) if pf >= 0 else -1
             progress(overall, text + suffix, phase=phase, phase_fraction=pf, elapsed=elapsed)
 
         return self.comfy.wait(prompt_id, on_progress=on, cancelled=self._cancel.is_set)
