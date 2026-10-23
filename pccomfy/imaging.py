@@ -60,6 +60,27 @@ def prepare_mask(mask: Image.Image, grow: int, blur: int) -> Image.Image:
     return m
 
 
+def is_soft(mask: Image.Image) -> bool:
+    """True when the mask already has a soft edge (e.g. a selection feathered in PhotoCraft)."""
+    a = np.asarray(mask.convert("L"))
+    inside = np.count_nonzero(a > 0)
+    return inside > 0 and np.count_nonzero((a > 8) & (a < 247)) > 0.01 * inside
+
+
+def feather_radius(sel_w: int, sel_h: int, percent: float) -> int:
+    """Feather width in px: a percentage of the selection's shorter side (0 = hard edge)."""
+    return max(0, round(min(sel_w, sel_h) * max(0.0, percent) / 100.0))
+
+
+def auto_feather(mask: Image.Image, radius: int) -> Image.Image:
+    """Soften a hard selection mask by `radius` px. A mask that is already soft is returned unchanged,
+    so a feather set in PhotoCraft always wins over the automatic one."""
+    m = mask.convert("L")
+    if radius <= 0 or is_soft(m):
+        return m
+    return m.filter(ImageFilter.GaussianBlur(radius / 2.0))
+
+
 def fill_transparent(img: Image.Image) -> Image.Image:
     """Fill transparent pixels with a blurred extension of the edges (pull–push).
 

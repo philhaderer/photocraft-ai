@@ -40,3 +40,15 @@ assert "upper left" in h and "1%" in h, h
 assert "centre" in placement_hint(Box(450, 450, 100, 100), Box(0, 0, 1000, 1000))
 assert "bottom centre" in placement_hint(Box(450, 800, 100, 100), Box(0, 0, 1000, 1000))
 print("ALL OK (hint)")
+
+from PIL import Image, ImageDraw
+from pccomfy import imaging
+hard = Image.new("L", (200, 200), 0); ImageDraw.Draw(hard).rectangle((50, 50, 149, 149), fill=255)
+assert not imaging.is_soft(hard)
+r = imaging.feather_radius(100, 300, 2.0); assert r == 2, r
+assert imaging.feather_radius(100, 300, 0) == 0
+soft = imaging.auto_feather(hard, 10)
+assert imaging.is_soft(soft) and soft.getpixel((100, 100)) == 255 and soft.getpixel((0, 0)) == 0
+assert list(imaging.auto_feather(soft, 10).getdata()) == list(soft.getdata())  # already soft: unchanged
+assert list(imaging.auto_feather(hard, 0).getdata()) == list(hard.getdata())
+print("ALL OK (feather)")

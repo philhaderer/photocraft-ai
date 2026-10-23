@@ -56,6 +56,7 @@ class Request:
     variants: int = 1
     fooocus: bool = True                 # inpaint/outpaint: Fooocus patch (SDXL) when the server has it
     layer_mask: str = "soft"             # "soft" = same mask the model got, "selection" = hard selection, "none"
+    feather_pct: float = 2.0             # soft layer mask for editors that ignore the mask: % of the selection's shorter side
 
 
 # progress(overall_fraction, message, phase="", phase_fraction=-1.0, elapsed=0.0)
@@ -300,13 +301,15 @@ class Bridge:
         base = (p.prompt.strip() or req.mode)[:40]
         layer_mask = None
         if has_sel and req.layer_mask == "soft":
-            # the same soft mask the model got: the result blends exactly where the model blended it
-            grow, blur = req.mask_grow, req.mask_blur
             if wf_paths[0] and not any(mask_is_used(json.loads(Path(w).read_text(encoding="utf-8"))) for w in wf_paths):
-                # the model regenerated the whole crop and never saw the mask: a wide feather only ghosts the
-                # edges of the new object, so blend with a tight one
-                grow, blur = min(grow, 3), min(blur, 2)
-            layer_mask = imaging.prepare_mask(mask.crop(region.pil()), grow, blur)
+                # an editor that regenerated the whole crop and never saw the mask (Fibo): feather by a share of
+                # the selection's size (a feather already set in PhotoCraft is kept as it is)
+                sel = bbox or region
+                layer_mask = imaging.auto_feather(mask.crop(region.pil()),
+                                                  imaging.feather_radius(sel.w, sel.h, req.feather_pct))
+            else:
+                # the same soft mask the model got: the result blends exactly where the model blended it
+                layer_mask = imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
         mode = req.layer_mask if has_sel else "none"
         items = [(label, i, im, len(ims)) for label, ims in results for i, im in enumerate(ims)]
         layers = []
