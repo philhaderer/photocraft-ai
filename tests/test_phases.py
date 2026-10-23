@@ -27,3 +27,8 @@ assert seen[-1] == ("image", 1.0)
 assert "gemma.json" or True
 assert json.loads((b.exchange / "timings.json").read_text())["gemma:prompt"] >= 0
 print("ALL OK")
+
+from pccomfy.bridge import mask_is_used
+assert not mask_is_used(g)
+assert Bridge._vgl_text(g, {"outputs": {"13": {"text": ["{\"a\": 1}"]}}}) == '{"a": 1}'
+print("ALL OK (vgl, mask)")

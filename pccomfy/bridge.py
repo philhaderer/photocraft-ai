@@ -85,6 +85,15 @@ def prompt_phase_nodes(graph: dict) -> set[str]:
     return seen if writers else set()
 
 
+def mask_is_used(graph: dict) -> bool:
+    """True when a pc:mask node feeds another node. Instruction-based editors (Fibo) load the mask but ignore it."""
+    import re
+    ids = {nid for nid, n in graph.items()
+           if "mask" in re.findall(r"pc:\s*([a-z]+)", n.get("_meta", {}).get("title", "").lower())}
+    return any(isinstance(v, list) and v and str(v[0]) in ids
+               for n in graph.values() for v in n.get("inputs", {}).values())
+
+
 def after_prompt_nodes(graph: dict) -> set[str]:
     """Ids of the nodes that consume the written prompt (text encoder, sampler, decode, output ...)."""
     import re
@@ -115,6 +124,7 @@ class Bridge:
         self.exchange.mkdir(parents=True, exist_ok=True)
         self.keep_files = keep_files
         self.pipeline = ""
+        self.last_vgl = ""
         self._cancel = threading.Event()
         self._tmp: list[Path] = []
 
@@ -133,6 +143,13 @@ class Bridge:
             p.seed = random.randint(0, 2**31 - 1)
         p.batch = max(1, int(req.variants))
         tag = uuid.uuid4().hex[:8]
+        _wfs = workflows.resolve(req.workflow) if req.workflow else [None]
+        self.last_vgl = ""
+        if not p.prompt.strip():
+            for w in _wfs:
+                if w and prompt_phase_nodes(json.loads(Path(w).read_text(encoding="utf-8"))):
+                    raise BridgeError("Type an instruction first: this workflow's text model writes the prompt from it "
+                                      "(e.g. \"a large helicopter on the meadow\"). An empty one gives an arbitrary image.")
         try:
             return self._run(req, p, tag, progress)
         except PhotoCraftError as e:
@@ -251,6 +268,9 @@ class Bridge:
             start, span = 0.15 + 0.75 * k / n_wf, 0.75 / n_wf
             progress(start, f"Queued in ComfyUI ({self.pipeline}{suffix})", phase="prepare")
             hist = self._wait(prompt_id, graph, wf, start, span, suffix, progress)
+            vgl = self._vgl_text(graph, hist)
+            if vgl:
+                self.last_vgl = vgl
             results.append((label, self.comfy.output_images(hist, out_node)[: max(1, req.variants)]))
 
         progress(0.92, "Placing the result in PhotoCraft", phase="place")
@@ -259,7 +279,12 @@ class Bridge:
         layer_mask = None
         if has_sel and req.layer_mask == "soft":
             # the same soft mask the model got: the result blends exactly where the model blended it
-            layer_mask = imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
+            grow, blur = req.mask_grow, req.mask_blur
+            if wf_paths[0] and not any(mask_is_used(json.loads(Path(w).read_text(encoding="utf-8"))) for w in wf_paths):
+                # the model regenerated the whole crop and never saw the mask: a wide feather only ghosts the
+                # edges of the new object, so blend with a tight one
+                grow, blur = min(grow, 3), min(blur, 2)
+            layer_mask = imaging.prepare_mask(mask.crop(region.pil()), grow, blur)
         mode = req.layer_mask if has_sel else "none"
         items = [(label, i, im, len(ims)) for label, ims in results for i, im in enumerate(ims)]
         layers = []
@@ -274,9 +299,20 @@ class Bridge:
         if has_sel:
             self._try("select.reselect")  # selection comes back, ready for another generation
         progress(1.0, f"Done (seed {p.seed})", phase="place")
-        return {"seed": p.seed, "layers": layers, "region": region.__dict__, "size": [gw, gh], "pipeline": self.pipeline}
+        return {"seed": p.seed, "vgl": self.last_vgl, "layers": layers, "region": region.__dict__, "size": [gw, gh], "pipeline": self.pipeline}
 
     # ---------- ComfyUI ----------
+
+    @staticmethod
+    def _vgl_text(graph: dict, hist: dict) -> str:
+        """Text produced by nodes titled pc:vgl (a PreviewAny after the prompt writer), for display in the GUI."""
+        import re
+        for nid, n in graph.items():
+            if "vgl" in re.findall(r"pc:\s*([a-z]+)", n.get("_meta", {}).get("title", "").lower()):
+                text = (hist.get("outputs", {}).get(nid) or {}).get("text")
+                if text:
+                    return "\n".join(str(t) for t in text)
+        return ""
 
     def _graph(self, req: Request, p, image_name, mask_name, wf: str | None = None):
         if wf:
