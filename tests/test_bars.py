@@ -28,5 +28,5 @@ for _ in range(20):
 assert app.bars["prompt"].calls.count("stop") == 0 and len(app.bars["prompt"].calls) == 1, app.bars["prompt"].calls
 for _ in range(20):
     app._set_bar("image", -1, "x", 3)
-assert app.bars["image"].calls.count("start") == 1
+assert app.bars["image"].calls.count("start") == 0 and app.bars["image"].calls.count("stop") == 0
 print("ALL OK (bars)")

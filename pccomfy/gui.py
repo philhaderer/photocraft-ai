@@ -647,6 +647,13 @@ class App:
         state = getattr(self, "_bar_state", None)
         if state is None:
             state = self._bar_state = {}
+        if key == "image" and fraction < 0:
+            fraction = 0.0  # no sweeping "unknown" animation while the model loads: a calm empty bar, the label shows seconds
+            msg = msg if msg is not None else ""
+            elapsed = elapsed if elapsed is not None else 0
+            unknown = True
+        else:
+            unknown = False
         want = ("ind", None) if fraction < 0 else ("det", round(fraction, 3))
         if state.get(key) != want:
             if fraction < 0:
@@ -661,7 +668,8 @@ class App:
             state[key] = want
         if msg is not None:
             label = "Prompt: " if key == "prompt" else "Image: "
-            text = label + (f"{elapsed:.0f} s" if elapsed is not None and fraction < 0 else (msg.split("…")[0] or ""))
+            text = label + (f"{elapsed:.0f} s" if elapsed is not None and (fraction < 0 or unknown)
+                            else (msg.split("…")[0] or ""))
             if var.get() != text:
                 var.set(text)
 
