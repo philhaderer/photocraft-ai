@@ -233,6 +233,7 @@ class Bridge:
         self.last_vgl = ""
         self._cancel = threading.Event()
         self._tmp: list[Path] = []
+        self._last_expand: dict | None = None   # the last Expand: document, canvas size, where the original lies, result layers
 
     def cancel(self) -> None:
         self._cancel.set()
@@ -486,7 +487,10 @@ class Bridge:
                     + (f" #{i + 1}" if count > 1 else ""))
             layers.insert(0, self._import(orig, im, region, mode, name, tag, g, first=(n == 0), hidden=(g > 0),
                                           layer_mask=layer_mask))
-        if has_sel:
+        if req.mode == "outpaint":
+            self._last_expand = {"doc": orig_name, "size": (W, H), "keep": keep, "layers": list(layers)}
+            self._try("select.deselect")   # the new-area selection is not needed any more; a rerun finds the area again
+        elif has_sel:
             self._try("select.reselect")  # selection comes back, ready for another generation
         progress(1.0, f"Done (seed {p.seed})", phase="place")
         return {"seed": p.seed, "vgl": self.last_vgl, "layers": layers, "region": region.__dict__, "size": [gw, gh], "pipeline": self.pipeline}
@@ -635,6 +639,8 @@ class Bridge:
             src, _ = self._export(orig, f"{tag}-probe", need_mask=False)
             keep = imaging.content_box(src)
             if keep is None:
+                keep = self._rerun_expand(orig)   # the last result fills the margin: run the same expand again
+            if keep is None:
                 raise BridgeError("No empty canvas area found. Extend the canvas first (Crop tool, confirm with Enter), "
                                   "then generate again.")
         doc = self.pc.document()
@@ -645,6 +651,21 @@ class Bridge:
             self.pc.execute("select.rect", {"x": x0, "y": y0, "width": x1 - x0, "height": y1 - y0,
                                             "mode": "subtract", "feather": max(0, int(req.overlap) // 2)})
         return keep
+
+    def _rerun_expand(self, orig: int) -> "imaging.Box | None":
+        """Expand again right after an Expand whose result is not wanted: the margin is covered by that result, so no
+        empty band is found any more. Same document and canvas size as the last Expand: reuse where the original lies
+        and hide the previous result layers (they stay in the document, just below the new result)."""
+        last = self._last_expand
+        if not last:
+            return None
+        doc = self.pc.document()
+        name = self.pc.session()["documents"][orig]["name"]
+        if last["doc"] != name or tuple(last["size"]) != (doc["width"], doc["height"]):
+            return None
+        for layer in last["layers"]:
+            self._try("layer.hideLayers", {"layer": layer})
+        return last["keep"]
 
     def _expand_canvas(self, req: Request) -> "imaging.Box":
         """Add the requested pixels around the image; returns where the original now lies."""
