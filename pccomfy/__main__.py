@@ -58,6 +58,46 @@ def cmd_probe(cfg: dict) -> int:
     return 0
 
 
+def cmd_commands(cfg: dict, pattern: str) -> int:
+    """Debug: look for PhotoCraft commands whose name matches `pattern` (e.g. "history|undo|group")."""
+    import re
+    b = make(cfg)
+    found = None
+    for method in ("engine.commands", "engine.list", "engine.listCommands", "commands.list", "engine.describe", "help"):
+        try:
+            res = b.pc.call(method)
+        except PhotoCraftError as e:
+            print(f"{method}: {str(e)[:100]}")
+            continue
+        names = []
+
+        def walk(x):
+            if isinstance(x, str):
+                names.append(x)
+            elif isinstance(x, dict):
+                for k, v in x.items():
+                    names.append(str(k))
+                    walk(v)
+            elif isinstance(x, list):
+                for v in x:
+                    walk(v)
+        walk(res)
+        found = names
+        print(f"{method}: OK, {len(names)} names")
+        break
+    for probe in ("history.inspect", "history.list", "history.state", "document.history"):
+        try:
+            res = b.pc.execute(probe)
+            print(f"{probe}: OK " + json.dumps(res, ensure_ascii=False)[:300])
+        except PhotoCraftError as e:
+            print(f"{probe}: {str(e)[:100]}")
+    if found:
+        rx = re.compile(pattern, re.I)
+        for n in sorted({n for n in found if rx.search(n) and len(n) < 80}):
+            print("  " + n)
+    return 0
+
+
 def cmd_run(cfg: dict, a) -> int:
     d = cfg["defaults"]
     p = GenParams(prompt=a.prompt, negative=a.negative if a.negative is not None else d["negative"],
@@ -97,6 +137,8 @@ def main(argv=None) -> int:
     sub.add_parser("gui", help="bridge window (default)")
     sub.add_parser("check", help="check connections and list models")
     sub.add_parser("windows", help="debug: list PhotoCraft's windows (what the bridge window is tied to)")
+    c = sub.add_parser("commands", help="debug: list PhotoCraft commands matching a pattern")
+    c.add_argument("pattern", nargs="?", default="history|undo|group|transaction|step")
     sub.add_parser("probe", help="debug: print what PhotoCraft answers on the control channel")
     r = sub.add_parser("run", help="one generation from the command line")
     r.add_argument("mode", choices=MODES)
@@ -130,6 +172,8 @@ def main(argv=None) -> int:
         return 0
     if a.cmd == "probe":
         return cmd_probe(cfg)
+    if a.cmd == "commands":
+        return cmd_commands(cfg, a.pattern)
     if a.cmd == "run":
         return cmd_run(cfg, a)
     from .gui import run_gui
