@@ -222,7 +222,7 @@ class App:
         self.v_grow = tk.IntVar(value=g("mask_grow", d["mask_grow"]))
         self.v_blur = tk.IntVar(value=g("mask_blur", d["mask_blur"]))
         self.v_overlap = tk.IntVar(value=g("overlap", d["overlap"]))
-        self.v_scale = tk.StringVar(value=str(g("scale", 2.0)).removesuffix(".0"))
+        self.v_scale = tk.StringVar(value=str(g("scale", 1.5)).removesuffix(".0"))
         self.v_top = tk.BooleanVar(value=g("on_top", True))
         self.v_feather = tk.DoubleVar(value=g("feather_pct", 2.0))
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
