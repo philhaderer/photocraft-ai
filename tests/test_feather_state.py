@@ -26,9 +26,10 @@ def main():
         app._update_feather_state()
         return app.w_feather["state"]
 
-    # auto: off for Fill with a Fibo-type editor, on for Expand and for the built-in graph
+    # auto: off for Fill / Expand with a Fibo-type editor, on for the built-in graph
     assert state("fibo2-edit-plain.json", "inpaint", "auto") == "disabled"
-    assert state("fibo2-edit-plain.json", "outpaint", "auto") == "normal"
+    assert state("fibo2-edit-plain.json", "outpaint", "auto") == "disabled"
+    assert state(gui.BUILTIN, "outpaint", "auto") == "normal"
     assert state(gui.BUILTIN, "inpaint", "auto") == "normal"
     # explicit choices: only "soft" uses the feather
     assert state("fibo2-edit-plain.json", "inpaint", "soft") == "normal"
@@ -42,7 +43,11 @@ def main():
     assert app.w_feather["state"] == "disabled"
     app.v_mode.set("outpaint")
     app._on_mode_ui()
+    assert app.w_feather["state"] == "disabled"   # Fibo redraws the crop: no layer mask in Expand either
+    app.v_workflow.set(gui.BUILTIN)
+    app._on_mode_ui()
     assert app.w_feather["state"] == "normal"
+    app.v_workflow.set("fibo2-edit-plain.json")
     app.v_mode.set("inpaint")
     app._apply_settings({"mode": "inpaint", "layer_mask": "soft"})
     assert app.w_feather["state"] == "normal"

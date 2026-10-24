@@ -108,7 +108,7 @@ def effective_layer_mask(choice: str, mode: str, editor: bool, has_sel: bool) ->
     if not has_sel:
         return "none"
     if choice == "auto":
-        return "none" if (editor and mode in ("inpaint", "reference")) else "soft"
+        return "none" if (editor and mode in ("inpaint", "reference", "outpaint")) else "soft"
     return choice
 
 
