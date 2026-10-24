@@ -164,10 +164,11 @@ def main():
     print("missing items OK:", app.v_status.get())
 
     # the shipped example preset
-    shutil.copy(ROOT / "presets" / "Fibo both.json", Path(TMP) / "presets" / "Fibo both.json")
+    shutil.copy(ROOT / "presets" / "Fibo VGL Bionic Gemma12B.json", Path(TMP) / "presets" / "Fibo VGL Bionic Gemma12B.json")
+    app.cb_workflow["values"] = [gui.BUILTIN, "fibo2-edit-vgl-bionic-gemma4-12b.json"]
     app.refresh_presets()
-    app.load_preset("Fibo both")
-    assert app.v_workflow.get() == "fibo2-edit-both.group.json" and app.v_denoise.get() == 1.0
+    app.load_preset("Fibo VGL Bionic Gemma12B")
+    assert app.v_workflow.get() == "fibo2-edit-vgl-bionic-gemma4-12b.json" and app.v_denoise.get() == 1.0
     print("example preset OK")
 
     # the normal request path still works and remembers the preset name
