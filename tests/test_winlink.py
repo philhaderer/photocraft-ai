@@ -15,16 +15,20 @@ def w(hwnd, exe, title="x", visible=True, owner=0, exstyle=0, area=100):
 
 class Fake:
     def __init__(self, infos):
-        self.infos, self.calls = infos, []
+        self.infos, self.calls, self.owners, self.ready = infos, [], {}, True
 
     def windows(self):
         return self.infos
 
     def toplevel(self, root):
-        return 777
+        return 777 if self.ready else 0
+
+    def owner_of(self, h):
+        return self.owners.get(h, 0)
 
     def set_owner(self, h, o):
         self.calls.append((h, o))
+        self.owners[h] = o
 
 
 def main():
@@ -41,6 +45,12 @@ def main():
 
     f = Fake([w(42, pc)])
     assert winlink.link(object(), f) is True and f.calls == [(777, 42)]
+    assert winlink.link(object(), f) is True and f.calls == [(777, 42)]   # already tied: nothing is set again
+    f.owners[777] = 5                                                      # lost (Tk rebuilt its window): tied again
+    assert winlink.link(object(), f) is True and f.calls[-1] == (777, 42)
+    f = Fake([w(42, pc)])
+    f.ready = False                                                        # Tk's window not there yet: later
+    assert winlink.link(object(), f) is False and f.calls == []
     f = Fake([w(1, "other.exe")])
     assert winlink.link(object(), f) is False and f.calls == []                          # not found -> free window
     f = Fake([w(42, pc)])

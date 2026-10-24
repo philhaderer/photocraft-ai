@@ -21,26 +21,36 @@ def main():
 
     app = gui.App(cfgmod.load())
     scheduled = []
-    app.root.after = lambda ms, fn=None, *a: scheduled.append((ms, fn))
+    app.root.after = lambda ms, fn=None, *a: (scheduled.append((ms, fn)), "job")[1]
+    app.root.after_cancel = lambda j: None
+
+    def tick():
+        ms, fn = scheduled.pop()
+        fn()
+        return ms
+
     calls["link"] = calls["unlink"] = 0
     app.v_top.set(True)
     app._on_top()
-    assert calls["link"] == 1 and scheduled and scheduled[-1][0] == 1500     # not found yet -> retry later
+    assert calls["link"] == 0 and scheduled[-1][0] == 300                    # not at once: Tk's window must exist first
+    assert tick() == 300 and calls["link"] == 1 and scheduled[-1][0] == 1500  # not found -> again later
     found["v"] = True
-    scheduled.pop()[1]()
-    assert calls["link"] == 2 and not scheduled                              # found -> done
+    tick()
+    assert calls["link"] == 2 and scheduled[-1][0] == 1500                   # found -> still watched (watchdog)
     app.v_top.set(False)
     app._on_top()
-    assert calls["unlink"] == 1 and calls["link"] == 2                       # off -> free window again
+    assert calls["unlink"] == 1
+    scheduled.clear()
+    app.root.after = lambda ms, fn=None, *a: None
+    app._try_link()
+    assert calls["link"] == 2                                                # switched off: no more linking
 
     found["v"] = False
     app.v_top.set(True)
-    app._on_top()
-    for _ in range(40):
-        if not scheduled:
-            break
-        scheduled.pop()[1]()
-    assert "not found" in app.v_status.get()                                  # gives up with a note, stays free
+    app._link_tries = 0
+    for _ in range(25):
+        app._try_link()
+    assert "not found" in app.v_status.get()
 
     class E: widget = app.root
     cfgmod.save_state({})

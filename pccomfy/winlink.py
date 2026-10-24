@@ -54,6 +54,7 @@ class Win32Api:
         u.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
         u.GetWindow.restype = wintypes.HWND
         u.GetParent.restype = wintypes.HWND
+        u.GetAncestor.restype = wintypes.HWND
         u.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
         k.OpenProcess.restype = wintypes.HANDLE
         k.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)]
@@ -100,23 +101,37 @@ class Win32Api:
         return out
 
     def toplevel(self, root) -> int:
-        return int(self.u.GetParent(root.winfo_id()) or root.winfo_id())
+        """The real top-level window of a Tk root (the "TkTopLevel" wrapper around Tk's inner window), or 0 while Tk
+        has not created it yet (before the first update): the inner window must never be touched."""
+        root.update_idletasks()
+        top = self.u.GetAncestor(root.winfo_id(), 2)   # GA_ROOT
+        cls = self.c.create_unicode_buffer(64)
+        if top:
+            self.u.GetClassNameW(top, cls, 64)
+        return int(top) if top and cls.value == "TkTopLevel" else 0
+
+    def owner_of(self, hwnd: int) -> int:
+        return int(self.u.GetWindow(hwnd, GW_OWNER) or 0)
 
     def set_owner(self, hwnd: int, owner: int) -> None:
         self.u.SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, owner)
 
 
 def link(root, api=None) -> bool:
-    """Make `root` an owned window of PhotoCraft's main window. False if unavailable or PhotoCraft not found."""
+    """Make `root` an owned window of PhotoCraft's main window and check that it took. True = tied to PhotoCraft now.
+    Idempotent (nothing is set when the owner is already right), so it can run again and again as a watchdog.
+    False: not on Windows, PhotoCraft not found, or Tk's window not created yet: try again later."""
     if not available() and api is None:
         return False
     try:
         api = api or Win32Api()
         owner = pick_window(api.windows(), exe_name())
-        if not owner:
+        top = api.toplevel(root)
+        if not owner or not top:
             return False
-        api.set_owner(api.toplevel(root), owner)
-        return True
+        if api.owner_of(top) != owner:
+            api.set_owner(top, owner)
+        return api.owner_of(top) == owner
     except Exception:
         return False
 
@@ -126,7 +141,9 @@ def unlink(root, api=None) -> None:
         return
     try:
         api = api or Win32Api()
-        api.set_owner(api.toplevel(root), 0)
+        top = api.toplevel(root)
+        if top:
+            api.set_owner(top, 0)
     except Exception:
         pass
 

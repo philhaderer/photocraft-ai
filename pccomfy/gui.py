@@ -478,22 +478,28 @@ class App:
             self.root.attributes("-topmost", bool(self.v_top.get()))
             return
         self.root.attributes("-topmost", False)   # owned window instead: above PhotoCraft only
+        if getattr(self, "_link_job", None):
+            self.root.after_cancel(self._link_job)
+            self._link_job = None
         self._link_tries = 0
         if self.v_top.get():
-            self._try_link()
+            # not now: Tk's real window exists only once the event loop runs. After that the link is checked again
+            # and again (watchdog): PhotoCraft's window may appear later, or Tk may rebuild its own.
+            self._link_job = self.root.after(300, self._try_link)
         else:
             winlink.unlink(self.root)
 
     def _try_link(self):
+        self._link_job = None
         if not self.v_top.get():
             return
         if winlink.link(self.root):
-            return
-        self._link_tries = getattr(self, "_link_tries", 0) + 1
-        if self._link_tries < 20:   # PhotoCraft may still be starting
-            self.root.after(1500, self._try_link)
+            self._link_tries = 0
         else:
-            self.v_status.set("PhotoCraft window not found - this window stays free")
+            self._link_tries = getattr(self, "_link_tries", 0) + 1
+            if self._link_tries == 20:
+                self.v_status.set("PhotoCraft window not found - this window stays free until it appears")
+        self._link_job = self.root.after(1500, self._try_link)
 
     def _on_destroy(self, e):
         if e.widget is not self.root or getattr(self, "_closing", False):
