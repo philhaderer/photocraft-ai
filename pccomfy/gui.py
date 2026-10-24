@@ -398,9 +398,30 @@ class App:
         else:
             self.f_ref.pack_forget()
         self.w_denoise.configure(state="disabled" if mode == "txt2img" else "normal")
+        self._sync_prompt_field(mode)
         self._update_feather_state()
         if self._sized:
             self._fit_height()
+
+    def _prompt_text(self) -> str:
+        """The prompt to save: in Remove object the field is empty, the user's own text is kept aside."""
+        if str(self.t_prompt.cget("state")) == "disabled":
+            return getattr(self, "_prompt_kept", "")
+        return self.t_prompt.get("1.0", "end").strip()
+
+    def _sync_prompt_field(self, mode: str):
+        """Remove object ignores the text: the field is emptied and greyed out, the typed text comes back afterwards."""
+        t = self.t_prompt
+        if mode == "remove":
+            if str(t.cget("state")) != "disabled":
+                self._prompt_kept = t.get("1.0", "end").strip()
+                t.delete("1.0", "end")
+                t.configure(state="disabled")
+        elif str(t.cget("state")) == "disabled":
+            t.configure(state="normal")
+            if getattr(self, "_prompt_kept", ""):
+                t.insert("1.0", self._prompt_kept)
+            self._prompt_kept = ""
 
     def _fit_height(self, width: int | None = None):
         """Height to fit the content; the width stays (MIN_W at start, else what it is, e.g. after the user resized it)."""
@@ -584,7 +605,7 @@ class App:
             "ref_collage": bool(self.v_collage.get()),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
             "feather_pct": round(float(self.v_feather.get()), 1),
-            "prompt": self.t_prompt.get("1.0", "end").strip(), "negative": self.t_neg.get("1.0", "end").strip(),
+            "prompt": self._prompt_text(), "negative": self.t_neg.get("1.0", "end").strip(),
         }
 
     def _apply_settings(self, s: dict) -> list[str]:
