@@ -14,6 +14,8 @@
      pc:latent    EmptyLatentImage/…     ← width, height, batch_size
      pc:size      anything with width/height ← width, height
      pc:output    SaveImage/PreviewImage ← the result is taken from here (else: first node with images)
+     pc:upscale   node with a `megapixels` field ← size of the result (Upscale and Refine modes: the bridge computes it
+                  from the picture and the factor; the picture itself goes to the workflow at its own size)
 
    Model, steps, CFG and sampler stay as saved in the workflow – it is the "recipe" for that model
    (Flux wants CFG 1 and FluxGuidance 30, SDXL something else entirely).
@@ -213,6 +215,9 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
             elif tag == "clip":
                 if p.clip and "clip_name" in inp:
                     inp["clip_name"] = p.clip
+            elif tag == "upscale":
+                if "megapixels" in p.extra and "megapixels" in inp and not isinstance(inp["megapixels"], list):
+                    inp["megapixels"] = round(float(p.extra["megapixels"]), 4)
             elif tag == "output":
                 out_node = nid
             elif tag == "ref" and ref_name is not None:
@@ -232,6 +237,11 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
     else:
         reference_first(g)
     return g, out_node
+
+
+def has_upscale_slot(graph: dict) -> bool:
+    """True when the workflow can enlarge or refine a picture (a node titled pc:upscale sets the result's size)."""
+    return any("upscale" in _tags(n) for n in graph.values() if isinstance(n, dict))
 
 
 def image_tag(node: dict) -> str:
@@ -295,7 +305,7 @@ def drop_ref_slot(graph: dict) -> None:
             del inp[k]
 
 
-TEXT_ENCODERS = ("TextEncode", "CLIPTextEncode")
+TEXT_ENCODERS = ("TextEncode", "CLIPTextEncode", "AUSBOSS_NODES_Text")   # plain text holders: not a text model
 
 
 def _tags(node: dict) -> list[str]:

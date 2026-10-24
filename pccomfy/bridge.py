@@ -35,7 +35,9 @@ from . import imaging, workflows
 from .comfy import ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 
-MODES = ("inpaint", "remove", "reference", "outpaint", "img2img", "txt2img")
+MODES = ("inpaint", "remove", "reference", "outpaint", "img2img", "txt2img", "upscale", "refine")
+SCALE_MODES = ("upscale", "refine")   # the picture goes to the workflow at its own size; the workflow sets the result's size
+MAX_RESULT_MP = 24.0                  # Upscale: refuse results above this many megapixels
 LAYER_MASKS = ("auto", "soft", "selection", "none")
 
 
@@ -63,6 +65,7 @@ class Request:
     layer_mask: str = "auto"             # "auto" = none for Fill with an editor that ignores the mask, else soft;
                                          # "soft" = same mask the model got, "selection" = hard selection, "none"
     feather_pct: float = 2.0             # soft layer mask for editors that ignore the mask: % of the selection's shorter side
+    scale: float = 2.0                   # Upscale: factor per side (Refine always runs at 1.0)
     ref_collage: bool = True             # reference mode: also paste a rough copy of the reference where it should go
 
 
@@ -71,7 +74,7 @@ class Request:
 #   phase_fraction is -1 when the phase has no real progress (the UI then shows elapsed time / an estimate).
 Progress = Callable[..., None]
 
-WRITER_SKIP = ("TextEncode", "CLIPTextEncode")
+WRITER_SKIP = ("TextEncode", "CLIPTextEncode", "AUSBOSS_NODES_Text")
 
 
 def prompt_phase_nodes(graph: dict) -> set[str]:
@@ -281,7 +284,13 @@ class Bridge:
         if req.mode == "reference" and not (req.workflow and all(
                 workflows.has_ref_slot(workflows.load_template(w)) for w in _wfs)):
             raise BridgeError("Insert reference image needs a workflow with a reference slot (the Fibo workflows have one).")
-        if req.enhance and req.mode != "reference" and not p.prompt.strip() and not self._kind(req, p, _wfs):
+        if req.mode in SCALE_MODES:
+            if not (req.workflow and all(workflows.has_upscale_slot(workflows.load_template(w)) for w in _wfs)):
+                raise BridgeError("Upscale and Refine need a workflow that sets the result's size (a node titled "
+                                  "pc:upscale), e.g. flux3-klein-upscale.json.")
+            if req.mode == "upscale" and not 1.0 <= float(req.scale) <= 8.0:
+                raise BridgeError("Upscale factor: between 1 and 8.")
+        if req.enhance and req.mode not in ("reference",) + SCALE_MODES and not p.prompt.strip() and not self._kind(req, p, _wfs):
             for w in _wfs:
                 if w and prompt_phase_nodes(json.loads(Path(w).read_text(encoding="utf-8"))):
                     raise BridgeError("Type an instruction first: this workflow's text model writes the prompt from it "
@@ -375,7 +384,8 @@ class Bridge:
         if orig is None:
             raise BridgeError("Open a document in PhotoCraft first.")
         orig_name = sess["documents"][orig]["name"]
-        self._snapshot(orig_name)   # one click back to here, however many history steps the run adds
+        if req.mode != "upscale":   # Upscale only opens a new document: nothing to undo in this one
+            self._snapshot(orig_name)   # one click back to here, however many history steps the run adds
         doc = pc.document()
 
         keep = None  # outpaint: where the original image lies in the extended canvas
@@ -432,7 +442,16 @@ class Bridge:
         removal = self._kind(req, p, wf_paths)
         fill = bool(editor and req.mode == "inpaint" and has_sel and not removal and p.prompt.strip())
         marked = bool(removal) or fill
-        gw, gh = imaging.gen_size(region.w, region.h, req.base_res)
+        if req.mode in SCALE_MODES:   # the picture goes in at its own size, the workflow sets the size of the result
+            gw, gh = region.w, region.h
+            factor = float(req.scale) if req.mode == "upscale" else 1.0
+            mp = region.w * region.h * factor * factor / 1e6
+            if mp > MAX_RESULT_MP:
+                raise BridgeError(f"The result would be {mp:.0f} megapixels ({region.w * factor:.0f}×{region.h * factor:.0f}); "
+                                  f"the limit is {MAX_RESULT_MP:.0f}. Select a smaller area or use a smaller factor.")
+            p.extra["megapixels"] = mp
+        else:
+            gw, gh = imaging.gen_size(region.w, region.h, req.base_res)
         p.width, p.height = gw, gh
         progress(0.1, f"Sending to ComfyUI ({gw}×{gh})", phase="prepare")
 
@@ -506,6 +525,8 @@ class Bridge:
             results.append((label, ims))
 
         progress(0.92, "Placing the result in PhotoCraft", phase="place")
+        if req.mode == "upscale":
+            return self._open_upscaled(results, orig, orig_name, region, p, tag, progress)
         orig = self._find_doc(orig, orig_name)
         base = (p.prompt.strip() or ("object" if req.remove else req.mode))[:40]
         mode_name = "remove" if req.remove else req.mode
@@ -672,6 +693,27 @@ class Bridge:
         if hidden:
             self._try("layer.hideLayers", {"layer": layer})
         return layer
+
+    def _open_upscaled(self, results, orig: int, orig_name: str, region: "imaging.Box", p, tag: str, progress) -> dict:
+        """Upscale: every result becomes a new document (like Photoshop's Image Size into a new file); the original
+        stays as it is. The first result is opened last, so it is the active one."""
+        import re
+        pc = self.pc
+        stem = re.sub(r"[^\w .()+-]", "_", Path(orig_name).stem).strip() or "image"
+        items = [im for _, ims in results for im in ims]
+        sizes = []
+        for n, im in enumerate(reversed(items)):
+            k = len(items) - n
+            w, h = im.size
+            name = f"{stem} upscaled {w}x{h}" + (f" #{k}" if len(items) > 1 else "") + ".png"
+            full = self.exchange / name
+            self._tmp.append(full)
+            im.convert("RGB").save(full)
+            pc.open(name)
+            sizes.append([w, h])
+        progress(1.0, f"Done: opened as a new document (seed {p.seed})", phase="place")
+        return {"seed": p.seed, "vgl": "", "layers": [], "region": region.__dict__, "size": sizes[-1],
+                "pipeline": self.pipeline, "documents": len(items)}
 
     def _select_new_area(self, req: Request, orig: int, tag: str) -> "imaging.Box":
         """Outpaint: select the empty (transparent or white) canvas plus an overlap onto the existing image.
