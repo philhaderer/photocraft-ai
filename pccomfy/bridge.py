@@ -69,6 +69,8 @@ class Request:
     ref_style: str = "classic"           # reference mode: "classic" = subject first (<image_1>), long instruction, rough placement;
                                          # "simple" = the picture first (image1), the reference second (image2), one short sentence
     ref_collage: bool = True             # reference mode: also paste a rough copy of the reference where it should go
+    preset: str = ""                     # name of the preset used: the layers are named "<preset> #<run_no>"
+    run_no: int = 0                      # running number of this preset's runs (kept by the window)
 
 
 # progress(overall_fraction, message, phase="", phase_fraction=-1.0, elapsed=0.0)
@@ -563,8 +565,11 @@ class Bridge:
         for n, g in enumerate(reversed(range(len(items)))):
             label, i, raw, count = items[g]
             im = raw.convert("RGB").resize((region.w, region.h), Image.LANCZOS)
-            name = (f"AI {mode_name}" + (f" [{label}]" if label else "") + f": {base} [{p.seed}]"
-                    + (f" #{i + 1}" if count > 1 else ""))
+            if req.preset:
+                name = f"{req.preset} #{req.run_no}" + (f".{i + 1}" if count > 1 else "") + (f" [{label}]" if label else "")
+            else:
+                name = (f"AI {mode_name}" + (f" [{label}]" if label else "") + f": {base} [{p.seed}]"
+                        + (f" #{i + 1}" if count > 1 else ""))
             layers.insert(0, self._import(orig, im, region, mode, name, tag, g, first=(n == 0), hidden=(g > 0),
                                           layer_mask=layer_mask))
         if req.mode == "outpaint":

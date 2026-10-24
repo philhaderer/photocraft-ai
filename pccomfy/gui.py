@@ -1132,6 +1132,12 @@ class App:
         except (tk.TclError, ValueError) as e:
             self._status(f"Invalid value: {e}", error=True)
             return
+        req.preset = self.v_preset.get().strip()
+        if req.preset:   # running number per preset, kept between sessions
+            runs = dict(self.state.get("runs", {}))
+            req.run_no = int(runs.get(req.preset, 0)) + 1
+            runs[req.preset] = req.run_no
+            self.state["runs"] = runs
         self._save_state(req)
         self.b_go.configure(state="disabled")
         self.b_undo.configure(state="disabled")
@@ -1247,7 +1253,7 @@ class App:
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
             "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
-            "ref_collage": req.ref_collage, "ref_style": req.ref_style,
+            "ref_collage": req.ref_collage, "ref_style": req.ref_style, "runs": dict(self.state.get("runs", {})),
         })
 
     def _quit(self):
