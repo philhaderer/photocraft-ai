@@ -52,6 +52,10 @@ def main():
     app._apply_settings(dict(s))
     assert app.v_collage.get() is False and app.v_mode.get() == "reference" and shown[-1] == "on"
     assert app._request().ref_collage is False
+    # the window state keeps the switch too (it was lost on restart)
+    app._save_state(app._request())
+    import json as _json
+    assert _json.loads((Path(t.TMP) / "state.json").read_text(encoding="utf-8"))["ref_collage"] is False
     shutil.rmtree(t.TMP, ignore_errors=True)
     print("ALL OK (reference gui)")
 

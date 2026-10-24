@@ -751,6 +751,7 @@ class App:
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap,
             "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "fooocus": req.fooocus, "enhance": req.enhance, "layer_mask": req.layer_mask,
+            "ref_collage": req.ref_collage,
         })
 
     def _quit(self):
