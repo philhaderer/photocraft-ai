@@ -119,14 +119,14 @@ def outpaint_hint(keep: "imaging.Box", canvas: tuple[int, int]) -> str:
 
 
 def outpaint_prompt(prompt: str, enhance: bool, keep: "imaging.Box", canvas: tuple[int, int]) -> str:
-    """The instruction for an outpaint with an instruction editor. A text model gets the long explanation; without it
-    Fibo answers best to the short "replace white" after the description of what should go there."""
+    """The instruction for an outpaint with an instruction editor: the typed description, "replace white" (live test:
+    Fibo needs these words) and the explanation of what the white margin is. Live test, enhancement off: the short
+    suffix alone did not fill the margin, the explanation has to stay. `enhance` is unused on purpose: both paths get
+    the same text, so a workflow without a text model (whose checkbox keeps its value) behaves the same."""
     prompt = prompt.strip()
-    if enhance:
-        return prompt + outpaint_hint(keep, canvas)
-    if "replace white" in prompt.lower():
-        return prompt  # already typed: do not say it twice
-    return prompt + (", replace white" if prompt else "replace white")
+    if "replace white" not in prompt.lower():
+        prompt += ", replace white" if prompt else "Replace white"
+    return prompt + outpaint_hint(keep, canvas)
 
 
 def after_prompt_nodes(graph: dict) -> set[str]:

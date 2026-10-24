@@ -79,10 +79,12 @@ def main():
     assert "left, top, right and bottom" in h, h
 
     k = imaging.Box(0, 0, 200, 100)
-    assert bridge.outpaint_prompt(" a landscape in upper austria ", False, k, (300, 100)) == "a landscape in upper austria, replace white"
-    assert bridge.outpaint_prompt("", False, k, (300, 100)) == "replace white"
-    assert bridge.outpaint_prompt("a landscape, Replace white", False, k, (300, 100)) == "a landscape, Replace white"
-    assert bridge.outpaint_prompt("a landscape", True, k, (300, 100)).startswith("a landscape (The white margin")
+    for enh in (True, False):  # same text with and without the text model
+        a = bridge.outpaint_prompt(" a landscape in upper austria ", enh, k, (300, 100))
+        assert a.startswith("a landscape in upper austria, replace white (The white margin"), a
+        assert bridge.outpaint_prompt("", enh, k, (300, 100)).startswith("Replace white (The white margin")
+        b = bridge.outpaint_prompt("a landscape, Replace white", enh, k, (300, 100))
+        assert b.startswith("a landscape, Replace white (The white margin") and b.lower().count("replace white") == 1, b
 
     rect = imaging.new_area_rect
     # right only: overlap on the right edge of the original, none on the other sides
