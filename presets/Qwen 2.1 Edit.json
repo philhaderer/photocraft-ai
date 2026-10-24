@@ -1,0 +1,19 @@
+{
+ "format": 1,
+ "name": "Qwen 2.1 Edit",
+ "saved": "2026-10-24T19:40:00",
+ "settings": {
+  "mode": "inpaint",
+  "clip": "",
+  "denoise": 1.0,
+  "variants": 1,
+  "base_res": 1024,
+  "context": 0.4,
+  "mask_grow": 8,
+  "mask_blur": 8,
+  "overlap": 48,
+  "layer_mask": "auto",
+  "workflow": "qwen-image-21-edit.json",
+  "turbo": true
+ }
+}
