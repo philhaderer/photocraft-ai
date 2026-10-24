@@ -464,10 +464,10 @@ class Bridge:
                force_plain: bool = False):
         if wf:
             tpl = workflows.load_template(wf)
-            graph, out_node = workflows.apply_template(tpl, p, image_name, mask_name, ref_name)
             if not req.enhance or req.mode == "reference" or force_plain:
-                graph = workflows.bypass_prompt_writer(graph, p.prompt)
-            return graph, out_node
+                # first: without the text model, a picture it alone needed (Text to image) is not required either
+                tpl = workflows.bypass_prompt_writer(tpl, p.prompt)
+            return workflows.apply_template(tpl, p, image_name, mask_name, ref_name)
         if not p.checkpoint:
             raise BridgeError("Pick a model (checkpoint) or a custom workflow.")
         if req.mode == "txt2img":

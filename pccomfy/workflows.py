@@ -185,13 +185,11 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
         for tag in tags:
             seen.add(tag)
             if tag == "image":
-                if image_name is None:
-                    raise ValueError("The workflow has a pc:image node, but this mode sends no image.")
-                inp["image"] = image_name
+                if image_name is not None:
+                    inp["image"] = image_name
             elif tag == "mask":
-                if mask_name is None:
-                    raise ValueError("The workflow has a pc:mask node, but this mode has no mask (selection).")
-                inp["image"] = mask_name
+                if mask_name is not None:
+                    inp["image"] = mask_name
             elif tag == "prompt":
                 key = next((k for k in ("text", "instruction", "prompt") if k in inp), "prompt")
                 inp[key] = p.prompt
@@ -219,6 +217,10 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
         raise ValueError("The workflow has no mask node titled pc:mask.")
     if ref_name is not None and "ref" not in seen:
         raise ValueError("The workflow has no reference slot (a LoadImage node titled pc:ref).")
+    if image_name is None and "image" in seen and not drop_empty_slot(g, "image", only_keys="images."):
+        raise ValueError("The workflow has a pc:image node, but this mode sends no image.")
+    if mask_name is None and "mask" in seen and not drop_empty_slot(g, "mask"):
+        raise ValueError("The workflow has a pc:mask node, but this mode has no mask (selection).")
     if ref_name is None:
         drop_ref_slot(g)
     else:
@@ -243,6 +245,22 @@ def reference_first(graph: dict) -> None:
         b = [k for k, v in inp.items() if isinstance(v, list) and v and str(v[0]) in ref]
         if len(a) == 1 and len(b) == 1:
             inp[a[0]], inp[b[0]] = inp[b[0]], inp[a[0]]
+
+
+def drop_empty_slot(graph: dict, tag: str, only_keys: str = "") -> bool:
+    """A slot (pc:image / pc:mask) this mode cannot fill: remove its nodes and the inputs linked to them, but only when
+    that is harmless: nothing links to the mask at all (Fibo loads it and ignores it), and the picture is only linked
+    into optional inputs starting with `only_keys` (Fibo's `images.image_N`, which may stay empty). False = untouched."""
+    ids = {nid for nid, n in graph.items() if tag in _tags(n)}
+    uses = [(nid, k) for nid, n in graph.items() if nid not in ids
+            for k, v in n.get("inputs", {}).items() if isinstance(v, list) and v and str(v[0]) in ids]
+    if any(not (only_keys and k.startswith(only_keys)) for _, k in uses):
+        return False
+    for nid in ids:
+        del graph[nid]
+    for nid, k in uses:
+        del graph[nid]["inputs"][k]
+    return True
 
 
 def drop_ref_slot(graph: dict) -> None:
