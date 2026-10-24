@@ -20,6 +20,7 @@ from .workflows import GenParams, list_templates, load_template, resolve
 
 MODE_LABELS = [
     ("inpaint", "Generative fill"),
+    ("reference", "Insert reference image"),
     ("outpaint", "Expand image"),
     ("img2img", "Image → image"),
     ("txt2img", "Text → image"),
@@ -115,6 +116,7 @@ class App:
         self.v_feather = tk.DoubleVar(value=g("feather_pct", 2.0))
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
         self.v_enhance = tk.BooleanVar(value=g("enhance", True))
+        self.v_collage = tk.BooleanVar(value=g("ref_collage", True))
         self.v_lmask = tk.StringVar(value=LAYER_MASKS.get(g("layer_mask", "auto"), LAYER_MASKS["auto"]))
         self.v_status = tk.StringVar(value="Ready")
         self.v_conn = tk.StringVar(value="")
@@ -264,6 +266,16 @@ class App:
         self._spin(self.f_out, self.v_overlap, 0, 512, 8, 5).grid(row=1, column=1, padx=6, pady=(0, 6))
         self.f_out.columnconfigure(0, weight=1)
 
+        self.f_ref = ttk.LabelFrame(r, text="Reference image")
+        ttk.Label(self.f_ref, text="The top layer is the reference. Select where it should go.\nEverything below it is the picture.",
+                  style="Muted.TLabel", justify="left", wraplength=360).pack(anchor="w", padx=6, pady=(0, 2))
+        self.cb_collage = ttk.Checkbutton(self.f_ref, text="Rough placement in the picture", variable=self.v_collage)
+        self.cb_collage.pack(anchor="w", padx=6, pady=(0, 6))
+        Tooltip(self.cb_collage, "Pastes a rough, scaled copy of the reference into the selection of the picture the model "
+                                 "sees, so it knows where the subject goes and how large it is. The model redraws it.\n"
+                                 "Off: the model only gets the instruction (and where the selection lies in words).\n"
+                                 "The text model is not used in this mode.")
+
         self.f_adv = ttk.LabelFrame(r, text="Advanced")
         self.f_adv.pack(fill="x", **pad)
         tips = {
@@ -342,6 +354,10 @@ class App:
             self.f_out.pack(fill="x", padx=10, pady=4, after=self.f_modes)
         else:
             self.f_out.pack_forget()
+        if mode == "reference":
+            self.f_ref.pack(fill="x", padx=10, pady=4, after=self.f_modes)
+        else:
+            self.f_ref.pack_forget()
         self.w_denoise.configure(state="disabled" if mode == "txt2img" else "normal")
         self._update_feather_state()
         if self._sized:
@@ -354,8 +370,9 @@ class App:
 
     def _on_mode(self):
         self._on_mode_ui()
+        self._on_workflow()  # the text model is not used in reference mode
         mode = self.v_mode.get()
-        if mode in ("inpaint", "outpaint"):
+        if mode in ("inpaint", "reference", "outpaint"):
             self.v_denoise.set(1.0)  # full denoise inside the mask; lower it to keep more of the original
         elif mode == "img2img" and self.v_denoise.get() >= 0.99:
             self.v_denoise.set(0.6)
@@ -374,7 +391,7 @@ class App:
         choice = {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto")
         if choice != "auto":
             return choice == "soft"
-        if self.v_mode.get() != "inpaint":
+        if self.v_mode.get() not in ("inpaint", "reference"):
             return True
         return not self._ignores_mask()
 
@@ -408,7 +425,7 @@ class App:
             self.cb_fooocus.grid_remove()
         # the text model applies to custom workflows (nodes tagged pc:clip), not to the built-in graph, and only
         # while the prompt enhancement is on
-        has_writer = self._has_text_model()
+        has_writer = self._has_text_model() and self.v_mode.get() != "reference"  # reference mode: fixed instruction
         self.cb_enhance.configure(state="normal" if has_writer else "disabled")
         enhancing = has_writer and bool(self.v_enhance.get())
         self.cb_clip.configure(state="readonly" if (state == "disabled" and enhancing) else "disabled")
@@ -490,6 +507,7 @@ class App:
             "base_res": int(self.v_res.get()), "context": float(self.v_context.get()),
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
             "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
+            "ref_collage": bool(self.v_collage.get()),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
             "feather_pct": round(float(self.v_feather.get()), 1),
             "prompt": self.t_prompt.get("1.0", "end").strip(), "negative": self.t_neg.get("1.0", "end").strip(),
@@ -537,6 +555,7 @@ class App:
         put(self.v_overlap, "overlap", int)
         put(self.v_fooocus, "fooocus", bool)
         put(self.v_enhance, "enhance", bool)
+        put(self.v_collage, "ref_collage", bool)
         put(self.v_feather, "feather_pct", float)
         self._on_feather()
         if "layer_mask" in s:
@@ -635,6 +654,7 @@ class App:
                        mask_blur=int(self.v_blur.get()),
                        overlap=int(self.v_overlap.get()), variants=int(self.v_variants.get()),
                        fooocus=bool(self.v_fooocus.get()), enhance=bool(self.v_enhance.get()),
+                       ref_collage=bool(self.v_collage.get()),
                        layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2)
 
