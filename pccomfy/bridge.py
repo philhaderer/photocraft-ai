@@ -56,8 +56,7 @@ class Request:
     overlap: int = 48                    # outpaint overlap onto the existing image (px)
     variants: int = 1
     fooocus: bool = True                 # inpaint/outpaint: Fooocus patch (SDXL) when the server has it
-    empty_fills: bool = True             # Fill with an instruction editor and no instruction: fill the outlined area from its surroundings
-    remove: bool = False                 # "Remove object" (the bridge runs it as an inpaint with the removal instruction)
+    remove: bool = False                 # "Remove" (the bridge runs it as an inpaint with the removal instruction)
     remove_tries: int = 3                # tries (new seed each) until the object is really gone
     enhance: bool = True                 # text-model workflows: let the text model write the prompt (off = typed text as is)
     layer_mask: str = "auto"             # "auto" = none for Fill with an editor that ignores the mask, else soft;
@@ -169,21 +168,10 @@ def remove_prompt(mask: "Image.Image") -> str:
     return REMOVE_PROMPT.format(shape=_shape(mask))
 
 
-# Live test, empty meadow marked: the removal instruction left the dragon alone and changed the meadow only a little;
-# "Replace the content ... with new natural detail" invented flowers everywhere (too much).
-FILL_PROMPT = ("Redo only the area inside the red {shape} so that it blends seamlessly into the surrounding image, "
-               "continuing the same scenery, textures and lighting. Do not remove or change anything outside the {shape}. "
-               "Also remove the red {shape} itself.")
-
-
 def _shape(mask: "Image.Image") -> str:
     box = imaging.mask_bbox(mask)
     rect = bool(box) and (np.asarray(mask.convert("L")) > 127).sum() >= 0.97 * box.w * box.h
     return "rectangle" if rect else "outline"
-
-
-def fill_prompt(mask: "Image.Image") -> str:
-    return FILL_PROMPT.format(shape=_shape(mask))
 
 
 def outline_width(gen_w: int, gen_h: int) -> int:
@@ -282,19 +270,22 @@ class Bridge:
 
     @staticmethod
     def _kind(req: Request, p, wfs: list) -> str:
-        """"remove": Remove object. "fill": Generative fill without an instruction. Both only with an instruction
-        editor (a workflow that does not use the mask, i.e. Fibo): the selection is drawn into the picture as a red
-        outline and a fixed instruction says what to do. "" = a normal run."""
+        """"remove": Remove, only with an instruction editor (a workflow that does not use the mask, i.e. Fibo): the
+        selection is drawn into the picture as a red outline and a fixed instruction says what to do. "" = a normal run.
+        Generative fill with an editor and no text is an error: Remove is the way to take something away."""
         if req.mode != "inpaint" or not wfs or not wfs[0]:
             if req.remove:
-                raise BridgeError("Remove object needs a Fibo workflow (pick one in the Workflow list).")
+                raise BridgeError("Remove needs a Fibo workflow (pick one in the Workflow list).")
             return ""
         editor = not any(mask_is_used(json.loads(Path(w).read_text(encoding="utf-8"))) for w in wfs)
         if req.remove:
             if not editor:
-                raise BridgeError("Remove object needs a Fibo workflow, this one uses the mask to inpaint.")
+                raise BridgeError("Remove needs a Fibo workflow, this one uses the mask to inpaint.")
             return "remove"
-        return "fill" if (editor and req.empty_fills and not p.prompt.strip()) else ""
+        if editor and not p.prompt.strip():
+            raise BridgeError("Generative fill needs a text: describe what should appear in the selection "
+                              "(\"a helicopter on the meadow\"). To take something away use \"Remove\".")
+        return ""
 
     # ---------- waiting for ComfyUI, with separate prompt / image phases ----------
 
@@ -445,7 +436,7 @@ class Bridge:
                 # the text model is bypassed in this mode: a fixed instruction with <image_1>/<image_2> (+ where)
                 gp = dataclasses.replace(p, prompt=reference_prompt(p.prompt, req.ref_collage, reference_where(bbox, region)))
             if removal:   # fixed instruction, the text model is bypassed
-                gp = dataclasses.replace(p, prompt=(remove_prompt if removal == "remove" else fill_prompt)(mask.crop(region.pil())))
+                gp = dataclasses.replace(p, prompt=remove_prompt(mask.crop(region.pil())))
             if hint and wf and req.enhance and not removal and prompt_phase_nodes(workflows.load_template(wf)):
                 gp = dataclasses.replace(p, prompt=p.prompt.strip() + hint)  # text-model workflows only
             start, span = 0.15 + 0.75 * k / n_wf, 0.75 / n_wf
@@ -470,7 +461,7 @@ class Bridge:
 
         progress(0.92, "Placing the result in PhotoCraft", phase="place")
         orig = self._find_doc(orig, orig_name)
-        base = (p.prompt.strip() or ("object" if req.remove else "area" if removal else req.mode))[:40]
+        base = (p.prompt.strip() or ("object" if req.remove else req.mode))[:40]
         mode_name = "remove" if req.remove else req.mode
         layer_mask = None
         lm_mode = effective_layer_mask(req.layer_mask, req.mode, editor, has_sel)

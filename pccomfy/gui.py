@@ -21,21 +21,20 @@ from .workflows import GenParams, list_templates, load_template, resolve
 
 MODE_LABELS = [
     ("inpaint", "Generative fill"),
-    ("remove", "Remove object"),
+    ("remove", "Remove"),
     ("reference", "Insert reference image"),
     ("outpaint", "Expand image"),
     ("img2img", "Image → image"),
     ("txt2img", "Text → image"),
 ]
 MODE_TIPS = {
-    "inpaint": "Select an area (Lasso / Rectangular Marquee), then Generate.\n"
-               "With text: describes what should appear there (\"a helicopter on the meadow\").\n"
-               "Without text (Fibo workflows): the area is redone from its surroundings, nothing else is removed or "
-               "changed. To take an object away use \"Remove object\".\n"
+    "inpaint": "Select an area (Lasso / Rectangular Marquee), type what should appear there (\"a helicopter on the meadow\"), "
+               "then Generate.\n"
+               "A text is required with Fibo workflows. To take something away use \"Remove\".\n"
                "Fibo redraws the whole surrounding crop and ignores the mask, so the layer mask is off in \"auto\".",
     "remove": "Select the object to remove (tightly, but with the whole object inside), then Generate. No text needed.\n"
               "A red rectangle / outline is drawn into the picture the model gets (never into your document) and a fixed "
-              "instruction says: erase the main subject inside it and paint the scenery behind.\n"
+              "instruction says: erase everything inside it, every part of the subject, and paint the scenery behind.\n"
               "If the object is still there the plugin tries again by itself (up to 3 times, new seed each).\n"
               "If a part of the object is already gone, include what is left in the selection: Fibo likes to restore "
               "half-removed figures. Fibo workflows only.",

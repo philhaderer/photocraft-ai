@@ -23,11 +23,11 @@ def red(im):
     return int(((a[..., 0] > 240) & (a[..., 1] < 20) & (a[..., 2] < 20)).sum())
 
 
-def run(wf, prompt="", enhance=True, empty_fills=True, mode="inpaint", **kw):
+def run(wf, prompt="", enhance=True, mode="inpaint", **kw):
     tmp = tempfile.mkdtemp()
     pc, _, b = t.make(tmp, layers=2)
     b.comfy = t.FakeComfy()
-    req = Request(mode=mode, workflow=str(ROOT / "workflows" / wf), enhance=enhance, empty_fills=empty_fills, **kw)
+    req = Request(mode=mode, workflow=str(ROOT / "workflows" / wf), enhance=enhance, **kw)
     req.params = workflows.GenParams(prompt=prompt, seed=7)
     return b, b.run(req)
 
@@ -45,13 +45,14 @@ def main():
     assert out.getpixel((30, 50)) == (255, 0, 0) and out.getpixel((50, 50)) == (30, 60, 200) and out.getpixel((5, 5)) == (30, 60, 200)
     assert red(out) < 40 * 4 * 5 + 200
 
-    # Generative fill, empty prompt, plain Fibo workflow: outline in the picture, fixed FILL prompt, one image only
-    b, res = run("fibo2-edit-plain.json")
-    img = next(v for k, v in b.comfy.uploads.items() if k.endswith("-image.png"))
-    assert red(img) > 50
-    g = b.comfy.graphs[0]
-    assert prompt_of(g) == bridge.FILL_PROMPT.format(shape="rectangle") and len(b.comfy.graphs) == 1
-    assert not [k for k in b.comfy.uploads if k.endswith("-ref.png")]
+    # Generative fill without text and an instruction editor: a clear error (Remove is for taking things away)
+    for wf in ("fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json"):
+        try:
+            run(wf)
+        except BridgeError as e:
+            assert "needs a text" in str(e) and "Remove" in str(e)
+        else:
+            raise AssertionError("expected error")
 
     # Remove object: the removal instruction, text model bypassed even with enhance on, no "type an instruction" error
     b, _ = run("fibo2-edit-vgl-bionic-qwen35-9b.json", enhance=True, mode="remove")
@@ -106,20 +107,12 @@ def main():
     from PIL import ImageDraw
     ImageDraw.Draw(mm).ellipse((10, 10, 90, 90), fill=255)
     assert "red outline" in bridge.remove_prompt(mm) and "red rectangle" in bridge.remove_prompt(Image.new("L", (50, 50), 255))
-    assert "red outline" in bridge.fill_prompt(mm)
 
     # typed text: normal fill, no outline
     b, _ = run("fibo2-edit-plain.json", prompt="a red car")
     img = next(v for k, v in b.comfy.uploads.items() if k.endswith("-image.png"))
     assert red(img) == 0 and prompt_of(b.comfy.graphs[0]).startswith("a red car")
 
-    # switched off: old behaviour with a text-model workflow (error)
-    try:
-        run("fibo2-edit-vgl-bionic-qwen35-9b.json", enhance=True, empty_fills=False)
-    except BridgeError as e:
-        assert "Type an instruction" in str(e)
-    else:
-        raise AssertionError("expected error")
     print("ALL OK (remove object)")
 
 
