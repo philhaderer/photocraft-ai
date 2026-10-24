@@ -114,44 +114,11 @@
    "title": "Negative prompt"
   }
  },
- "31": {
-  "class_type": "MaskBoundingBox+",
-  "inputs": {
-   "padding": 256,
-   "blur": 0,
-   "mask": [
-    "12",
-    0
-   ],
-   "image_optional": [
-    "10",
-    0
-   ]
-  },
-  "_meta": {
-   "title": "Crop around mask (padding = context)"
-  }
- },
- "32": {
-  "class_type": "ImageScaleToTotalPixels",
-  "inputs": {
-   "upscale_method": "lanczos",
-   "megapixels": 1.5,
-   "resolution_steps": 32,
-   "image": [
-    "31",
-    1
-   ]
-  },
-  "_meta": {
-   "title": "Scale crop to ~1.5 MP"
-  }
- },
  "33": {
   "class_type": "VAEEncode",
   "inputs": {
    "pixels": [
-    "32",
+    "10",
     0
    ],
    "vae": [
@@ -160,7 +127,7 @@
    ]
   },
   "_meta": {
-   "title": "Encode crop"
+   "title": "Encode the crop (the bridge cuts it around the selection and scales it to ~1.5 MP)"
   }
  },
  "34": {
@@ -171,7 +138,7 @@
     0
    ],
    "mask": [
-    "31",
+    "12",
     0
    ]
   },
@@ -225,50 +192,22 @@
    "title": "Decode"
   }
  },
- "51": {
-  "class_type": "ImageScale",
-  "inputs": {
-   "upscale_method": "lanczos",
-   "width": [
-    "31",
-    4
-   ],
-   "height": [
-    "31",
-    5
-   ],
-   "crop": "disabled",
-   "image": [
-    "50",
-    0
-   ]
-  },
-  "_meta": {
-   "title": "Scale back to crop size"
-  }
- },
  "52": {
   "class_type": "ImageCompositeMasked",
   "inputs": {
-   "x": [
-    "31",
-    2
-   ],
-   "y": [
-    "31",
-    3
-   ],
+   "x": 0,
+   "y": 0,
    "resize_source": false,
    "destination": [
     "10",
     0
    ],
    "source": [
-    "51",
+    "50",
     0
    ],
    "mask": [
-    "31",
+    "12",
     0
    ]
   },

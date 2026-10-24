@@ -37,6 +37,9 @@ def main():
     # the result is the picture itself (outside the mask unchanged): ImageCompositeMasked pastes into pc:image
     comp = next(n for n in g.values() if n["class_type"] == "ImageCompositeMasked")
     assert comp["inputs"]["destination"] == [by_tag(g, "image")[0], 0]
+    # no custom mask-box node (ComfyUI_essentials is avoided): the bridge cuts the crop around the selection itself
+    assert not any(n["class_type"] in ("MaskBoundingBox+", "ImageScale") for n in g.values())
+    assert g[next(k for k, n in g.items() if n["class_type"] == "VAEEncode")]["inputs"]["pixels"] == [by_tag(g, "image")[0], 0]
     # no leftovers of the original's showcase/preview branch; the window's mask grow/blur does that job
     assert not any(n["class_type"] in ("SaveImage", "AddLabel", "ImageStitch", "GrowMaskWithBlur") for n in g.values())
     # without the LoRA (the file may not be installed): the loader is gone and the model feeds straight on
