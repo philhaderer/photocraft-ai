@@ -203,9 +203,13 @@ def main():
     placed = imaging.paste_reference(Image.new("RGB", (100, 100), "black"), rgba, imaging.Box(10, 10, 80, 60))
     assert placed.getpixel((50, 40)) == YELLOW[:3] and placed.getpixel((12, 12)) == (0, 0, 0)  # 40x60 fits 40x60, centred
     # the sentence: both image tags, the typed text, the placement
-    t = bridge.reference_prompt("standing on the left", True, " (WHERE)")
-    assert "<image_1>" in t and "<image_2>" in t and "standing on the left" in t and t.endswith(" (WHERE)") and "pasted" in t
-    assert "pasted" not in bridge.reference_prompt("", False)
+    t = bridge.reference_prompt("standing on the left", True, " WHERE")
+    assert "<image_1>" in t and "<image_2>" in t and t.endswith("standing on the left") and "already pasted" in t and "WHERE" not in t
+    t = bridge.reference_prompt("standing on the left", False, " WHERE")
+    assert "WHERE standing on the left" in t and "pasted" not in t       # no copy: the words say where
+    assert t.startswith("Place the subject from <image_1> into <image_2>")  # subject first, picture second
+    w = bridge.reference_where(imaging.Box(10, 10, 20, 20), imaging.Box(0, 0, 40, 40))
+    assert "<image_2>" in w and "centre" in w and "25%" in w
 
     for wf in ("fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json"):
         # with the rough placement
@@ -213,9 +217,11 @@ def main():
         g = b.comfy.graphs[0]
         enc = next(n for n in g.values() if n["class_type"] == "TextEncodeFibo2")
         assert "<image_2>" in enc["inputs"]["prompt"] and "<image_1>" in enc["inputs"]["prompt"], wf
-        assert "looking at the camera" in enc["inputs"]["prompt"] and "Apply this only at" in enc["inputs"]["prompt"], wf
+        assert "looking at the camera" in enc["inputs"]["prompt"] and "already pasted" in enc["inputs"]["prompt"], wf
         assert not any(n["class_type"] in ("TextGenerate", "VGLBionicEditPrompt", "PreviewAny") for n in g.values()), wf  # text model bypassed
-        ref_node = g[enc["inputs"]["images.image_2"][0]]
+        ref_node = g[enc["inputs"]["images.image_1"][0]]   # the reference is image_1, the picture image_2
+        pic_node = g[enc["inputs"]["images.image_2"][0]]
+        assert pic_node["inputs"]["image"].endswith("-image.png"), wf
         ref_up = b.comfy.uploads[ref_node["inputs"]["image"]]
         assert ref_up.size == (40, 60) and ref_up.getpixel((20, 30)) == YELLOW[:3], wf
         img_up = next(v for k, v in b.comfy.uploads.items() if k.endswith("-image.png"))
@@ -229,7 +235,7 @@ def main():
         img_up = next(v for k, v in b.comfy.uploads.items() if k.endswith("-image.png"))
         assert not has_yellow(img_up), wf
         enc = next(n for n in b.comfy.graphs[0].values() if n["class_type"] == "TextEncodeFibo2")
-        assert "pasted" not in enc["inputs"]["prompt"], wf
+        assert "pasted" not in enc["inputs"]["prompt"] and "Put the subject at the" in enc["inputs"]["prompt"], wf
 
     # errors, each with a clear message
     expect_error("Select where the reference image should go", with_sel=False)

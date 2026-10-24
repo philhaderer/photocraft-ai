@@ -110,31 +110,43 @@ def effective_layer_mask(choice: str, mode: str, editor: bool, has_sel: bool) ->
     return choice
 
 
-REFERENCE_PROMPT = ("Insert the subject from <image_2> into <image_1>. Keep the subject exactly as it looks in <image_2> "
-                    "(face, hair, clothing, colours, proportions) and match the lighting, perspective and shadows of "
-                    "<image_1>. Leave everything else in <image_1> unchanged.")
-REFERENCE_COLLAGE_NOTE = (" A rough copy of the subject is pasted into <image_1> to show where it goes and how large it "
-                          "is: redraw it properly there, integrated into the scene.")
+REFERENCE_PROMPT = ("Place the subject from <image_1> into <image_2>. Keep the subject exactly as it looks in <image_1> "
+                    "(face, hair, clothing, colours, proportions) and match the lighting, colours and shadows of "
+                    "<image_2>. Keep everything else in <image_2> unchanged.")
+REFERENCE_COLLAGE_NOTE = (" A rough copy of the subject is already pasted into <image_2>: keep the subject at exactly "
+                          "that position and size and make it blend into the scene.")
 
 
 def reference_prompt(typed: str, collage: bool, where: str = "") -> str:
-    """The instruction for "insert reference image". Fibo 2 Edit addresses the images as <image_1> (the picture) and
-    <image_2> (the reference), in the order they are connected. `where` is the placement_hint sentence."""
-    text = REFERENCE_PROMPT + (REFERENCE_COLLAGE_NOTE if collage else "")
+    """The instruction for "insert reference image". Fibo 2 Edit composes best with the subject first: <image_1> is the
+    reference, <image_2> the picture (live tests: with the picture first the model redraws the reference and ignores
+    the scene). With the rough placement the pasted copy shows where; otherwise `where` (reference_where) says it."""
+    text = REFERENCE_PROMPT + (REFERENCE_COLLAGE_NOTE if collage else where)
     if typed.strip():
         text += " " + typed.strip()
-    return text + where
+    return text
 
 
-def placement_hint(sel: "imaging.Box", crop: "imaging.Box") -> str:
-    """Where the selection lies inside the crop, in words, for instruction-based editors that only see the crop."""
+def _where(sel: "imaging.Box", crop: "imaging.Box") -> tuple[str, int]:
+    """Where the selection lies inside the crop in words, and the share of the crop it covers in percent."""
     cx = (sel.center[0] - crop.x) / max(1, crop.w)
     cy = (sel.center[1] - crop.y) / max(1, crop.h)
     horiz = "left" if cx < 0.38 else "right" if cx > 0.62 else "centre"
     vert = "upper" if cy < 0.38 else "lower" if cy > 0.62 else "middle"
     where = "centre" if (horiz == "centre" and vert == "middle") else f"{vert} {horiz}".replace("middle left", "left").replace("middle right", "right").replace("upper centre", "top centre").replace("lower centre", "bottom centre")
-    share = round(100 * sel.w * sel.h / max(1, crop.w * crop.h))
+    return where, round(100 * sel.w * sel.h / max(1, crop.w * crop.h))
+
+
+def placement_hint(sel: "imaging.Box", crop: "imaging.Box") -> str:
+    """Where the selection lies inside the crop, in words, for instruction-based editors that only see the crop."""
+    where, share = _where(sel, crop)
     return f" (Apply this only at the {where} of the image, in an area of roughly {share}% of the image; leave everything else as it is.)"
+
+
+def reference_where(sel: "imaging.Box", crop: "imaging.Box") -> str:
+    """Reference mode without the rough placement: where the subject goes in <image_2> and how large."""
+    where, share = _where(sel, crop)
+    return f" Put the subject at the {where} of <image_2>, covering roughly {share}% of the image."
 
 
 def outpaint_hint(keep: "imaging.Box", canvas: tuple[int, int]) -> str:
@@ -367,7 +379,7 @@ class Bridge:
                 gp = dataclasses.replace(p, prompt=outpaint_prompt(p.prompt, req.enhance, keep, (W, H)))
             if req.mode == "reference":
                 # the text model is bypassed in this mode: a fixed instruction with <image_1>/<image_2> (+ where)
-                gp = dataclasses.replace(p, prompt=reference_prompt(p.prompt, req.ref_collage, placement_hint(bbox, region)))
+                gp = dataclasses.replace(p, prompt=reference_prompt(p.prompt, req.ref_collage, reference_where(bbox, region)))
             if hint and wf and req.enhance and prompt_phase_nodes(workflows.load_template(wf)):
                 gp = dataclasses.replace(p, prompt=p.prompt.strip() + hint)  # text-model workflows only
             graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name)

@@ -171,7 +171,7 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
     (TextGenerate, TextEncodeFibo2, ...).
     `pc:ref` is the slot for a reference image (a LoadImage feeding TextEncodeFibo2's `images.image_2`). The slot is
     always in the workflow; with no reference (`ref_name` None) the node and the links to it are dropped, so the run
-    is exactly the one-image run.
+    is exactly the one-image run. With a reference it becomes `image_1` and the picture `image_2` (reference_first).
     """
     g = json.loads(json.dumps(graph))  # deep copy
     out_node = None
@@ -221,12 +221,28 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
         raise ValueError("The workflow has no reference slot (a LoadImage node titled pc:ref).")
     if ref_name is None:
         drop_ref_slot(g)
+    else:
+        reference_first(g)
     return g, out_node
 
 
 def has_ref_slot(graph: dict) -> bool:
     """True when the workflow has a reference-image slot (a node titled pc:ref)."""
     return any("ref" in _tags(n) for n in graph.values() if isinstance(n, dict))
+
+
+def reference_first(graph: dict) -> None:
+    """Fibo 2 Edit composes best with the subject first and the scene second ("Place the subject from <image_1> into
+    <image_2>", Bria's own example): with the scene first the model redraws the reference as the result and ignores
+    the scene. A node that takes both the picture (pc:image) and the reference (pc:ref) gets them swapped."""
+    pic = {nid for nid, n in graph.items() if "image" in _tags(n)}
+    ref = {nid for nid, n in graph.items() if "ref" in _tags(n)}
+    for n in graph.values():
+        inp = n.get("inputs", {})
+        a = [k for k, v in inp.items() if isinstance(v, list) and v and str(v[0]) in pic]
+        b = [k for k, v in inp.items() if isinstance(v, list) and v and str(v[0]) in ref]
+        if len(a) == 1 and len(b) == 1:
+            inp[a[0]], inp[b[0]] = inp[b[0]], inp[a[0]]
 
 
 def drop_ref_slot(graph: dict) -> None:

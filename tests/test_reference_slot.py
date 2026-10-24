@@ -30,11 +30,13 @@ def main():
         g, out = workflows.apply_template(tpl, p, "img.png", "mask.png")
         assert not workflows.has_ref_slot(g) and "images.image_2" not in g[enc]["inputs"], name
         assert "images.image_1" in g[enc]["inputs"] and links_resolve(g) and out in g, name
-        # with a reference: the slot carries the uploaded file and feeds image_2
+        assert g[g[enc]["inputs"]["images.image_1"][0]]["inputs"]["image"] == "img.png", name  # the picture is image_1
+        # with a reference: the reference comes first (Fibo composes best subject-first), the picture second
         g2, _ = workflows.apply_template(tpl, p, "img.png", "mask.png", ref_name="ref.png")
-        ref = g2[g2[enc]["inputs"]["images.image_2"][0]]
+        ref = g2[g2[enc]["inputs"]["images.image_1"][0]]
+        pic = g2[g2[enc]["inputs"]["images.image_2"][0]]
         assert ref["class_type"] == "LoadImage" and ref["inputs"]["image"] == "ref.png", name
-        assert g2[enc]["inputs"]["images.image_1"] == tpl[enc]["inputs"]["images.image_1"] and links_resolve(g2), name
+        assert pic["class_type"] == "LoadImage" and pic["inputs"]["image"] == "img.png" and links_resolve(g2), name
         # the template itself is never changed
         assert workflows.has_ref_slot(tpl) and tpl[enc]["inputs"]["images.image_2"][0] in tpl, name
         # the prompt-enhancement bypass still works with a reference
