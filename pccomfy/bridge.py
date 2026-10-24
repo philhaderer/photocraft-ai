@@ -157,8 +157,11 @@ def reference_where(sel: "imaging.Box", crop: "imaging.Box") -> str:
 # as if it had never been there, and paint the empty scenery behind it" removed it every time. Failed: "Remove the object
 # marked by the red outline ...", "... inside the red frame ... the red frame must not appear" (the model removed the
 # frame and kept the subject). What works is a command to erase and to paint the scenery behind.
-REMOVE_PROMPT = ("Erase the main subject inside the red {shape} completely, as if it had never been there, and paint the "
-                 "empty scenery behind it. Also remove the red {shape} itself.")
+# Multi-part figure (knight with weapon, tight frame): "Erase the main subject ..." left head-less legs standing; naming
+# "every part of it, its limbs, clothing, accessories and anything it holds" removed all of it in one pass (2 seeds).
+REMOVE_PROMPT = ("Erase everything inside the red {shape} completely: the whole subject from top to bottom, including "
+                 "every part of it, its limbs, clothing, accessories and anything it holds. Paint the empty scenery "
+                 "behind it. Also remove the red {shape} itself.")
 
 
 def remove_prompt(mask: "Image.Image") -> str:
