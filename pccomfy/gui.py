@@ -400,7 +400,7 @@ class App:
             self.f_ref.pack(fill="x", padx=10, pady=4, after=self.f_modes)
         else:
             self.f_ref.pack_forget()
-        self.w_denoise.configure(state="disabled" if mode == "txt2img" else "normal")
+        self.w_denoise.configure(state="disabled" if mode == "txt2img" or self._ignores_mask() else "normal")   # an editor always runs at 1.0
         self._sync_prompt_field(mode)
         self._update_feather_state()
         if self._sized:
@@ -437,8 +437,8 @@ class App:
         mode = self.v_mode.get()
         if mode in ("inpaint", "remove", "reference", "outpaint"):
             self.v_denoise.set(1.0)  # full denoise inside the mask; lower it to keep more of the original
-        elif mode == "img2img" and self.v_denoise.get() >= 0.99:
-            self.v_denoise.set(0.6)
+        elif mode == "img2img" and self.v_denoise.get() >= 0.99 and not self._ignores_mask():
+            self.v_denoise.set(0.6)   # not for Fibo-type editors: below 1.0 they produce a different, broken picture
 
     def _status(self, msg: str, error: bool = False):
         """The status line. An error gets a red "!" badge and red text, it never opens a dialog."""

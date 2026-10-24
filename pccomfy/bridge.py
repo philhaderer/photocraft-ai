@@ -386,6 +386,11 @@ class Bridge:
         editor = bool(wf_paths[0]) and not any(mask_is_used(json.loads(Path(w).read_text(encoding="utf-8")))
                                                for w in wf_paths)
 
+        if editor and p.denoise != 1.0:
+            # live test (Image → image at 0.6): an instruction editor starts from an empty latent, so a denoise below 1.0
+            # gives a broken picture (a whole creek of ducks); at 1.0 the same instruction edits the picture correctly
+            p.denoise = 1.0
+
         src = mask = None
         if req.mode != "txt2img" or has_sel:
             progress(0.05, "Exporting the image from PhotoCraft", phase="prepare")
