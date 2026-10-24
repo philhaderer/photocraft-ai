@@ -69,6 +69,7 @@ def preset_stem(name: str) -> str:
 
 BG, PANEL, FG, MUTED, ACCENT = "#16181d", "#1f2229", "#e6e8ee", "#8a90a0", "#7c5cff"
 ERROR, ERROR_TEXT = "#e5484d", "#ff8a8a"
+MIN_W = 420  # the window opens at this width; text fields etc. stretch to it
 
 
 class App:
@@ -88,7 +89,8 @@ class App:
         self.root = tk.Tk()
         self.root.title("PhotoCraft × ComfyUI")
         self.root.configure(bg=BG)
-        self.root.minsize(420, 560)
+        self.root.minsize(MIN_W, 560)
+        self._sized = False
         self._style()
 
         g = lambda k, default: self.state.get(k, default)  # noqa: E731
@@ -120,6 +122,8 @@ class App:
         self._build(d)
         self._on_mode()
         self._on_top()
+        self._fit_height(MIN_W)
+        self._sized = True
         self.root.after(100, self._poll)
         self.root.after(200, self.refresh)
         self.refresh_presets()
@@ -158,7 +162,7 @@ class App:
         self.root.option_add("*TCombobox*Listbox.foreground", FG)
 
     def _text(self, parent, height):
-        t = tk.Text(parent, height=height, wrap="word", bg=PANEL, fg=FG, insertbackground=FG,
+        t = tk.Text(parent, height=height, width=10, wrap="word", bg=PANEL, fg=FG, insertbackground=FG,
                     relief="flat", highlightthickness=1, highlightbackground="#2c303a", highlightcolor=ACCENT,
                     font=(FONT, 10), padx=6, pady=4)
         return t
@@ -174,7 +178,7 @@ class App:
         pf.pack(fill="x", **pad)
         pf.columnconfigure(1, weight=1)
         ttk.Label(pf, text="Preset").grid(row=0, column=0, sticky="w")
-        self.cb_preset = ttk.Combobox(pf, textvariable=self.v_preset, state="readonly")
+        self.cb_preset = ttk.Combobox(pf, textvariable=self.v_preset, state="readonly", width=8)
         self.cb_preset.bind("<<ComboboxSelected>>", lambda e: self.load_preset(self.v_preset.get()))
         self.cb_preset.grid(row=0, column=1, sticky="ew", padx=6)
         ttk.Button(pf, text="Save", width=6, command=self.save_preset).grid(row=0, column=2)
@@ -185,11 +189,11 @@ class App:
         mf.pack(fill="x", **pad)
         mf.columnconfigure(1, weight=1)
         ttk.Label(mf, text="Workflow").grid(row=0, column=0, sticky="w")
-        self.cb_workflow = ttk.Combobox(mf, textvariable=self.v_workflow, state="readonly")
+        self.cb_workflow = ttk.Combobox(mf, textvariable=self.v_workflow, state="readonly", width=8)
         self.cb_workflow.bind("<<ComboboxSelected>>", lambda e: self._on_workflow())
         self.cb_workflow.grid(row=0, column=1, sticky="ew", padx=6)
         ttk.Label(mf, text="Text model").grid(row=1, column=0, sticky="w", pady=(4, 0))
-        self.cb_clip = ttk.Combobox(mf, textvariable=self.v_clip, state="readonly")
+        self.cb_clip = ttk.Combobox(mf, textvariable=self.v_clip, state="readonly", width=8)
         self.cb_clip.grid(row=1, column=1, sticky="ew", padx=6, pady=(4, 0))
         self.cb_enhance = ttk.Checkbutton(mf, text="LLM prompt enhancement", variable=self.v_enhance, command=self._on_workflow)
         self.cb_enhance.grid(row=2, column=1, sticky="w", padx=6, pady=(4, 0))
@@ -254,7 +258,7 @@ class App:
 
         self.f_out = ttk.LabelFrame(r, text="Expand image")
         ttk.Label(self.f_out, text="Extend the canvas with the Crop tool (confirm with Enter).\nThe empty area is filled.",
-                  style="Muted.TLabel", justify="left").grid(row=0, column=0, rowspan=2, sticky="w", padx=6, pady=(0, 6))
+                  style="Muted.TLabel", justify="left", wraplength=280).grid(row=0, column=0, rowspan=2, sticky="w", padx=6, pady=(0, 6))
         ttk.Label(self.f_out, text="Overlap", style="Muted.TLabel").grid(row=0, column=1, sticky="w", padx=6)
         self._spin(self.f_out, self.v_overlap, 0, 512, 8, 5).grid(row=1, column=1, padx=6, pady=(0, 6))
         self.f_out.columnconfigure(0, weight=1)
@@ -317,7 +321,7 @@ class App:
         self.lbl_status = ttk.Label(st, textvariable=self.v_status, wraplength=380, justify="left")
         self.lbl_status.pack(side="left", fill="x", expand=True)
         ttk.Label(r, text="Prompt written by the text model (VGL)", style="Muted.TLabel").pack(anchor="w", padx=10, pady=(6, 0))
-        self.t_vgl = tk.Text(r, height=6, wrap="word", state="disabled", font=(FONT, 8))
+        self.t_vgl = tk.Text(r, height=6, width=10, wrap="word", state="disabled", font=(FONT, 8))
         self.t_vgl.pack(fill="x", padx=10)
         foot = ttk.Frame(r)
         foot.pack(fill="x", side="bottom", padx=10, pady=6)
@@ -335,6 +339,13 @@ class App:
         else:
             self.f_out.pack_forget()
         self.w_denoise.configure(state="disabled" if mode == "txt2img" else "normal")
+        if self._sized:
+            self._fit_height()
+
+    def _fit_height(self, width: int | None = None):
+        """Height to fit the content; the width stays (MIN_W at start, else what it is, e.g. after the user resized it)."""
+        self.root.update_idletasks()
+        self.root.geometry(f"{width or self.root.winfo_width()}x{max(560, self.root.winfo_reqheight())}")
 
     def _on_mode(self):
         self._on_mode_ui()

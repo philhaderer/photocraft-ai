@@ -59,6 +59,12 @@ class Widget:
     def configure(self, *a, **k):
         self._o.update(k)
 
+    def winfo_width(self):
+        return 420
+
+    def winfo_reqheight(self):
+        return 700
+
     def __getattr__(self, name):
         if name.startswith("__"):
             raise AttributeError(name)
