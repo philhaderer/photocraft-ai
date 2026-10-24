@@ -117,6 +117,35 @@ def cmd_commands(cfg: dict, pattern: str) -> int:
     return 0
 
 
+def cmd_viewtest(cfg: dict) -> int:
+    """Debug: find the control-channel call that sets zoom and position (sets the values it just read, so nothing moves)."""
+    b = make(cfg)
+    v = b.pc.call("ui.inspect").get("views") or []
+    if not v:
+        print("No document open.")
+        return 1
+    cur = v[0]
+    print("current:", json.dumps(cur))
+    z, c = cur["zoom"], cur["center"]
+    tries = []
+    for method in ("ui.view.set", "ui.view.setZoom", "ui.view.zoom", "ui.zoom", "ui.setZoom", "ui.view.center",
+                   "ui.viewport.set", "view.set", "view.setZoom", "view.zoom", "ui.view.pan", "ui.view.restore"):
+        for params in ({"zoom": z, "center": c}, {"zoom": z}, {"view": 0, "zoom": z, "center": c}):
+            tries.append((method, params))
+    seen = set()
+    for method, params in tries:
+        try:
+            res = b.pc.call(method, params)
+            print(f"OK    {method} {json.dumps(params)[:80]} -> {json.dumps(res)[:100]}")
+            break
+        except PhotoCraftError as e:
+            msg = str(e)[:160]
+            if (method, msg) not in seen:
+                seen.add((method, msg))
+                print(f"fail  {method}: {msg}")
+    return 0
+
+
 def cmd_run(cfg: dict, a) -> int:
     d = cfg["defaults"]
     p = GenParams(prompt=a.prompt, negative=a.negative if a.negative is not None else d["negative"],
@@ -158,6 +187,7 @@ def main(argv=None) -> int:
     sub.add_parser("windows", help="debug: list PhotoCraft's windows (what the bridge window is tied to)")
     c = sub.add_parser("commands", help="debug: list PhotoCraft commands matching a pattern")
     c.add_argument("pattern", nargs="?", default="history|undo|group|transaction|step")
+    sub.add_parser("viewtest", help="debug: find the call that sets zoom and position")
     pr = sub.add_parser("probe", help="debug: print what PhotoCraft answers on the control channel")
     pr.add_argument("keys", nargs="*", help="parts of ui.inspect to print in full (e.g. view views)")
     r = sub.add_parser("run", help="one generation from the command line")
@@ -190,6 +220,8 @@ def main(argv=None) -> int:
         from . import winlink
         print(winlink.describe() if winlink.available() else "Only on Windows.")
         return 0
+    if a.cmd == "viewtest":
+        return cmd_viewtest(cfg)
     if a.cmd == "probe":
         return cmd_probe(cfg, a.keys)
     if a.cmd == "commands":
