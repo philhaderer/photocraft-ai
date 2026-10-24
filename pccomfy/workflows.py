@@ -19,6 +19,10 @@
    (Flux wants CFG 1 and FluxGuidance 30, SDXL something else entirely).
 
    That way Flux Fill, Qwen-Image-Edit, ControlNet etc. plug in without code changes.
+
+   Two optional fields in a node's `_meta` (next to the title) let a workflow describe its model:
+     pc_image_tag   on the pc:prompt node: how the model names the picture in its prompt ("<image1>" for Qwen Image 2.1,
+                    "<ref_image_0>" for FLUX.3 Klein). The bridge puts it in front of the typed text.
 """
 
 from __future__ import annotations
@@ -192,7 +196,7 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
                     inp["image"] = mask_name
             elif tag == "prompt":
                 key = next((k for k in ("text", "instruction", "prompt") if k in inp), "prompt")
-                inp[key] = p.prompt
+                inp[key] = with_image_tag(p.prompt, node)
             elif tag == "negative":
                 key = "text" if "text" in inp else "negative_prompt"
                 inp[key] = p.negative
@@ -230,6 +234,21 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
 
 def has_ref_slot(graph: dict) -> bool:
     """True when the workflow has a reference-image slot (a node titled pc:ref)."""
+def image_tag(node: dict) -> str:
+    """How the model names the picture in its prompt ("<image1>", "<ref_image_0>"): the `pc_image_tag` field in the
+    _meta of the pc:prompt node. Empty = the model needs none (Fibo)."""
+    return str(node.get("_meta", {}).get("pc_image_tag", "")).strip()
+
+
+def with_image_tag(prompt: str, node: dict) -> str:
+    """The prompt with the picture's tag in front. Left alone when the workflow names no tag, when there is no text,
+    or when the text already mentions the tag (typed by hand)."""
+    tag, text = image_tag(node), prompt.strip()
+    if not tag or not text or tag.lower() in text.lower():
+        return prompt
+    return f"{tag} {text}"
+
+
     return any("ref" in _tags(n) for n in graph.values() if isinstance(n, dict))
 
 
