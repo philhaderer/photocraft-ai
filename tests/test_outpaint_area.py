@@ -78,6 +78,11 @@ def main():
     h = bridge.outpaint_hint(imaging.Box(50, 50, 200, 100), (300, 200))
     assert "left, top, right and bottom" in h, h
 
+    k = imaging.Box(0, 0, 200, 100)
+    assert bridge.outpaint_prompt(" a landscape in upper austria ", False, k, (300, 100)) == "a landscape in upper austria, replace white"
+    assert bridge.outpaint_prompt("", False, k, (300, 100)) == "replace white"
+    assert bridge.outpaint_prompt("a landscape", True, k, (300, 100)).startswith("a landscape (The white margin")
+
     rect = imaging.new_area_rect
     # right only: overlap on the right edge of the original, none on the other sides
     assert rect(imaging.Box(0, 0, 200, 100), (300, 100), 32) == (0, 0, 168, 100)

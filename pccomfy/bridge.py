@@ -118,6 +118,15 @@ def outpaint_hint(keep: "imaging.Box", canvas: tuple[int, int]) -> str:
             "continuing what is visible at its edge, and leave no white. Keep the existing picture unchanged.)")
 
 
+def outpaint_prompt(prompt: str, enhance: bool, keep: "imaging.Box", canvas: tuple[int, int]) -> str:
+    """The instruction for an outpaint with an instruction editor. A text model gets the long explanation; without it
+    Fibo answers best to the short "replace white" after the description of what should go there."""
+    prompt = prompt.strip()
+    if enhance:
+        return prompt + outpaint_hint(keep, canvas)
+    return prompt + (", replace white" if prompt else "replace white")
+
+
 def after_prompt_nodes(graph: dict) -> set[str]:
     """Ids of the nodes that consume the written prompt (text encoder, sampler, decode, output ...)."""
     import re
@@ -304,7 +313,7 @@ class Bridge:
             self.pipeline = "workflow" if wf else req.mode
             gp = p
             if keep is not None and editor:
-                gp = dataclasses.replace(p, prompt=p.prompt.strip() + outpaint_hint(keep, (W, H)))
+                gp = dataclasses.replace(p, prompt=outpaint_prompt(p.prompt, req.enhance, keep, (W, H)))
             if hint and wf and req.enhance and prompt_phase_nodes(workflows.load_template(wf)):
                 gp = dataclasses.replace(p, prompt=p.prompt.strip() + hint)  # text-model workflows only
             graph, out_node = self._graph(req, gp, image_name, mask_name, wf)
