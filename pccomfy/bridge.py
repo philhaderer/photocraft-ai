@@ -124,6 +124,8 @@ def outpaint_prompt(prompt: str, enhance: bool, keep: "imaging.Box", canvas: tup
     prompt = prompt.strip()
     if enhance:
         return prompt + outpaint_hint(keep, canvas)
+    if "replace white" in prompt.lower():
+        return prompt  # already typed: do not say it twice
     return prompt + (", replace white" if prompt else "replace white")
 
 
