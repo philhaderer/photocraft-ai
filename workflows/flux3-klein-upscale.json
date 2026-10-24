@@ -1,0 +1,508 @@
+{
+ "2": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:image Your picture"
+  }
+ },
+ "3": {
+  "class_type": "AUSBOSS_NODES_TiledUpscale",
+  "inputs": {
+   "megapixels": 4,
+   "tile_megapixels": 2,
+   "overlap": 128,
+   "multiple": 32,
+   "max_growth": 8,
+   "image": [
+    "2",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "pc:upscale Megapixels of the result"
+  }
+ },
+ "5": {
+  "class_type": "AUSBOSS_NODES_Seed",
+  "inputs": {
+   "seed": 20261016
+  },
+  "_meta": {
+   "title": "pc:sampler Seed"
+  }
+ },
+ "6": {
+  "class_type": "CLIPLoader",
+  "inputs": {
+   "clip_name": "qwen3vl_4b_int8_convrot.safetensors",
+   "type": "flux3",
+   "device": "default"
+  },
+  "_meta": {
+   "title": "Text encoder"
+  }
+ },
+ "7": {
+  "class_type": "VAELoader",
+  "inputs": {
+   "vae_name": "flux2-vae.safetensors"
+  },
+  "_meta": {
+   "title": "VAE"
+  }
+ },
+ "8": {
+  "class_type": "UNETLoader",
+  "inputs": {
+   "unet_name": "flux3-image-klein-int8-convrot.safetensors",
+   "weight_dtype": "default"
+  },
+  "_meta": {
+   "title": "Diffusion model"
+  }
+ },
+ "9": {
+  "class_type": "AUSBOSS_NODES_LoraLoader",
+  "inputs": {
+   "loras": "[{\"name\":\"flux-3-image-klein-restore.safetensors\",\"strength\":1,\"enabled\":true,\"triggers\":\"\"}]",
+   "trigger_separator": ", ",
+   "on_missing": "skip",
+   "model": [
+    "8",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "LoRA Loader - Restore LoRA"
+  }
+ },
+ "10": {
+  "class_type": "UNETLoader",
+  "inputs": {
+   "unet_name": "seedvr2_3b_int8_convrot.safetensors",
+   "weight_dtype": "default"
+  },
+  "_meta": {
+   "title": "SeedVR2 model"
+  }
+ },
+ "11": {
+  "class_type": "VAELoader",
+  "inputs": {
+   "vae_name": "seedvr2_ema_vae_fp16.safetensors"
+  },
+  "_meta": {
+   "title": "SeedVR2 VAE"
+  }
+ },
+ "24": {
+  "class_type": "AUSBOSS_NODES_Text",
+  "inputs": {
+   "text": ""
+  },
+  "_meta": {
+   "title": "pc:prompt Describe your picture (optional)"
+  }
+ },
+ "144": {
+  "class_type": "GetImageSize",
+  "inputs": {
+   "image": [
+    "2",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Get Image Size - Your picture"
+  }
+ },
+ "145": {
+  "class_type": "AUSBOSS_NODES_MathExpression",
+  "inputs": {
+   "expression": "min(12, max(a * c, 9 * b * b * c / a) / 1000000)",
+   "a": [
+    "3",
+    3
+   ],
+   "b": [
+    "144",
+    0
+   ],
+   "c": [
+    "3",
+    4
+   ]
+  },
+  "_meta": {
+   "title": "Math Expression - Megapixels for SeedVR2"
+  }
+ },
+ "146": {
+  "class_type": "AUSBOSS_NODES_ImageResize",
+  "inputs": {
+   "target_mode": "megapixels",
+   "width": 0,
+   "height": 0,
+   "edge_length": 1024,
+   "megapixels": [
+    "145",
+    0
+   ],
+   "scale_factor": 0.5,
+   "keep_proportion": "fit",
+   "fill_color": "#000000",
+   "divisible_by": 32,
+   "interpolation": "lanczos",
+   "image": [
+    "2",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Image Resize - Your picture at that size"
+  }
+ },
+ "147": {
+  "class_type": "SeedVR2Preprocess",
+  "inputs": {
+   "resized_images": [
+    "146",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "SeedVR2 Preprocess"
+  }
+ },
+ "148": {
+  "class_type": "VAEEncodeTiled",
+  "inputs": {
+   "tile_size": 512,
+   "overlap": 128,
+   "temporal_size": 4096,
+   "temporal_overlap": 8,
+   "pixels": [
+    "147",
+    0
+   ],
+   "vae": [
+    "11",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "VAE Encode (Tiled)"
+  }
+ },
+ "149": {
+  "class_type": "SeedVR2Conditioning",
+  "inputs": {
+   "model": [
+    "10",
+    0
+   ],
+   "vae_conditioning": [
+    "148",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "SeedVR2 Conditioning"
+  }
+ },
+ "150": {
+  "class_type": "KSampler",
+  "inputs": {
+   "seed": [
+    "5",
+    0
+   ],
+   "steps": 1,
+   "cfg": 1,
+   "sampler_name": "euler",
+   "scheduler": "simple",
+   "denoise": 1,
+   "model": [
+    "10",
+    0
+   ],
+   "positive": [
+    "149",
+    0
+   ],
+   "negative": [
+    "149",
+    1
+   ],
+   "latent_image": [
+    "148",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "KSampler - 1 step, CFG 1"
+  }
+ },
+ "151": {
+  "class_type": "VAEDecodeTiled",
+  "inputs": {
+   "tile_size": 512,
+   "overlap": 128,
+   "temporal_size": 4096,
+   "temporal_overlap": 8,
+   "samples": [
+    "150",
+    0
+   ],
+   "vae": [
+    "11",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "VAE Decode (Tiled)"
+  }
+ },
+ "152": {
+  "class_type": "SeedVR2PostProcessing",
+  "inputs": {
+   "color_correction_method": "lab",
+   "images": [
+    "151",
+    0
+   ],
+   "original_resized_images": [
+    "146",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "SeedVR2 Post Processing - Colors back"
+  }
+ },
+ "153": {
+  "class_type": "ImageScale",
+  "inputs": {
+   "upscale_method": "lanczos",
+   "width": [
+    "3",
+    3
+   ],
+   "height": [
+    "3",
+    4
+   ],
+   "crop": "disabled",
+   "image": [
+    "152",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Upscale Image - To the size of the result"
+  }
+ },
+ "154": {
+  "class_type": "AUSBOSS_NODES_TiledUpscale",
+  "inputs": {
+   "megapixels": 0,
+   "tile_megapixels": 2,
+   "overlap": 128,
+   "multiple": 32,
+   "max_growth": 8,
+   "image": [
+    "153",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Tiled Upscale - Cut into tiles at this size"
+  }
+ },
+ "158": {
+  "class_type": "AUSBOSS_NODES_Text",
+  "inputs": {
+   "text": "Restore the photo: remove blur, noise and compression artifacts and recover sharp, natural detail, keeping the same composition, people and colors."
+  },
+  "_meta": {
+   "title": "Text - What each tile is asked to do"
+  }
+ },
+ "169": {
+  "class_type": "StringConcatenate",
+  "inputs": {
+   "string_a": [
+    "158",
+    0
+   ],
+   "string_b": [
+    "24",
+    0
+   ],
+   "delimiter": " "
+  },
+  "_meta": {
+   "title": "Concatenate - The sentence, then your words"
+  }
+ },
+ "170": {
+  "class_type": "StringTrim",
+  "inputs": {
+   "string": [
+    "169",
+    0
+   ],
+   "mode": "Both"
+  },
+  "_meta": {
+   "title": "Trim - No space left when your words are empty"
+  }
+ },
+ "159": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "text": [
+    "170",
+    0
+   ],
+   "clip": [
+    "6",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "CLIP Text Encode - The request"
+  }
+ },
+ "160": {
+  "class_type": "ConditioningZeroOut",
+  "inputs": {
+   "conditioning": [
+    "159",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Empty negative"
+  }
+ },
+ "161": {
+  "class_type": "ReferenceMultiLatent",
+  "inputs": {
+   "resolution": "keep resolution",
+   "positive": [
+    "159",
+    0
+   ],
+   "negative": [
+    "160",
+    0
+   ],
+   "vae": [
+    "7",
+    0
+   ],
+   "images.image0": [
+    "154",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Set Reference Multi Latent - The tile as the reference"
+  }
+ },
+ "162": {
+  "class_type": "AUSBOSS_NODES_MathExpression",
+  "inputs": {
+   "expression": "a + 1",
+   "a": [
+    "5",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Math Expression - Seed plus 1"
+  }
+ },
+ "163": {
+  "class_type": "KSampler",
+  "inputs": {
+   "seed": [
+    "162",
+    1
+   ],
+   "steps": 8,
+   "cfg": 1,
+   "sampler_name": "euler",
+   "scheduler": "simple",
+   "denoise": 1,
+   "model": [
+    "9",
+    0
+   ],
+   "positive": [
+    "161",
+    0
+   ],
+   "negative": [
+    "161",
+    1
+   ],
+   "latent_image": [
+    "161",
+    2
+   ]
+  },
+  "_meta": {
+   "title": "KSampler - 8 steps, each tile drawn again"
+  }
+ },
+ "164": {
+  "class_type": "VAEDecode",
+  "inputs": {
+   "samples": [
+    "163",
+    0
+   ],
+   "vae": [
+    "7",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Decode"
+  }
+ },
+ "165": {
+  "class_type": "AUSBOSS_NODES_TiledUpscaleStitch",
+  "inputs": {
+   "keep_colors": 1,
+   "tiles": [
+    "164",
+    0
+   ],
+   "stitcher": [
+    "154",
+    1
+   ]
+  },
+  "_meta": {
+   "title": "Tiled Upscale Stitch - Join the tiles"
+  }
+ },
+ "16": {
+  "class_type": "PreviewImage",
+  "inputs": {
+   "images": [
+    "165",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "pc:output Result"
+  }
+ }
+}
