@@ -23,6 +23,7 @@
    That way Flux Fill, Qwen-Image-Edit, ControlNet etc. plug in without code changes.
 
    Two optional fields in a node's `_meta` (next to the title) let a workflow describe its model:
+     pc_default_prompt  on the pc:prompt node: the prompt that is used when nothing is typed (Upscale / Refine).
      pc_image_tag   on the pc:prompt node: how the model names the picture in its prompt ("<image1>" for Qwen Image 2.1,
                     "<ref_image_0>" for FLUX.3 Klein). The bridge puts it in front of the typed text.
      pc:lora        (a title tag) on a speed/turbo LoRA loader the window can switch off; the pc:sampler node's
@@ -200,7 +201,7 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
                     inp["image"] = mask_name
             elif tag == "prompt":
                 key = next((k for k in ("text", "instruction", "prompt") if k in inp), "prompt")
-                inp[key] = with_image_tag(p.prompt, node)
+                inp[key] = with_image_tag(p.prompt.strip() and p.prompt or default_prompt(node) or p.prompt, node)
             elif tag == "negative":
                 key = "text" if "text" in inp else "negative_prompt"
                 inp[key] = p.negative
@@ -242,6 +243,12 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
 def has_upscale_slot(graph: dict) -> bool:
     """True when the workflow can enlarge or refine a picture (a node titled pc:upscale sets the result's size)."""
     return any("upscale" in _tags(n) for n in graph.values() if isinstance(n, dict))
+
+
+def default_prompt(node: dict) -> str:
+    """What a pc:prompt node asks for when nothing is typed: the `pc_default_prompt` field in its _meta (the Flux 2
+    Klein upscale: a description of a clean photo). Empty = the workflow has none."""
+    return str(node.get("_meta", {}).get("pc_default_prompt", "")).strip()
 
 
 def image_tag(node: dict) -> str:

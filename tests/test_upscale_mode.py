@@ -66,6 +66,25 @@ def main():
     assert g["24"]["inputs"]["text"] == "a young woman" and g["5"]["inputs"]["seed"] == 5
     assert g[out]["class_type"] == "PreviewImage"
 
+    # the Flux 2 Klein upscale: the same slots, and a default prompt when nothing is typed
+    f2 = workflows.load_template(ROOT / "workflows" / "flux2-klein-upscale.json")
+    assert links_resolve(f2) and workflows.has_upscale_slot(f2) and not bridge.prompt_phase_nodes(f2)
+    p2 = workflows.GenParams(prompt="", seed=9)
+    p2.extra["megapixels"] = 6.0
+    g2, out2 = workflows.apply_template(f2, p2, "pic.png", None)
+    assert g2["213"]["inputs"]["megapixels"] == 6.0 and g2["188"]["inputs"]["image"] == "pic.png"
+    assert g2["201"]["inputs"]["noise_seed"] == 9 and g2[out2]["class_type"] == "PreviewImage"
+    assert g2["206"]["inputs"]["text"].startswith("A sharp, natural photograph")          # nothing typed: the default
+    p2.prompt = "an old man in a wool hat"
+    g2, _ = workflows.apply_template(f2, p2, "pic.png", None)
+    assert g2["206"]["inputs"]["text"] == "an old man in a wool hat"                      # typed: as typed
+    # Qwen, Fibo: an empty prompt stays empty
+    q, _ = workflows.apply_template(workflows.load_template(ROOT / "workflows" / "qwen-image-21-edit.json"),
+                                    workflows.GenParams(prompt=""), "pic.png", "m.png")
+    assert q["8"]["inputs"]["prompt"] == ""
+    pc, b, res = run("upscale", wf=ROOT / "workflows" / "flux2-klein-upscale.json", scale=2.0)
+    assert len(pc.docs) == 2 and abs(b.comfy.graphs[0]["213"]["inputs"]["megapixels"] - 0.096) < 1e-6
+
     # Upscale: a new document, the original stays as it was
     pc, b, res = run("upscale", scale=2.0, prompt="a young woman")
     assert len(pc.docs) == 2 and pc.active == 1, [d.name for d in pc.docs]

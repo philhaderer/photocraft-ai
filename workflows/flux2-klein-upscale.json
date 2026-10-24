@@ -1,0 +1,285 @@
+{
+ "188": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:image Your picture"
+  }
+ },
+ "213": {
+  "class_type": "ImageScaleToTotalPixels",
+  "inputs": {
+   "upscale_method": "lanczos",
+   "megapixels": 3,
+   "resolution_steps": 1,
+   "image": [
+    "188",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "pc:upscale Scale to the size of the result"
+  }
+ },
+ "189": {
+  "class_type": "UNETLoader",
+  "inputs": {
+   "unet_name": "flux-2-klein-9b-int8-ConvRot-comfyui.safetensors",
+   "weight_dtype": "default"
+  },
+  "_meta": {
+   "title": "Diffusion model"
+  }
+ },
+ "191": {
+  "class_type": "LoraLoaderModelOnly",
+  "inputs": {
+   "lora_name": "Flux 2\\ultra_real_v4.safetensors",
+   "strength_model": 0.3,
+   "model": [
+    "189",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Ultra real LoRA"
+  }
+ },
+ "202": {
+  "class_type": "CLIPLoader",
+  "inputs": {
+   "clip_name": "qwen_3_8b_fp8mixed.safetensors",
+   "type": "flux2",
+   "device": "default"
+  },
+  "_meta": {
+   "title": "Text encoder"
+  }
+ },
+ "203": {
+  "class_type": "VAELoader",
+  "inputs": {
+   "vae_name": "flux2-vae.safetensors"
+  },
+  "_meta": {
+   "title": "VAE"
+  }
+ },
+ "206": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "text": "",
+   "clip": [
+    "202",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "pc:prompt Positive prompt",
+   "pc_default_prompt": "A sharp, natural photograph of the same scene: clean detail and texture, true-to-life colors, soft natural light. Keep the composition, people, faces and colors exactly as they are."
+  }
+ },
+ "207": {
+  "class_type": "ConditioningZeroOut",
+  "inputs": {
+   "conditioning": [
+    "206",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Empty negative"
+  }
+ },
+ "208": {
+  "class_type": "GetImageSize",
+  "inputs": {
+   "image": [
+    "213",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Get Image Size"
+  }
+ },
+ "209": {
+  "class_type": "EmptyFlux2LatentImage",
+  "inputs": {
+   "width": [
+    "208",
+    0
+   ],
+   "height": [
+    "208",
+    1
+   ],
+   "batch_size": 1
+  },
+  "_meta": {
+   "title": "Empty latent"
+  }
+ },
+ "211": {
+  "class_type": "VAEEncode",
+  "inputs": {
+   "pixels": [
+    "213",
+    0
+   ],
+   "vae": [
+    "203",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "VAE Encode"
+  }
+ },
+ "210": {
+  "class_type": "ReferenceLatent",
+  "inputs": {
+   "conditioning": [
+    "207",
+    0
+   ],
+   "latent": [
+    "211",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Reference (negative)"
+  }
+ },
+ "212": {
+  "class_type": "ReferenceLatent",
+  "inputs": {
+   "conditioning": [
+    "206",
+    0
+   ],
+   "latent": [
+    "211",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Reference (positive)"
+  }
+ },
+ "204": {
+  "class_type": "CFGGuider",
+  "inputs": {
+   "cfg": 1,
+   "model": [
+    "191",
+    0
+   ],
+   "positive": [
+    "212",
+    0
+   ],
+   "negative": [
+    "210",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "CFG Guider"
+  }
+ },
+ "205": {
+  "class_type": "Flux2Scheduler",
+  "inputs": {
+   "steps": 4,
+   "width": [
+    "208",
+    0
+   ],
+   "height": [
+    "208",
+    1
+   ]
+  },
+  "_meta": {
+   "title": "Flux2Scheduler"
+  }
+ },
+ "198": {
+  "class_type": "KSamplerSelect",
+  "inputs": {
+   "sampler_name": "euler"
+  },
+  "_meta": {
+   "title": "Sampler"
+  }
+ },
+ "201": {
+  "class_type": "RandomNoise",
+  "inputs": {
+   "noise_seed": 1
+  },
+  "_meta": {
+   "title": "pc:sampler Noise"
+  }
+ },
+ "199": {
+  "class_type": "SamplerCustomAdvanced",
+  "inputs": {
+   "noise": [
+    "201",
+    0
+   ],
+   "guider": [
+    "204",
+    0
+   ],
+   "sampler": [
+    "198",
+    0
+   ],
+   "sigmas": [
+    "205",
+    0
+   ],
+   "latent_image": [
+    "209",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Sampler"
+  }
+ },
+ "200": {
+  "class_type": "VAEDecode",
+  "inputs": {
+   "samples": [
+    "199",
+    0
+   ],
+   "vae": [
+    "203",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Decode"
+  }
+ },
+ "187": {
+  "class_type": "PreviewImage",
+  "inputs": {
+   "images": [
+    "200",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "pc:output Result"
+  }
+ }
+}
