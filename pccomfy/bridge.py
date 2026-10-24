@@ -233,6 +233,8 @@ class Bridge:
         self.last_vgl = ""
         self._cancel = threading.Event()
         self._tmp: list[Path] = []
+        self._snap: dict | None = None          # history snapshot taken before the last generation (for "Undo AI edit")
+        self._snap_error = ""
         self._last_expand: dict | None = None   # the last Expand: document, canvas size, where the original lies, result layers
 
     def cancel(self) -> None:
@@ -351,6 +353,7 @@ class Bridge:
         if orig is None:
             raise BridgeError("Open a document in PhotoCraft first.")
         orig_name = sess["documents"][orig]["name"]
+        self._snapshot(orig_name)   # one click back to here, however many history steps the run adds
         doc = pc.document()
 
         keep = None  # outpaint: where the original image lies in the extended canvas
@@ -651,6 +654,44 @@ class Bridge:
             self.pc.execute("select.rect", {"x": x0, "y": y0, "width": x1 - x0, "height": y1 - y0,
                                             "mode": "subtract", "feather": max(0, int(req.overlap) // 2)})
         return keep
+
+    def _snapshot(self, doc_name: str) -> None:
+        """History snapshot before the run starts. The run adds several history steps (paste, rename, mask, ...) and
+        PhotoCraft has no way to group them; the snapshot is the single step back (`undo_last`). Only the latest one
+        is kept. Best effort: a failure is remembered and reported when the user tries to undo."""
+        stamp = time.strftime("Before AI %H:%M:%S")
+        if self._snap:
+            self._try("history.deleteSnapshot", {"name": self._snap["name"]})
+            self._snap = None
+        errors = []
+        for key in ("name", "snapshot"):
+            try:
+                self.pc.execute("history.newSnapshot", {key: stamp})
+                self._snap, self._snap_error = {"name": stamp, "doc": doc_name, "key": key}, ""
+                return
+            except PhotoCraftError as e:
+                errors.append(str(e))
+        self._snap_error = "; ".join(errors)
+
+    def undo_last(self) -> str:
+        """Go back to the snapshot taken before the last generation (one history step for the whole run)."""
+        if not self._snap:
+            raise BridgeError("Nothing to undo yet." + (f" (No snapshot could be made: {self._snap_error})" if self._snap_error else ""))
+        pc = self.pc.connect()
+        name = self._snap["name"]
+        docs = pc.session().get("documents", [])
+        match = next((d["index"] for d in docs if d["name"] == self._snap["doc"]), None)
+        if match is None:
+            raise BridgeError(f"Document “{self._snap['doc']}” not found – was it closed?")
+        pc.activate(match)
+        errors = []
+        for key in (self._snap["key"], "name", "snapshot"):
+            try:
+                pc.execute("history.selectSnapshot", {key: name})
+                return f"Back to the state before the last AI edit ({name})."
+            except PhotoCraftError as e:
+                errors.append(str(e))
+        raise BridgeError("Could not go back to the snapshot: " + "; ".join(dict.fromkeys(errors)))
 
     def _rerun_expand(self, orig: int) -> "imaging.Box | None":
         """Expand again right after an Expand whose result is not wanted: the margin is covered by that result, so no

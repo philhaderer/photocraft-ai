@@ -354,6 +354,10 @@ class App:
         self.b_go.pack(side="left", fill="x", expand=True)
         self.b_stop = ttk.Button(bf, text="Cancel", command=self.stop, state="disabled")
         self.b_stop.pack(side="left", padx=(6, 0))
+        self.b_undo = ttk.Button(bf, text="Undo AI edit", command=self.undo_edit)
+        self.b_undo.pack(side="left", padx=(6, 0))
+        Tooltip(self.b_undo, "Back to the state before the last generation in one click (a history snapshot taken at the start).\n"
+                             "The history list shows every step the plugin made; this skips them all.")
 
         # one bar for the whole run (prompt, then image) with the current step written next to it
         self.v_pl = tk.StringVar(value="")
@@ -762,6 +766,7 @@ class App:
             return
         self._save_state(req)
         self.b_go.configure(state="disabled")
+        self.b_undo.configure(state="disabled")
         self.b_stop.configure(state="normal")
         self._reset_progress()
 
@@ -782,6 +787,21 @@ class App:
         self.worker = threading.Thread(target=work, daemon=True)
         self.worker.start()
 
+    def undo_edit(self):
+        if self.worker and self.worker.is_alive():
+            return
+        self.b_undo.configure(state="disabled")
+
+        def work():
+            try:
+                self.events.put(("note", self.bridge.undo_last()))
+            except (BridgeError, PhotoCraftError) as e:
+                self.events.put(("note-error", f"Error: {e}"))
+            except Exception as e:
+                self.events.put(("note-error", f"Unexpected error: {type(e).__name__}: {e}"))
+        self.worker = threading.Thread(target=work, daemon=True)
+        self.worker.start()
+
     def stop(self):
         if self.worker and self.worker.is_alive():
             self.bridge.cancel()
@@ -796,10 +816,14 @@ class App:
                     self._set_progress(f, msg, phase, pf, elapsed)
                     if msg:
                         self._status(msg)
+                elif kind in ("note", "note-error"):
+                    self._status(data, error=(kind == "note-error"))
+                    self.b_undo.configure(state="normal")
                 elif kind == "done":
                     self._reset_progress(done=not data.startswith(("Error", "Cancel", "Unexpected")))
                     self._status(data, error=data.startswith(("Error", "Unexpected")))
                     self.b_go.configure(state="normal")
+                    self.b_undo.configure(state="normal")
                     self.b_stop.configure(state="disabled")
                 elif kind == "vgl":
                     self.t_vgl.configure(state="normal")
