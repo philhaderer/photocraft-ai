@@ -165,11 +165,11 @@ def preset_stem(name: str) -> str:
     """File-name-safe preset name."""
     return re.sub(r"[^\w .\-]", "_", name.strip(), flags=re.UNICODE).strip(". ") or "preset"
 
-BG, PANEL, FG, MUTED, ACCENT = "#16181d", "#1f2229", "#e6e8ee", "#8a90a0", "#7c5cff"
-DISABLED = "#4b5060"   # text of a greyed-out control: clearly darker than MUTED, so it reads as "not available here"
+BG, PANEL, FG, MUTED, ACCENT = "#535353", "#404040", "#eeeeee", "#a2a2a2", "#f28c28"   # PhotoCraft grey (measured from a screenshot), orange accent
+DISABLED = "#7d7d7d"   # text of a greyed-out control: clearly darker than MUTED, so it reads as "not available here"
 REF_STYLES = {"classic": "Classic: subject first, long instruction", "simple": "Simple: picture first, one short sentence"}
 SCALE_MODES = ("upscale", "refine")   # these run only with an upscale workflow (a node titled pc:upscale)
-ERROR, ERROR_TEXT = "#e5484d", "#ff8a8a"
+ERROR, ERROR_TEXT = "#e5484d", "#ffc2c2"
 MIN_W = 420  # the window opens at this width; text fields etc. stretch to it
 
 
@@ -251,26 +251,26 @@ class App:
     def _style(self):
         s = ttk.Style(self.root)
         s.theme_use("clam")
-        s.configure(".", background=BG, foreground=FG, fieldbackground=PANEL, bordercolor="#2c303a",
+        s.configure(".", background=BG, foreground=FG, fieldbackground=PANEL, bordercolor="#454545",
                     lightcolor=PANEL, darkcolor=PANEL, troughcolor=PANEL, focuscolor=ACCENT, font=(FONT, 10))
         s.configure("TLabel", background=BG, foreground=FG)
         s.configure("Muted.TLabel", foreground=MUTED, font=(FONT, 9))
         s.configure("Badge.TLabel", background=ERROR, foreground="white", font=(FONT, 10, "bold"))
         s.configure("Error.TLabel", foreground=ERROR_TEXT)
-        s.configure("TLabelframe", background=BG, bordercolor="#2c303a")
+        s.configure("TLabelframe", background=BG, bordercolor="#454545")
         s.configure("TLabelframe.Label", background=BG, foreground=MUTED)
         s.configure("TRadiobutton", background=BG, foreground=FG)
         s.configure("TCheckbutton", background=BG, foreground=FG)
         for w in ("TRadiobutton", "TCheckbutton"):
-            s.map(w, background=[("active", BG)], indicatorbackground=[("selected", ACCENT), ("active", "#2a2e38")],
-                  indicatorforeground=[("selected", "white")])
+            s.map(w, background=[("active", BG)], indicatorbackground=[("selected", ACCENT), ("active", "#5f5f5f")],
+                  indicatorforeground=[("selected", "#1b1b1b")])
         s.configure("TButton", background=PANEL, foreground=FG, padding=6)
-        s.map("TButton", background=[("active", "#2a2e38")])
+        s.map("TButton", background=[("active", "#5f5f5f")])
         s.configure("Icon.TButton", padding=4)
         s.configure("Link.TButton", background=BG, foreground=MUTED, padding=(0, 2), borderwidth=0, relief="flat")
         s.map("Link.TButton", foreground=[("active", FG)], background=[("active", BG)])
-        s.configure("Accent.TButton", background=ACCENT, foreground="white", font=(FONT, 10, "bold"))
-        s.map("Accent.TButton", background=[("active", "#6a4cf0"), ("disabled", "#3a3550")])
+        s.configure("Accent.TButton", background=ACCENT, foreground="#1b1b1b", font=(FONT, 10, "bold"))
+        s.map("Accent.TButton", background=[("active", "#ff9d3d"), ("disabled", "#6e6558")])
         s.configure("TCombobox", fieldbackground=PANEL, background=PANEL, foreground=FG, arrowcolor=FG)
         s.map("TCombobox", fieldbackground=[("readonly", PANEL)], foreground=[("readonly", FG)],
               selectbackground=[("readonly", PANEL)], selectforeground=[("readonly", FG)])
@@ -282,8 +282,8 @@ class App:
         for w in ("TCheckbutton", "TRadiobutton", "TLabel"):
             s.map(w, foreground=[("disabled", DISABLED)])
         for w in ("TCheckbutton", "TRadiobutton"):
-            s.map(w, indicatorbackground=[("disabled", BG), ("selected", ACCENT), ("active", "#2a2e38")],
-                  indicatorforeground=[("disabled", DISABLED), ("selected", "white")])
+            s.map(w, indicatorbackground=[("disabled", BG), ("selected", ACCENT), ("active", "#5f5f5f")],
+                  indicatorforeground=[("disabled", DISABLED), ("selected", "#1b1b1b")])
         s.map("TSpinbox", foreground=[("disabled", DISABLED)], fieldbackground=[("disabled", BG)],
               arrowcolor=[("disabled", DISABLED)])
         s.map("TCombobox", foreground=[("disabled", DISABLED), ("readonly", FG)], fieldbackground=[("disabled", BG), ("readonly", PANEL)],
@@ -295,7 +295,7 @@ class App:
 
     def _text(self, parent, height):
         t = tk.Text(parent, height=height, width=10, wrap="word", bg=PANEL, fg=FG, insertbackground=FG,
-                    relief="flat", highlightthickness=1, highlightbackground="#2c303a", highlightcolor=ACCENT,
+                    relief="flat", highlightthickness=1, highlightbackground="#454545", highlightcolor=ACCENT,
                     font=(FONT, 10), padx=6, pady=4, undo=True, maxundo=200)
         self._editor_keys(t)
         return t
