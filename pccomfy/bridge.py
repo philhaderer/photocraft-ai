@@ -59,6 +59,7 @@ class Request:
     remove: bool = False                 # "Remove" (the bridge runs it as an inpaint with the removal instruction)
     remove_tries: int = 3                # tries (new seed each) until the object is really gone
     enhance: bool = True                 # text-model workflows: let the text model write the prompt (off = typed text as is)
+    turbo: bool = True                   # workflows with a speed (turbo) LoRA, nodes titled pc:lora: off = cut it out, full steps
     layer_mask: str = "auto"             # "auto" = none for Fill with an editor that ignores the mask, else soft;
                                          # "soft" = same mask the model got, "selection" = hard selection, "none"
     feather_pct: float = 2.0             # soft layer mask for editors that ignore the mask: % of the selection's shorter side
@@ -559,6 +560,8 @@ class Bridge:
             if not req.enhance or req.mode == "reference" or force_plain:
                 # first: without the text model, a picture it alone needed (Text to image) is not required either
                 tpl = workflows.bypass_prompt_writer(tpl, p.prompt)
+            if not req.turbo:
+                tpl = workflows.bypass_lora(tpl)
             return workflows.apply_template(tpl, p, image_name, mask_name, ref_name)
         if not p.checkpoint:
             raise BridgeError("Pick a model (checkpoint) or a custom workflow.")

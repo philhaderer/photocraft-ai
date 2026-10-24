@@ -23,6 +23,8 @@
    Two optional fields in a node's `_meta` (next to the title) let a workflow describe its model:
      pc_image_tag   on the pc:prompt node: how the model names the picture in its prompt ("<image1>" for Qwen Image 2.1,
                     "<ref_image_0>" for FLUX.3 Klein). The bridge puts it in front of the typed text.
+     pc:lora        (a title tag) on a speed/turbo LoRA loader the window can switch off; the pc:sampler node's
+                    `pc_no_lora` ({"steps": 25}) says what the sampler needs without it.
 """
 
 from __future__ import annotations
@@ -232,8 +234,6 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
     return g, out_node
 
 
-def has_ref_slot(graph: dict) -> bool:
-    """True when the workflow has a reference-image slot (a node titled pc:ref)."""
 def image_tag(node: dict) -> str:
     """How the model names the picture in its prompt ("<image1>", "<ref_image_0>"): the `pc_image_tag` field in the
     _meta of the pc:prompt node. Empty = the model needs none (Fibo)."""
@@ -249,6 +249,8 @@ def with_image_tag(prompt: str, node: dict) -> str:
     return f"{tag} {text}"
 
 
+def has_ref_slot(graph: dict) -> bool:
+    """True when the workflow has a reference-image slot (a node titled pc:ref)."""
     return any("ref" in _tags(n) for n in graph.values() if isinstance(n, dict))
 
 
@@ -329,6 +331,41 @@ def bypass_prompt_writer(graph: dict, prompt: str) -> dict:
                 inp[k] = prompt
     for w in writers:
         g.pop(w, None)
+    return g
+
+
+def lora_switches(graph: dict) -> list[str]:
+    """Ids of the nodes titled pc:lora: speed (turbo) LoRAs the window can switch off."""
+    return [nid for nid, n in graph.items() if isinstance(n, dict) and "lora" in _tags(n)]
+
+
+def bypass_lora(graph: dict) -> dict:
+    """Turbo LoRA off: the pc:lora loaders drop out of the graph (whatever read their model gets the model they were
+    given) and every pc:sampler takes the values its `pc_no_lora` field lists (e.g. 25 steps instead of 10).
+    Graphs without a pc:lora node are returned unchanged."""
+    g = json.loads(json.dumps(graph))
+    loras = {str(i) for i in lora_switches(g)}
+    if not loras:
+        return g
+
+    def source(nid: str):
+        link = g[nid].get("inputs", {}).get("model")
+        while isinstance(link, list) and link and str(link[0]) in loras:   # two LoRAs in a row
+            link = g[str(link[0])].get("inputs", {}).get("model")
+        return link
+
+    for n in g.values():
+        for k, v in n.get("inputs", {}).items():
+            if isinstance(v, list) and v and str(v[0]) in loras:
+                n["inputs"][k] = source(str(v[0]))
+    for nid in loras:
+        del g[nid]
+    for n in g.values():
+        if "sampler" in _tags(n):
+            inp = n.get("inputs", {})
+            for k, v in (n.get("_meta", {}).get("pc_no_lora") or {}).items():
+                if k in inp and not isinstance(inp[k], list):
+                    inp[k] = v
     return g
 
 
