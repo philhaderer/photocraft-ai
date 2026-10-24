@@ -34,7 +34,7 @@ from . import imaging, workflows
 from .comfy import ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 
-MODES = ("inpaint", "outpaint", "img2img", "txt2img")
+MODES = ("inpaint", "reference", "outpaint", "img2img", "txt2img")
 LAYER_MASKS = ("auto", "soft", "selection", "none")
 
 
@@ -59,6 +59,7 @@ class Request:
     layer_mask: str = "auto"             # "auto" = none for Fill with an editor that ignores the mask, else soft;
                                          # "soft" = same mask the model got, "selection" = hard selection, "none"
     feather_pct: float = 2.0             # soft layer mask for editors that ignore the mask: % of the selection's shorter side
+    ref_collage: bool = True             # reference mode: also paste a rough copy of the reference where it should go
 
 
 # progress(overall_fraction, message, phase="", phase_fraction=-1.0, elapsed=0.0)
@@ -105,8 +106,24 @@ def effective_layer_mask(choice: str, mode: str, editor: bool, has_sel: bool) ->
     if not has_sel:
         return "none"
     if choice == "auto":
-        return "none" if (editor and mode == "inpaint") else "soft"
+        return "none" if (editor and mode in ("inpaint", "reference")) else "soft"
     return choice
+
+
+REFERENCE_PROMPT = ("Insert the subject from <image_2> into <image_1>. Keep the subject exactly as it looks in <image_2> "
+                    "(face, hair, clothing, colours, proportions) and match the lighting, perspective and shadows of "
+                    "<image_1>. Leave everything else in <image_1> unchanged.")
+REFERENCE_COLLAGE_NOTE = (" A rough copy of the subject is pasted into <image_1> to show where it goes and how large it "
+                          "is: redraw it properly there, integrated into the scene.")
+
+
+def reference_prompt(typed: str, collage: bool, where: str = "") -> str:
+    """The instruction for "insert reference image". Fibo 2 Edit addresses the images as <image_1> (the picture) and
+    <image_2> (the reference), in the order they are connected. `where` is the placement_hint sentence."""
+    text = REFERENCE_PROMPT + (REFERENCE_COLLAGE_NOTE if collage else "")
+    if typed.strip():
+        text += " " + typed.strip()
+    return text + where
 
 
 def placement_hint(sel: "imaging.Box", crop: "imaging.Box") -> str:
@@ -192,7 +209,10 @@ class Bridge:
         tag = uuid.uuid4().hex[:8]
         _wfs = workflows.resolve(req.workflow) if req.workflow else [None]
         self.last_vgl = ""
-        if req.enhance and not p.prompt.strip():
+        if req.mode == "reference" and not (req.workflow and all(
+                workflows.has_ref_slot(workflows.load_template(w)) for w in _wfs)):
+            raise BridgeError("Insert reference image needs a workflow with a reference slot (the Fibo workflows have one).")
+        if req.enhance and req.mode != "reference" and not p.prompt.strip():
             for w in _wfs:
                 if w and prompt_phase_nodes(json.loads(Path(w).read_text(encoding="utf-8"))):
                     raise BridgeError("Type an instruction first: this workflow's text model writes the prompt from it "
@@ -279,6 +299,11 @@ class Bridge:
         has_sel = bool(doc.get("hasSelection"))
         if req.mode == "inpaint" and not has_sel:
             raise BridgeError("Select the area to fill first (e.g. Lasso or Rectangular Marquee).")
+        if req.mode == "reference":
+            if not has_sel:
+                raise BridgeError("Select where the reference image should go (e.g. Rectangular Marquee).")
+            if len(doc.get("layers", [])) < 2:
+                raise BridgeError("Put the reference image on its own layer above the picture: the top layer is the reference.")
 
         wf_paths = workflows.resolve(req.workflow) if req.workflow else [None]
         # an instruction-based editor (Fibo) never sees the mask: it gets the white margin as it is plus a sentence
@@ -289,12 +314,18 @@ class Bridge:
         src = mask = None
         if req.mode != "txt2img" or has_sel:
             progress(0.05, "Exporting the image from PhotoCraft", phase="prepare")
-            src, mask = self._export(orig, tag, need_mask=has_sel)
+            ref_rgba = ref_rgb = None
+            if req.mode == "reference":
+                try:
+                    ref_rgba, ref_rgb = imaging.reference_from_layer(self._export_top_layer(orig, tag))
+                except ValueError as e:
+                    raise BridgeError(str(e)) from None
+            src, mask = self._export(orig, tag, need_mask=has_sel, drop_top=(req.mode == "reference"))
             if keep is not None:
                 src = imaging.white_outside(src, keep) if editor else imaging.clear_outside(src, keep)
 
         bbox = None
-        if req.mode in ("inpaint", "outpaint"):
+        if req.mode in ("inpaint", "reference", "outpaint"):
             bbox = imaging.mask_bbox(mask)
             if bbox is None:
                 raise BridgeError("The selection is empty.")
@@ -310,9 +341,15 @@ class Bridge:
 
         image_name = mask_name = None
         if req.mode != "txt2img":
-            crop = imaging.to_rgb(src.crop(region.pil())).resize((gw, gh), Image.LANCZOS)
+            crop_full = src.crop(region.pil())
+            if req.mode == "reference" and req.ref_collage:
+                crop_full = imaging.paste_reference(crop_full, ref_rgba, imaging.Box(bbox.x - region.x, bbox.y - region.y, bbox.w, bbox.h))
+            crop = imaging.to_rgb(crop_full).resize((gw, gh), Image.LANCZOS)
             image_name = self.comfy.upload_image(crop, f"pcc-{tag}-image.png")
-        if req.mode in ("inpaint", "outpaint"):
+        ref_name = None
+        if req.mode == "reference":
+            ref_name = self.comfy.upload_image(ref_rgb, f"pcc-{tag}-ref.png")
+        if req.mode in ("inpaint", "reference", "outpaint"):
             m = imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
             m = m.resize((gw, gh), Image.BILINEAR)
             mask_name = self.comfy.upload_image(m.convert("RGB"), f"pcc-{tag}-mask.png")
@@ -328,9 +365,12 @@ class Bridge:
             gp = p
             if keep is not None and editor:
                 gp = dataclasses.replace(p, prompt=outpaint_prompt(p.prompt, req.enhance, keep, (W, H)))
+            if req.mode == "reference":
+                # the text model is bypassed in this mode: a fixed instruction with <image_1>/<image_2> (+ where)
+                gp = dataclasses.replace(p, prompt=reference_prompt(p.prompt, req.ref_collage, placement_hint(bbox, region)))
             if hint and wf and req.enhance and prompt_phase_nodes(workflows.load_template(wf)):
                 gp = dataclasses.replace(p, prompt=p.prompt.strip() + hint)  # text-model workflows only
-            graph, out_node = self._graph(req, gp, image_name, mask_name, wf)
+            graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name)
             prompt_id = self.comfy.queue(graph)
             start, span = 0.15 + 0.75 * k / n_wf, 0.75 / n_wf
             progress(start, f"Queued in ComfyUI ({self.pipeline}{suffix})", phase="prepare")
@@ -384,11 +424,11 @@ class Bridge:
                     return "\n".join(str(t) for t in text)
         return ""
 
-    def _graph(self, req: Request, p, image_name, mask_name, wf: str | None = None):
+    def _graph(self, req: Request, p, image_name, mask_name, wf: str | None = None, ref_name: str | None = None):
         if wf:
             tpl = workflows.load_template(wf)
-            graph, out_node = workflows.apply_template(tpl, p, image_name, mask_name)
-            if not req.enhance:
+            graph, out_node = workflows.apply_template(tpl, p, image_name, mask_name, ref_name)
+            if not req.enhance or req.mode == "reference":
                 graph = workflows.bypass_prompt_writer(graph, p.prompt)
             return graph, out_node
         if not p.checkpoint:
@@ -423,10 +463,29 @@ class Bridge:
         im.load()
         return im
 
-    def _export(self, orig: int, tag: str, need_mask: bool) -> tuple[Image.Image, Image.Image | None]:
+    def _export_top_layer(self, orig: int, tag: str) -> Image.Image:
+        """The top layer on its own (with its transparency), exported from a throw-away duplicate."""
         pc = self.pc
-        pc.execute("image.duplicate", {"name": f"pccomfy-{tag}", "mergedOnly": True})
+        pc.execute("image.duplicate", {"name": f"pccomfy-{tag}-ref", "mergedOnly": False})
         try:
+            for layer in pc.document()["layers"][1:]:  # index 0 is the top layer
+                pc.execute("layer.delete", {"layer": layer["id"]})
+            name, full = self._path(tag, "ref")
+            pc.save(name)
+            return self._wait_file(full)
+        finally:
+            pc.close_active()
+            pc.activate(orig)
+
+    def _export(self, orig: int, tag: str, need_mask: bool, drop_top: bool = False) -> tuple[Image.Image, Image.Image | None]:
+        """The picture (and the selection as a mask) from a throw-away duplicate. With `drop_top` the top layer (the
+        reference) is left out: the picture is all layers below it, flattened in the duplicate only."""
+        pc = self.pc
+        pc.execute("image.duplicate", {"name": f"pccomfy-{tag}", "mergedOnly": not drop_top})
+        try:
+            if drop_top:
+                pc.execute("layer.delete", {"layer": pc.document()["layers"][0]["id"]})
+                self._try("layer.flattenImage")  # nothing to flatten when only one layer is left
             src_name, src_full = self._path(tag, "src")
             pc.save(src_name)
             mask = None
