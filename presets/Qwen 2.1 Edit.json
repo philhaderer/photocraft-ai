@@ -12,8 +12,9 @@
   "mask_grow": 8,
   "mask_blur": 8,
   "overlap": 48,
-  "layer_mask": "auto",
+  "layer_mask": "soft",
   "workflow": "qwen-image-21-edit.json",
-  "turbo": true
+  "turbo": true,
+  "feather_pct": 4.0
  }
 }
