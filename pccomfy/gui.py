@@ -72,6 +72,26 @@ MODE_TIPS = {
 BUILTIN = "Built-in (checkpoint)"
 LAYER_MASKS = {"auto": "auto (recommended)", "soft": "soft (same as the model's)", "selection": "hard (from selection)", "none": "none"}
 
+def word_left(before: str) -> int:
+    """How many characters Ctrl+Left moves back, as in an editor: over spaces/punctuation/line breaks, then over the word."""
+    i = len(before)
+    while i > 0 and not before[i - 1].isalnum():
+        i -= 1
+    while i > 0 and before[i - 1].isalnum():
+        i -= 1
+    return len(before) - i
+
+
+def word_right(after: str) -> int:
+    """How many characters Ctrl+Right moves on: over the rest of the word, then to the start of the next one."""
+    j = 0
+    while j < len(after) and after[j].isalnum():
+        j += 1
+    while j < len(after) and not after[j].isalnum():
+        j += 1
+    return j
+
+
 def icon_image(root, kind: str, color: str):
     """A 16x16 icon for a button, drawn pixel by pixel: "save" (floppy disk), "saveas" (floppy with a plus), "trash"."""
     n = 16
@@ -273,8 +293,67 @@ class App:
     def _text(self, parent, height):
         t = tk.Text(parent, height=height, width=10, wrap="word", bg=PANEL, fg=FG, insertbackground=FG,
                     relief="flat", highlightthickness=1, highlightbackground="#2c303a", highlightcolor=ACCENT,
-                    font=(FONT, 10), padx=6, pady=4)
+                    font=(FONT, 10), padx=6, pady=4, undo=True, maxundo=200)
+        self._editor_keys(t)
         return t
+
+    def _editor_keys(self, t):
+        """Text-editor keys in a prompt field: Ctrl+Left/Right jump by word (Shift selects), Ctrl+Backspace/Delete delete a
+        word, Ctrl+A selects all, Ctrl+Z / Ctrl+Y undo and redo. Ctrl+Enter generates and writes no line break."""
+        def cursor(extend, idx):
+            proc = "tk::TextKeySelect" if extend else "tk::TextSetCursor"
+            try:
+                t.tk.call(proc, str(t), idx)
+            except tk.TclError:
+                t.mark_set("insert", idx)
+            t.see("insert")
+            return "break"
+
+        def jump(direction, extend):
+            def h(_e=None):
+                if direction < 0:
+                    n = word_left(t.get("1.0", "insert"))
+                    return cursor(extend, f"insert-{n}c")
+                n = word_right(t.get("insert", "end-1c"))
+                return cursor(extend, f"insert+{n}c")
+            return h
+
+        def kill(direction):
+            def h(_e=None):
+                if t.tag_ranges("sel"):
+                    t.delete("sel.first", "sel.last")
+                elif direction < 0:
+                    t.delete(f"insert-{word_left(t.get('1.0', 'insert'))}c", "insert")
+                else:
+                    t.delete("insert", f"insert+{word_right(t.get('insert', 'end-1c'))}c")
+                return "break"
+            return h
+
+        def select_all(_e=None):
+            t.tag_add("sel", "1.0", "end-1c")
+            t.mark_set("insert", "end-1c")
+            return "break"
+
+        def history(redo):
+            def h(_e=None):
+                try:
+                    (t.edit_redo if redo else t.edit_undo)()
+                except tk.TclError:
+                    pass
+                return "break"
+            return h
+
+        def generate(_e=None):
+            self.generate()
+            return "break"          # the Text's own Return binding must not add a line break
+
+        for seq, fn in (("<Control-Left>", jump(-1, False)), ("<Control-Right>", jump(1, False)),
+                        ("<Control-Shift-Left>", jump(-1, True)), ("<Control-Shift-Right>", jump(1, True)),
+                        ("<Control-BackSpace>", kill(-1)), ("<Control-Delete>", kill(1)),
+                        ("<Control-a>", select_all), ("<Control-A>", select_all),
+                        ("<Control-z>", history(False)), ("<Control-Z>", history(True)), ("<Control-y>", history(True)),
+                        ("<Control-Return>", generate), ("<Control-KP_Enter>", generate)):
+            t.bind(seq, fn)
 
     def _spin(self, parent, var, frm, to, inc=1.0, width=6):
         return ttk.Spinbox(parent, textvariable=var, from_=frm, to=to, increment=inc, width=width)

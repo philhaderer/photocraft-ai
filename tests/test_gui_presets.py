@@ -269,6 +269,13 @@ def main():
     app._on_mode()
     print("mode/workflow coupling OK")
 
+    # editor keys in the prompt: Ctrl+Left / Ctrl+Right jump by word
+    assert gui.word_left("make it night") == 5 and gui.word_left("make it ") == 3 and gui.word_left("") == 0
+    assert gui.word_left("make it\n\nnight") == 5 and gui.word_left("red, blue") == 4 and gui.word_left("   ") == 3
+    assert gui.word_right("make it night") == 5 and gui.word_right("it, night") == 4 and gui.word_right("night") == 5
+    assert gui.word_right("a\n\nb") == 3 and gui.word_right("") == 0 and gui.word_right("  x") == 2
+    print("word jumps OK")
+
     # delete
     app.delete_preset()
     assert not f.exists() and app.v_preset.get() == ""
