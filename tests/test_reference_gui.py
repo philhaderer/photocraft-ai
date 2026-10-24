@@ -56,6 +56,18 @@ def main():
     app._save_state(app._request())
     import json as _json
     assert _json.loads((Path(t.TMP) / "state.json").read_text(encoding="utf-8"))["ref_collage"] is False
+    # the style: classic by default; simple greys out the rough placement; kept by request, preset and state
+    assert app._request().ref_style == "classic" and app.cb_collage["state"] == "normal"
+    app.v_refstyle.set(gui.REF_STYLES["simple"])
+    app._update_availability()
+    assert app._request().ref_style == "simple" and app.cb_collage["state"] == "disabled"
+    s = app._collect()
+    assert s["ref_style"] == "simple"
+    app.v_refstyle.set(gui.REF_STYLES["classic"])
+    app._apply_settings(dict(s))
+    assert app._request().ref_style == "simple"
+    app._save_state(app._request())
+    assert _json.loads((Path(t.TMP) / "state.json").read_text(encoding="utf-8"))["ref_style"] == "simple"
     shutil.rmtree(t.TMP, ignore_errors=True)
     print("ALL OK (reference gui)")
 
