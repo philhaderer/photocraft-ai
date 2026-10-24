@@ -28,6 +28,8 @@ MODE_LABELS = [
     ("outpaint", "Expand image"),
     ("img2img", "Image → image"),
     ("txt2img", "Text → image"),
+    ("upscale", "Upscale (new file)"),
+    ("refine", "Refine (same size)"),
 ]
 MODE_TIPS = {
     "inpaint": "Select an area (Lasso / Rectangular Marquee), type what should appear there (\"a helicopter on the meadow\"), "
@@ -55,6 +57,12 @@ MODE_TIPS = {
     "img2img": "Reworks the picture (or the selection) from your text.\n"
                "Checkpoint workflows: Denoise says how far it may change (low = stay close, high = new picture).\n"
                "Fibo workflows: type an instruction (\"make it night\"); no mask is needed.",
+    "upscale": "Enlarges the picture (or the selection) by the factor and opens the result as a NEW document; your document stays "
+               "as it is. Needs an upscale workflow (flux3-klein-upscale.json): SeedVR2 cleans the photo, Flux 3 Klein redraws it in tiles.\n"
+               "The text is optional: a few words about what is in the picture (\"a young woman\") help the redraw.\n"
+               "Results above 24 megapixels are refused.",
+    "refine": "Cleans up and re-detail the picture (or the selection) at the SAME size and puts the result on a new layer.\n"
+              "Same workflow as Upscale (flux3-klein-upscale.json), factor 1. The text is optional (a few words about the picture).",
     "txt2img": "Creates a new image from text only, in the size of the selection or the whole canvas.\n"
                "Checkpoint workflows: describe the image.\n"
                "Fibo Edit workflows: only with \"enhance\" switched off (the text model needs a picture). "
@@ -157,6 +165,7 @@ class App:
         self.v_grow = tk.IntVar(value=g("mask_grow", d["mask_grow"]))
         self.v_blur = tk.IntVar(value=g("mask_blur", d["mask_blur"]))
         self.v_overlap = tk.IntVar(value=g("overlap", d["overlap"]))
+        self.v_scale = tk.StringVar(value=str(g("scale", 2.0)).removesuffix(".0"))
         self.v_top = tk.BooleanVar(value=g("on_top", True))
         self.v_feather = tk.DoubleVar(value=g("feather_pct", 2.0))
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
@@ -319,6 +328,13 @@ class App:
         self._spin(self.f_out, self.v_overlap, 0, 512, 8, 5).grid(row=1, column=1, padx=6, pady=(0, 6))
         self.f_out.columnconfigure(0, weight=1)
 
+        self.f_scale = ttk.LabelFrame(r, text="Upscale")
+        ttk.Label(self.f_scale, text="Factor per side (2 = four times the pixels). The result opens as a new document.",
+                  style="Muted.TLabel", justify="left", wraplength=280).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
+        self.cb_scale = ttk.Combobox(self.f_scale, textvariable=self.v_scale, values=["1.5", "2", "3", "4"], width=5)
+        self.cb_scale.grid(row=0, column=1, padx=6, pady=(0, 6))
+        self.f_scale.columnconfigure(0, weight=1)
+
         self.f_ref = ttk.LabelFrame(r, text="Reference image")
         ttk.Label(self.f_ref, text="The top layer is the reference. Select where it should go.\nEverything below it is the picture.",
                   style="Muted.TLabel", justify="left", wraplength=360).pack(anchor="w", padx=6, pady=(0, 2))
@@ -431,6 +447,10 @@ class App:
             self.f_out.pack(fill="x", padx=10, pady=4, after=self.f_modes)
         else:
             self.f_out.pack_forget()
+        if mode == "upscale":
+            self.f_scale.pack(fill="x", padx=10, pady=4, after=self.f_modes)
+        else:
+            self.f_scale.pack_forget()
         if mode == "reference":
             self.f_ref.pack(fill="x", padx=10, pady=4, after=self.f_modes)
         else:
@@ -440,6 +460,12 @@ class App:
         self._update_feather_state()
         if self._sized:
             self._fit_height()
+
+    def _scale(self) -> float:
+        try:
+            return min(8.0, max(1.0, float(str(self.v_scale.get()).replace(",", "."))))
+        except ValueError:
+            return 2.0
 
     def _prompt_text(self) -> str:
         """The prompt to save: in Remove object the field is empty, the user's own text is kept aside."""
@@ -650,6 +676,7 @@ class App:
             "sampler": self.v_sampler.get(), "scheduler": self.v_scheduler.get(),
             "base_res": int(self.v_res.get()), "context": float(self.v_context.get()),
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
+            "scale": self._scale(),
             "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
             "turbo": bool(self.v_turbo.get()), "ref_collage": bool(self.v_collage.get()),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
@@ -697,6 +724,7 @@ class App:
         put(self.v_grow, "mask_grow", int)
         put(self.v_blur, "mask_blur", int)
         put(self.v_overlap, "overlap", int)
+        put(self.v_scale, "scale", lambda v: str(float(v)).removesuffix(".0"))
         put(self.v_fooocus, "fooocus", bool)
         put(self.v_enhance, "enhance", bool)
         put(self.v_turbo, "turbo", bool)
@@ -799,7 +827,7 @@ class App:
                        mask_blur=int(self.v_blur.get()),
                        overlap=int(self.v_overlap.get()), variants=int(self.v_variants.get()),
                        fooocus=bool(self.v_fooocus.get()), enhance=bool(self.v_enhance.get()),
-                       turbo=bool(self.v_turbo.get()), ref_collage=bool(self.v_collage.get()),
+                       turbo=bool(self.v_turbo.get()), scale=self._scale(), ref_collage=bool(self.v_collage.get()),
                        layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2)
 
@@ -924,7 +952,7 @@ class App:
             "mode": req.mode, "workflow": self.v_workflow.get(), "clip": p.clip, "checkpoint": p.checkpoint, "prompt": p.prompt,
             "negative": p.negative, "steps": p.steps, "cfg": p.cfg, "denoise": self.v_denoise.get(),
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
-            "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap,
+            "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
             "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
             "ref_collage": req.ref_collage,
         })

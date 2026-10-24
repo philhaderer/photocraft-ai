@@ -219,6 +219,24 @@ def main():
     app.v_preset.set("My Test_")
     print("turbo switch OK")
 
+    # Upscale: a factor box that only the Upscale mode shows; part of the preset, the request and the state
+    shown = []
+    app.f_scale.pack = lambda *a, **k: shown.append("on")
+    app.f_scale.pack_forget = lambda: shown.append("off")
+    app.v_mode.set("upscale")
+    app._on_mode_ui()
+    assert shown[-1] == "on"
+    app.v_scale.set("3")
+    assert app._request().scale == 3.0 and app._collect()["scale"] == 3.0
+    app.v_scale.set("x")                                   # nonsense falls back to 2
+    assert app._request().scale == 2.0
+    app.v_mode.set("refine")
+    app._on_mode_ui()
+    assert shown[-1] == "off"
+    app.v_mode.set("inpaint")
+    app._on_mode_ui()
+    print("upscale controls OK")
+
     # delete
     app.delete_preset()
     assert not f.exists() and app.v_preset.get() == ""
