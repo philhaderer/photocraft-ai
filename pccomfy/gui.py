@@ -303,17 +303,14 @@ class App:
         self.b_stop = ttk.Button(bf, text="Cancel", command=self.stop, state="disabled")
         self.b_stop.pack(side="left", padx=(6, 0))
 
-        # two bars: the text model writing the prompt, and the image model generating
-        self.v_pl, self.v_il = tk.StringVar(value="Prompt"), tk.StringVar(value="Image")
-        self.bars = {}
-        for key, var in (("prompt", self.v_pl), ("image", self.v_il)):
-            row = ttk.Frame(r)
-            row.pack(fill="x", padx=10, pady=(6 if key == "prompt" else 2, 0))
-            ttk.Label(row, textvariable=var, width=34, style="Muted.TLabel").pack(side="left")
-            bar = ttk.Progressbar(row, mode="determinate", maximum=1.0)
-            bar.pack(side="left", fill="x", expand=True)
-            self.bars[key] = bar
-        self.pb = self.bars["image"]  # overall/fallback bar
+        # one bar for the whole run (prompt, then image) with the current step written next to it
+        self.v_pl = tk.StringVar(value="")
+        row = ttk.Frame(r)
+        row.pack(fill="x", padx=10, pady=(6, 0))
+        ttk.Label(row, textvariable=self.v_pl, width=24, style="Muted.TLabel").pack(side="left")
+        self.pb = ttk.Progressbar(row, mode="determinate", maximum=1.0)
+        self.pb.pack(side="left", fill="x", expand=True)
+        self._bar_value = 0.0
         st = ttk.Frame(r)
         st.pack(fill="x", padx=10, pady=(4, 0))
         self.lbl_err = ttk.Label(st, text="!", style="Badge.TLabel", width=2, anchor="center")
@@ -611,7 +608,7 @@ class App:
         self._save_state(req)
         self.b_go.configure(state="disabled")
         self.b_stop.configure(state="normal")
-        self._reset_bars()
+        self._reset_progress()
 
         def progress(f, msg, phase="", phase_fraction=-1.0, elapsed=0.0):
             self.events.put(("progress", (f, msg, phase, phase_fraction, elapsed)))
@@ -641,14 +638,11 @@ class App:
                 kind, data = self.events.get_nowait()
                 if kind == "progress":
                     f, msg, phase, pf, elapsed = data
-                    if phase in self.bars:
-                        self._set_bar(phase, pf, msg, elapsed)
-                        if phase == "image":  # the prompt is finished once the image phase starts
-                            self._set_bar("prompt", 1.0, None, None)
+                    self._set_progress(f, msg, phase, pf, elapsed)
                     if msg:
                         self._status(msg)
                 elif kind == "done":
-                    self._reset_bars(keep=not data.startswith(("Error", "Cancel", "Unexpected")))
+                    self._reset_progress(done=not data.startswith(("Error", "Cancel", "Unexpected")))
                     self._status(data, error=data.startswith(("Error", "Unexpected")))
                     self.b_go.configure(state="normal")
                     self.b_stop.configure(state="disabled")
@@ -663,46 +657,30 @@ class App:
             pass
         self.root.after(100, self._poll)
 
-    def _reset_bars(self, keep: bool = False):
-        self._bar_state = {}
-        for key, bar in self.bars.items():
-            bar.stop()
-            bar.configure(mode="determinate", value=bar["maximum"] if keep else 0)
-        self.v_pl.set("Prompt")
-        self.v_il.set("Image")
+    def _reset_progress(self, done: bool = False):
+        self._bar_value = 1.0 if done else 0.0
+        self.pb.configure(value=self._bar_value)
+        self.v_pl.set("Done" if done else "")
 
-    def _set_bar(self, key: str, fraction: float, msg: str | None, elapsed: float | None):
-        """Update one bar. Idempotent: Tk only gets touched when something really changed - stop()/mode switches
-        reset the bar for a moment, which showed up as blinking when done on every progress tick."""
-        bar, var = self.bars[key], (self.v_pl if key == "prompt" else self.v_il)
-        state = getattr(self, "_bar_state", None)
-        if state is None:
-            state = self._bar_state = {}
-        if key == "image" and fraction < 0:
-            fraction = 0.0  # no sweeping "unknown" animation while the model loads: a calm empty bar, the label shows seconds
-            msg = msg if msg is not None else ""
-            elapsed = elapsed if elapsed is not None else 0
-            unknown = True
+    def _set_progress(self, fraction: float, msg: str | None, phase: str, phase_fraction: float, elapsed: float | None):
+        """Move the single bar and name the step. Idempotent and only forward: Tk is touched only when the value or the
+        text really changed (stop()/mode switches on the bar made it blink), and the bar never jumps back when a
+        phase has no real progress (-1)."""
+        secs = f"{elapsed:.0f} s" if elapsed is not None else ""
+        if phase == "prompt":
+            text = f"Prompt · {secs}"
+        elif phase == "image":
+            step = (msg or "").split("…")[0].strip()
+            text = "Image · " + (step if phase_fraction >= 0 and step else secs)
+        elif phase == "place":
+            text = "Placing the result"
         else:
-            unknown = False
-        want = ("ind", None) if fraction < 0 else ("det", round(fraction, 3))
-        if state.get(key) != want:
-            if fraction < 0:
-                if state.get(key, ("",))[0] != "ind":
-                    bar.configure(mode="indeterminate")
-                    bar.start(40)
-            else:
-                if state.get(key, ("",))[0] == "ind":
-                    bar.stop()
-                    bar.configure(mode="determinate")
-                bar.configure(value=fraction)
-            state[key] = want
-        if msg is not None:
-            label = "Prompt: " if key == "prompt" else "Image: "
-            text = label + (f"{elapsed:.0f} s" if elapsed is not None and (fraction < 0 or unknown)
-                            else (msg.split("…")[0] or ""))
-            if var.get() != text:
-                var.set(text)
+            text = "Preparing"
+        if self.v_pl.get() != text:
+            self.v_pl.set(text)
+        if fraction is not None and fraction > self._bar_value:
+            self._bar_value = round(fraction, 3)
+            self.pb.configure(value=self._bar_value)
 
     def _save_state(self, req: Request):
         p = req.params
