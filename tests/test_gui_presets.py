@@ -170,6 +170,19 @@ def main():
     assert json.loads((Path(TMP) / "state.json").read_text(encoding="utf-8"))["preset"] == "My Test_"
     print("request/state OK:", req.mode, Path(req.workflow).name)
 
+    # errors get the red badge (no dialog), normal messages clear it
+    shown = []
+    app.lbl_err.pack = lambda *a, **k: shown.append("on")
+    app.lbl_err.pack_forget = lambda: shown.append("off")
+    app._status("Error: ComfyUI is not reachable", error=True)
+    app._status("Saved.")
+    app.v_workflow.set("fibo2-edit-both.group.json")
+    app.t_prompt.delete("1.0", "end")
+    app.t_prompt.insert("1.0", "x")
+    app._status("Loaded.")
+    assert shown == ["on", "off", "off"] and app.v_status.get() == "Loaded.", shown
+    print("status badge OK")
+
     # delete
     app.delete_preset()
     assert not f.exists() and app.v_preset.get() == ""

@@ -68,6 +68,7 @@ def preset_stem(name: str) -> str:
     return re.sub(r"[^\w .\-]", "_", name.strip(), flags=re.UNICODE).strip(". ") or "preset"
 
 BG, PANEL, FG, MUTED, ACCENT = "#16181d", "#1f2229", "#e6e8ee", "#8a90a0", "#7c5cff"
+ERROR, ERROR_TEXT = "#e5484d", "#ff8a8a"
 
 
 class App:
@@ -133,6 +134,8 @@ class App:
                     lightcolor=PANEL, darkcolor=PANEL, troughcolor=PANEL, focuscolor=ACCENT, font=(FONT, 10))
         s.configure("TLabel", background=BG, foreground=FG)
         s.configure("Muted.TLabel", foreground=MUTED, font=(FONT, 9))
+        s.configure("Badge.TLabel", background=ERROR, foreground="white", font=(FONT, 10, "bold"))
+        s.configure("Error.TLabel", foreground=ERROR_TEXT)
         s.configure("TLabelframe", background=BG, bordercolor="#2c303a")
         s.configure("TLabelframe.Label", background=BG, foreground=MUTED)
         s.configure("TRadiobutton", background=BG, foreground=FG)
@@ -310,7 +313,11 @@ class App:
             bar.pack(side="left", fill="x", expand=True)
             self.bars[key] = bar
         self.pb = self.bars["image"]  # overall/fallback bar
-        ttk.Label(r, textvariable=self.v_status, wraplength=400, justify="left").pack(anchor="w", padx=10, pady=(4, 0))
+        st = ttk.Frame(r)
+        st.pack(fill="x", padx=10, pady=(4, 0))
+        self.lbl_err = ttk.Label(st, text="!", style="Badge.TLabel", width=2, anchor="center")
+        self.lbl_status = ttk.Label(st, textvariable=self.v_status, wraplength=380, justify="left")
+        self.lbl_status.pack(side="left", fill="x", expand=True)
         ttk.Label(r, text="Prompt written by the text model (VGL)", style="Muted.TLabel").pack(anchor="w", padx=10, pady=(6, 0))
         self.t_vgl = tk.Text(r, height=6, wrap="word", state="disabled", font=(FONT, 8))
         self.t_vgl.pack(fill="x", padx=10)
@@ -338,6 +345,15 @@ class App:
             self.v_denoise.set(1.0)  # full denoise inside the mask; lower it to keep more of the original
         elif mode == "img2img" and self.v_denoise.get() >= 0.99:
             self.v_denoise.set(0.6)
+
+    def _status(self, msg: str, error: bool = False):
+        """The status line. An error gets a red "!" badge and red text, it never opens a dialog."""
+        self.v_status.set(msg)
+        self.lbl_status.configure(style="Error.TLabel" if error else "TLabel")
+        if error:
+            self.lbl_err.pack(side="left", padx=(0, 8), before=self.lbl_status)
+        else:
+            self.lbl_err.pack_forget()
 
     def _on_feather(self, _value=None):
         v = round(float(self.v_feather.get()) * 2) / 2
@@ -420,7 +436,7 @@ class App:
             self.v_workflow.set(BUILTIN)
         self._on_workflow()
         if info.get("err"):
-            self.v_status.set(info["err"])
+            self._status(info["err"], error=True)
 
     # ---------- presets (save / load everything, incl. the prompt) ----------
 
@@ -527,7 +543,7 @@ class App:
         try:
             settings = self._collect()
         except (tk.TclError, ValueError) as e:
-            self.v_status.set(f"Invalid value, preset not saved: {e}")
+            self._status(f"Invalid value, preset not saved: {e}", error=True)
             return
         stem = preset_stem(name)
         data = {"format": 1, "name": stem, "saved": datetime.now().isoformat(timespec="seconds"), "settings": settings}
@@ -535,10 +551,10 @@ class App:
             self.presets_dir.mkdir(parents=True, exist_ok=True)
             self._preset_path(stem).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
         except OSError as e:
-            self.v_status.set(f"Could not save the preset: {e}")
+            self._status(f"Could not save the preset: {e}", error=True)
             return
         self.refresh_presets(select=stem)
-        self.v_status.set(f"Saved preset “{stem}”.")
+        self._status(f"Saved preset “{stem}”.")
 
     def load_preset(self, name: str):
         if not name:
@@ -546,10 +562,10 @@ class App:
         try:
             data = json.loads(self._preset_path(name).read_text(encoding="utf-8"))
         except (OSError, ValueError) as e:
-            self.v_status.set(f"Could not load the preset: {e}")
+            self._status(f"Could not load the preset: {e}", error=True)
             return
         notes = self._apply_settings(data.get("settings", data) if isinstance(data, dict) else {})
-        self.v_status.set(f"Loaded preset “{name}”." + (f" Not applied: {'; '.join(notes)}." if notes else ""))
+        self._status(f"Loaded preset “{name}”." + (f" Not applied: {'; '.join(notes)}." if notes else ""))
 
     def delete_preset(self):
         name = self.v_preset.get().strip()
@@ -560,10 +576,10 @@ class App:
         try:
             self._preset_path(name).unlink()
         except OSError as e:
-            self.v_status.set(f"Could not delete the preset: {e}")
+            self._status(f"Could not delete the preset: {e}", error=True)
             return
         self.refresh_presets(select="")
-        self.v_status.set(f"Deleted preset “{name}”.")
+        self._status(f"Deleted preset “{name}”.")
 
     # ---------- generation ----------
 
@@ -589,7 +605,7 @@ class App:
         try:
             req = self._request()
         except (tk.TclError, ValueError) as e:
-            self.v_status.set(f"Invalid value: {e}")
+            self._status(f"Invalid value: {e}", error=True)
             return
         self._save_state(req)
         self.b_go.configure(state="disabled")
@@ -616,7 +632,7 @@ class App:
     def stop(self):
         if self.worker and self.worker.is_alive():
             self.bridge.cancel()
-            self.v_status.set("Cancelling…")
+            self._status("Cancelling…")
 
     def _poll(self):
         try:
@@ -629,10 +645,10 @@ class App:
                         if phase == "image":  # the prompt is finished once the image phase starts
                             self._set_bar("prompt", 1.0, None, None)
                     if msg:
-                        self.v_status.set(msg)
+                        self._status(msg)
                 elif kind == "done":
                     self._reset_bars(keep=not data.startswith(("Error", "Cancel", "Unexpected")))
-                    self.v_status.set(data)
+                    self._status(data, error=data.startswith(("Error", "Unexpected")))
                     self.b_go.configure(state="normal")
                     self.b_stop.configure(state="disabled")
                 elif kind == "vgl":
