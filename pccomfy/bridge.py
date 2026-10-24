@@ -255,6 +255,7 @@ class Bridge:
         self._tmp: list[Path] = []
         self._snap: dict | None = None          # history snapshot taken before the last generation (for "Undo AI edit")
         self._snap_error = ""
+        self._redo: dict | None = None          # snapshot of the state before an undo, for "Redo AI edit"
         self._last_expand: dict | None = None   # the last Expand: document, canvas size, where the original lies, result layers
 
     def cancel(self) -> None:
@@ -718,6 +719,7 @@ class Bridge:
         if self._snap and self._snap.get("id") is not None:
             self._try("history.deleteSnapshot", {"snapshot": self._snap["id"]})
         self._snap = None
+        self._drop_redo()   # a new run ends the redo chain
         try:
             res = self.pc.execute("history.newSnapshot", {"name": stamp})
         except PhotoCraftError as e:
@@ -729,21 +731,51 @@ class Bridge:
             return
         self._snap, self._snap_error = {"name": stamp, "doc": doc_name, "id": sid}, ""
 
-    def undo_last(self) -> str:
-        """Go back to the snapshot taken before the last generation (one history step for the whole run)."""
-        if not self._snap:
-            raise BridgeError("Nothing to undo yet." + (f" (No snapshot could be made: {self._snap_error})" if self._snap_error else ""))
+    def _drop_redo(self) -> None:
+        redo, self._redo = getattr(self, "_redo", None), None
+        if redo and redo.get("id") is not None:
+            self._try("history.deleteSnapshot", {"snapshot": redo["id"]})
+
+    def _activate_doc(self, name: str):
         pc = self.pc.connect()
         docs = pc.session().get("documents", [])
-        match = next((d["index"] for d in docs if d["name"] == self._snap["doc"]), None)
+        match = next((d["index"] for d in docs if d["name"] == name), None)
         if match is None:
-            raise BridgeError(f"Document “{self._snap['doc']}” not found – was it closed?")
+            raise BridgeError(f"Document \u201c{name}\u201d not found \u2013 was it closed?")
         pc.activate(match)
+        return pc
+
+    def undo_last(self) -> str:
+        """Go back to the snapshot taken before the last generation (one history step for the whole run). The state
+        that is left is kept as a snapshot too, so "Redo" can bring it back."""
+        if not self._snap:
+            raise BridgeError("Nothing to undo yet." + (f" (No snapshot could be made: {self._snap_error})" if self._snap_error else ""))
+        pc = self._activate_doc(self._snap["doc"])
+        self._drop_redo()
+        stamp = time.strftime("After AI %H:%M:%S")
+        try:   # best effort: without it undo still works, redo does not
+            sid = self._snapshot_id(pc.execute("history.newSnapshot", {"name": stamp}))
+            if sid is not None:
+                self._redo = {"name": stamp, "doc": self._snap["doc"], "id": sid}
+        except PhotoCraftError:
+            pass
         try:
             pc.execute("history.selectSnapshot", {"snapshot": self._snap["id"]})
         except PhotoCraftError as e:
             raise BridgeError(f"Could not go back to the snapshot: {e}") from None
         return f"Back to the state before the last AI edit ({self._snap['name']})."
+
+    def redo_last(self) -> str:
+        """Bring back the result that the last undo left (until the next generation)."""
+        redo = getattr(self, "_redo", None)
+        if not redo:
+            raise BridgeError("Nothing to redo (redo is possible right after an undo, until the next generation).")
+        pc = self._activate_doc(redo["doc"])
+        try:
+            pc.execute("history.selectSnapshot", {"snapshot": redo["id"]})
+        except PhotoCraftError as e:
+            raise BridgeError(f"Could not redo: {e}") from None
+        return f"Redone: the AI edit is back ({redo['name']})."
 
     def _rerun_expand(self, orig: int) -> "imaging.Box | None":
         """Expand again right after an Expand whose result is not wanted: the margin is covered by that result, so no
