@@ -13,8 +13,9 @@ from pccomfy.photocraft import PhotoCraftError  # noqa: E402
 
 
 class Pc:
-    def __init__(self, accept=("name",)):
-        self.calls, self.accept, self.active = [], accept, None
+    """Fake PhotoCraft: new-snapshot answers with an id, select/delete want {"snapshot": id}."""
+    def __init__(self, answer=lambda n: {"id": n}):
+        self.calls, self.active, self.answer, self.n = [], None, answer, 0
 
     def connect(self):
         return self
@@ -27,8 +28,11 @@ class Pc:
 
     def execute(self, cmd, params=None):
         self.calls.append((cmd, params))
-        if cmd in ("history.newSnapshot", "history.selectSnapshot") and not (set(params) & set(self.accept)):
-            raise PhotoCraftError(f"{cmd}: bad params")
+        if cmd == "history.newSnapshot":
+            self.n += 1
+            return self.answer(self.n)
+        if cmd in ("history.selectSnapshot", "history.deleteSnapshot") and "snapshot" not in params:
+            raise PhotoCraftError(f"{cmd}: `snapshot` must be a snapshot id")
         return {}
 
 
@@ -47,31 +51,28 @@ def main():
     else:
         raise AssertionError
 
-    # the snapshot is made, undo selects it in its own document; only the latest snapshot is kept
+    # the snapshot is made, undo selects it by id in its own document; only the latest snapshot is kept
     pc = Pc(); b = make(pc)
     b._snapshot("b.png")
-    first = b._snap["name"]
-    assert pc.calls[0][0] == "history.newSnapshot"
     b._snapshot("b.png")
-    assert ("history.deleteSnapshot", {"name": first}) in pc.calls or first == b._snap["name"]
+    assert ("history.deleteSnapshot", {"snapshot": 1}) in pc.calls and b._snap["id"] == 2
     msg = b.undo_last()
-    assert pc.active == 1 and pc.calls[-1] == ("history.selectSnapshot", {"name": b._snap["name"]}) and "before the last AI edit" in msg
+    assert pc.active == 1 and pc.calls[-1] == ("history.selectSnapshot", {"snapshot": 2}) and "before the last AI edit" in msg
 
-    # the other spelling of the parameter is found
-    pc = Pc(accept=("snapshot",)); b = make(pc)
-    b._snapshot("a.png")
-    assert b._snap["key"] == "snapshot"
-    b.undo_last()
-    assert pc.calls[-1][1] == {"snapshot": b._snap["name"]}
+    # the id can come back in other shapes
+    for answer, want in ((lambda n: n, 1), (lambda n: "s7", "s7"), (lambda n: {"snapshot": {"id": 9}}, 9)):
+        pc = Pc(answer); b = make(pc)
+        b._snapshot("a.png")
+        assert b._snap["id"] == want, (b._snap, want)
 
-    # no snapshot possible: remembered, and said when undo is asked
-    pc = Pc(accept=()); b = make(pc)
+    # no id in the answer: remembered with the answer, and said when undo is asked
+    pc = Pc(lambda n: {"ok": True}); b = make(pc)
     b._snapshot("a.png")
-    assert b._snap is None and b._snap_error
+    assert b._snap is None and "gave no id" in b._snap_error
     try:
         b.undo_last()
     except BridgeError as e:
-        assert "No snapshot could be made" in str(e)
+        assert "No snapshot could be made" in str(e) and "gave no id" in str(e)
     else:
         raise AssertionError
     print("ALL OK (undo snapshot)")
