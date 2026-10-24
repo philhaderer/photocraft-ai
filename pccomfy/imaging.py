@@ -32,20 +32,34 @@ def mask_bbox(mask: Image.Image, threshold: int = 3) -> Box | None:
     return Box(int(xs.min()), int(ys.min()), int(xs.max() - xs.min() + 1), int(ys.max() - ys.min() + 1))
 
 
-def content_box(img: Image.Image, threshold: int = 250) -> Box | None:
-    """Bounding box of the opaque content of an image that has transparent canvas around it.
+def content_box(img: Image.Image, threshold: int = 250, min_band: int = 8) -> Box | None:
+    """Bounding box of the real image inside a canvas that was extended around it.
 
-    None when there is no transparency at all, when nothing is opaque, or when the content fills the whole image,
-    i.e. when there is no empty canvas to fill.
+    Empty canvas is transparent (alpha < threshold) or pure white: PhotoCraft's Crop tool fills new canvas with
+    white. Only bands along the edges that are empty across the whole image width/height count, and only if they
+    are at least `min_band` px thick (a thin white line is not an extension).
+    None when there is no such band, or when nothing is left.
     """
-    if img.mode not in ("RGBA", "LA") and "transparency" not in img.info:
-        return None
-    opaque = np.asarray(img.convert("RGBA"))[..., 3] >= threshold
-    rows, cols = np.flatnonzero(opaque.any(axis=1)), np.flatnonzero(opaque.any(axis=0))
+    rgba = np.asarray(img.convert("RGBA"))
+    empty = (rgba[..., 3] < threshold) | (rgba[..., :3].min(axis=2) >= 254)
+    rows, cols = np.flatnonzero(~empty.all(axis=1)), np.flatnonzero(~empty.all(axis=0))
     if len(rows) == 0:
         return None
-    box = Box(int(cols[0]), int(rows[0]), int(cols[-1] - cols[0] + 1), int(rows[-1] - rows[0] + 1))
-    return None if (box.w, box.h) == img.size else box
+    W, H = img.size
+    x0, x1, y0, y1 = int(cols[0]), int(cols[-1]) + 1, int(rows[0]), int(rows[-1]) + 1
+    x0, y0 = (x0 if x0 >= min_band else 0), (y0 if y0 >= min_band else 0)
+    x1, y1 = (x1 if W - x1 >= min_band else W), (y1 if H - y1 >= min_band else H)
+    return None if (x0, y0, x1, y1) == (0, 0, W, H) else Box(x0, y0, x1 - x0, y1 - y0)
+
+
+def clear_outside(img: Image.Image, keep: Box) -> Image.Image:
+    """Make everything outside `keep` transparent, so the new canvas gets the edge-extended fill (to_rgb) whether
+    the Crop tool left it white or transparent."""
+    out = img.convert("RGBA")
+    alpha = Image.new("L", out.size, 0)
+    alpha.paste(255, keep.pil())
+    out.putalpha(alpha)
+    return out
 
 
 def new_area_rect(keep: Box, canvas: tuple[int, int], overlap: int) -> tuple[int, int, int, int]:

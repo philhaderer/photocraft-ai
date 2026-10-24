@@ -38,6 +38,34 @@ def main():
     b = cb(im)
     assert (b.x, b.y, b.w, b.h) == (0, 0, 100, 100), b
 
+    # PhotoCraft's Crop tool fills new canvas with white
+    def white(size, content):
+        im = Image.new("RGB", size, (255, 255, 255))
+        x, y, w, h = content
+        im.paste(Image.new("RGB", (w, h), (200, 100, 50)), (x, y))
+        return im
+
+    b = cb(white((300, 100), (0, 0, 200, 100)))
+    assert (b.x, b.y, b.w, b.h) == (0, 0, 200, 100), b
+    b = cb(white((280, 160), (80, 60, 200, 100)))
+    assert (b.x, b.y, b.w, b.h) == (80, 60, 200, 100), b
+    # white inside the picture or a thin white line at the edge is not an extension
+    im = white((300, 100), (0, 0, 300, 100))
+    im.paste(Image.new("RGB", (60, 40), (255, 255, 255)), (100, 30))
+    assert cb(im) is None
+    assert cb(white((203, 100), (0, 0, 200, 100))) is None
+    # white canvas around a picture that has a white sky at the top: only whole empty rows/columns count
+    im = white((300, 200), (50, 50, 200, 100))
+    b = cb(im)
+    assert (b.x, b.y, b.w, b.h) == (50, 50, 200, 100), b
+    assert cb(Image.new("RGB", (50, 50), (255, 255, 255))) is None
+
+    # white canvas is turned into the edge-extended fill like a transparent one
+    kept = imaging.Box(0, 0, 200, 100)
+    filled = imaging.to_rgb(imaging.clear_outside(white((300, 100), (0, 0, 200, 100)), kept))
+    px = filled.getpixel((250, 50))
+    assert all(abs(a - b) < 30 for a, b in zip(px, (200, 100, 50))), px  # picture colours, not white
+
     rect = imaging.new_area_rect
     # right only: overlap on the right edge of the original, none on the other sides
     assert rect(imaging.Box(0, 0, 200, 100), (300, 100), 32) == (0, 0, 168, 100)

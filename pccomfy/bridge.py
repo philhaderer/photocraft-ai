@@ -235,9 +235,10 @@ class Bridge:
         orig_name = sess["documents"][orig]["name"]
         doc = pc.document()
 
+        keep = None  # outpaint: where the original image lies in the extended canvas
         if req.mode == "outpaint":
             progress(0.02, "Finding the empty canvas area", phase="prepare")
-            self._select_new_area(req, orig, tag)
+            keep = self._select_new_area(req, orig, tag)
             doc = pc.document()
 
         W, H = doc["width"], doc["height"]
@@ -249,6 +250,8 @@ class Bridge:
         if req.mode != "txt2img" or has_sel:
             progress(0.05, "Exporting the image from PhotoCraft", phase="prepare")
             src, mask = self._export(orig, tag, need_mask=has_sel)
+            if keep is not None:
+                src = imaging.clear_outside(src, keep)
 
         bbox = None
         if req.mode in ("inpaint", "outpaint"):
@@ -434,10 +437,11 @@ class Bridge:
             self._try("layer.hideLayers", {"layer": layer})
         return layer
 
-    def _select_new_area(self, req: Request, orig: int, tag: str) -> None:
-        """Outpaint: select the empty (transparent) canvas plus an overlap onto the existing image.
+    def _select_new_area(self, req: Request, orig: int, tag: str) -> "imaging.Box":
+        """Outpaint: select the empty (transparent or white) canvas plus an overlap onto the existing image.
 
-        The canvas is opened by the user (Crop tool); the transparent area is found in the merged image.
+        The canvas is opened by the user (Crop tool, which fills it with white); the empty bands are found in the
+        merged image. Returns where the original image lies.
         Explicit pixel amounts (command line, tests) are applied first with Canvas Size instead.
         """
         if any(max(0, int(v)) for v in req.outpaint):
@@ -455,6 +459,7 @@ class Bridge:
             # feather only the edge against the original (feathering the whole selection would round the canvas corners)
             self.pc.execute("select.rect", {"x": x0, "y": y0, "width": x1 - x0, "height": y1 - y0,
                                             "mode": "subtract", "feather": max(0, int(req.overlap) // 2)})
+        return keep
 
     def _expand_canvas(self, req: Request) -> "imaging.Box":
         """Add the requested pixels around the image; returns where the original now lies."""
