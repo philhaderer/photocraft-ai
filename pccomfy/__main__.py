@@ -91,8 +91,22 @@ def cmd_commands(cfg: dict, pattern: str) -> int:
             print(f"{probe}: OK " + json.dumps(res, ensure_ascii=False)[:300])
         except PhotoCraftError as e:
             print(f"{probe}: {str(e)[:100]}")
-    if found:
+    if found is not None:
         rx = re.compile(pattern, re.I)
+        # show the full entry (usage text) of every matching command
+        def entries(x, key=None):
+            if isinstance(x, dict):
+                if rx.search(str(x.get("name") or x.get("command") or "")) and len(json.dumps(x)) < 600:
+                    print("  * " + json.dumps(x, ensure_ascii=False))
+                    return
+                for k, v in x.items():
+                    if rx.search(str(k)) and not isinstance(v, (dict, list)) and len(str(v)) < 400:
+                        print(f"  * {k}: {v}")
+                    entries(v, k)
+            elif isinstance(x, list):
+                for v in x:
+                    entries(v, key)
+        entries(res)
         for n in sorted({n for n in found if rx.search(n) and len(n) < 80}):
             print("  " + n)
     return 0
