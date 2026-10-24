@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
+import numpy as np
 from PIL import Image
 
 from . import imaging, workflows
@@ -150,9 +151,19 @@ def reference_where(sel: "imaging.Box", crop: "imaging.Box") -> str:
     return f" Put the subject at the {where} of <image_2>, covering roughly {share}% of the image."
 
 
-REMOVE_PROMPT = ("Remove the object inside the red outline from the image and fill the area naturally with the surrounding "
-                 "background, continuing what lies behind it. The red outline must not appear in the result. "
-                 "Keep everything else unchanged.")
+# Live test (Fibo 2 Edit Turbo, dragon on a meadow, 3 seeds): "Erase the main subject inside the red rectangle completely,
+# as if it had never been there, and paint the empty scenery behind it" removed it every time. Failed: "Remove the object
+# marked by the red outline ...", "... inside the red frame ... the red frame must not appear" (the model removed the
+# frame and kept the subject). What works is a command to erase and to paint the scenery behind.
+REMOVE_PROMPT = ("Erase the main subject inside the red {shape} completely, as if it had never been there, and paint the "
+                 "empty scenery behind it. Also remove the red {shape} itself.")
+
+
+def remove_prompt(mask: "Image.Image") -> str:
+    """The removal instruction; "rectangle" for a rectangular selection (tested), otherwise "outline"."""
+    box = imaging.mask_bbox(mask)
+    rect = bool(box) and (np.asarray(mask.convert("L")) > 127).sum() >= 0.97 * box.w * box.h
+    return REMOVE_PROMPT.format(shape="rectangle" if rect else "outline")
 
 
 def outline_width(gen_w: int, gen_h: int) -> int:
@@ -403,7 +414,7 @@ class Bridge:
                 # the text model is bypassed in this mode: a fixed instruction with <image_1>/<image_2> (+ where)
                 gp = dataclasses.replace(p, prompt=reference_prompt(p.prompt, req.ref_collage, reference_where(bbox, region)))
             if removal:
-                gp = dataclasses.replace(p, prompt=REMOVE_PROMPT)   # fixed instruction, the text model is bypassed
+                gp = dataclasses.replace(p, prompt=remove_prompt(mask.crop(region.pil())))   # fixed instruction, the text model is bypassed
             if hint and wf and req.enhance and not removal and prompt_phase_nodes(workflows.load_template(wf)):
                 gp = dataclasses.replace(p, prompt=p.prompt.strip() + hint)  # text-model workflows only
             graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name, force_plain=removal)

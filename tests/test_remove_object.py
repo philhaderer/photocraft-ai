@@ -50,13 +50,19 @@ def main():
     img = next(v for k, v in b.comfy.uploads.items() if k.endswith("-image.png"))
     assert red(img) > 50
     g = b.comfy.graphs[0]
-    assert prompt_of(g) == bridge.REMOVE_PROMPT and "red outline" in prompt_of(g)
+    assert prompt_of(g) == bridge.REMOVE_PROMPT.format(shape="rectangle")
     assert not [k for k in b.comfy.uploads if k.endswith("-ref.png")]
 
     # empty prompt with a text-model workflow and enhance on: no "type an instruction" error, text model bypassed
     b, _ = run("fibo2-edit-vgl-bionic-qwen35-9b.json", enhance=True)
     g = b.comfy.graphs[0]
-    assert prompt_of(g) == bridge.REMOVE_PROMPT
+    assert prompt_of(g) == bridge.REMOVE_PROMPT.format(shape="rectangle")
+
+    # a round selection says "outline"
+    mm = Image.new("L", (100, 100), 0)
+    from PIL import ImageDraw
+    ImageDraw.Draw(mm).ellipse((10, 10, 90, 90), fill=255)
+    assert "red outline" in bridge.remove_prompt(mm) and "red rectangle" in bridge.remove_prompt(Image.new("L", (50, 50), 255))
 
     # typed text: normal fill, no outline
     b, _ = run("fibo2-edit-plain.json", prompt="a red car")
