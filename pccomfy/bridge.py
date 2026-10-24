@@ -469,9 +469,11 @@ class Bridge:
                 gp = dataclasses.replace(p, prompt=reference_prompt(p.prompt, req.ref_collage, reference_where(bbox, region)))
             if removal:   # fixed instruction, the text model is bypassed
                 gp = dataclasses.replace(p, prompt=remove_prompt(mask.crop(region.pil())))
-            elif fill:    # marked area + fixed wrapper around the typed text, the text model is bypassed
+            elif fill:    # marked area + fixed wrapper around the typed text; goes through the text model only when the
+                #           workflow has one and "Enhance" is on (live test: the same placement, ~25 s slower, fewer
+                #           doubled objects in 1 of 5 pictures), otherwise it is sent as it is
                 gp = dataclasses.replace(p, prompt=fill_prompt(p.prompt, mask.crop(region.pil())))
-            if hint and wf and req.enhance and not removal and prompt_phase_nodes(workflows.load_template(wf)):
+            if hint and wf and req.enhance and not removal and not fill and prompt_phase_nodes(workflows.load_template(wf)):
                 gp = dataclasses.replace(p, prompt=p.prompt.strip() + hint)  # text-model workflows only
             start, span = 0.15 + 0.75 * k / n_wf, 0.75 / n_wf
             tries = max(1, int(req.remove_tries)) if removal == "remove" else 1
@@ -482,7 +484,7 @@ class Bridge:
                     gp = dataclasses.replace(gp, seed=(gp.seed + 7919 * attempt) % (2**31),
                                              prompt=remove_prompt(mask.crop(region.pil()), attempt))
                     p.seed = gp.seed
-                graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name, force_plain=marked)
+                graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name, force_plain=marked and not (fill and req.enhance and prompt_phase_nodes(workflows.load_template(wf))))
                 prompt_id = self.comfy.queue(graph)
                 progress(start, f"Queued in ComfyUI ({self.pipeline}{suffix})" if not attempt
                          else f"Object still there, trying again ({attempt + 1}/{tries})", phase="prepare")

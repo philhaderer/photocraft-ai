@@ -32,7 +32,8 @@ MODE_TIPS = {
                "then Generate.\n"
                "A text is required with Fibo workflows. To take something away use \"Remove\".\n"
                "With Fibo the selection is drawn into the picture as a red outline and your text is wrapped in a fixed "
-               "instruction (place it only inside the outline), so the object lands where you marked. The text model is bypassed.\n"
+               "instruction (place it only inside the outline), so the object lands where you marked.\n"
+               "With a text-model workflow and Enhance on, the text model writes the long prompt from it (about 25 s slower); otherwise it goes straight to Fibo.\n"
                "Fibo redraws the whole surrounding crop and ignores the mask, so the layer mask is off in \"auto\".",
     "remove": "Select the object to remove (tightly, but with the whole object inside), then Generate. No text needed.\n"
               "A red rectangle / outline is drawn into the picture the model gets (never into your document) and a fixed "

@@ -123,6 +123,17 @@ def main():
     assert red(img) > 0 and len(b.comfy.graphs) == 1
     assert pr.startswith("a red car. Place it only inside the red ") and "Also remove the red" in pr
 
+    # with a text-model workflow: Enhance on = the wrapped text goes to the text model as its instruction (no placement
+    # hint on top), Enhance off = straight to Fibo
+    b, _ = run("fibo2-edit-vgl-bionic-qwen35-9b.json", prompt="a red car", enhance=True)
+    g = b.comfy.graphs[0]
+    vgl = next(n for n in g.values() if n["class_type"] == "VGLBionicEditPrompt")
+    assert vgl["inputs"]["instruction"].startswith("a red car. Place it only inside the red ") and "Apply this only" not in vgl["inputs"]["instruction"]
+    b, _ = run("fibo2-edit-vgl-bionic-qwen35-9b.json", prompt="a red car", enhance=False)
+    g = b.comfy.graphs[0]
+    assert not any(n["class_type"] == "VGLBionicEditPrompt" for n in g.values())
+    assert prompt_of(g).startswith("a red car. Place it only inside the red ")
+
     print("ALL OK (remove object)")
 
 
