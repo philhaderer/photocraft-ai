@@ -108,8 +108,9 @@ def main(argv=None) -> int:
     r.add_argument("--seed", type=int, default=-1)
     r.add_argument("--res", type=int, help="base resolution (e.g. 512, 768, 1024)")
     r.add_argument("--variants", type=int, default=1)
-    r.add_argument("--layer-mask", choices=("soft", "selection", "none"), default="soft",
-                   help="layer mask of the new layer: soft (default), hard from the selection, or none")
+    r.add_argument("--layer-mask", choices=("auto", "soft", "selection", "none"), default="auto",
+                   help="layer mask of the new layer: auto (default: none for Fill with a Fibo-type editor, else soft), "
+                        "soft, hard from the selection, or none")
     r.add_argument("--no-fooocus", action="store_true", help="don't use the Fooocus patch (e.g. for SD1.5 models)")
     r.add_argument("--no-enhance", action="store_true",
                    help="text-model workflows: send the prompt as typed, without the text model writing it")

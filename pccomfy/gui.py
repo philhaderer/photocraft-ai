@@ -25,7 +25,7 @@ MODE_LABELS = [
     ("txt2img", "Text → image"),
 ]
 BUILTIN = "Built-in (checkpoint)"
-LAYER_MASKS = {"soft": "soft (same as the model's)", "selection": "hard (from selection)", "none": "none"}
+LAYER_MASKS = {"auto": "auto (recommended)", "soft": "soft (same as the model's)", "selection": "hard (from selection)", "none": "none"}
 
 class Tooltip:
     """Small hover tooltip for any tk/ttk widget."""
@@ -115,7 +115,7 @@ class App:
         self.v_feather = tk.DoubleVar(value=g("feather_pct", 2.0))
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
         self.v_enhance = tk.BooleanVar(value=g("enhance", True))
-        self.v_lmask = tk.StringVar(value=LAYER_MASKS.get(g("layer_mask", "soft"), LAYER_MASKS["soft"]))
+        self.v_lmask = tk.StringVar(value=LAYER_MASKS.get(g("layer_mask", "auto"), LAYER_MASKS["auto"]))
         self.v_status = tk.StringVar(value="Ready")
         self.v_conn = tk.StringVar(value="")
 
@@ -296,7 +296,9 @@ class App:
         cb_lm.pack(side="left", padx=6)
         for w in (lb, cb_lm):
             Tooltip(w, "How the result is blended into your image.\n"
-                       "soft: a feathered mask (see Edge feather) - recommended.\n"
+                       "auto: no mask for Fill with a Fibo-type editor (it regenerates the whole crop, so a mask would cut off\n"
+                       "   what it changed on purpose, e.g. a person's shadow); soft for everything else - recommended.\n"
+                       "soft: a feathered mask (see Edge feather).\n"
                        "hard (from selection): the selection exactly as PhotoCraft has it, incl. a feather you set there.\n"
                        "none: the whole generated area replaces the pixels, no mask.")
 
@@ -461,7 +463,7 @@ class App:
             "base_res": int(self.v_res.get()), "context": float(self.v_context.get()),
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
             "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
-            "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "soft"),
+            "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
             "feather_pct": round(float(self.v_feather.get()), 1),
             "prompt": self.t_prompt.get("1.0", "end").strip(), "negative": self.t_neg.get("1.0", "end").strip(),
         }
@@ -511,7 +513,7 @@ class App:
         put(self.v_feather, "feather_pct", float)
         self._on_feather()
         if "layer_mask" in s:
-            self.v_lmask.set(LAYER_MASKS.get(s["layer_mask"], LAYER_MASKS["soft"]))
+            self.v_lmask.set(LAYER_MASKS.get(s["layer_mask"], LAYER_MASKS["auto"]))
         for widget, key in ((self.t_prompt, "prompt"), (self.t_neg, "negative")):
             # an empty prompt in a preset means "not part of the preset": never wipe what was typed
             if str(s.get(key, "")).strip():
@@ -605,7 +607,7 @@ class App:
                        mask_blur=int(self.v_blur.get()),
                        overlap=int(self.v_overlap.get()), variants=int(self.v_variants.get()),
                        fooocus=bool(self.v_fooocus.get()), enhance=bool(self.v_enhance.get()),
-                       layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "soft"),
+                       layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2)
 
     def generate(self):

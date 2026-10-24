@@ -35,7 +35,7 @@ from .comfy import ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 
 MODES = ("inpaint", "outpaint", "img2img", "txt2img")
-LAYER_MASKS = ("soft", "selection", "none")
+LAYER_MASKS = ("auto", "soft", "selection", "none")
 
 
 class BridgeError(RuntimeError):
@@ -56,7 +56,8 @@ class Request:
     variants: int = 1
     fooocus: bool = True                 # inpaint/outpaint: Fooocus patch (SDXL) when the server has it
     enhance: bool = True                 # text-model workflows: let the text model write the prompt (off = typed text as is)
-    layer_mask: str = "soft"             # "soft" = same mask the model got, "selection" = hard selection, "none"
+    layer_mask: str = "auto"             # "auto" = none for Fill with an editor that ignores the mask, else soft;
+                                         # "soft" = same mask the model got, "selection" = hard selection, "none"
     feather_pct: float = 2.0             # soft layer mask for editors that ignore the mask: % of the selection's shorter side
 
 
@@ -95,6 +96,17 @@ def mask_is_used(graph: dict) -> bool:
            if "mask" in re.findall(r"pc:\s*([a-z]+)", n.get("_meta", {}).get("title", "").lower())}
     return any(isinstance(v, list) and v and str(v[0]) in ids
                for n in graph.values() for v in n.get("inputs", {}).values())
+
+
+def effective_layer_mask(choice: str, mode: str, editor: bool, has_sel: bool) -> str:
+    """The layer mask that is really used. "auto" = none for a Fill with an instruction-based editor (Fibo): it
+    regenerates the whole crop and ignores the mask, so a layer mask would cut off parts it changed on purpose
+    (a person's shadow, outline, pose). Everything else gets the soft mask."""
+    if not has_sel:
+        return "none"
+    if choice == "auto":
+        return "none" if (editor and mode == "inpaint") else "soft"
+    return choice
 
 
 def placement_hint(sel: "imaging.Box", crop: "imaging.Box") -> str:
@@ -332,7 +344,8 @@ class Bridge:
         orig = self._find_doc(orig, orig_name)
         base = (p.prompt.strip() or req.mode)[:40]
         layer_mask = None
-        if has_sel and req.layer_mask == "soft":
+        lm_mode = effective_layer_mask(req.layer_mask, req.mode, editor, has_sel)
+        if lm_mode == "soft":
             if wf_paths[0] and not any(mask_is_used(json.loads(Path(w).read_text(encoding="utf-8"))) for w in wf_paths):
                 # an editor that regenerated the whole crop and never saw the mask (Fibo): feather by a share of
                 # the selection's size (a feather already set in PhotoCraft is kept as it is)
@@ -342,7 +355,7 @@ class Bridge:
             else:
                 # the same soft mask the model got: the result blends exactly where the model blended it
                 layer_mask = imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
-        mode = req.layer_mask if has_sel else "none"
+        mode = lm_mode
         items = [(label, i, im, len(ims)) for label, ims in results for i, im in enumerate(ims)]
         layers = []
         # last item first: #1 ends up on top, visible and active, the others hidden below it
