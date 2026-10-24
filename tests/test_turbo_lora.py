@@ -75,6 +75,16 @@ def main():
     on, _ = bridge.Bridge._graph(object(), bridge.Request(workflow=fibo, params=p, turbo=True), p, "i.png", "m.png", fibo)
     off_, _ = bridge.Bridge._graph(object(), bridge.Request(workflow=fibo, params=p, turbo=False), p, "i.png", "m.png", fibo)
     assert on == off_
+    # the Flux upscale workflows: their LoRA can be switched off, the rest of the graph stays whole
+    for name, loader, label in (("flux3-klein-upscale.json", "9", "Restore LoRA"), ("flux2-klein-upscale.json", "191", "Ultra real LoRA")):
+        tpl = workflows.load_template(WF / name)
+        assert workflows.lora_switches(tpl) == [loader] and tpl[loader]["_meta"]["pc_lora_label"] == label, name
+        off = workflows.bypass_lora(tpl)
+        assert loader not in off and links_resolve(off), name
+        users = [n for n in off.values() if any(isinstance(v, list) and v[0] == tpl[loader]["inputs"]["model"][0]
+                                                 for k, v in n["inputs"].items() if k == "model")]
+        assert users, name                                            # the sampler's model is the plain one now
+        assert len(off) == len(tpl) - 1, name
     print("ALL OK (turbo LoRA)")
 
 

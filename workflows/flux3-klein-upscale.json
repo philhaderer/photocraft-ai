@@ -76,7 +76,8 @@
    ]
   },
   "_meta": {
-   "title": "LoRA Loader - Restore LoRA"
+   "title": "pc:lora LoRA Loader - Restore LoRA",
+   "pc_lora_label": "Restore LoRA"
   }
  },
  "10": {

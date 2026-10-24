@@ -315,11 +315,13 @@ class App:
         Tooltip(self.cb_enhance, "On: the text model turns your instruction into the detailed prompt the image model expects "
                                  "(VGL for Fibo).\nOff: your text goes to the image model exactly as typed.\n"
                                  "Only for workflows that have a text model.")
-        self.cb_turbo = ttk.Checkbutton(mf, text="Turbo LoRA", variable=self.v_turbo)
+        self.cb_turbo = ttk.Checkbutton(mf, text="LoRA", variable=self.v_turbo)
         self.cb_turbo.grid(row=3, column=1, sticky="w", padx=6, pady=(4, 0))
-        Tooltip(self.cb_turbo, "On: the workflow's speed LoRA runs (Qwen Image 2.1: about 10 steps).\n"
-                               "Off: the LoRA is left out and the workflow's full step count runs (Qwen: 25 steps), slower.\n"
-                               "Only for workflows that have a speed LoRA.")
+        Tooltip(self.cb_turbo, "A LoRA of the workflow that can be switched off (the checkbox names it).\n"
+                               "Qwen Image 2.1 - Turbo LoRA: on = about 10 steps; off = the full 25 steps, slower.\n"
+                               "Flux 3 upscale - Restore LoRA: on = faces stay closer to the picture; off = plain Flux 3 Klein.\n"
+                               "Flux 2 upscale - Ultra real LoRA: on = the realism LoRA at 0.3; off = plain Flux 2 Klein.\n"
+                               "Greyed out when the workflow has no such LoRA.")
 
         modes = ttk.Frame(r)
         modes.pack(fill="x", **pad)
@@ -709,7 +711,7 @@ class App:
         # while the prompt enhancement is on
         has_writer = self._has_text_model() and self.v_mode.get() not in ("reference", "remove")  # these modes: fixed instruction
         self.cb_enhance.configure(state="normal" if has_writer else "disabled")
-        self.cb_turbo.configure(state="normal" if self._has_lora_switch() else "disabled")
+        self.cb_turbo.configure(state="normal" if self._has_lora_switch() else "disabled", text=self._lora_label())
         enhancing = has_writer and bool(self.v_enhance.get())
         self.cb_clip.configure(state="readonly" if (state == "disabled" and enhancing) else "disabled")
         self._update_feather_state()
@@ -724,6 +726,20 @@ class App:
             return any(prompt_phase_nodes(load_template(w)) for w in resolve(self.workflows_dir / wf))
         except (OSError, ValueError, KeyError):
             return False
+
+    def _lora_label(self) -> str:
+        """The checkbox text: the workflow names its LoRA (pc_lora_label in the _meta of the pc:lora node)."""
+        wf = self.v_workflow.get()
+        if wf != BUILTIN:
+            try:
+                for w in resolve(self.workflows_dir / wf):
+                    for nid in lora_switches(load_template(w)):
+                        label = str(load_template(w)[nid].get("_meta", {}).get("pc_lora_label", "")).strip()
+                        if label:
+                            return label
+            except (OSError, ValueError, KeyError):
+                pass
+        return "LoRA"
 
     def _has_lora_switch(self) -> bool:
         """True when the selected workflow (or one of a group) has a speed LoRA the window can switch off (pc:lora)."""

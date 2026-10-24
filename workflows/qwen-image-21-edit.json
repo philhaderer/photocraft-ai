@@ -20,7 +20,8 @@
    ]
   },
   "_meta": {
-   "title": "pc:lora Qwen turbo LoRA"
+   "title": "pc:lora Qwen turbo LoRA",
+   "pc_lora_label": "Turbo LoRA"
   }
  },
  "3": {

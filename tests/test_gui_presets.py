@@ -214,6 +214,7 @@ def main():
     assert app.v_turbo.get() is False
     app._save_state(app._request())
     assert json.loads((Path(TMP) / "state.json").read_text(encoding="utf-8"))["turbo"] is False
+    assert app.cb_turbo["text"] == "LoRA"                 # this test workflow names none
     app.v_workflow.set("plain.json")                      # no speed LoRA there: the switch is greyed out
     app._on_workflow()
     assert app.cb_turbo["state"] == "disabled"
@@ -249,7 +250,8 @@ def main():
     assert app.v_workflow.get() == "up.json", app.v_workflow.get()       # the mode took the workflow along
     assert app.w_variants["state"] == "disabled" and app.w_denoise["state"] == "disabled"
     assert app.w_adv["Context"]["state"] == "disabled" and app.w_adv["Base res."]["state"] == "disabled"
-    assert app.cb_lm["state"] == "disabled" and app.cb_turbo["state"] == "disabled"
+    assert app.cb_lm["state"] == "disabled"
+    assert app.cb_turbo["state"] == "normal" and app.cb_turbo["text"] == "Restore LoRA"   # the upscale workflow's own LoRA
     app.v_mode.set("inpaint")
     app._on_mode()
     assert app.v_workflow.get() == "plain.json", app.v_workflow.get()     # and gave the old one back
