@@ -72,6 +72,39 @@ MODE_TIPS = {
 BUILTIN = "Built-in (checkpoint)"
 LAYER_MASKS = {"auto": "auto (recommended)", "soft": "soft (same as the model's)", "selection": "hard (from selection)", "none": "none"}
 
+def icon_image(root, kind: str, color: str):
+    """A 16x16 icon for a button, drawn pixel by pixel: "save" (floppy disk), "saveas" (floppy with a plus), "trash"."""
+    n = 16
+    px = [[None] * n for _ in range(n)]
+
+    def rect(x0, y0, x1, y1, fill=True, c=color):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                if fill or x in (x0, x1) or y in (y0, y1):
+                    px[y][x] = c
+
+    if kind in ("save", "saveas"):
+        rect(0, 0, 13, 13, fill=False)          # the disk
+        rect(3, 0, 10, 4)                        # the shutter
+        rect(2, 8, 11, 13, fill=False)           # the label
+        if kind == "saveas":
+            rect(11, 8, 15, 15, c=BG)            # room for the plus
+            rect(13, 9, 13, 15, c="#6fcf97")
+            rect(10, 12, 15, 12, c="#6fcf97")
+    else:                                         # trash can
+        rect(5, 0, 10, 1)                         # handle
+        rect(1, 2, 14, 3)                         # lid
+        rect(3, 4, 12, 15, fill=False)            # body
+        for x in (6, 9):
+            rect(x, 6, x, 13)
+    img = tk.PhotoImage(master=root, width=n, height=n)
+    for y, row in enumerate(px):
+        for x, c in enumerate(row):
+            if c:
+                img.put(c, (x, y))
+    return img
+
+
 class Tooltip:
     """Small hover tooltip for any tk/ttk widget."""
 
@@ -212,6 +245,7 @@ class App:
                   indicatorforeground=[("selected", "white")])
         s.configure("TButton", background=PANEL, foreground=FG, padding=6)
         s.map("TButton", background=[("active", "#2a2e38")])
+        s.configure("Icon.TButton", padding=4)
         s.configure("Accent.TButton", background=ACCENT, foreground="white", font=(FONT, 10, "bold"))
         s.map("Accent.TButton", background=[("active", "#6a4cf0"), ("disabled", "#3a3550")])
         s.configure("TCombobox", fieldbackground=PANEL, background=PANEL, foreground=FG, arrowcolor=FG)
@@ -256,9 +290,15 @@ class App:
         self.cb_preset = ttk.Combobox(pf, textvariable=self.v_preset, state="readonly", width=8)
         self.cb_preset.bind("<<ComboboxSelected>>", lambda e: self.load_preset(self.v_preset.get()))
         self.cb_preset.grid(row=0, column=1, sticky="ew", padx=6)
-        ttk.Button(pf, text="Save", width=6, command=self.save_preset).grid(row=0, column=2)
-        ttk.Button(pf, text="Save as…", command=self.save_preset_as).grid(row=0, column=3, padx=(4, 0))
-        ttk.Button(pf, text="Delete", width=7, command=self.delete_preset).grid(row=0, column=4, padx=(4, 0))
+        # icon buttons (drawn here: emoji do not render in Tk on Windows) leave the name list the room it needs
+        self._icons = {"save": icon_image(self.root, "save", FG), "saveas": icon_image(self.root, "saveas", FG),
+                       "delete": icon_image(self.root, "trash", ERROR_TEXT)}
+        for col, (key, cmd, tip) in enumerate((("save", self.save_preset, "Save the preset under its name"),
+                                               ("saveas", self.save_preset_as, "Save as a new preset…"),
+                                               ("delete", self.delete_preset, "Delete the preset"))):
+            b = ttk.Button(pf, image=self._icons[key], style="Icon.TButton", command=cmd)
+            b.grid(row=0, column=2 + col, padx=(6 if col == 0 else 3, 0))
+            Tooltip(b, tip)
 
         mf = ttk.Frame(r)
         mf.pack(fill="x", **pad)

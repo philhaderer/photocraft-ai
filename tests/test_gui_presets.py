@@ -93,6 +93,7 @@ sd = types.ModuleType("tkinter.simpledialog")
 tk.Tk = tk.Toplevel = Widget
 tk.StringVar, tk.IntVar, tk.DoubleVar, tk.BooleanVar = Var, IntVar, DoubleVar, Var
 tk.Text, tk.TclError = Text, TclError
+tk.PhotoImage = Widget
 for n in ("Frame", "Label", "Combobox", "Button", "Radiobutton", "Checkbutton", "Spinbox", "LabelFrame",
           "Progressbar", "Style", "Notebook", "Scale"):
     setattr(ttk, n, Widget)
