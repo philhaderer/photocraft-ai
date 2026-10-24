@@ -266,6 +266,8 @@ class App:
         s.configure("TButton", background=PANEL, foreground=FG, padding=6)
         s.map("TButton", background=[("active", "#2a2e38")])
         s.configure("Icon.TButton", padding=4)
+        s.configure("Link.TButton", background=BG, foreground=MUTED, padding=(0, 2), borderwidth=0, relief="flat")
+        s.map("Link.TButton", foreground=[("active", FG)], background=[("active", BG)])
         s.configure("Accent.TButton", background=ACCENT, foreground="white", font=(FONT, 10, "bold"))
         s.map("Accent.TButton", background=[("active", "#6a4cf0"), ("disabled", "#3a3550")])
         s.configure("TCombobox", fieldbackground=PANEL, background=PANEL, foreground=FG, arrowcolor=FG)
@@ -382,20 +384,24 @@ class App:
         mf = ttk.Frame(r)
         mf.pack(fill="x", **pad)
         mf.columnconfigure(1, weight=1)
-        ttk.Label(mf, text="Workflow").grid(row=0, column=0, sticky="w")
-        self.cb_workflow = ttk.Combobox(mf, textvariable=self.v_workflow, state="readonly", width=8)
+        # Workflow and Text model live under "Advanced" (built below): the presets choose them.
+        self.f_adv = ttk.Frame(r)
+        self.adv_body = ttk.Frame(self.f_adv)
+        self.adv_body.columnconfigure(1, weight=1)
+        ttk.Label(self.adv_body, text="Workflow", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
+        self.cb_workflow = ttk.Combobox(self.adv_body, textvariable=self.v_workflow, state="readonly", width=8)
         self.cb_workflow.bind("<<ComboboxSelected>>", lambda e: self._workflow_picked())
         self.cb_workflow.grid(row=0, column=1, sticky="ew", padx=6)
-        ttk.Label(mf, text="Text model").grid(row=1, column=0, sticky="w", pady=(4, 0))
-        self.cb_clip = ttk.Combobox(mf, textvariable=self.v_clip, state="readonly", width=8)
+        ttk.Label(self.adv_body, text="Text model", style="Muted.TLabel").grid(row=1, column=0, sticky="w", pady=(4, 0))
+        self.cb_clip = ttk.Combobox(self.adv_body, textvariable=self.v_clip, state="readonly", width=8)
         self.cb_clip.grid(row=1, column=1, sticky="ew", padx=6, pady=(4, 0))
         self.cb_enhance = ttk.Checkbutton(mf, text="LLM prompt enhancement", variable=self.v_enhance, command=self._on_workflow)
-        self.cb_enhance.grid(row=2, column=1, sticky="w", padx=6, pady=(4, 0))
+        self.cb_enhance.grid(row=0, column=1, sticky="w", padx=6, pady=(4, 0))
         Tooltip(self.cb_enhance, "On: the text model turns your instruction into the detailed prompt the image model expects "
                                  "(VGL for Fibo).\nOff: your text goes to the image model exactly as typed.\n"
                                  "Only for workflows that have a text model.")
         self.cb_turbo = ttk.Checkbutton(mf, text="LoRA", variable=self.v_turbo)
-        self.cb_turbo.grid(row=3, column=1, sticky="w", padx=6, pady=(4, 0))
+        self.cb_turbo.grid(row=1, column=1, sticky="w", padx=6, pady=(4, 0))
         Tooltip(self.cb_turbo, "A LoRA of the workflow that can be switched off (the checkbox names it).\n"
                                "Qwen Image 2.1 - Turbo LoRA: on = about 10 steps; off = the full 25 steps, slower.\n"
                                "Flux 3 upscale - Restore LoRA: on = faces stay closer to the picture; off = plain Flux 3 Klein.\n"
@@ -437,20 +443,24 @@ class App:
 
         sf = ttk.Frame(r)
         sf.pack(fill="x", **pad)
-        items = [("Steps", self._spin(sf, self.v_steps, 1, 150, 1, 5)),
-                 ("CFG", self._spin(sf, self.v_cfg, 1, 30, 0.5, 5)),
-                 ("Denoise", self._spin(sf, self.v_denoise, 0.05, 1.0, 0.05, 5)),
-                 ("Seed (-1 random)", self._spin(sf, self.v_seed, -1, 2**31 - 1, 1, 11)),
-                 ("Variants", self._spin(sf, self.v_variants, 1, 8, 1, 4))]
+        af = ttk.Frame(self.adv_body)
+        af.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
+        items = [("Seed (-1 random)", self._spin(sf, self.v_seed, -1, 2**31 - 1, 1, 11)),
+                 ("Variants", self._spin(sf, self.v_variants, 1, 8, 1, 4)),
+                 ("Steps", self._spin(af, self.v_steps, 1, 150, 1, 5)),
+                 ("CFG", self._spin(af, self.v_cfg, 1, 30, 0.5, 5)),
+                 ("Denoise", self._spin(af, self.v_denoise, 0.05, 1.0, 0.05, 5))]
         for i, (lbl, w) in enumerate(items):
-            ttk.Label(sf, text=lbl, style="Muted.TLabel").grid(row=0, column=i, sticky="w", padx=(0, 6))
-            w.grid(row=1, column=i, sticky="w", padx=(0, 6))
-        self.w_denoise = items[2][1]
-        self.w_variants = items[4][1]
-        self.recipe_widgets = [items[0][1], items[1][1]]
+            parent = sf if i < 2 else af
+            col = i if i < 2 else i - 2
+            ttk.Label(parent, text=lbl, style="Muted.TLabel").grid(row=0, column=col, sticky="w", padx=(0, 6))
+            w.grid(row=1, column=col, sticky="w", padx=(0, 6))
+        self.w_denoise = items[4][1]
+        self.w_variants = items[1][1]
+        self.recipe_widgets = [items[2][1], items[3][1]]
 
-        sm = ttk.Frame(r)
-        sm.pack(fill="x", **pad)
+        sm = ttk.Frame(self.adv_body)
+        sm.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(6, 0))
         sm.columnconfigure((1, 3), weight=1)
         ttk.Label(sm, text="Sampler", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
         self.cb_sampler = ttk.Combobox(sm, textvariable=self.v_sampler, width=14)
@@ -459,6 +469,12 @@ class App:
         self.cb_sched = ttk.Combobox(sm, textvariable=self.v_scheduler, width=12)
         self.cb_sched.grid(row=0, column=3, sticky="ew", padx=6)
         self.recipe_widgets += [self.cb_sampler, self.cb_sched]
+
+        self.v_adv_open = tk.BooleanVar(value=bool(self.state.get("adv_open", False)))
+        self.btn_adv = ttk.Button(self.f_adv, command=self._toggle_advanced, style="Link.TButton")
+        self.btn_adv.pack(anchor="w")
+        self.f_adv.pack(fill="x", padx=10, pady=4)
+        self._show_advanced()
 
         self.f_out = ttk.LabelFrame(r, text="Expand image")
         ttk.Label(self.f_out, text="Extend the canvas with the Crop tool (confirm with Enter).\nThe empty area is filled.",
@@ -645,6 +661,19 @@ class App:
             if getattr(self, "_prompt_kept", ""):
                 t.insert("1.0", self._prompt_kept)
             self._prompt_kept = ""
+
+    def _show_advanced(self):
+        opened = bool(self.v_adv_open.get())
+        self.btn_adv.configure(text=("\u25be Advanced" if opened else "\u25b8 Advanced"))
+        if opened:
+            self.adv_body.pack(fill="x", pady=(4, 0))
+        else:
+            self.adv_body.pack_forget()
+
+    def _toggle_advanced(self):
+        self.v_adv_open.set(not self.v_adv_open.get())
+        self._show_advanced()
+        self._fit_height()
 
     def _fit_height(self, width: int | None = None):
         """Height to fit the content; the width stays (MIN_W at start, else what it is, e.g. after the user resized it)."""
@@ -1217,7 +1246,7 @@ class App:
             "negative": p.negative, "steps": p.steps, "cfg": p.cfg, "denoise": self.v_denoise.get(),
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
-            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
+            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
             "ref_collage": req.ref_collage, "ref_style": req.ref_style,
         })
 
