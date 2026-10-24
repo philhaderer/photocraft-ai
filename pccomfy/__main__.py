@@ -42,9 +42,14 @@ def cmd_check(cfg: dict) -> int:
     return 0 if ok else 1
 
 
-def cmd_probe(cfg: dict) -> int:
-    """Debug: show what this PhotoCraft build answers on the control channel."""
+def cmd_probe(cfg: dict, keys: list[str] | None = None) -> int:
+    """Debug: show what this PhotoCraft build answers on the control channel. With keys: those parts of ui.inspect in full."""
     b = make(cfg)
+    if keys:
+        res = b.pc.call("ui.inspect")
+        for k in keys:
+            print(f"{k}: " + json.dumps(res.get(k), ensure_ascii=False)[:3000])
+        return 0
     for label, fn in (("ui.inspect", lambda: b.pc.call("ui.inspect")),
                       ("session.inspect", lambda: b.pc.execute("session.inspect")),
                       ("document.inspect", lambda: b.pc.execute("document.inspect"))):
@@ -153,7 +158,8 @@ def main(argv=None) -> int:
     sub.add_parser("windows", help="debug: list PhotoCraft's windows (what the bridge window is tied to)")
     c = sub.add_parser("commands", help="debug: list PhotoCraft commands matching a pattern")
     c.add_argument("pattern", nargs="?", default="history|undo|group|transaction|step")
-    sub.add_parser("probe", help="debug: print what PhotoCraft answers on the control channel")
+    pr = sub.add_parser("probe", help="debug: print what PhotoCraft answers on the control channel")
+    pr.add_argument("keys", nargs="*", help="parts of ui.inspect to print in full (e.g. view views)")
     r = sub.add_parser("run", help="one generation from the command line")
     r.add_argument("mode", choices=MODES)
     r.add_argument("-p", "--prompt", default="")
@@ -185,7 +191,7 @@ def main(argv=None) -> int:
         print(winlink.describe() if winlink.available() else "Only on Windows.")
         return 0
     if a.cmd == "probe":
-        return cmd_probe(cfg)
+        return cmd_probe(cfg, a.keys)
     if a.cmd == "commands":
         return cmd_commands(cfg, a.pattern)
     if a.cmd == "run":
