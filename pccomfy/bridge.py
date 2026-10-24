@@ -35,7 +35,7 @@ from . import imaging, workflows
 from .comfy import ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 
-MODES = ("inpaint", "reference", "outpaint", "img2img", "txt2img")
+MODES = ("inpaint", "remove", "reference", "outpaint", "img2img", "txt2img")
 LAYER_MASKS = ("auto", "soft", "selection", "none")
 
 
@@ -56,7 +56,9 @@ class Request:
     overlap: int = 48                    # outpaint overlap onto the existing image (px)
     variants: int = 1
     fooocus: bool = True                 # inpaint/outpaint: Fooocus patch (SDXL) when the server has it
-    empty_removes: bool = True           # Fill with an instruction editor and no instruction: remove what the selection outlines
+    empty_fills: bool = True             # Fill with an instruction editor and no instruction: fill the outlined area from its surroundings
+    remove: bool = False                 # "Remove object" (the bridge runs it as an inpaint with the removal instruction)
+    remove_tries: int = 3                # tries (new seed each) until the object is really gone
     enhance: bool = True                 # text-model workflows: let the text model write the prompt (off = typed text as is)
     layer_mask: str = "auto"             # "auto" = none for Fill with an editor that ignores the mask, else soft;
                                          # "soft" = same mask the model got, "selection" = hard selection, "none"
@@ -161,9 +163,24 @@ REMOVE_PROMPT = ("Erase the main subject inside the red {shape} completely, as i
 
 def remove_prompt(mask: "Image.Image") -> str:
     """The removal instruction; "rectangle" for a rectangular selection (tested), otherwise "outline"."""
+    return REMOVE_PROMPT.format(shape=_shape(mask))
+
+
+# Live test, empty meadow marked: the removal instruction left the dragon alone and changed the meadow only a little;
+# "Replace the content ... with new natural detail" invented flowers everywhere (too much).
+FILL_PROMPT = ("Redo only the area inside the red {shape} so that it blends seamlessly into the surrounding image, "
+               "continuing the same scenery, textures and lighting. Do not remove or change anything outside the {shape}. "
+               "Also remove the red {shape} itself.")
+
+
+def _shape(mask: "Image.Image") -> str:
     box = imaging.mask_bbox(mask)
     rect = bool(box) and (np.asarray(mask.convert("L")) > 127).sum() >= 0.97 * box.w * box.h
-    return REMOVE_PROMPT.format(shape="rectangle" if rect else "outline")
+    return "rectangle" if rect else "outline"
+
+
+def fill_prompt(mask: "Image.Image") -> str:
+    return FILL_PROMPT.format(shape=_shape(mask))
 
 
 def outline_width(gen_w: int, gen_h: int) -> int:
@@ -236,6 +253,8 @@ class Bridge:
         self._cancel.clear()
         if req.mode not in MODES:
             raise BridgeError(f"Unknown mode: {req.mode}")
+        if req.mode == "remove":
+            req = dataclasses.replace(req, mode="inpaint", remove=True)
         p = req.params
         if p.seed is None or p.seed < 0:
             p.seed = random.randint(0, 2**31 - 1)
@@ -246,7 +265,7 @@ class Bridge:
         if req.mode == "reference" and not (req.workflow and all(
                 workflows.has_ref_slot(workflows.load_template(w)) for w in _wfs)):
             raise BridgeError("Insert reference image needs a workflow with a reference slot (the Fibo workflows have one).")
-        if req.enhance and req.mode != "reference" and not p.prompt.strip() and not self._removal(req, p, _wfs):
+        if req.enhance and req.mode != "reference" and not p.prompt.strip() and not self._kind(req, p, _wfs):
             for w in _wfs:
                 if w and prompt_phase_nodes(json.loads(Path(w).read_text(encoding="utf-8"))):
                     raise BridgeError("Type an instruction first: this workflow's text model writes the prompt from it "
@@ -259,12 +278,20 @@ class Bridge:
             self._cleanup()
 
     @staticmethod
-    def _removal(req: Request, p, wfs: list) -> bool:
-        """Fill without an instruction, with an instruction editor (workflow that does not use the mask): remove the
-        object the selection outlines. Like Photoshop's empty Generative Fill."""
-        if req.mode != "inpaint" or not req.empty_removes or p.prompt.strip() or not wfs or not wfs[0]:
-            return False
-        return not any(mask_is_used(json.loads(Path(w).read_text(encoding="utf-8"))) for w in wfs)
+    def _kind(req: Request, p, wfs: list) -> str:
+        """"remove": Remove object. "fill": Generative fill without an instruction. Both only with an instruction
+        editor (a workflow that does not use the mask, i.e. Fibo): the selection is drawn into the picture as a red
+        outline and a fixed instruction says what to do. "" = a normal run."""
+        if req.mode != "inpaint" or not wfs or not wfs[0]:
+            if req.remove:
+                raise BridgeError("Remove object needs a Fibo workflow (pick one in the Workflow list).")
+            return ""
+        editor = not any(mask_is_used(json.loads(Path(w).read_text(encoding="utf-8"))) for w in wfs)
+        if req.remove:
+            if not editor:
+                raise BridgeError("Remove object needs a Fibo workflow, this one uses the mask to inpaint.")
+            return "remove"
+        return "fill" if (editor and req.empty_fills and not p.prompt.strip()) else ""
 
     # ---------- waiting for ComfyUI, with separate prompt / image phases ----------
 
@@ -377,7 +404,7 @@ class Bridge:
         else:
             region = imaging.Box(0, 0, W, H)
 
-        removal = self._removal(req, p, wf_paths)
+        removal = self._kind(req, p, wf_paths)
         gw, gh = imaging.gen_size(region.w, region.h, req.base_res)
         p.width, p.height = gw, gh
         progress(0.1, f"Sending to ComfyUI ({gw}×{gh})", phase="prepare")
@@ -388,6 +415,7 @@ class Bridge:
             if req.mode == "reference" and req.ref_collage:
                 crop_full = imaging.paste_reference(crop_full, ref_rgba, imaging.Box(bbox.x - region.x, bbox.y - region.y, bbox.w, bbox.h))
             crop = imaging.to_rgb(crop_full).resize((gw, gh), Image.LANCZOS)
+            crop_plain = crop
             if removal:
                 crop = imaging.mark_outline(crop, mask.crop(region.pil()).resize((gw, gh), Image.NEAREST), outline_width(gw, gh))
             image_name = self.comfy.upload_image(crop, f"pcc-{tag}-image.png")
@@ -413,23 +441,34 @@ class Bridge:
             if req.mode == "reference":
                 # the text model is bypassed in this mode: a fixed instruction with <image_1>/<image_2> (+ where)
                 gp = dataclasses.replace(p, prompt=reference_prompt(p.prompt, req.ref_collage, reference_where(bbox, region)))
-            if removal:
-                gp = dataclasses.replace(p, prompt=remove_prompt(mask.crop(region.pil())))   # fixed instruction, the text model is bypassed
+            if removal:   # fixed instruction, the text model is bypassed
+                gp = dataclasses.replace(p, prompt=(remove_prompt if removal == "remove" else fill_prompt)(mask.crop(region.pil())))
             if hint and wf and req.enhance and not removal and prompt_phase_nodes(workflows.load_template(wf)):
                 gp = dataclasses.replace(p, prompt=p.prompt.strip() + hint)  # text-model workflows only
-            graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name, force_plain=removal)
-            prompt_id = self.comfy.queue(graph)
             start, span = 0.15 + 0.75 * k / n_wf, 0.75 / n_wf
-            progress(start, f"Queued in ComfyUI ({self.pipeline}{suffix})", phase="prepare")
-            hist = self._wait(prompt_id, graph, wf, start, span, suffix, progress)
-            vgl = self._vgl_text(graph, hist)
-            if vgl:
-                self.last_vgl = vgl
-            results.append((label, self.comfy.output_images(hist, out_node)[: max(1, req.variants)]))
+            tries = max(1, int(req.remove_tries)) if removal == "remove" else 1
+            for attempt in range(tries):
+                if attempt:   # the object is still there: same picture, new seed
+                    gp = dataclasses.replace(gp, seed=(gp.seed + 7919 * attempt) % (2**31))
+                    p.seed = gp.seed
+                graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name, force_plain=bool(removal))
+                prompt_id = self.comfy.queue(graph)
+                progress(start, f"Queued in ComfyUI ({self.pipeline}{suffix})" if not attempt
+                         else f"Object still there, trying again ({attempt + 1}/{tries})", phase="prepare")
+                hist = self._wait(prompt_id, graph, wf, start, span, suffix, progress)
+                vgl = self._vgl_text(graph, hist)
+                if vgl:
+                    self.last_vgl = vgl
+                ims = self.comfy.output_images(hist, out_node)[: max(1, req.variants)]
+                if tries == 1 or not ims or imaging.removal_done(
+                        crop_plain, ims[0], mask.crop(region.pil()).resize((gw, gh), Image.NEAREST), outline_width(gw, gh)):
+                    break
+            results.append((label, ims))
 
         progress(0.92, "Placing the result in PhotoCraft", phase="place")
         orig = self._find_doc(orig, orig_name)
-        base = (p.prompt.strip() or ("remove" if removal else req.mode))[:40]
+        base = (p.prompt.strip() or ("object" if req.remove else "area" if removal else req.mode))[:40]
+        mode_name = "remove" if req.remove else req.mode
         layer_mask = None
         lm_mode = effective_layer_mask(req.layer_mask, req.mode, editor, has_sel)
         if lm_mode == "soft":
@@ -449,7 +488,7 @@ class Bridge:
         for n, g in enumerate(reversed(range(len(items)))):
             label, i, raw, count = items[g]
             im = raw.convert("RGB").resize((region.w, region.h), Image.LANCZOS)
-            name = (f"AI {req.mode}" + (f" [{label}]" if label else "") + f": {base} [{p.seed}]"
+            name = (f"AI {mode_name}" + (f" [{label}]" if label else "") + f": {base} [{p.seed}]"
                     + (f" #{i + 1}" if count > 1 else ""))
             layers.insert(0, self._import(orig, im, region, mode, name, tag, g, first=(n == 0), hidden=(g > 0),
                                           layer_mask=layer_mask))

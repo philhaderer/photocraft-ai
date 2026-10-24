@@ -21,6 +21,7 @@ from .workflows import GenParams, list_templates, load_template, resolve
 
 MODE_LABELS = [
     ("inpaint", "Generative fill"),
+    ("remove", "Remove object"),
     ("reference", "Insert reference image"),
     ("outpaint", "Expand image"),
     ("img2img", "Image → image"),
@@ -29,9 +30,15 @@ MODE_LABELS = [
 MODE_TIPS = {
     "inpaint": "Select an area (Lasso / Rectangular Marquee), then Generate.\n"
                "With text: describes what should appear there (\"a helicopter on the meadow\").\n"
-               "Without text (Fibo workflows): removes the main subject inside the selection. Select tightly around it. "
-               "A red rectangle / outline is drawn into the picture the model gets; it is never in your document.\n"
+               "Without text (Fibo workflows): the area is redone from its surroundings, nothing else is removed or "
+               "changed. To take an object away use \"Remove object\".\n"
                "Fibo redraws the whole surrounding crop and ignores the mask, so the layer mask is off in \"auto\".",
+    "remove": "Select the object to remove (tightly, but with the whole object inside), then Generate. No text needed.\n"
+              "A red rectangle / outline is drawn into the picture the model gets (never into your document) and a fixed "
+              "instruction says: erase the main subject inside it and paint the scenery behind.\n"
+              "If the object is still there the plugin tries again by itself (up to 3 times, new seed each).\n"
+              "If a part of the object is already gone, include what is left in the selection: Fibo likes to restore "
+              "half-removed figures. Fibo workflows only.",
     "reference": "Insert a person or object with the look of a picture (e.g. a Viking).\n"
                  "1. Put it on its own layer ABOVE everything else (cut out, transparent).\n"
                  "2. Select where it should stand.\n3. Generate.\n"
@@ -404,7 +411,7 @@ class App:
         self._on_mode_ui()
         self._on_workflow()  # the text model is not used in reference mode
         mode = self.v_mode.get()
-        if mode in ("inpaint", "reference", "outpaint"):
+        if mode in ("inpaint", "remove", "reference", "outpaint"):
             self.v_denoise.set(1.0)  # full denoise inside the mask; lower it to keep more of the original
         elif mode == "img2img" and self.v_denoise.get() >= 0.99:
             self.v_denoise.set(0.6)
@@ -423,7 +430,7 @@ class App:
         choice = {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto")
         if choice != "auto":
             return choice == "soft"
-        if self.v_mode.get() not in ("inpaint", "reference"):
+        if self.v_mode.get() not in ("inpaint", "remove", "reference", "outpaint"):
             return True
         return not self._ignores_mask()
 
@@ -457,7 +464,7 @@ class App:
             self.cb_fooocus.grid_remove()
         # the text model applies to custom workflows (nodes tagged pc:clip), not to the built-in graph, and only
         # while the prompt enhancement is on
-        has_writer = self._has_text_model() and self.v_mode.get() != "reference"  # reference mode: fixed instruction
+        has_writer = self._has_text_model() and self.v_mode.get() not in ("reference", "remove")  # these modes: fixed instruction
         self.cb_enhance.configure(state="normal" if has_writer else "disabled")
         enhancing = has_writer and bool(self.v_enhance.get())
         self.cb_clip.configure(state="readonly" if (state == "disabled" and enhancing) else "disabled")

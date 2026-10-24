@@ -211,3 +211,25 @@ def mark_outline(img: Image.Image, mask: Image.Image, width: int = 4, color: tup
     out = np.array(img)
     out[ring > 0] = color
     return Image.fromarray(out)
+
+
+def removal_done(before: Image.Image, after: Image.Image, mask: Image.Image, width: int, min_changed: float = 0.08) -> bool:
+    """Did "remove object" work? `before` is the picture sent (without the red outline), `after` the result, `mask` the
+    selection (all in the generated size), `width` the outline's half thickness. False = the area is practically
+    unchanged (the model only wiped the outline and kept the object) or the red outline is still there."""
+    after = after.convert("RGB").resize(before.size, Image.BILINEAR)
+    m = mask.convert("L").resize(before.size, Image.NEAREST).point(lambda v: 255 if v > 127 else 0)
+    small = m.resize((max(1, m.width // 4), max(1, m.height // 4)), Image.NEAREST)
+    k = max(1, (2 * width) // 4)
+    inner = np.asarray(small.filter(ImageFilter.MinFilter(2 * k + 1))) > 0   # without the outline's own pixels
+    if not inner.any():
+        inner = np.asarray(small) > 0
+    b = np.asarray(before.convert("RGB").resize(small.size, Image.BILINEAR)).astype(int)
+    a = np.asarray(after.resize(small.size, Image.BILINEAR)).astype(int)
+    changed = (np.abs(a - b).max(axis=2) > 40)[inner].mean() if inner.any() else 1.0
+    size = 2 * max(1, int(width)) + 1
+    ring = (np.asarray(m.filter(ImageFilter.MaxFilter(size))).astype(int) - np.asarray(m.filter(ImageFilter.MinFilter(size))).astype(int)) > 0
+    arr = np.asarray(after).astype(int)
+    red = (arr[..., 0] > 200) & (arr[..., 1] < 70) & (arr[..., 2] < 70)
+    outline_left = ring.any() and red[ring].mean() > 0.25
+    return bool(changed >= min_changed and not outline_left)

@@ -63,7 +63,7 @@ def cmd_run(cfg: dict, a) -> int:
     p = GenParams(prompt=a.prompt, negative=a.negative if a.negative is not None else d["negative"],
                   checkpoint=a.checkpoint or d["checkpoint"], steps=a.steps or d["steps"],
                   cfg=a.cfg or d["cfg"], sampler=d["sampler"], scheduler=d["scheduler"], seed=a.seed,
-                  denoise=a.denoise if a.denoise is not None else (1.0 if a.mode in ("inpaint", "reference", "outpaint") else d["denoise"]))
+                  denoise=a.denoise if a.denoise is not None else (1.0 if a.mode in ("inpaint", "remove", "reference", "outpaint") else d["denoise"]))
     req = Request(mode=a.mode, params=p, workflow=a.workflow, base_res=a.res or d["base_res"],
                   context=d["context"], mask_grow=d["mask_grow"], mask_blur=d["mask_blur"],
                   outpaint=tuple(a.expand), overlap=d["overlap"], variants=a.variants, fooocus=not a.no_fooocus,
