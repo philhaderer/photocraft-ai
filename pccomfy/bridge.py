@@ -55,6 +55,7 @@ class Request:
     overlap: int = 48                    # outpaint overlap onto the existing image (px)
     variants: int = 1
     fooocus: bool = True                 # inpaint/outpaint: Fooocus patch (SDXL) when the server has it
+    empty_removes: bool = True           # Fill with an instruction editor and no instruction: remove what the selection outlines
     enhance: bool = True                 # text-model workflows: let the text model write the prompt (off = typed text as is)
     layer_mask: str = "auto"             # "auto" = none for Fill with an editor that ignores the mask, else soft;
                                          # "soft" = same mask the model got, "selection" = hard selection, "none"
@@ -149,6 +150,16 @@ def reference_where(sel: "imaging.Box", crop: "imaging.Box") -> str:
     return f" Put the subject at the {where} of <image_2>, covering roughly {share}% of the image."
 
 
+REMOVE_PROMPT = ("Remove the object inside the red outline from the image and fill the area naturally with the surrounding "
+                 "background, continuing what lies behind it. The red outline must not appear in the result. "
+                 "Keep everything else unchanged.")
+
+
+def outline_width(gen_w: int, gen_h: int) -> int:
+    """Half thickness of the red outline in the generated picture: visible, but thin."""
+    return max(2, round(max(gen_w, gen_h) / 300))
+
+
 def outpaint_hint(keep: "imaging.Box", canvas: tuple[int, int]) -> str:
     """For instruction-based editors (Fibo), which ignore the mask: say what the white margin is."""
     W, H = canvas
@@ -224,7 +235,7 @@ class Bridge:
         if req.mode == "reference" and not (req.workflow and all(
                 workflows.has_ref_slot(workflows.load_template(w)) for w in _wfs)):
             raise BridgeError("Insert reference image needs a workflow with a reference slot (the Fibo workflows have one).")
-        if req.enhance and req.mode != "reference" and not p.prompt.strip():
+        if req.enhance and req.mode != "reference" and not p.prompt.strip() and not self._removal(req, p, _wfs):
             for w in _wfs:
                 if w and prompt_phase_nodes(json.loads(Path(w).read_text(encoding="utf-8"))):
                     raise BridgeError("Type an instruction first: this workflow's text model writes the prompt from it "
@@ -235,6 +246,14 @@ class Bridge:
             raise BridgeError(str(e)) from None
         finally:
             self._cleanup()
+
+    @staticmethod
+    def _removal(req: Request, p, wfs: list) -> bool:
+        """Fill without an instruction, with an instruction editor (workflow that does not use the mask): remove the
+        object the selection outlines. Like Photoshop's empty Generative Fill."""
+        if req.mode != "inpaint" or not req.empty_removes or p.prompt.strip() or not wfs or not wfs[0]:
+            return False
+        return not any(mask_is_used(json.loads(Path(w).read_text(encoding="utf-8"))) for w in wfs)
 
     # ---------- waiting for ComfyUI, with separate prompt / image phases ----------
 
@@ -347,6 +366,7 @@ class Bridge:
         else:
             region = imaging.Box(0, 0, W, H)
 
+        removal = self._removal(req, p, wf_paths)
         gw, gh = imaging.gen_size(region.w, region.h, req.base_res)
         p.width, p.height = gw, gh
         progress(0.1, f"Sending to ComfyUI ({gw}×{gh})", phase="prepare")
@@ -357,6 +377,8 @@ class Bridge:
             if req.mode == "reference" and req.ref_collage:
                 crop_full = imaging.paste_reference(crop_full, ref_rgba, imaging.Box(bbox.x - region.x, bbox.y - region.y, bbox.w, bbox.h))
             crop = imaging.to_rgb(crop_full).resize((gw, gh), Image.LANCZOS)
+            if removal:
+                crop = imaging.mark_outline(crop, mask.crop(region.pil()).resize((gw, gh), Image.NEAREST), outline_width(gw, gh))
             image_name = self.comfy.upload_image(crop, f"pcc-{tag}-image.png")
         ref_name = None
         if req.mode == "reference":
@@ -380,9 +402,11 @@ class Bridge:
             if req.mode == "reference":
                 # the text model is bypassed in this mode: a fixed instruction with <image_1>/<image_2> (+ where)
                 gp = dataclasses.replace(p, prompt=reference_prompt(p.prompt, req.ref_collage, reference_where(bbox, region)))
-            if hint and wf and req.enhance and prompt_phase_nodes(workflows.load_template(wf)):
+            if removal:
+                gp = dataclasses.replace(p, prompt=REMOVE_PROMPT)   # fixed instruction, the text model is bypassed
+            if hint and wf and req.enhance and not removal and prompt_phase_nodes(workflows.load_template(wf)):
                 gp = dataclasses.replace(p, prompt=p.prompt.strip() + hint)  # text-model workflows only
-            graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name)
+            graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name, force_plain=removal)
             prompt_id = self.comfy.queue(graph)
             start, span = 0.15 + 0.75 * k / n_wf, 0.75 / n_wf
             progress(start, f"Queued in ComfyUI ({self.pipeline}{suffix})", phase="prepare")
@@ -394,7 +418,7 @@ class Bridge:
 
         progress(0.92, "Placing the result in PhotoCraft", phase="place")
         orig = self._find_doc(orig, orig_name)
-        base = (p.prompt.strip() or req.mode)[:40]
+        base = (p.prompt.strip() or ("remove" if removal else req.mode))[:40]
         layer_mask = None
         lm_mode = effective_layer_mask(req.layer_mask, req.mode, editor, has_sel)
         if lm_mode == "soft":
@@ -436,11 +460,12 @@ class Bridge:
                     return "\n".join(str(t) for t in text)
         return ""
 
-    def _graph(self, req: Request, p, image_name, mask_name, wf: str | None = None, ref_name: str | None = None):
+    def _graph(self, req: Request, p, image_name, mask_name, wf: str | None = None, ref_name: str | None = None,
+               force_plain: bool = False):
         if wf:
             tpl = workflows.load_template(wf)
             graph, out_node = workflows.apply_template(tpl, p, image_name, mask_name, ref_name)
-            if not req.enhance or req.mode == "reference":
+            if not req.enhance or req.mode == "reference" or force_plain:
                 graph = workflows.bypass_prompt_writer(graph, p.prompt)
             return graph, out_node
         if not p.checkpoint:

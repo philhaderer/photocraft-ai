@@ -198,3 +198,16 @@ def paste_reference(crop: Image.Image, ref_rgba: Image.Image, box: Box) -> Image
     r = ref_rgba.resize((w, h), Image.LANCZOS)
     out.paste(r.convert("RGB"), (box.x + (box.w - w) // 2, box.y + (box.h - h) // 2), r.getchannel("A"))
     return out
+
+
+def mark_outline(img: Image.Image, mask: Image.Image, width: int = 4, color: tuple[int, int, int] = (255, 0, 0)) -> Image.Image:
+    """Draw the outline of the selection (`mask`, same size as `img`) into a copy of `img`: a line `width` px thick on
+    each side of the edge. Instruction-based editors (Fibo) cannot read a mask, but they can see a coloured outline."""
+    width = max(1, int(width))
+    img = img.convert("RGB")
+    m = mask.convert("L").resize(img.size, Image.NEAREST).point(lambda v: 255 if v > 127 else 0)
+    size = 2 * width + 1
+    ring = np.asarray(m.filter(ImageFilter.MaxFilter(size))).astype(int) - np.asarray(m.filter(ImageFilter.MinFilter(size))).astype(int)
+    out = np.array(img)
+    out[ring > 0] = color
+    return Image.fromarray(out)
