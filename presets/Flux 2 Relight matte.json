@@ -1,0 +1,14 @@
+{
+ "format": 1,
+ "name": "Flux 2 Relight matte",
+ "saved": "2026-10-24T22:00:00",
+ "settings": {
+  "mode": "refine",
+  "clip": "",
+  "denoise": 1.0,
+  "variants": 1,
+  "workflow": "flux2-klein-upscale.json",
+  "layer_mask": "auto",
+  "prompt": "The scene utilizes fully diffuse, cross-polarized studio lighting to eliminate all specular reflections, glare, and hotspots, resulting in a perfectly flat-field exposure with uniform luminance across the skin. The skin exhibits a completely matte texture with purely diffuse (Lambertian) reflectance, no glossy or oily appearance, and no highlight clipping.\n\nRemove highlights on the cheeks and nose.\n\nThe white balance is calibrated to 5500K (daylight neutral), ensuring absolutely accurate, true-to-life colors with no warm or cool color casts.\n\nPhotographed with a Sony A7R V using a 55mm f/8 lens for maximum sharpness from edge to edge and zero distortion. The aesthetic is objective, documentary-style, and ultra-realistic. 8k resolution, clean ISO 100, raw output. Preserve the background. Remove watermarks and checkerboard patterns."
+ }
+}

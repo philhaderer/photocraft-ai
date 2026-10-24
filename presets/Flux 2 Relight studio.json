@@ -1,0 +1,14 @@
+{
+ "format": 1,
+ "name": "Flux 2 Relight studio",
+ "saved": "2026-10-24T22:00:00",
+ "settings": {
+  "mode": "refine",
+  "clip": "",
+  "denoise": 1.0,
+  "variants": 1,
+  "workflow": "flux2-klein-upscale.json",
+  "layer_mask": "auto",
+  "prompt": "Transform the image into a professionally lit studio portrait with soft, diffused lighting. Remove harsh sunlight, strong contrast, and directional shadows."
+ }
+}
