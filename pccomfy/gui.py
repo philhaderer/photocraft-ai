@@ -181,8 +181,25 @@ class App:
         ttk.Button(pf, text="Save as…", command=self.save_preset_as).grid(row=0, column=3, padx=(4, 0))
         ttk.Button(pf, text="Delete", width=7, command=self.delete_preset).grid(row=0, column=4, padx=(4, 0))
 
+        mf = ttk.Frame(r)
+        mf.pack(fill="x", **pad)
+        mf.columnconfigure(1, weight=1)
+        ttk.Label(mf, text="Workflow").grid(row=0, column=0, sticky="w")
+        self.cb_workflow = ttk.Combobox(mf, textvariable=self.v_workflow, state="readonly")
+        self.cb_workflow.bind("<<ComboboxSelected>>", lambda e: self._on_workflow())
+        self.cb_workflow.grid(row=0, column=1, sticky="ew", padx=6)
+        ttk.Label(mf, text="Text model").grid(row=1, column=0, sticky="w", pady=(4, 0))
+        self.cb_clip = ttk.Combobox(mf, textvariable=self.v_clip, state="readonly")
+        self.cb_clip.grid(row=1, column=1, sticky="ew", padx=6, pady=(4, 0))
+        self.cb_enhance = ttk.Checkbutton(mf, text="LLM prompt enhancement", variable=self.v_enhance, command=self._on_workflow)
+        self.cb_enhance.grid(row=2, column=1, sticky="w", padx=6, pady=(4, 0))
+        Tooltip(self.cb_enhance, "On: the text model turns your instruction into the detailed prompt the image model expects "
+                                 "(VGL for Fibo).\nOff: your text goes to the image model exactly as typed.\n"
+                                 "Only for workflows that have a text model.")
+
         modes = ttk.Frame(r)
         modes.pack(fill="x", **pad)
+        self.f_modes = modes
         for i, (key, label) in enumerate(MODE_LABELS):
             ttk.Radiobutton(modes, text=label, value=key, variable=self.v_mode, command=self._on_mode).grid(
                 row=i // 2, column=i % 2, sticky="w", padx=(0, 16), pady=1)
@@ -210,22 +227,6 @@ class App:
         self.t_neg = self._text(r, 2)
         self.t_neg.pack(fill="x", padx=10)
         self.t_neg.insert("1.0", self.state.get("negative", d["negative"]))
-
-        mf = ttk.Frame(r)
-        mf.pack(fill="x", **pad)
-        mf.columnconfigure(1, weight=1)
-        ttk.Label(mf, text="Workflow").grid(row=0, column=0, sticky="w")
-        self.cb_workflow = ttk.Combobox(mf, textvariable=self.v_workflow, state="readonly")
-        self.cb_workflow.bind("<<ComboboxSelected>>", lambda e: self._on_workflow())
-        self.cb_workflow.grid(row=0, column=1, sticky="ew", padx=6)
-        ttk.Label(mf, text="Text model").grid(row=1, column=0, sticky="w", pady=(4, 0))
-        self.cb_clip = ttk.Combobox(mf, textvariable=self.v_clip, state="readonly")
-        self.cb_clip.grid(row=1, column=1, sticky="ew", padx=6, pady=(4, 0))
-        self.cb_enhance = ttk.Checkbutton(mf, text="LLM prompt enhancement", variable=self.v_enhance, command=self._on_workflow)
-        self.cb_enhance.grid(row=2, column=1, sticky="w", padx=6, pady=(4, 0))
-        Tooltip(self.cb_enhance, "On: the text model turns your instruction into the detailed prompt the image model expects "
-                                 "(VGL for Fibo).\nOff: your text goes to the image model exactly as typed.\n"
-                                 "Only for workflows that have a text model.")
 
         sf = ttk.Frame(r)
         sf.pack(fill="x", **pad)
@@ -333,7 +334,7 @@ class App:
     def _on_mode_ui(self):
         mode = self.v_mode.get()
         if mode == "outpaint":
-            self.f_out.pack(fill="x", padx=10, pady=4, before=self.f_adv)
+            self.f_out.pack(fill="x", padx=10, pady=4, after=self.f_modes)
         else:
             self.f_out.pack_forget()
         self.w_denoise.configure(state="disabled" if mode == "txt2img" else "normal")
