@@ -213,10 +213,11 @@ def mark_outline(img: Image.Image, mask: Image.Image, width: int = 4, color: tup
     return Image.fromarray(out)
 
 
-def removal_done(before: Image.Image, after: Image.Image, mask: Image.Image, width: int, min_changed: float = 0.08) -> bool:
-    """Did "remove object" work? `before` is the picture sent (without the red outline), `after` the result, `mask` the
-    selection (all in the generated size), `width` the outline's half thickness. False = the area is practically
-    unchanged (the model only wiped the outline and kept the object) or the red outline is still there."""
+def removal_score(before: Image.Image, after: Image.Image, mask: Image.Image, width: int) -> float:
+    """How much of the selection was really replaced (0..1; 0 when the red outline is still there). Measured on
+    live tests: failed removals 0 to 0.11, successful ones 0.16 and up. `before` is the picture sent (without the
+    red outline), `after` the result, `mask` the selection (all in the generated size), `width` the outline's half
+    thickness. Low = the area is practically unchanged (the model only wiped the outline and kept the object)."""
     after = after.convert("RGB").resize(before.size, Image.BILINEAR)
     m = mask.convert("L").resize(before.size, Image.NEAREST).point(lambda v: 255 if v > 127 else 0)
     small = m.resize((max(1, m.width // 4), max(1, m.height // 4)), Image.NEAREST)
@@ -232,4 +233,12 @@ def removal_done(before: Image.Image, after: Image.Image, mask: Image.Image, wid
     arr = np.asarray(after).astype(int)
     red = (arr[..., 0] > 200) & (arr[..., 1] < 70) & (arr[..., 2] < 70)
     outline_left = ring.any() and red[ring].mean() > 0.25
-    return bool(changed >= min_changed and not outline_left)
+    return 0.0 if outline_left else float(changed)
+
+
+REMOVAL_MIN = 0.13   # between the failed (<= 0.11) and the successful (>= 0.16) live tests
+
+
+def removal_done(before: Image.Image, after: Image.Image, mask: Image.Image, width: int, min_changed: float = REMOVAL_MIN) -> bool:
+    """True when `removal_score` says the selection was replaced."""
+    return removal_score(before, after, mask, width) >= min_changed

@@ -78,6 +78,9 @@ def main():
         b.run(req)
         seeds = [next(n["inputs"]["seed"] for n in g.values() if n["class_type"] == "KSampler") for g in b.comfy.graphs]
         assert len(b.comfy.graphs) == expect and len(set(seeds)) == expect, (ok_on, expect, seeds)
+        prompts = [prompt_of(g) for g in b.comfy.graphs]
+        want = [bridge.REMOVE_PROMPT, bridge.REMOVE_PROMPT_ALT, bridge.REMOVE_PROMPT][:expect]
+        assert prompts == [w.format(shape="rectangle") for w in want], prompts   # the tries alternate the wording
 
     # removal_done: unchanged / outline left = not done; area replaced = done
     before = Image.new("RGB", (200, 200), (40, 90, 40))
@@ -88,6 +91,11 @@ def main():
     changed = before.copy()
     changed.paste((200, 200, 200), (50, 50, 150, 150))
     assert imaging.removal_done(before, changed, mk, 4)
+    assert imaging.removal_score(before, before, mk, 4) == 0 and imaging.removal_score(before, changed, mk, 4) > 0.9
+    # a half-removed figure (live test: 0.11) is not "done", a removed small object (0.16) is
+    half = before.copy()
+    half.paste((200, 200, 200), (50, 50, 80, 80))     # ~10 % of the selection changed
+    assert not imaging.removal_done(before, half, mk, 4)
 
     # Remove object with a workflow that uses the mask: clear error
     try:

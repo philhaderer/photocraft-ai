@@ -163,9 +163,17 @@ REMOVE_PROMPT = ("Erase everything inside the red {shape} completely: the whole 
                  "behind it. Also remove the red {shape} itself.")
 
 
-def remove_prompt(mask: "Image.Image") -> str:
+# Second wording, used for the second try: on a big table with food on it (tight frame) the first one changed nothing,
+# this one removed the table and most of what stood on it (but it left the legs of a knight standing). Neither wording
+# works everywhere, so the tries alternate A, B, A.
+REMOVE_PROMPT_ALT = ("Erase everything inside the red {shape} completely: the whole object including everything standing "
+                     "or lying on it and everything attached to it. Paint the empty scenery behind it, continuing the "
+                     "surroundings. Also remove the red {shape} itself.")
+
+
+def remove_prompt(mask: "Image.Image", attempt: int = 0) -> str:
     """The removal instruction; "rectangle" for a rectangular selection (tested), otherwise "outline"."""
-    return REMOVE_PROMPT.format(shape=_shape(mask))
+    return (REMOVE_PROMPT_ALT if attempt % 2 else REMOVE_PROMPT).format(shape=_shape(mask))
 
 
 def _shape(mask: "Image.Image") -> str:
@@ -445,9 +453,12 @@ class Bridge:
                 gp = dataclasses.replace(p, prompt=p.prompt.strip() + hint)  # text-model workflows only
             start, span = 0.15 + 0.75 * k / n_wf, 0.75 / n_wf
             tries = max(1, int(req.remove_tries)) if removal == "remove" else 1
+            sel = mask.crop(region.pil()).resize((gw, gh), Image.NEAREST) if removal else None
+            best = None   # (score, images, seed): the try that changed the selection most
             for attempt in range(tries):
-                if attempt:   # the object is still there: same picture, new seed
-                    gp = dataclasses.replace(gp, seed=(gp.seed + 7919 * attempt) % (2**31))
+                if attempt:   # the object is still there: same picture, new seed and the other wording
+                    gp = dataclasses.replace(gp, seed=(gp.seed + 7919 * attempt) % (2**31),
+                                             prompt=remove_prompt(mask.crop(region.pil()), attempt))
                     p.seed = gp.seed
                 graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name, force_plain=bool(removal))
                 prompt_id = self.comfy.queue(graph)
@@ -458,9 +469,15 @@ class Bridge:
                 if vgl:
                     self.last_vgl = vgl
                 ims = self.comfy.output_images(hist, out_node)[: max(1, req.variants)]
-                if tries == 1 or not ims or imaging.removal_done(
-                        crop_plain, ims[0], mask.crop(region.pil()).resize((gw, gh), Image.NEAREST), outline_width(gw, gh)):
+                if tries == 1 or not ims:
                     break
+                score = imaging.removal_score(crop_plain, ims[0], sel, outline_width(gw, gh))
+                if best is None or score > best[0]:
+                    best = (score, ims, gp.seed)
+                if score >= imaging.REMOVAL_MIN:
+                    break
+            if best is not None and best[1] is not ims:   # the last try was not the best one: keep the best
+                ims, p.seed = best[1], best[2]
             results.append((label, ims))
 
         progress(0.92, "Placing the result in PhotoCraft", phase="place")
