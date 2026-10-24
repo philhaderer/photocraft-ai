@@ -116,10 +116,12 @@ def main():
     ImageDraw.Draw(mm).ellipse((10, 10, 90, 90), fill=255)
     assert "red outline" in bridge.remove_prompt(mm) and "red rectangle" in bridge.remove_prompt(Image.new("L", (50, 50), 255))
 
-    # typed text: normal fill, no outline
+    # typed text (Generative fill): the selection is marked in the picture and the text is wrapped, one pass
     b, _ = run("fibo2-edit-plain.json", prompt="a red car")
     img = next(v for k, v in b.comfy.uploads.items() if k.endswith("-image.png"))
-    assert red(img) == 0 and prompt_of(b.comfy.graphs[0]).startswith("a red car")
+    pr = prompt_of(b.comfy.graphs[0])
+    assert red(img) > 0 and len(b.comfy.graphs) == 1
+    assert pr.startswith("a red car. Place it only inside the red ") and "Also remove the red" in pr
 
     print("ALL OK (remove object)")
 

@@ -182,6 +182,18 @@ def _shape(mask: "Image.Image") -> str:
     return "rectangle" if rect else "outline"
 
 
+# Generative fill with an instruction editor (Fibo ignores the mask): the selection is drawn into the picture as a red
+# outline and this fixed sentence wraps the typed text. Live test (meadow + lake, "a red fox", "a campfire with a pot",
+# "a rowing boat", "a heron"): the objects appeared at the marked spot; without the outline they appeared anywhere.
+FILL_PROMPT = ("{text}. Place it only inside the red {shape}, scaled to fit it and blended into the scene "
+               "(light, shadows, perspective). Do not change anything outside the red {shape}. "
+               "Also remove the red {shape} itself.")
+
+
+def fill_prompt(text: str, mask: "Image.Image") -> str:
+    return FILL_PROMPT.format(text=text.strip().rstrip(".!"), shape=_shape(mask))
+
+
 def outline_width(gen_w: int, gen_h: int) -> int:
     """Half thickness of the red outline in the generated picture: visible, but thin."""
     return max(2, round(max(gen_w, gen_h) / 300))
@@ -416,6 +428,8 @@ class Bridge:
             region = imaging.Box(0, 0, W, H)
 
         removal = self._kind(req, p, wf_paths)
+        fill = bool(editor and req.mode == "inpaint" and has_sel and not removal and p.prompt.strip())
+        marked = bool(removal) or fill
         gw, gh = imaging.gen_size(region.w, region.h, req.base_res)
         p.width, p.height = gw, gh
         progress(0.1, f"Sending to ComfyUI ({gw}×{gh})", phase="prepare")
@@ -427,7 +441,7 @@ class Bridge:
                 crop_full = imaging.paste_reference(crop_full, ref_rgba, imaging.Box(bbox.x - region.x, bbox.y - region.y, bbox.w, bbox.h))
             crop = imaging.to_rgb(crop_full).resize((gw, gh), Image.LANCZOS)
             crop_plain = crop
-            if removal:
+            if marked:
                 crop = imaging.mark_outline(crop, mask.crop(region.pil()).resize((gw, gh), Image.NEAREST), outline_width(gw, gh))
             image_name = self.comfy.upload_image(crop, f"pcc-{tag}-image.png")
         ref_name = None
@@ -454,6 +468,8 @@ class Bridge:
                 gp = dataclasses.replace(p, prompt=reference_prompt(p.prompt, req.ref_collage, reference_where(bbox, region)))
             if removal:   # fixed instruction, the text model is bypassed
                 gp = dataclasses.replace(p, prompt=remove_prompt(mask.crop(region.pil())))
+            elif fill:    # marked area + fixed wrapper around the typed text, the text model is bypassed
+                gp = dataclasses.replace(p, prompt=fill_prompt(p.prompt, mask.crop(region.pil())))
             if hint and wf and req.enhance and not removal and prompt_phase_nodes(workflows.load_template(wf)):
                 gp = dataclasses.replace(p, prompt=p.prompt.strip() + hint)  # text-model workflows only
             start, span = 0.15 + 0.75 * k / n_wf, 0.75 / n_wf
@@ -465,7 +481,7 @@ class Bridge:
                     gp = dataclasses.replace(gp, seed=(gp.seed + 7919 * attempt) % (2**31),
                                              prompt=remove_prompt(mask.crop(region.pil()), attempt))
                     p.seed = gp.seed
-                graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name, force_plain=bool(removal))
+                graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name, force_plain=marked)
                 prompt_id = self.comfy.queue(graph)
                 progress(start, f"Queued in ComfyUI ({self.pipeline}{suffix})" if not attempt
                          else f"Object still there, trying again ({attempt + 1}/{tries})", phase="prepare")

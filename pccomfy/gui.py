@@ -31,6 +31,8 @@ MODE_TIPS = {
     "inpaint": "Select an area (Lasso / Rectangular Marquee), type what should appear there (\"a helicopter on the meadow\"), "
                "then Generate.\n"
                "A text is required with Fibo workflows. To take something away use \"Remove\".\n"
+               "With Fibo the selection is drawn into the picture as a red outline and your text is wrapped in a fixed "
+               "instruction (place it only inside the outline), so the object lands where you marked. The text model is bypassed.\n"
                "Fibo redraws the whole surrounding crop and ignores the mask, so the layer mask is off in \"auto\".",
     "remove": "Select the object to remove (tightly, but with the whole object inside), then Generate. No text needed.\n"
               "A red rectangle / outline is drawn into the picture the model gets (never into your document) and a fixed "
