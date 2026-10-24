@@ -26,6 +26,29 @@ MODE_LABELS = [
     ("img2img", "Image → image"),
     ("txt2img", "Text → image"),
 ]
+MODE_TIPS = {
+    "inpaint": "Select an area (Lasso / Rectangular Marquee), then Generate.\n"
+               "With text: describes what should appear there (\"a helicopter on the meadow\").\n"
+               "Without text (Fibo workflows): removes the main subject inside the selection. Select tightly around it. "
+               "A red rectangle / outline is drawn into the picture the model gets; it is never in your document.\n"
+               "Fibo redraws the whole surrounding crop and ignores the mask, so the layer mask is off in \"auto\".",
+    "reference": "Insert a person or object with the look of a picture (e.g. a Viking).\n"
+                 "1. Put it on its own layer ABOVE everything else (cut out, transparent).\n"
+                 "2. Select where it should stand.\n3. Generate.\n"
+                 "The top layer is the reference; all layers below are flattened in a temporary copy that is deleted again. "
+                 "\"Rough placement\" pastes a scaled copy into the selection so the position is kept. "
+                 "Your text is added to a fixed instruction (\"standing, facing left\"). Fibo workflows only.",
+    "outpaint": "Extend the canvas with the Crop tool (confirm with Enter), then Generate: the empty area is filled.\n"
+                "Text is optional and describes what the new area shows.\n"
+                "Large extensions drift in style and tone at the seam: extend in smaller steps and repeat.",
+    "img2img": "Reworks the picture (or the selection) from your text.\n"
+               "Checkpoint workflows: Denoise says how far it may change (low = stay close, high = new picture).\n"
+               "Fibo workflows: type an instruction (\"make it night\"); no mask is needed.",
+    "txt2img": "Creates a new image from text only, in the size of the selection or the whole canvas.\n"
+               "Checkpoint workflows: describe the image.\n"
+               "Fibo Edit workflows: only with \"enhance\" switched off (the text model needs a picture). "
+               "Fibo Edit is made for editing, results may be arbitrary.",
+}
 BUILTIN = "Built-in (checkpoint)"
 LAYER_MASKS = {"auto": "auto (recommended)", "soft": "soft (same as the model's)", "selection": "hard (from selection)", "none": "none"}
 
@@ -209,8 +232,9 @@ class App:
         modes.pack(fill="x", **pad)
         self.f_modes = modes
         for i, (key, label) in enumerate(MODE_LABELS):
-            ttk.Radiobutton(modes, text=label, value=key, variable=self.v_mode, command=self._on_mode).grid(
-                row=i // 2, column=i % 2, sticky="w", padx=(0, 16), pady=1)
+            rb = ttk.Radiobutton(modes, text=label, value=key, variable=self.v_mode, command=self._on_mode)
+            rb.grid(row=i // 2, column=i % 2, sticky="w", padx=(0, 16), pady=1)
+            Tooltip(rb, MODE_TIPS[key])
 
         ff = ttk.Frame(r)
         ff.pack(fill="x", **pad)
