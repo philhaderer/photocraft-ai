@@ -172,6 +172,12 @@ def to_rgb(img: Image.Image) -> Image.Image:
     return img.convert("RGB")
 
 
+def layer_box(layer: Image.Image) -> "Box | None":
+    """Where a layer's visible pixels lie on the canvas (the layer exported at canvas size), or None when it is empty."""
+    box = layer.convert("RGBA").getchannel("A").point(lambda a: 255 if a > 8 else 0).getbbox()
+    return Box(box[0], box[1], box[2] - box[0], box[3] - box[1]) if box else None
+
+
 def reference_from_layer(layer: Image.Image, max_side: int = 1024) -> tuple[Image.Image, Image.Image]:
     """A reference image exported from a single layer: cropped to its visible pixels and at most `max_side` px on
     the long side. Returns (RGBA with the layer's transparency, RGB on white for the model).

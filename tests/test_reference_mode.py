@@ -255,7 +255,11 @@ def main():
         assert res["layers"]
 
     # errors, each with a clear message
-    expect_error("Select where the reference image should go", with_sel=False)
+    # no selection: the placed reference layer is the place (its position and size), and the sentence asks for the cut-out
+    pc, b, res = run("fibo2-edit-plain.json", prompt="", style="simple", with_sel=False)
+    assert res["layers"]
+    assert bridge.simple_reference_prompt("", "centre", True).endswith("Remove the background of image2 first.")
+    assert "Remove the background" not in bridge.simple_reference_prompt("", "centre")
     expect_error("own layer above the picture", layers=1)
     expect_error("empty", top=Image.new("RGBA", (W, H), (0, 0, 0, 0)))
     try:

@@ -67,9 +67,10 @@ class Request:
                                          # "soft" = same mask the model got, "selection" = hard selection, "none"
     feather_pct: float = 2.0             # soft layer mask for editors that ignore the mask: % of the selection's shorter side
     scale: float = 2.0                   # Upscale: factor per side (Refine always runs at 1.0)
-    ref_style: str = "classic"           # reference mode: "classic" = subject first (<image_1>), long instruction, rough placement;
+    ref_style: str = "simple"            # reference mode: "classic" = subject first (<image_1>), long instruction, rough placement;
                                          # "simple" = the picture first (image1), the reference second (image2), one short sentence
     ref_collage: bool = True             # reference mode: also paste a rough copy of the reference where it should go
+    ref_cutout: bool = True              # reference mode, simple style: the sentence also asks to remove the reference's background
     preset: str = ""                     # name of the preset used: the layers are named "<preset> #<run_no>"
     run_no: int = 0                      # running number of this preset's runs (kept by the window)
 
@@ -148,10 +149,12 @@ def reference_prompt(typed: str, collage: bool, where: str = "") -> str:
     return text
 
 
-def simple_reference_prompt(typed: str, where: str) -> str:
+def simple_reference_prompt(typed: str, where: str, cutout: bool = False) -> str:
     """The "simple" style, from a live test that worked (Fibo 2 Edit Turbo, a tower into a landscape without cutting it
     out): the picture is image1, the reference image2, and one plain sentence says where it goes."""
     text = f"Put the subject from image2 into the {where} of the picture from image1."
+    if cutout:   # the reference needs no cutting out beforehand: the model removes its background itself
+        text += " Remove the background of image2 first."
     if typed.strip():
         text += " " + typed.strip()
     return text
@@ -423,8 +426,6 @@ class Bridge:
         if req.mode == "inpaint" and not has_sel:
             raise BridgeError("Select the area to fill first (e.g. Lasso or Rectangular Marquee).")
         if req.mode == "reference":
-            if not has_sel:
-                raise BridgeError("Select where the reference image should go (e.g. Rectangular Marquee).")
             if len(doc.get("layers", [])) < 2:
                 raise BridgeError("Put the reference image on its own layer above the picture: the top layer is the reference.")
 
@@ -445,10 +446,19 @@ class Bridge:
             ref_rgba = ref_rgb = None
             if req.mode == "reference":
                 try:
-                    ref_rgba, ref_rgb = imaging.reference_from_layer(self._export_top_layer(orig, tag))
+                    ref_full = self._export_top_layer(orig, tag)
+                    ref_rgba, ref_rgb = imaging.reference_from_layer(ref_full)
                 except ValueError as e:
                     raise BridgeError(str(e)) from None
             src, mask = self._export(orig, tag, need_mask=has_sel, drop_top=(req.mode == "reference"))
+            if req.mode == "reference" and mask is None:
+                # no selection: the reference layer, placed where it belongs, is the place (and its size)
+                lb = imaging.layer_box(ref_full)
+                if lb is None or ref_full.size != (W, H):
+                    raise BridgeError("Select where the reference image should go (e.g. Rectangular Marquee), or place its layer there.")
+                mask = Image.new("L", (W, H), 0)
+                mask.paste(255, lb.pil())
+                has_sel = True
             if keep is not None:
                 src = imaging.white_outside(src, keep) if editor else imaging.clear_outside(src, keep)
 
@@ -511,7 +521,7 @@ class Bridge:
             if req.mode == "reference":
                 # the text model is bypassed in this mode: a fixed instruction with <image_1>/<image_2> (+ where)
                 if req.ref_style == "simple":
-                    gp = dataclasses.replace(p, prompt=simple_reference_prompt(p.prompt, _where(bbox, region)[0]))
+                    gp = dataclasses.replace(p, prompt=simple_reference_prompt(p.prompt, _where(bbox, region)[0], req.ref_cutout))
                 else:
                     gp = dataclasses.replace(p, prompt=reference_prompt(p.prompt, req.ref_collage, reference_where(bbox, region)))
             if removal:   # fixed instruction, the text model is bypassed

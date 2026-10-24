@@ -56,8 +56,13 @@ def main():
     app._save_state(app._request())
     import json as _json
     assert _json.loads((Path(t.TMP) / "state.json").read_text(encoding="utf-8"))["ref_collage"] is False
-    # the style: classic by default; simple greys out the rough placement; kept by request, preset and state
-    assert app._request().ref_style == "classic" and app.cb_collage["state"] == "normal"
+    # the style: simple by default (it worked better in live tests); simple greys out the rough placement, the classic
+    # one greys out the cut-out switch; kept by request, preset and state
+    assert app._request().ref_style == "simple" and app.cb_collage["state"] == "disabled" and app.cb_cutout["state"] == "normal"
+    assert app._request().ref_cutout is True
+    app.v_refstyle.set(gui.REF_STYLES["classic"])
+    app._update_availability()
+    assert app.cb_collage["state"] == "normal" and app.cb_cutout["state"] == "disabled"
     app.v_refstyle.set(gui.REF_STYLES["simple"])
     app._update_availability()
     assert app._request().ref_style == "simple" and app.cb_collage["state"] == "disabled"

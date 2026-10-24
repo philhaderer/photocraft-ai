@@ -229,7 +229,8 @@ class App:
         self.v_enhance = tk.BooleanVar(value=g("enhance", True))
         self.v_turbo = tk.BooleanVar(value=g("turbo", True))
         self.v_collage = tk.BooleanVar(value=g("ref_collage", True))
-        self.v_refstyle = tk.StringVar(value=REF_STYLES.get(g("ref_style", "classic"), REF_STYLES["classic"]))
+        self.v_cutout = tk.BooleanVar(value=g("ref_cutout", True))
+        self.v_refstyle = tk.StringVar(value=REF_STYLES.get(g("ref_style", "simple"), REF_STYLES["simple"]))
         self.v_lmask = tk.StringVar(value=LAYER_MASKS.get(g("layer_mask", "auto"), LAYER_MASKS["auto"]))
         self.v_status = tk.StringVar(value="Ready")
         self.v_conn = tk.StringVar(value="")
@@ -507,6 +508,11 @@ class App:
                        "Simple: the picture is image1, the reference image2 and one sentence: \"Put the subject from image2 into "
                        "the <place> of the picture from image1.\" plus your text. No rough placement. Worked without cutting "
                        "the reference out.")
+        self.cb_cutout = ttk.Checkbutton(self.f_ref, text="Cut out the reference (remove its background)", variable=self.v_cutout)
+        self.cb_cutout.pack(anchor="w", padx=6, pady=(0, 4))
+        Tooltip(self.cb_cutout, "Simple style: adds \"Remove the background of image2 first.\" to the sentence, so the reference "
+                                "needs no cutting out beforehand.\nPlace the reference layer where it belongs (or select the "
+                                "place): without a selection its position and size are the place.")
         self.cb_collage = ttk.Checkbutton(self.f_ref, text="Rough placement in the picture", variable=self.v_collage)
         self.cb_collage.pack(anchor="w", padx=6, pady=(0, 6))
         Tooltip(self.cb_collage, "Pastes a rough, scaled copy of the reference into the selection of the picture the model "
@@ -634,7 +640,7 @@ class App:
             self._fit_height()
 
     def _ref_style(self) -> str:
-        return {v: k for k, v in REF_STYLES.items()}.get(self.v_refstyle.get(), "classic")
+        return {v: k for k, v in REF_STYLES.items()}.get(self.v_refstyle.get(), "simple")
 
     def _scale(self) -> float:
         try:
@@ -801,6 +807,7 @@ class App:
         on(self.w_adv["Mask grow"], masked and not editor)
         on(self.w_adv["Mask blur"], masked and not editor)
         on(self.cb_lm, mode != "upscale", "readonly")        # Upscale opens a new document: no layer to mask
+        on(self.cb_cutout, self._ref_style() == "simple")     # the classic sentence has its own wording
         on(self.cb_collage, self._ref_style() == "classic")   # the simple style never pastes a rough copy
         on(self.t_neg, self._wf_has_tag("negative"))
         self.t_neg.configure(fg=FG if self._wf_has_tag("negative") else DISABLED)
@@ -970,7 +977,7 @@ class App:
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
             "scale": self._scale(), "ref_style": self._ref_style(),
             "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
-            "turbo": bool(self.v_turbo.get()), "ref_collage": bool(self.v_collage.get()),
+            "turbo": bool(self.v_turbo.get()), "ref_collage": bool(self.v_collage.get()), "ref_cutout": bool(self.v_cutout.get()),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
             "feather_pct": round(float(self.v_feather.get()), 1),
             "prompt": self._prompt_text(), "negative": self.t_neg.get("1.0", "end").strip(),
@@ -1021,6 +1028,7 @@ class App:
         put(self.v_enhance, "enhance", bool)
         put(self.v_turbo, "turbo", bool)
         put(self.v_collage, "ref_collage", bool)
+        put(self.v_cutout, "ref_cutout", bool)
         put(self.v_refstyle, "ref_style", lambda v: REF_STYLES.get(v, REF_STYLES["classic"]))
         put(self.v_feather, "feather_pct", float)
         self._on_feather()
@@ -1120,7 +1128,7 @@ class App:
                        mask_blur=int(self.v_blur.get()),
                        overlap=int(self.v_overlap.get()), variants=int(self.v_variants.get()),
                        fooocus=bool(self.v_fooocus.get()), enhance=bool(self.v_enhance.get()),
-                       turbo=bool(self.v_turbo.get()), scale=self._scale(), ref_style=self._ref_style(), ref_collage=bool(self.v_collage.get()),
+                       turbo=bool(self.v_turbo.get()), scale=self._scale(), ref_style=self._ref_style(), ref_collage=bool(self.v_collage.get()), ref_cutout=bool(self.v_cutout.get()),
                        layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2)
 
@@ -1253,7 +1261,7 @@ class App:
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
             "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
-            "ref_collage": req.ref_collage, "ref_style": req.ref_style, "runs": dict(self.state.get("runs", {})),
+            "ref_collage": req.ref_collage, "ref_style": req.ref_style, "ref_cutout": req.ref_cutout, "runs": dict(self.state.get("runs", {})),
         })
 
     def _quit(self):
