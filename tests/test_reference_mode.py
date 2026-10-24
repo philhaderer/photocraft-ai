@@ -169,11 +169,11 @@ def has_yellow(im):
     return bool(((a[..., 0] > 240) & (a[..., 1] > 190) & (a[..., 1] < 240) & (a[..., 2] < 60)).any())
 
 
-def run(wf, prompt="", enhance=True, collage=True, **kw):
+def run(wf, prompt="", enhance=True, collage=True, style="classic", **kw):
     tmp = tempfile.mkdtemp()
     pc, _, b = make(tmp, **kw)
     b.comfy = FakeComfy()
-    req = Request(mode="reference", workflow=str(ROOT / "workflows" / wf) if wf else None, enhance=enhance, ref_collage=collage)
+    req = Request(mode="reference", workflow=str(ROOT / "workflows" / wf) if wf else None, enhance=enhance, ref_collage=collage, ref_style=style)
     req.params = workflows.GenParams(prompt=prompt, seed=7)
     res = b.run(req)
     return pc, b, res
@@ -236,6 +236,23 @@ def main():
         assert not has_yellow(img_up), wf
         enc = next(n for n in b.comfy.graphs[0].values() if n["class_type"] == "TextEncodeFibo2")
         assert "pasted" not in enc["inputs"]["prompt"] and "Put the subject at the" in enc["inputs"]["prompt"], wf
+
+    # the simple style: the picture is image1, the reference image2, one plain sentence, never a rough placement
+    t = bridge.simple_reference_prompt("standing, facing left", "lower right")
+    assert t == "Put the subject from image2 into the lower right of the picture from image1. standing, facing left", t
+    assert bridge.simple_reference_prompt("", "centre").endswith("of the picture from image1.")
+    for wf in ("fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json"):
+        pc, b, res = run(wf, prompt="facing the camera", enhance=True, collage=True, style="simple")
+        g = b.comfy.graphs[0]
+        enc = next(n for n in g.values() if n["class_type"] == "TextEncodeFibo2")
+        assert enc["inputs"]["prompt"].startswith("Put the subject from image2 into the "), enc["inputs"]["prompt"]
+        assert enc["inputs"]["prompt"].endswith("facing the camera") and "<image" not in enc["inputs"]["prompt"], wf
+        pic_node = g[enc["inputs"]["images.image_1"][0]]    # the picture first, the reference second
+        ref_node = g[enc["inputs"]["images.image_2"][0]]
+        assert pic_node["inputs"]["image"].endswith("-image.png") and ref_node["inputs"]["image"].endswith("-ref.png"), wf
+        img_up = next(v for k, v in b.comfy.uploads.items() if k.endswith("-image.png"))
+        assert not has_yellow(img_up), wf                     # collage is ignored in this style
+        assert res["layers"]
 
     # errors, each with a clear message
     expect_error("Select where the reference image should go", with_sel=False)

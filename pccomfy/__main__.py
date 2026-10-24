@@ -156,7 +156,7 @@ def cmd_run(cfg: dict, a) -> int:
                   context=d["context"], mask_grow=d["mask_grow"], mask_blur=d["mask_blur"],
                   outpaint=tuple(a.expand), overlap=d["overlap"], variants=a.variants, fooocus=not a.no_fooocus,
                   layer_mask=a.layer_mask, enhance=not a.no_enhance, turbo=not a.no_turbo, scale=a.scale,
-                  ref_collage=not a.no_collage)
+                  ref_collage=not a.no_collage, ref_style=a.ref_style)
     b = make(cfg)
     if not p.checkpoint and not a.workflow:
         try:
@@ -206,6 +206,8 @@ def main(argv=None) -> int:
                    help="layer mask of the new layer: auto (default: none for Fill with a Fibo-type editor, else soft), "
                         "soft, hard from the selection, or none")
     r.add_argument("--no-fooocus", action="store_true", help="don't use the Fooocus patch (e.g. for SD1.5 models)")
+    r.add_argument("--ref-style", choices=("classic", "simple"), default="classic",
+                   help="reference mode: classic = subject first with a long instruction, simple = picture first, one short sentence")
     r.add_argument("--no-collage", action="store_true",
                    help="reference mode: do not paste a rough copy of the reference into the picture")
     r.add_argument("--no-enhance", action="store_true",

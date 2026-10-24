@@ -66,6 +66,8 @@ class Request:
                                          # "soft" = same mask the model got, "selection" = hard selection, "none"
     feather_pct: float = 2.0             # soft layer mask for editors that ignore the mask: % of the selection's shorter side
     scale: float = 2.0                   # Upscale: factor per side (Refine always runs at 1.0)
+    ref_style: str = "classic"           # reference mode: "classic" = subject first (<image_1>), long instruction, rough placement;
+                                         # "simple" = the picture first (image1), the reference second (image2), one short sentence
     ref_collage: bool = True             # reference mode: also paste a rough copy of the reference where it should go
 
 
@@ -129,6 +131,15 @@ def reference_prompt(typed: str, collage: bool, where: str = "") -> str:
     reference, <image_2> the picture (live tests: with the picture first the model redraws the reference and ignores
     the scene). With the rough placement the pasted copy shows where; otherwise `where` (reference_where) says it."""
     text = REFERENCE_PROMPT + (REFERENCE_COLLAGE_NOTE if collage else where)
+    if typed.strip():
+        text += " " + typed.strip()
+    return text
+
+
+def simple_reference_prompt(typed: str, where: str) -> str:
+    """The "simple" style, from a live test that worked (Fibo 2 Edit Turbo, a tower into a landscape without cutting it
+    out): the picture is image1, the reference image2, and one plain sentence says where it goes."""
+    text = f"Put the subject from image2 into the {where} of the picture from image1."
     if typed.strip():
         text += " " + typed.strip()
     return text
@@ -458,7 +469,7 @@ class Bridge:
         image_name = mask_name = None
         if req.mode != "txt2img":
             crop_full = src.crop(region.pil())
-            if req.mode == "reference" and req.ref_collage:
+            if req.mode == "reference" and req.ref_collage and req.ref_style != "simple":
                 crop_full = imaging.paste_reference(crop_full, ref_rgba, imaging.Box(bbox.x - region.x, bbox.y - region.y, bbox.w, bbox.h))
             crop = imaging.to_rgb(crop_full).resize((gw, gh), Image.LANCZOS)
             crop_plain = crop
@@ -486,7 +497,10 @@ class Bridge:
                 gp = dataclasses.replace(p, prompt=outpaint_prompt(p.prompt, req.enhance, keep, (W, H)))
             if req.mode == "reference":
                 # the text model is bypassed in this mode: a fixed instruction with <image_1>/<image_2> (+ where)
-                gp = dataclasses.replace(p, prompt=reference_prompt(p.prompt, req.ref_collage, reference_where(bbox, region)))
+                if req.ref_style == "simple":
+                    gp = dataclasses.replace(p, prompt=simple_reference_prompt(p.prompt, _where(bbox, region)[0]))
+                else:
+                    gp = dataclasses.replace(p, prompt=reference_prompt(p.prompt, req.ref_collage, reference_where(bbox, region)))
             if removal:   # fixed instruction, the text model is bypassed
                 gp = dataclasses.replace(p, prompt=remove_prompt(mask.crop(region.pil())))
             elif fill:    # marked area + fixed wrapper around the typed text; goes through the text model only when the
@@ -583,7 +597,8 @@ class Bridge:
                 tpl = workflows.bypass_prompt_writer(tpl, p.prompt)
             if not req.turbo:
                 tpl = workflows.bypass_lora(tpl)
-            return workflows.apply_template(tpl, p, image_name, mask_name, ref_name)
+            return workflows.apply_template(tpl, p, image_name, mask_name, ref_name,
+                                            ref_first=req.ref_style != "simple")
         if not p.checkpoint:
             raise BridgeError("Pick a model (checkpoint) or a custom workflow.")
         if req.mode == "txt2img":

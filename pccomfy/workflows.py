@@ -172,7 +172,7 @@ def resolve(path: str | Path) -> list[str]:
 
 
 def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name: str | None,
-                   ref_name: str | None = None) -> tuple[dict, str | None]:
+                   ref_name: str | None = None, ref_first: bool = True) -> tuple[dict, str | None]:
     """Fill parameters into `pc:*` nodes. Returns (graph, output node id or None).
 
     A title may carry several tags (e.g. "pc:prompt pc:size" for one node that takes the prompt and the size).
@@ -235,7 +235,7 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
         raise ValueError("The workflow has a pc:mask node, but this mode has no mask (selection).")
     if ref_name is None:
         drop_ref_slot(g)
-    else:
+    elif ref_first:
         reference_first(g)
     return g, out_node
 
