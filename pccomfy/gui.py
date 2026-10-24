@@ -17,7 +17,8 @@ from . import winlink
 from .bridge import Bridge, BridgeError, Request, mask_is_used, prompt_phase_nodes
 from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
-from .workflows import GenParams, list_templates, load_template, lora_switches, resolve
+from .workflows import _tags as workflows_tags
+from .workflows import GenParams, has_upscale_slot, list_templates, load_template, lora_switches, resolve
 
 FILL_CONTEXT = 0.2   # Context (margin) that Generative fill starts with
 
@@ -112,6 +113,8 @@ def preset_stem(name: str) -> str:
     return re.sub(r"[^\w .\-]", "_", name.strip(), flags=re.UNICODE).strip(". ") or "preset"
 
 BG, PANEL, FG, MUTED, ACCENT = "#16181d", "#1f2229", "#e6e8ee", "#8a90a0", "#7c5cff"
+DISABLED = "#4b5060"   # text of a greyed-out control: clearly darker than MUTED, so it reads as "not available here"
+SCALE_MODES = ("upscale", "refine")   # these run only with an upscale workflow (a node titled pc:upscale)
 ERROR, ERROR_TEXT = "#e5484d", "#ff8a8a"
 MIN_W = 420  # the window opens at this width; text fields etc. stretch to it
 
@@ -216,6 +219,18 @@ class App:
         s.configure("TRadiobutton", indicatorbackground=PANEL)
         s.configure("TSpinbox", fieldbackground=PANEL, foreground=FG, arrowcolor=FG)
         s.configure("Horizontal.TProgressbar", background=ACCENT)
+        # greyed out must be visible on the dark theme (clam keeps nearly the normal text colour)
+        for w in ("TCheckbutton", "TRadiobutton", "TLabel"):
+            s.map(w, foreground=[("disabled", DISABLED)])
+        for w in ("TCheckbutton", "TRadiobutton"):
+            s.map(w, indicatorbackground=[("disabled", BG), ("selected", ACCENT), ("active", "#2a2e38")],
+                  indicatorforeground=[("disabled", DISABLED), ("selected", "white")])
+        s.map("TSpinbox", foreground=[("disabled", DISABLED)], fieldbackground=[("disabled", BG)],
+              arrowcolor=[("disabled", DISABLED)])
+        s.map("TCombobox", foreground=[("disabled", DISABLED), ("readonly", FG)], fieldbackground=[("disabled", BG), ("readonly", PANEL)],
+              arrowcolor=[("disabled", DISABLED)])
+        s.map("TScale", background=[("disabled", BG)], troughcolor=[("disabled", BG)])
+        s.map("TButton", foreground=[("disabled", DISABLED)])
         self.root.option_add("*TCombobox*Listbox.background", PANEL)
         self.root.option_add("*TCombobox*Listbox.foreground", FG)
 
@@ -248,7 +263,7 @@ class App:
         mf.columnconfigure(1, weight=1)
         ttk.Label(mf, text="Workflow").grid(row=0, column=0, sticky="w")
         self.cb_workflow = ttk.Combobox(mf, textvariable=self.v_workflow, state="readonly", width=8)
-        self.cb_workflow.bind("<<ComboboxSelected>>", lambda e: self._on_workflow())
+        self.cb_workflow.bind("<<ComboboxSelected>>", lambda e: self._workflow_picked())
         self.cb_workflow.grid(row=0, column=1, sticky="ew", padx=6)
         ttk.Label(mf, text="Text model").grid(row=1, column=0, sticky="w", pady=(4, 0))
         self.cb_clip = ttk.Combobox(mf, textvariable=self.v_clip, state="readonly", width=8)
@@ -308,6 +323,7 @@ class App:
             ttk.Label(sf, text=lbl, style="Muted.TLabel").grid(row=0, column=i, sticky="w", padx=(0, 6))
             w.grid(row=1, column=i, sticky="w", padx=(0, 6))
         self.w_denoise = items[2][1]
+        self.w_variants = items[4][1]
         self.recipe_widgets = [items[0][1], items[1][1]]
 
         sm = ttk.Frame(r)
@@ -356,6 +372,7 @@ class App:
                          "that use the mask (not Fibo, which regenerates the whole crop).",
             "Mask blur": "Softens the edge of the mask the model gets by this many px. Same as above: not used by Fibo.",
         }
+        self.w_adv = {}
         for i, (lbl, var, lo, hi, inc) in enumerate((("Base res.", self.v_res, 256, 2048, 64),
                                                     ("Context", self.v_context, 0, 2, 0.1),
                                                     ("Mask grow", self.v_grow, 0, 128, 2),
@@ -364,6 +381,7 @@ class App:
             lb.grid(row=0, column=i, sticky="w", padx=6)
             sp = self._spin(self.f_adv, var, lo, hi, inc, 6)
             sp.grid(row=1, column=i, padx=6, pady=(0, 6))
+            self.w_adv[lbl] = sp
             Tooltip(lb, tips[lbl])
             Tooltip(sp, tips[lbl])
         self.cb_fooocus = ttk.Checkbutton(self.f_adv, text="Fooocus inpaint (SDXL, as in Krita AI Diffusion)", variable=self.v_fooocus)
@@ -374,7 +392,7 @@ class App:
         lm.grid(row=3, column=0, columnspan=4, sticky="w", padx=6, pady=(0, 6))
         lb = ttk.Label(lm, text="Layer mask", style="Muted.TLabel")
         lb.pack(side="left")
-        cb_lm = ttk.Combobox(lm, textvariable=self.v_lmask, values=list(LAYER_MASKS.values()), state="readonly", width=24)
+        self.cb_lm = cb_lm = ttk.Combobox(lm, textvariable=self.v_lmask, values=list(LAYER_MASKS.values()), state="readonly", width=24)
         cb_lm.pack(side="left", padx=6)
         cb_lm.bind("<<ComboboxSelected>>", lambda e: self._update_feather_state())
         for w in (lb, cb_lm):
@@ -458,6 +476,7 @@ class App:
         self.w_denoise.configure(state="disabled" if mode == "txt2img" or self._ignores_mask() else "normal")   # an editor always runs at 1.0
         self._sync_prompt_field(mode)
         self._update_feather_state()
+        self._update_availability()
         if self._sized:
             self._fit_height()
 
@@ -493,6 +512,7 @@ class App:
         self.root.geometry(f"{width or self.root.winfo_width()}x{max(560, self.root.winfo_reqheight())}")
 
     def _on_mode(self):
+        self._couple_workflow()
         self._on_mode_ui()
         self._on_workflow()  # the text model is not used in reference mode
         mode = self.v_mode.get()
@@ -515,6 +535,8 @@ class App:
         choice = {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto")
         if choice != "auto":
             return choice == "soft"
+        if self.v_mode.get() == "upscale":
+            return False
         if self.v_mode.get() not in ("inpaint", "remove", "reference", "outpaint"):
             return True
         return not self._ignores_mask()
@@ -537,6 +559,82 @@ class App:
         v = round(float(self.v_feather.get()) * 2) / 2
         self.lbl_feather.configure(text="hard edge" if v <= 0 else f"{v:g} % of the shorter side")
 
+    def _wf_has_upscale(self, name: str) -> bool:
+        if name == BUILTIN:
+            return False
+        try:
+            return any(has_upscale_slot(load_template(w)) for w in resolve(self.workflows_dir / name))
+        except (OSError, ValueError, KeyError):
+            return False
+
+    def _wf_has_tag(self, tag: str) -> bool:
+        """True when the selected workflow has a node titled pc:<tag> (the built-in graph has all of them)."""
+        wf = self.v_workflow.get()
+        if wf == BUILTIN:
+            return True
+        try:
+            return any(tag in workflows_tags(n) for w in resolve(self.workflows_dir / wf)
+                       for n in load_template(w).values() if isinstance(n, dict))
+        except (OSError, ValueError, KeyError):
+            return False
+
+    def _couple_workflow(self):
+        """Upscale / Refine only run with an upscale workflow and no other mode runs with one: the mode takes the
+        right workflow along (and gives the previous one back)."""
+        mode, wf = self.v_mode.get(), self.v_workflow.get()
+        has = self._wf_has_upscale(wf)
+        if mode in SCALE_MODES and not has:
+            names = [n for n in self.cb_workflow["values"] if self._wf_has_upscale(n)]
+            if not names:
+                self._status("No upscale workflow in the workflows folder (flux3-klein-upscale.json).", error=True)
+                return
+            self._edit_wf = wf
+            last = getattr(self, "_scale_wf", "")
+            self.v_workflow.set(last if last in names else next((n for n in names if "flux3" in n), names[0]))
+        elif mode not in SCALE_MODES and has:
+            self._scale_wf = wf
+            back = getattr(self, "_edit_wf", "")
+            self.v_workflow.set(back if back in list(self.cb_workflow["values"]) and not self._wf_has_upscale(back) else BUILTIN)
+
+    def _workflow_picked(self):
+        """The Workflow list was used: an upscale workflow puts the window in Upscale, any other takes it out of it."""
+        wf, mode = self.v_workflow.get(), self.v_mode.get()
+        has = self._wf_has_upscale(wf)
+        if has:
+            self._scale_wf = wf
+        else:
+            self._edit_wf = wf
+        if has and mode not in SCALE_MODES:
+            self.v_mode.set("upscale")
+            self._on_mode()
+        elif not has and mode in SCALE_MODES:
+            self.v_mode.set("inpaint")
+            self._on_mode()
+        else:
+            self._on_workflow()
+
+    def _update_availability(self):
+        """Grey out what has no effect in the current mode with the current workflow."""
+        if not hasattr(self, "w_adv"):
+            return
+        mode = self.v_mode.get()
+        scale = mode in SCALE_MODES
+        masked = mode in ("inpaint", "remove", "reference", "outpaint")
+        editor = self._ignores_mask()
+
+        def on(widget, yes, normal="normal"):
+            widget.configure(state=normal if yes else "disabled")
+
+        on(self.w_denoise, not (mode == "txt2img" or editor or scale))
+        on(self.w_variants, not scale)                       # the upscale workflow gives one picture
+        on(self.w_adv["Base res."], not scale)               # the picture goes in at its own size
+        on(self.w_adv["Context"], masked)
+        on(self.w_adv["Mask grow"], masked and not editor)
+        on(self.w_adv["Mask blur"], masked and not editor)
+        on(self.cb_lm, mode != "upscale", "readonly")        # Upscale opens a new document: no layer to mask
+        on(self.t_neg, self._wf_has_tag("negative"))
+        self.t_neg.configure(fg=FG if self._wf_has_tag("negative") else DISABLED)
+
     def _on_workflow(self):
         # a custom workflow carries its own model/steps/CFG/sampler – these fields apply to the built-in one only
         state = "normal" if self.v_workflow.get() == BUILTIN else "disabled"
@@ -555,6 +653,7 @@ class App:
         enhancing = has_writer and bool(self.v_enhance.get())
         self.cb_clip.configure(state="readonly" if (state == "disabled" and enhancing) else "disabled")
         self._update_feather_state()
+        self._update_availability()
 
     def _has_text_model(self) -> bool:
         """True when the selected workflow (or one of a group) contains a text model that writes the prompt."""

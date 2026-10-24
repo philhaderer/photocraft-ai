@@ -237,6 +237,35 @@ def main():
     app._on_mode_ui()
     print("upscale controls OK")
 
+    # Mode and workflow go together: Upscale / Refine only with an upscale workflow, the other modes never with one
+    shutil.copy(ROOT / "workflows" / "flux3-klein-upscale.json", wfdir / "up.json")
+    app.cb_workflow["values"] = [gui.BUILTIN, "turbo.json", "plain.json", "up.json"]
+    app.v_workflow.set("plain.json")
+    app.v_mode.set("inpaint")
+    app._on_mode()
+    app.v_mode.set("upscale")
+    app._on_mode()
+    assert app.v_workflow.get() == "up.json", app.v_workflow.get()       # the mode took the workflow along
+    assert app.w_variants["state"] == "disabled" and app.w_denoise["state"] == "disabled"
+    assert app.w_adv["Context"]["state"] == "disabled" and app.w_adv["Base res."]["state"] == "disabled"
+    assert app.cb_lm["state"] == "disabled" and app.cb_turbo["state"] == "disabled"
+    app.v_mode.set("inpaint")
+    app._on_mode()
+    assert app.v_workflow.get() == "plain.json", app.v_workflow.get()     # and gave the old one back
+    assert app.w_variants["state"] == "normal" and app.w_adv["Context"]["state"] == "normal"
+    app.v_workflow.set("up.json")                                          # picking the upscale workflow in the list
+    app._workflow_picked()
+    assert app.v_mode.get() == "upscale"
+    app.v_workflow.set("plain.json")                                       # ... and any other one takes it out again
+    app._workflow_picked()
+    assert app.v_mode.get() == "inpaint"
+    app.v_mode.set("refine")
+    app._on_mode()
+    assert app.v_workflow.get() == "up.json" and app.cb_lm["state"] == "readonly"   # Refine adds a layer: layer mask stays
+    app.v_mode.set("inpaint")
+    app._on_mode()
+    print("mode/workflow coupling OK")
+
     # delete
     app.delete_preset()
     assert not f.exists() and app.v_preset.get() == ""
