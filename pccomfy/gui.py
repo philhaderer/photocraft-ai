@@ -13,6 +13,7 @@ from pathlib import Path
 from tkinter import messagebox, simpledialog, ttk
 
 from . import config as cfgmod
+from . import winlink
 from .bridge import Bridge, BridgeError, Request, mask_is_used, prompt_phase_nodes
 from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
@@ -130,6 +131,7 @@ class App:
         self.root.after(200, self.refresh)
         self.refresh_presets()
         self.root.protocol("WM_DELETE_WINDOW", self._quit)
+        self.root.bind("<Destroy>", self._on_destroy, add="+")
 
     # ---------- UI ----------
 
@@ -343,7 +345,13 @@ class App:
         foot.pack(fill="x", side="bottom", padx=10, pady=6)
         ttk.Label(foot, textvariable=self.v_conn, style="Muted.TLabel").pack(side="left")
         ttk.Button(foot, text="Refresh", command=self.refresh).pack(side="left", padx=(8, 0))
-        ttk.Checkbutton(foot, text="Always on top", variable=self.v_top, command=self._on_top).pack(side="right")
+        cb_top = ttk.Checkbutton(foot, text="Stay with PhotoCraft" if winlink.available() else "Always on top",
+                                 variable=self.v_top, command=self._on_top)
+        cb_top.pack(side="right")
+        if winlink.available():
+            Tooltip(cb_top, "On: this window belongs to PhotoCraft - it minimizes and returns with PhotoCraft, stays above "
+                            "PhotoCraft only and does not cover other programs. It closes when PhotoCraft closes. "
+                            "Off: a normal, free window.")
 
         self.root.bind("<Control-Return>", lambda e: (self.generate(), "break")[1])
         self.root.bind("<Escape>", lambda e: self.stop())
@@ -442,7 +450,36 @@ class App:
             return False
 
     def _on_top(self):
-        self.root.attributes("-topmost", bool(self.v_top.get()))
+        if not winlink.available():
+            self.root.attributes("-topmost", bool(self.v_top.get()))
+            return
+        self.root.attributes("-topmost", False)   # owned window instead: above PhotoCraft only
+        self._link_tries = 0
+        if self.v_top.get():
+            self._try_link()
+        else:
+            winlink.unlink(self.root)
+
+    def _try_link(self):
+        if not self.v_top.get():
+            return
+        if winlink.link(self.root):
+            return
+        self._link_tries = getattr(self, "_link_tries", 0) + 1
+        if self._link_tries < 20:   # PhotoCraft may still be starting
+            self.root.after(1500, self._try_link)
+        else:
+            self.v_status.set("PhotoCraft window not found - this window stays free")
+
+    def _on_destroy(self, e):
+        if e.widget is not self.root or getattr(self, "_closing", False):
+            return
+        self._closing = True   # PhotoCraft closed: Windows destroys owned windows without asking
+        try:
+            self._save_state(self._request())
+        except Exception:
+            pass
+        self.bridge.cancel()
 
     # ---------- connections ----------
 
@@ -755,6 +792,7 @@ class App:
         })
 
     def _quit(self):
+        self._closing = True
         try:
             self._save_state(self._request())
         except Exception:
