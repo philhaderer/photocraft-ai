@@ -90,6 +90,10 @@
    "images.image_1": [
     "6",
     0
+   ],
+   "images.image_2": [
+    "13",
+    0
    ]
   },
   "_meta": {
@@ -164,6 +168,15 @@
   },
   "_meta": {
    "title": "pc:output"
+  }
+ },
+ "13": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref"
   }
  }
 }

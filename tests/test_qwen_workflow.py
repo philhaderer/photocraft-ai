@@ -37,12 +37,12 @@ def main():
     assert g[out]["class_type"] == "PreviewImage"
     enc = g[by_tag(g, "prompt")[0]]["inputs"]
     assert enc["images.image_1"] == [by_tag(g, "image")[0], 0] and enc["prompt"] == "<image1> a red scarf"
-    try:   # one picture only: no reference slot
-        workflows.apply_template(tpl, p, "pic.png", "mask.png", ref_name="ref.png")
-    except ValueError as e:
-        assert "reference slot" in str(e)
-    else:
-        raise AssertionError("Qwen has no reference slot")
+    assert "images.image_2" not in enc and not by_tag(g, "ref")          # no reference: the slot is gone
+    assert workflows.has_ref_slot(tpl)
+    g2, _ = workflows.apply_template(tpl, p, "pic.png", "mask.png", ref_name="ref.png", ref_first=False)
+    e2 = g2[by_tag(g2, "prompt")[0]]["inputs"]                          # simple style: the picture is image 1, the reference image 2
+    assert e2["images.image_1"] == [by_tag(g2, "image")[0], 0] and e2["images.image_2"] == [by_tag(g2, "ref")[0], 0]
+    assert g2[by_tag(g2, "ref")[0]]["inputs"]["image"] == "ref.png" and links_resolve(g2)
 
     # the turbo switch: 10 steps with the LoRA, 25 without
     assert workflows.lora_switches(tpl) == ["2"]

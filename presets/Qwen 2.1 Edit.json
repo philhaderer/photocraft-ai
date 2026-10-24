@@ -7,7 +7,7 @@
   "clip": "",
   "denoise": 1.0,
   "variants": 1,
-  "base_res": 1024,
+  "base_res": 1224,
   "context": 0.4,
   "mask_grow": 8,
   "mask_blur": 8,
