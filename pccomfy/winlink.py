@@ -116,6 +116,10 @@ class Win32Api:
     def set_owner(self, hwnd: int, owner: int) -> None:
         self.u.SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, owner)
 
+    def place_below(self, hwnd: int, above: int) -> None:
+        """Put `hwnd` directly below `above` in the z-order, without moving, resizing or activating it."""
+        self.u.SetWindowPos(hwnd, above, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010)   # NOSIZE | NOMOVE | NOACTIVATE
+
 
 def link(root, api=None) -> bool:
     """Make `root` an owned window of PhotoCraft's main window and check that it took. True = tied to PhotoCraft now.
@@ -132,6 +136,51 @@ def link(root, api=None) -> bool:
         if api.owner_of(top) != owner:
             api.set_owner(top, owner)
         return api.owner_of(top) == owner
+    except Exception:
+        return False
+
+
+def popups_over(infos: list[dict], exe: str, top: int, owner: int | None) -> int | None:
+    """infos in z-order, topmost first (EnumWindows order). Returns the popup of PhotoCraft's process (a menu, a drop-down,
+    a tooltip) that lies BELOW the bridge window `top` and overlaps it - the one the bridge window must give way to - or
+    None. When several qualify, the lowest one: the bridge window then goes below all of them."""
+    exe = exe.lower()
+    mine = None
+    found = None
+    for w in infos:
+        if w.get("hwnd") == top:
+            mine = w
+            continue
+        if mine is None or not w.get("visible"):
+            continue
+        name = os.path.basename((w.get("exe") or "").replace("\\", "/")).lower()
+        if name != exe or w["hwnd"] == owner:
+            continue
+        a, b = mine.get("rect"), w.get("rect")
+        if a and b and (b[0] >= a[2] or b[2] <= a[0] or b[1] >= a[3] or b[3] <= a[1]):
+            continue   # no overlap with the bridge window
+        found = w["hwnd"]
+    return found
+
+
+def yield_to_popups(root, api=None) -> bool:
+    """PhotoCraft's menus open above the main window, but an owned window that was active last can still cover them.
+    Called often (a few times per second): when a popup of PhotoCraft lies below the bridge window and overlaps it, the
+    bridge window is put directly below that popup. True = something was moved."""
+    if not available() and api is None:
+        return False
+    try:
+        api = api or Win32Api()
+        top = api.toplevel(root)
+        infos = api.windows(everything=True)
+        owner = pick_window(infos, exe_name())
+        if not top or not owner:
+            return False
+        over = popups_over(infos, exe_name(), top, owner)
+        if over is None:
+            return False
+        api.place_below(top, over)
+        return True
     except Exception:
         return False
 

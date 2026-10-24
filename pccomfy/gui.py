@@ -846,12 +846,21 @@ class App:
         else:
             winlink.unlink(self.root)
 
+    def _yield_popups(self):
+        """PhotoCraft's menus must not be hidden by this window: a few times a second it steps behind them."""
+        self._popup_job = None
+        if self.v_top.get() and winlink.available():
+            winlink.yield_to_popups(self.root)
+            self._popup_job = self.root.after(300, self._yield_popups)
+
     def _try_link(self):
         self._link_job = None
         if not self.v_top.get():
             return
         if winlink.link(self.root):
             self._link_tries = 0
+            if not getattr(self, "_popup_job", None):
+                self._popup_job = self.root.after(300, self._yield_popups)
         else:
             self._link_tries = getattr(self, "_link_tries", 0) + 1
             if self._link_tries == 20:

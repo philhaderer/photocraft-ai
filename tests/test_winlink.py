@@ -31,7 +31,46 @@ class Fake:
         self.owners[h] = o
 
 
+def popup_test():
+    pc = r"C:\PhotoCraft\PhotoCraft.exe"
+    r = lambda x0, y0, x1, y1: (x0, y0, x1, y1)
+
+    def win(h, rect, exe=pc, visible=True):
+        return dict(hwnd=h, exe=exe, visible=visible, rect=rect)
+    po = winlink.popups_over
+    ours, main_w = 777, 42
+    # z-order, topmost first: ours, then a menu below it overlapping, then the main window
+    infos = [win(ours, r(0, 0, 100, 100), "py.exe"), win(9, r(50, 50, 200, 200)), win(main_w, r(0, 0, 900, 900))]
+    assert po(infos, "photocraft.exe", ours, main_w) == 9
+    assert po([win(9, r(50, 50, 200, 200)), win(ours, r(0, 0, 100, 100), "py.exe"), win(main_w, r(0, 0, 900, 900))],
+              "photocraft.exe", ours, main_w) is None                       # the menu is already above us
+    assert po([win(ours, r(0, 0, 100, 100), "py.exe"), win(9, r(300, 300, 400, 400)), win(main_w, r(0, 0, 900, 900))],
+              "photocraft.exe", ours, main_w) is None                       # no overlap
+    assert po([win(ours, r(0, 0, 100, 100), "py.exe"), win(9, r(50, 50, 200, 200), "other.exe")],
+              "photocraft.exe", ours, main_w) is None                       # another program
+    assert po([win(ours, r(0, 0, 100, 100), "py.exe"), win(9, r(50, 50, 200, 200), visible=False)],
+              "photocraft.exe", ours, main_w) is None
+    infos = [win(ours, r(0, 0, 100, 100), "py.exe"), win(9, r(50, 50, 200, 200)), win(10, r(60, 60, 80, 80)), win(main_w, r(0, 0, 900, 900))]
+    assert po(infos, "photocraft.exe", ours, main_w) == 10                  # several: below the lowest
+
+    class F:
+        placed = []
+
+        def toplevel(self, root):
+            return ours
+
+        def windows(self, everything=False):
+            return [dict(win(ours, r(0, 0, 100, 100), "py.exe"), title="bridge"), win(9, r(50, 50, 200, 200)),
+                    dict(win(main_w, r(0, 0, 900, 900)), title="PhotoCraft", owner=0, exstyle=0, area=810000)]
+
+        def place_below(self, h, above):
+            self.placed.append((h, above))
+    f = F()
+    assert winlink.yield_to_popups(object(), f) is True and f.placed == [(ours, 9)]
+
+
 def main():
+    popup_test()
     pick = winlink.pick_window
     pc = r"C:\Program Files\PhotoCraft\PhotoCraft.exe"
     assert pick([w(1, pc), w(2, r"C:\x\other.exe", area=999)], "photocraft.exe") == 1
