@@ -108,6 +108,16 @@ def placement_hint(sel: "imaging.Box", crop: "imaging.Box") -> str:
     return f" (Apply this only at the {where} of the image, in an area of roughly {share}% of the image; leave everything else as it is.)"
 
 
+def outpaint_hint(keep: "imaging.Box", canvas: tuple[int, int]) -> str:
+    """For instruction-based editors (Fibo), which ignore the mask: say what the white margin is."""
+    W, H = canvas
+    sides = [name for name, added in (("left", keep.x > 0), ("top", keep.y > 0),
+                                      ("right", keep.x + keep.w < W), ("bottom", keep.y + keep.h < H)) if added]
+    where = ", ".join(sides[:-1]) + " and " + sides[-1] if len(sides) > 1 else (sides[0] if sides else "")
+    return (f" (The white margin on the {where} of the image is empty canvas. Extend the scene seamlessly into it, "
+            "continuing what is visible at its edge, and leave no white. Keep the existing picture unchanged.)")
+
+
 def after_prompt_nodes(graph: dict) -> set[str]:
     """Ids of the nodes that consume the written prompt (text encoder, sampler, decode, output ...)."""
     import re
@@ -247,12 +257,18 @@ class Bridge:
         if req.mode == "inpaint" and not has_sel:
             raise BridgeError("Select the area to fill first (e.g. Lasso or Rectangular Marquee).")
 
+        wf_paths = workflows.resolve(req.workflow) if req.workflow else [None]
+        # an instruction-based editor (Fibo) never sees the mask: it gets the white margin as it is plus a sentence
+        # saying what it is; a smeared edge fill would look finished to it and come back unchanged
+        editor = bool(wf_paths[0]) and not any(mask_is_used(json.loads(Path(w).read_text(encoding="utf-8")))
+                                               for w in wf_paths)
+
         src = mask = None
         if req.mode != "txt2img" or has_sel:
             progress(0.05, "Exporting the image from PhotoCraft", phase="prepare")
             src, mask = self._export(orig, tag, need_mask=has_sel)
             if keep is not None:
-                src = imaging.clear_outside(src, keep)
+                src = imaging.white_outside(src, keep) if editor else imaging.clear_outside(src, keep)
 
         bbox = None
         if req.mode in ("inpaint", "outpaint"):
@@ -278,7 +294,6 @@ class Bridge:
             m = m.resize((gw, gh), Image.BILINEAR)
             mask_name = self.comfy.upload_image(m.convert("RGB"), f"pcc-{tag}-mask.png")
 
-        wf_paths = workflows.resolve(req.workflow) if req.workflow else [None]
         hint = placement_hint(bbox, region) if (req.mode == "inpaint" and has_sel and bbox) else ""
         n_wf = len(wf_paths)
         results: list[tuple[str, list[Image.Image]]] = []
@@ -288,6 +303,8 @@ class Bridge:
             suffix = f" [{label}]" if label else ""
             self.pipeline = "workflow" if wf else req.mode
             gp = p
+            if keep is not None and editor:
+                gp = dataclasses.replace(p, prompt=p.prompt.strip() + outpaint_hint(keep, (W, H)))
             if hint and wf and req.enhance and prompt_phase_nodes(workflows.load_template(wf)):
                 gp = dataclasses.replace(p, prompt=p.prompt.strip() + hint)  # text-model workflows only
             graph, out_node = self._graph(req, gp, image_name, mask_name, wf)

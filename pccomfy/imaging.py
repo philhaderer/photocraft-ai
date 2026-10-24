@@ -62,6 +62,14 @@ def clear_outside(img: Image.Image, keep: Box) -> Image.Image:
     return out
 
 
+def white_outside(img: Image.Image, keep: Box) -> Image.Image:
+    """RGB copy with everything outside `keep` flat white, whatever the Crop tool left there (white or transparent)."""
+    rgba = img.convert("RGBA")
+    out = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+    out.paste(Image.alpha_composite(out.crop(keep.pil()), rgba.crop(keep.pil())), (keep.x, keep.y))
+    return out.convert("RGB")
+
+
 def new_area_rect(keep: Box, canvas: tuple[int, int], overlap: int) -> tuple[int, int, int, int]:
     """Rectangle (x0, y0, x1, y1) to subtract from "select all" so the selection is the empty canvas around `keep`
     plus `overlap` px onto the existing image, on every side where canvas was added."""

@@ -66,6 +66,18 @@ def main():
     px = filled.getpixel((250, 50))
     assert all(abs(a - b) < 30 for a, b in zip(px, (200, 100, 50))), px  # picture colours, not white
 
+    # instruction editors (Fibo): the margin stays flat white, whether the Crop tool left white or transparent
+    for im in (white((300, 100), (0, 0, 200, 100)), canvas((300, 100), (0, 0, 200, 100))):
+        flat = imaging.white_outside(im, kept)
+        assert flat.mode == "RGB" and flat.getpixel((250, 50)) == (255, 255, 255)
+        assert flat.getpixel((100, 50)) == (200, 100, 50), flat.getpixel((100, 50))
+
+    from pccomfy import bridge  # noqa: E402
+    h = bridge.outpaint_hint(imaging.Box(0, 0, 200, 100), (300, 100))
+    assert "on the right of the image" in h and "left" not in h and "leave no white" in h, h
+    h = bridge.outpaint_hint(imaging.Box(50, 50, 200, 100), (300, 200))
+    assert "left, top, right and bottom" in h, h
+
     rect = imaging.new_area_rect
     # right only: overlap on the right edge of the original, none on the other sides
     assert rect(imaging.Box(0, 0, 200, 100), (300, 100), 32) == (0, 0, 168, 100)
