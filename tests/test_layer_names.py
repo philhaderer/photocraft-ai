@@ -35,6 +35,10 @@ def main():
     assert sorted(got) == ["Fibo plain #3.1", "Fibo plain #3.2"], got
     old = names("", 0)
     assert len(old) == 1 and old[0].startswith("AI inpaint"), old        # no preset: the earlier name
+    from pccomfy import bridge
+    assert bridge.strip_placeholder("<DESCRIBE THE IMAGE>") == ""
+    assert bridge.strip_placeholder("a woman <DESCRIBE THE IMAGE>") == "a woman"
+    assert bridge.strip_placeholder("a woman with a hat") == "a woman with a hat"
     print("ALL OK (layer names)")
 
 

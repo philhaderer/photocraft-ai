@@ -21,6 +21,7 @@ import dataclasses
 import json
 import os
 import random
+import re
 import threading
 import time
 import uuid
@@ -71,6 +72,15 @@ class Request:
     ref_collage: bool = True             # reference mode: also paste a rough copy of the reference where it should go
     preset: str = ""                     # name of the preset used: the layers are named "<preset> #<run_no>"
     run_no: int = 0                      # running number of this preset's runs (kept by the window)
+
+
+PLACEHOLDER = "<DESCRIBE THE IMAGE>"
+
+
+def strip_placeholder(text: str) -> str:
+    """Presets put <DESCRIBE THE IMAGE> into the prompt where a short description of the picture helps the result. Whoever
+    does not replace it sends nothing: the marker itself is never part of a prompt."""
+    return re.sub(r"\s{2,}", " ", (text or "").replace(PLACEHOLDER, "")).strip()
 
 
 # progress(overall_fraction, message, phase="", phase_fraction=-1.0, elapsed=0.0)
@@ -288,6 +298,7 @@ class Bridge:
         if req.mode == "remove":
             req = dataclasses.replace(req, mode="inpaint", remove=True)
         p = req.params
+        p.prompt = strip_placeholder(p.prompt)   # the unedited "<DESCRIBE THE IMAGE>" of a preset is no instruction
         if p.seed is None or p.seed < 0:
             p.seed = random.randint(0, 2**31 - 1)
         p.batch = max(1, int(req.variants))

@@ -10,6 +10,7 @@
   "workflow": "flux3-klein-upscale.json",
   "layer_mask": "auto",
   "context": 0.0,
-  "scale": 1.5
+  "scale": 1.5,
+  "prompt": "<DESCRIBE THE IMAGE>"
  }
 }

@@ -9,6 +9,7 @@
   "variants": 1,
   "workflow": "flux3-klein-upscale.json",
   "layer_mask": "auto",
-  "context": 0.0
+  "context": 0.0,
+  "prompt": "<DESCRIBE THE IMAGE>"
  }
 }
