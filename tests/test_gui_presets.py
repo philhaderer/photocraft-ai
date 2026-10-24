@@ -189,6 +189,36 @@ def main():
     assert shown == ["on", "off", "off"] and app.v_status.get() == "Loaded.", shown
     print("status badge OK")
 
+    # Turbo LoRA: a switch for workflows that ship a speed LoRA; part of the preset, the request and the state
+    wfdir = Path(TMP) / "wf"
+    wfdir.mkdir()
+    lora_wf = {"1": {"class_type": "UNETLoader", "inputs": {}},
+               "2": {"class_type": "LoraLoaderModelOnly", "inputs": {"model": ["1", 0]}, "_meta": {"title": "pc:lora"}},
+               "3": {"class_type": "KSampler", "inputs": {"model": ["2", 0], "steps": 10}, "_meta": {"title": "pc:sampler"}}}
+    (wfdir / "turbo.json").write_text(json.dumps(lora_wf), encoding="utf-8")
+    shutil.copy(ROOT / "workflows" / "fibo2-edit-plain.json", wfdir / "plain.json")
+    app.workflows_dir = wfdir
+    app.cb_workflow["values"] = [gui.BUILTIN, "turbo.json", "plain.json"]
+    app.v_workflow.set("turbo.json")
+    app._on_workflow()
+    assert app.cb_turbo["state"] == "normal"
+    app.v_turbo.set(False)
+    assert app._request().turbo is False
+    sd.askstring = lambda *a, **k: "Turbo Off"
+    app.save_preset_as()
+    t_off = json.loads((Path(TMP) / "presets" / "Turbo Off.json").read_text(encoding="utf-8"))["settings"]
+    assert t_off["turbo"] is False and t_off["workflow"] == "turbo.json", t_off
+    app.v_turbo.set(True)
+    app.load_preset("Turbo Off")
+    assert app.v_turbo.get() is False
+    app._save_state(app._request())
+    assert json.loads((Path(TMP) / "state.json").read_text(encoding="utf-8"))["turbo"] is False
+    app.v_workflow.set("plain.json")                      # no speed LoRA there: the switch is greyed out
+    app._on_workflow()
+    assert app.cb_turbo["state"] == "disabled"
+    app.v_preset.set("My Test_")
+    print("turbo switch OK")
+
     # delete
     app.delete_preset()
     assert not f.exists() and app.v_preset.get() == ""

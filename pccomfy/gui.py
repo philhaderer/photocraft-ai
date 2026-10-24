@@ -17,7 +17,7 @@ from . import winlink
 from .bridge import Bridge, BridgeError, Request, mask_is_used, prompt_phase_nodes
 from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
-from .workflows import GenParams, list_templates, load_template, resolve
+from .workflows import GenParams, list_templates, load_template, lora_switches, resolve
 
 FILL_CONTEXT = 0.2   # Context (margin) that Generative fill starts with
 
@@ -161,6 +161,7 @@ class App:
         self.v_feather = tk.DoubleVar(value=g("feather_pct", 2.0))
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
         self.v_enhance = tk.BooleanVar(value=g("enhance", True))
+        self.v_turbo = tk.BooleanVar(value=g("turbo", True))
         self.v_collage = tk.BooleanVar(value=g("ref_collage", True))
         self.v_lmask = tk.StringVar(value=LAYER_MASKS.get(g("layer_mask", "auto"), LAYER_MASKS["auto"]))
         self.v_status = tk.StringVar(value="Ready")
@@ -248,6 +249,11 @@ class App:
         Tooltip(self.cb_enhance, "On: the text model turns your instruction into the detailed prompt the image model expects "
                                  "(VGL for Fibo).\nOff: your text goes to the image model exactly as typed.\n"
                                  "Only for workflows that have a text model.")
+        self.cb_turbo = ttk.Checkbutton(mf, text="Turbo LoRA", variable=self.v_turbo)
+        self.cb_turbo.grid(row=3, column=1, sticky="w", padx=6, pady=(4, 0))
+        Tooltip(self.cb_turbo, "On: the workflow's speed LoRA runs (Qwen Image 2.1: about 10 steps).\n"
+                               "Off: the LoRA is left out and the workflow's full step count runs (Qwen: 25 steps), slower.\n"
+                               "Only for workflows that have a speed LoRA.")
 
         modes = ttk.Frame(r)
         modes.pack(fill="x", **pad)
@@ -519,6 +525,7 @@ class App:
         # while the prompt enhancement is on
         has_writer = self._has_text_model() and self.v_mode.get() not in ("reference", "remove")  # these modes: fixed instruction
         self.cb_enhance.configure(state="normal" if has_writer else "disabled")
+        self.cb_turbo.configure(state="normal" if self._has_lora_switch() else "disabled")
         enhancing = has_writer and bool(self.v_enhance.get())
         self.cb_clip.configure(state="readonly" if (state == "disabled" and enhancing) else "disabled")
         self._update_feather_state()
@@ -530,6 +537,16 @@ class App:
             return False
         try:
             return any(prompt_phase_nodes(load_template(w)) for w in resolve(self.workflows_dir / wf))
+        except (OSError, ValueError, KeyError):
+            return False
+
+    def _has_lora_switch(self) -> bool:
+        """True when the selected workflow (or one of a group) has a speed LoRA the window can switch off (pc:lora)."""
+        wf = self.v_workflow.get()
+        if wf == BUILTIN:
+            return False
+        try:
+            return any(lora_switches(load_template(w)) for w in resolve(self.workflows_dir / wf))
         except (OSError, ValueError, KeyError):
             return False
 
@@ -634,7 +651,7 @@ class App:
             "base_res": int(self.v_res.get()), "context": float(self.v_context.get()),
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
             "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
-            "ref_collage": bool(self.v_collage.get()),
+            "turbo": bool(self.v_turbo.get()), "ref_collage": bool(self.v_collage.get()),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
             "feather_pct": round(float(self.v_feather.get()), 1),
             "prompt": self._prompt_text(), "negative": self.t_neg.get("1.0", "end").strip(),
@@ -682,6 +699,7 @@ class App:
         put(self.v_overlap, "overlap", int)
         put(self.v_fooocus, "fooocus", bool)
         put(self.v_enhance, "enhance", bool)
+        put(self.v_turbo, "turbo", bool)
         put(self.v_collage, "ref_collage", bool)
         put(self.v_feather, "feather_pct", float)
         self._on_feather()
@@ -781,7 +799,7 @@ class App:
                        mask_blur=int(self.v_blur.get()),
                        overlap=int(self.v_overlap.get()), variants=int(self.v_variants.get()),
                        fooocus=bool(self.v_fooocus.get()), enhance=bool(self.v_enhance.get()),
-                       ref_collage=bool(self.v_collage.get()),
+                       turbo=bool(self.v_turbo.get()), ref_collage=bool(self.v_collage.get()),
                        layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2)
 
@@ -907,7 +925,7 @@ class App:
             "negative": p.negative, "steps": p.steps, "cfg": p.cfg, "denoise": self.v_denoise.get(),
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap,
-            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "fooocus": req.fooocus, "enhance": req.enhance, "layer_mask": req.layer_mask,
+            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
             "ref_collage": req.ref_collage,
         })
 
