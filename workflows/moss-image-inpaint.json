@@ -1,0 +1,290 @@
+{
+ "1": {
+  "class_type": "UNETLoader",
+  "inputs": {
+   "unet_name": "moss_image_sft_int8_convrot.safetensors",
+   "weight_dtype": "default"
+  },
+  "_meta": {
+   "title": "Load MOSS-Image model"
+  }
+ },
+ "2": {
+  "class_type": "CLIPLoader",
+  "inputs": {
+   "clip_name": "qwen3.5_9b_w4a8_gptq.safetensors",
+   "type": "moss_image",
+   "device": "default"
+  },
+  "_meta": {
+   "title": "Load text encoder (type: moss_image)"
+  }
+ },
+ "3": {
+  "class_type": "VAELoader",
+  "inputs": {
+   "vae_name": "flux2-vae_small.safetensors"
+  },
+  "_meta": {
+   "title": "Load VAE (Flux 2 small)"
+  }
+ },
+ "5": {
+  "class_type": "LoraLoaderModelOnly",
+  "inputs": {
+   "lora_name": "moss/lenovo_moss.safetensors",
+   "strength_model": 1,
+   "model": [
+    "1",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "LoRA: Lenovo UltraReal"
+  }
+ },
+ "4": {
+  "class_type": "DifferentialDiffusion",
+  "inputs": {
+   "strength": 1,
+   "model": [
+    "5",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Differential Diffusion (soft mask edge)"
+  }
+ },
+ "10": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:image"
+  }
+ },
+ "11": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:mask"
+  }
+ },
+ "12": {
+  "class_type": "ImageToMask",
+  "inputs": {
+   "image": [
+    "11",
+    0
+   ],
+   "channel": "red"
+  },
+  "_meta": {
+   "title": "Mask (white = redraw)"
+  }
+ },
+ "20": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "text": "",
+   "clip": [
+    "2",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "pc:prompt"
+  }
+ },
+ "21": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "text": "worst quality, bad anatomy, watermark, jpeg artifact",
+   "clip": [
+    "2",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Negative prompt"
+  }
+ },
+ "31": {
+  "class_type": "MaskBoundingBox+",
+  "inputs": {
+   "padding": 256,
+   "blur": 0,
+   "mask": [
+    "12",
+    0
+   ],
+   "image_optional": [
+    "10",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Crop around mask (padding = context)"
+  }
+ },
+ "32": {
+  "class_type": "ImageScaleToTotalPixels",
+  "inputs": {
+   "upscale_method": "lanczos",
+   "megapixels": 1.5,
+   "resolution_steps": 32,
+   "image": [
+    "31",
+    1
+   ]
+  },
+  "_meta": {
+   "title": "Scale crop to ~1.5 MP"
+  }
+ },
+ "33": {
+  "class_type": "VAEEncode",
+  "inputs": {
+   "pixels": [
+    "32",
+    0
+   ],
+   "vae": [
+    "3",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Encode crop"
+  }
+ },
+ "34": {
+  "class_type": "SetLatentNoiseMask",
+  "inputs": {
+   "samples": [
+    "33",
+    0
+   ],
+   "mask": [
+    "31",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Redraw only the mask"
+  }
+ },
+ "40": {
+  "class_type": "KSampler",
+  "inputs": {
+   "model": [
+    "4",
+    0
+   ],
+   "positive": [
+    "20",
+    0
+   ],
+   "negative": [
+    "21",
+    0
+   ],
+   "latent_image": [
+    "34",
+    0
+   ],
+   "seed": 42,
+   "steps": 25,
+   "cfg": 2.5,
+   "sampler_name": "er_sde",
+   "scheduler": "simple",
+   "denoise": 1
+  },
+  "_meta": {
+   "title": "pc:sampler"
+  }
+ },
+ "50": {
+  "class_type": "VAEDecode",
+  "inputs": {
+   "samples": [
+    "40",
+    0
+   ],
+   "vae": [
+    "3",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Decode"
+  }
+ },
+ "51": {
+  "class_type": "ImageScale",
+  "inputs": {
+   "upscale_method": "lanczos",
+   "width": [
+    "31",
+    4
+   ],
+   "height": [
+    "31",
+    5
+   ],
+   "crop": "disabled",
+   "image": [
+    "50",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Scale back to crop size"
+  }
+ },
+ "52": {
+  "class_type": "ImageCompositeMasked",
+  "inputs": {
+   "x": [
+    "31",
+    2
+   ],
+   "y": [
+    "31",
+    3
+   ],
+   "resize_source": false,
+   "destination": [
+    "10",
+    0
+   ],
+   "source": [
+    "51",
+    0
+   ],
+   "mask": [
+    "31",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Paste into original (outside the mask stays exact)"
+  }
+ },
+ "60": {
+  "class_type": "PreviewImage",
+  "inputs": {
+   "images": [
+    "52",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "pc:output"
+  }
+ }
+}
