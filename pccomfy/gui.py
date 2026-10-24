@@ -13,7 +13,7 @@ from pathlib import Path
 from tkinter import messagebox, simpledialog, ttk
 
 from . import config as cfgmod
-from .bridge import Bridge, BridgeError, Request, prompt_phase_nodes
+from .bridge import Bridge, BridgeError, Request, mask_is_used, prompt_phase_nodes
 from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 from .workflows import GenParams, list_templates, load_template, resolve
@@ -213,7 +213,7 @@ class App:
         ff.columnconfigure(1, weight=1)
         lbl_f = ttk.Label(ff, text="Edge feather")
         lbl_f.grid(row=0, column=0, sticky="w")
-        sc = ttk.Scale(ff, from_=0, to=10, variable=self.v_feather, command=self._on_feather)
+        self.w_feather = sc = ttk.Scale(ff, from_=0, to=10, variable=self.v_feather, command=self._on_feather)
         sc.grid(row=0, column=1, sticky="ew", padx=8)
         self.lbl_feather = ttk.Label(ff, width=22, style="Muted.TLabel")
         self.lbl_feather.grid(row=0, column=2, sticky="e")
@@ -221,7 +221,8 @@ class App:
         for w in (lbl_f, sc):
             Tooltip(w, "How soft the edge of the new layer is, as a percentage of the selection's shorter side "
                        "(2 % is the default, 0 = hard edge).\nApplies to the layer mask the result is pasted with. "
-                       "A feather you set in PhotoCraft (Weiche Kante) is kept as it is, this one is then ignored.")
+                       "A feather you set in PhotoCraft (Weiche Kante) is kept as it is, this one is then ignored.\n"
+                       "Greyed out when no soft layer mask is used (Layer mask: none / hard, or auto with a Fibo-type editor).")
 
         ttk.Label(r, text="Prompt").pack(anchor="w", padx=10)
         self.t_prompt = self._text(r, 4)
@@ -294,6 +295,7 @@ class App:
         lb.pack(side="left")
         cb_lm = ttk.Combobox(lm, textvariable=self.v_lmask, values=list(LAYER_MASKS.values()), state="readonly", width=24)
         cb_lm.pack(side="left", padx=6)
+        cb_lm.bind("<<ComboboxSelected>>", lambda e: self._update_feather_state())
         for w in (lb, cb_lm):
             Tooltip(w, "How the result is blended into your image.\n"
                        "auto: no mask for Fill with a Fibo-type editor (it regenerates the whole crop, so a mask would cut off\n"
@@ -341,6 +343,7 @@ class App:
         else:
             self.f_out.pack_forget()
         self.w_denoise.configure(state="disabled" if mode == "txt2img" else "normal")
+        self._update_feather_state()
         if self._sized:
             self._fit_height()
 
@@ -366,6 +369,29 @@ class App:
         else:
             self.lbl_err.pack_forget()
 
+    def _uses_soft_mask(self) -> bool:
+        """True when the new layer really gets the soft (feathered) layer mask, i.e. the feather has an effect."""
+        choice = {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto")
+        if choice != "auto":
+            return choice == "soft"
+        if self.v_mode.get() != "inpaint":
+            return True
+        return not self._ignores_mask()
+
+    def _ignores_mask(self) -> bool:
+        """True when the selected workflow never uses the mask (a Fibo-type instruction editor)."""
+        wf = self.v_workflow.get()
+        if wf == BUILTIN:
+            return False
+        try:
+            return not any(mask_is_used(load_template(w)) for w in resolve(self.workflows_dir / wf))
+        except (OSError, ValueError, KeyError):
+            return False
+
+    def _update_feather_state(self):
+        on = self._uses_soft_mask()
+        self.w_feather.configure(state="normal" if on else "disabled")
+
     def _on_feather(self, _value=None):
         v = round(float(self.v_feather.get()) * 2) / 2
         self.lbl_feather.configure(text="hard edge" if v <= 0 else f"{v:g} % of the shorter side")
@@ -386,6 +412,7 @@ class App:
         self.cb_enhance.configure(state="normal" if has_writer else "disabled")
         enhancing = has_writer and bool(self.v_enhance.get())
         self.cb_clip.configure(state="readonly" if (state == "disabled" and enhancing) else "disabled")
+        self._update_feather_state()
 
     def _has_text_model(self) -> bool:
         """True when the selected workflow (or one of a group) contains a text model that writes the prompt."""
@@ -514,6 +541,7 @@ class App:
         self._on_feather()
         if "layer_mask" in s:
             self.v_lmask.set(LAYER_MASKS.get(s["layer_mask"], LAYER_MASKS["auto"]))
+        self._update_feather_state()
         for widget, key in ((self.t_prompt, "prompt"), (self.t_neg, "negative")):
             # an empty prompt in a preset means "not part of the preset": never wipe what was typed
             if str(s.get(key, "")).strip():
