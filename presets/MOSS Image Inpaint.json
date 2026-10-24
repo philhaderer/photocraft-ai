@@ -13,6 +13,7 @@
   "mask_blur": 8,
   "overlap": 48,
   "layer_mask": "auto",
-  "workflow": "moss-image-inpaint.json"
+  "workflow": "moss-image-inpaint.json",
+  "turbo": false
  }
 }

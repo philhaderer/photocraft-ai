@@ -25,7 +25,7 @@ def main():
     tpl = workflows.load_template(WF)
     assert links_resolve(tpl)
     assert bridge.mask_is_used(tpl), "MOSS redraws only the mask"
-    assert not bridge.prompt_phase_nodes(tpl) and not workflows.lora_switches(tpl)
+    assert not bridge.prompt_phase_nodes(tpl) and workflows.lora_switches(tpl) == ["5"]   # the Lenovo LoRA is optional
     g, out = workflows.apply_template(tpl, p, "pic.png", "mask.png")
     mask_loader = by_tag(g, "mask")[0]
     to_mask = [nid for nid, n in g.items() if n["class_type"] == "ImageToMask"]
@@ -39,6 +39,9 @@ def main():
     assert comp["inputs"]["destination"] == [by_tag(g, "image")[0], 0]
     # no leftovers of the original's showcase/preview branch; the window's mask grow/blur does that job
     assert not any(n["class_type"] in ("SaveImage", "AddLabel", "ImageStitch", "GrowMaskWithBlur") for n in g.values())
+    # without the LoRA (the file may not be installed): the loader is gone and the model feeds straight on
+    off = workflows.bypass_lora(g)
+    assert "5" not in off and off["4"]["inputs"]["model"] == ["1", 0] and links_resolve(off)
     # through the bridge the same graph comes out
     req = bridge.Request(workflow=str(WF), params=p)
     graph, _ = bridge.Bridge._graph(object(), req, p, "pic.png", "mask.png", str(WF))

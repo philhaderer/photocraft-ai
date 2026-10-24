@@ -40,7 +40,8 @@
    ]
   },
   "_meta": {
-   "title": "LoRA: Lenovo UltraReal"
+   "title": "pc:lora LoRA: Lenovo UltraReal (optional)",
+   "pc_lora_label": "Lenovo UltraReal LoRA"
   }
  },
  "4": {
