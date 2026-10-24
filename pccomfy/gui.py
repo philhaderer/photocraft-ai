@@ -19,6 +19,8 @@ from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 from .workflows import GenParams, list_templates, load_template, resolve
 
+FILL_CONTEXT = 0.2   # Context (margin) that Generative fill starts with
+
 MODE_LABELS = [
     ("inpaint", "Generative fill"),
     ("remove", "Remove"),
@@ -142,6 +144,16 @@ class App:
         self.v_scheduler = tk.StringVar(value=g("scheduler", d["scheduler"]))
         self.v_res = tk.IntVar(value=g("base_res", d["base_res"]))
         self.v_context = tk.DoubleVar(value=g("context", d["context"]))
+        # Context is remembered per mode. Generative fill starts at 0.2: with a wide margin Fibo lets the new object grow
+        # beyond the selection or doubles it (live test); the other modes keep the global default.
+        self._ctx_default = d["context"]
+        self._ctx_mode = self.v_mode.get()
+        self._ctx = {"inpaint": FILL_CONTEXT}
+        if self._ctx_mode == "inpaint":
+            if abs(self.v_context.get() - self._ctx_default) < 1e-9:   # the old default, never chosen on purpose
+                self.v_context.set(FILL_CONTEXT)
+        else:
+            self._ctx["inpaint"] = FILL_CONTEXT
         self.v_grow = tk.IntVar(value=g("mask_grow", d["mask_grow"]))
         self.v_blur = tk.IntVar(value=g("mask_blur", d["mask_blur"]))
         self.v_overlap = tk.IntVar(value=g("overlap", d["overlap"]))
@@ -396,8 +408,19 @@ class App:
         self.root.bind("<Control-Return>", lambda e: (self.generate(), "break")[1])
         self.root.bind("<Escape>", lambda e: self.stop())
 
+    def _switch_context(self, mode: str):
+        """Keep each mode's own Context value: store the old one, show the new one's."""
+        try:
+            self._ctx[self._ctx_mode] = float(self.v_context.get())
+        except tk.TclError:
+            pass
+        if mode != self._ctx_mode:
+            self.v_context.set(self._ctx.get(mode, self._ctx_default))
+            self._ctx_mode = mode
+
     def _on_mode_ui(self):
         mode = self.v_mode.get()
+        self._switch_context(mode)
         if mode == "outpaint":
             self.f_out.pack(fill="x", padx=10, pady=4, after=self.f_modes)
         else:
