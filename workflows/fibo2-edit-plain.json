@@ -63,7 +63,11 @@
    ],
    "width": 0,
    "height": 0,
-   "batch_size": 1
+   "batch_size": 1,
+   "images.image_2": [
+    "90",
+    0
+   ]
   },
   "_meta": {
    "title": "pc:prompt pc:size"
@@ -122,6 +126,15 @@
   },
   "_meta": {
    "title": "pc:output"
+  }
+ },
+ "90": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref"
   }
  }
 }

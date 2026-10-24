@@ -162,12 +162,16 @@ def resolve(path: str | Path) -> list[str]:
     return [str(p)]
 
 
-def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name: str | None) -> tuple[dict, str | None]:
+def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name: str | None,
+                   ref_name: str | None = None) -> tuple[dict, str | None]:
     """Fill parameters into `pc:*` nodes. Returns (graph, output node id or None).
 
     A title may carry several tags (e.g. "pc:prompt pc:size" for one node that takes the prompt and the size).
     `pc:prompt` fills the node's `text` field, else its `instruction` field (VGLBionicEditPrompt), else its `prompt` field
     (TextGenerate, TextEncodeFibo2, ...).
+    `pc:ref` is the slot for a reference image (a LoadImage feeding TextEncodeFibo2's `images.image_2`). The slot is
+    always in the workflow; with no reference (`ref_name` None) the node and the links to it are dropped, so the run
+    is exactly the one-image run.
     """
     g = json.loads(json.dumps(graph))  # deep copy
     out_node = None
@@ -207,11 +211,33 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
                     inp["clip_name"] = p.clip
             elif tag == "output":
                 out_node = nid
+            elif tag == "ref" and ref_name is not None:
+                inp["image"] = ref_name
     if image_name is not None and "image" not in seen:
         raise ValueError("The workflow has no LoadImage node titled pc:image.")
     if mask_name is not None and "mask" not in seen:
         raise ValueError("The workflow has no mask node titled pc:mask.")
+    if ref_name is not None and "ref" not in seen:
+        raise ValueError("The workflow has no reference slot (a LoadImage node titled pc:ref).")
+    if ref_name is None:
+        drop_ref_slot(g)
     return g, out_node
+
+
+def has_ref_slot(graph: dict) -> bool:
+    """True when the workflow has a reference-image slot (a node titled pc:ref)."""
+    return any("ref" in _tags(n) for n in graph.values() if isinstance(n, dict))
+
+
+def drop_ref_slot(graph: dict) -> None:
+    """No reference image: remove the pc:ref nodes and every input that was linked to them (in place)."""
+    ids = {nid for nid, n in graph.items() if "ref" in _tags(n)}
+    for nid in ids:
+        del graph[nid]
+    for n in graph.values():
+        inp = n.get("inputs", {})
+        for k in [k for k, v in inp.items() if isinstance(v, list) and v and str(v[0]) in ids]:
+            del inp[k]
 
 
 TEXT_ENCODERS = ("TextEncode", "CLIPTextEncode")
