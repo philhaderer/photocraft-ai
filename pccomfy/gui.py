@@ -13,10 +13,10 @@ from pathlib import Path
 from tkinter import messagebox, simpledialog, ttk
 
 from . import config as cfgmod
-from .bridge import Bridge, BridgeError, Request
+from .bridge import Bridge, BridgeError, Request, prompt_phase_nodes
 from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
-from .workflows import GenParams, list_templates
+from .workflows import GenParams, list_templates, load_template, resolve
 
 MODE_LABELS = [
     ("inpaint", "Generative fill"),
@@ -111,6 +111,7 @@ class App:
         self.v_top = tk.BooleanVar(value=g("on_top", True))
         self.v_feather = tk.DoubleVar(value=g("feather_pct", 2.0))
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
+        self.v_enhance = tk.BooleanVar(value=g("enhance", True))
         self.v_lmask = tk.StringVar(value=LAYER_MASKS.get(g("layer_mask", "soft"), LAYER_MASKS["soft"]))
         self.v_status = tk.StringVar(value="Ready")
         self.v_conn = tk.StringVar(value="")
@@ -217,6 +218,11 @@ class App:
         ttk.Label(mf, text="Text model").grid(row=1, column=0, sticky="w", pady=(4, 0))
         self.cb_clip = ttk.Combobox(mf, textvariable=self.v_clip, state="readonly")
         self.cb_clip.grid(row=1, column=1, sticky="ew", padx=6, pady=(4, 0))
+        self.cb_enhance = ttk.Checkbutton(mf, text="LLM prompt enhancement", variable=self.v_enhance, command=self._on_workflow)
+        self.cb_enhance.grid(row=2, column=1, sticky="w", padx=6, pady=(4, 0))
+        Tooltip(self.cb_enhance, "On: the text model turns your instruction into the detailed prompt the image model expects "
+                                 "(VGL for Fibo).\nOff: your text goes to the image model exactly as typed.\n"
+                                 "Only for workflows that have a text model.")
 
         sf = ttk.Frame(r)
         sf.pack(fill="x", **pad)
@@ -347,8 +353,22 @@ class App:
             self.cb_fooocus.grid()
         else:
             self.cb_fooocus.grid_remove()
-        # the text model applies to custom workflows (nodes tagged pc:clip), not to the built-in graph
-        self.cb_clip.configure(state="readonly" if state == "disabled" else "disabled")
+        # the text model applies to custom workflows (nodes tagged pc:clip), not to the built-in graph, and only
+        # while the prompt enhancement is on
+        has_writer = self._has_text_model()
+        self.cb_enhance.configure(state="normal" if has_writer else "disabled")
+        enhancing = has_writer and bool(self.v_enhance.get())
+        self.cb_clip.configure(state="readonly" if (state == "disabled" and enhancing) else "disabled")
+
+    def _has_text_model(self) -> bool:
+        """True when the selected workflow (or one of a group) contains a text model that writes the prompt."""
+        wf = self.v_workflow.get()
+        if wf == BUILTIN:
+            return False
+        try:
+            return any(prompt_phase_nodes(load_template(w)) for w in resolve(self.workflows_dir / wf))
+        except (OSError, ValueError, KeyError):
+            return False
 
     def _on_top(self):
         self.root.attributes("-topmost", bool(self.v_top.get()))
@@ -415,7 +435,7 @@ class App:
             "sampler": self.v_sampler.get(), "scheduler": self.v_scheduler.get(),
             "base_res": int(self.v_res.get()), "context": float(self.v_context.get()),
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
-            "fooocus": bool(self.v_fooocus.get()),
+            "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "soft"),
             "feather_pct": round(float(self.v_feather.get()), 1),
             "prompt": self.t_prompt.get("1.0", "end").strip(), "negative": self.t_neg.get("1.0", "end").strip(),
@@ -462,6 +482,7 @@ class App:
         put(self.v_blur, "mask_blur", int)
         put(self.v_overlap, "overlap", int)
         put(self.v_fooocus, "fooocus", bool)
+        put(self.v_enhance, "enhance", bool)
         put(self.v_feather, "feather_pct", float)
         self._on_feather()
         if "layer_mask" in s:
@@ -558,7 +579,7 @@ class App:
                        context=float(self.v_context.get()), mask_grow=int(self.v_grow.get()),
                        mask_blur=int(self.v_blur.get()),
                        overlap=int(self.v_overlap.get()), variants=int(self.v_variants.get()),
-                       fooocus=bool(self.v_fooocus.get()),
+                       fooocus=bool(self.v_fooocus.get()), enhance=bool(self.v_enhance.get()),
                        layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "soft"),
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2)
 
@@ -673,7 +694,7 @@ class App:
             "negative": p.negative, "steps": p.steps, "cfg": p.cfg, "denoise": self.v_denoise.get(),
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap,
-            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "fooocus": req.fooocus, "layer_mask": req.layer_mask,
+            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "fooocus": req.fooocus, "enhance": req.enhance, "layer_mask": req.layer_mask,
         })
 
     def _quit(self):

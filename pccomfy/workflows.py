@@ -214,6 +214,45 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
     return g, out_node
 
 
+TEXT_ENCODERS = ("TextEncode", "CLIPTextEncode")
+
+
+def _tags(node: dict) -> list[str]:
+    return re.findall(r"pc:\s*([a-z]+)", node.get("_meta", {}).get("title", "").lower())
+
+
+def prompt_writers(graph: dict) -> list[str]:
+    """Ids of the text-model nodes that write the prompt: pc:prompt nodes that are not a plain text encoder."""
+    return [nid for nid, n in graph.items()
+            if "prompt" in _tags(n) and not n.get("class_type", "").startswith(TEXT_ENCODERS)]
+
+
+def bypass_prompt_writer(graph: dict, prompt: str) -> dict:
+    """Prompt enhancement off: whatever consumed the text model's output gets the typed prompt itself.
+
+    The text model, the pc:vgl preview and (because ComfyUI only runs what an output needs) everything that only fed
+    the text model drop out of the run. Graphs without a text model are returned unchanged.
+    """
+    g = json.loads(json.dumps(graph))
+    writers = {str(w) for w in prompt_writers(g)}
+    if not writers:
+        return g
+
+    def uses_writer(node):
+        return any(isinstance(v, list) and v and str(v[0]) in writers for v in node.get("inputs", {}).values())
+
+    for nid in [nid for nid, n in g.items() if "vgl" in _tags(n) and uses_writer(n)]:
+        del g[nid]
+    for n in g.values():
+        inp = n.get("inputs", {})
+        for k, v in inp.items():
+            if isinstance(v, list) and v and str(v[0]) in writers:
+                inp[k] = prompt
+    for w in writers:
+        g.pop(w, None)
+    return g
+
+
 def list_templates(folder: str | Path) -> list[Path]:
     folder = Path(folder).expanduser()
     return sorted(folder.glob("*.json")) if folder.is_dir() else []

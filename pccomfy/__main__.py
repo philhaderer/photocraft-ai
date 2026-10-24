@@ -67,7 +67,7 @@ def cmd_run(cfg: dict, a) -> int:
     req = Request(mode=a.mode, params=p, workflow=a.workflow, base_res=a.res or d["base_res"],
                   context=d["context"], mask_grow=d["mask_grow"], mask_blur=d["mask_blur"],
                   outpaint=tuple(a.expand), overlap=d["overlap"], variants=a.variants, fooocus=not a.no_fooocus,
-                  layer_mask=a.layer_mask)
+                  layer_mask=a.layer_mask, enhance=not a.no_enhance)
     b = make(cfg)
     if not p.checkpoint and not a.workflow:
         try:
@@ -111,6 +111,8 @@ def main(argv=None) -> int:
     r.add_argument("--layer-mask", choices=("soft", "selection", "none"), default="soft",
                    help="layer mask of the new layer: soft (default), hard from the selection, or none")
     r.add_argument("--no-fooocus", action="store_true", help="don't use the Fooocus patch (e.g. for SD1.5 models)")
+    r.add_argument("--no-enhance", action="store_true",
+                   help="text-model workflows: send the prompt as typed, without the text model writing it")
     r.add_argument("--expand", type=int, nargs=4, default=[0, 0, 0, 0], metavar=("L", "T", "R", "B"),
                    help="outpaint: pixels to add on the left/top/right/bottom")
     a = ap.parse_args(argv)

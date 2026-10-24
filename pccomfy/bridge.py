@@ -55,6 +55,7 @@ class Request:
     overlap: int = 48                    # outpaint overlap onto the existing image (px)
     variants: int = 1
     fooocus: bool = True                 # inpaint/outpaint: Fooocus patch (SDXL) when the server has it
+    enhance: bool = True                 # text-model workflows: let the text model write the prompt (off = typed text as is)
     layer_mask: str = "soft"             # "soft" = same mask the model got, "selection" = hard selection, "none"
     feather_pct: float = 2.0             # soft layer mask for editors that ignore the mask: % of the selection's shorter side
 
@@ -158,7 +159,7 @@ class Bridge:
         tag = uuid.uuid4().hex[:8]
         _wfs = workflows.resolve(req.workflow) if req.workflow else [None]
         self.last_vgl = ""
-        if not p.prompt.strip():
+        if req.enhance and not p.prompt.strip():
             for w in _wfs:
                 if w and prompt_phase_nodes(json.loads(Path(w).read_text(encoding="utf-8"))):
                     raise BridgeError("Type an instruction first: this workflow's text model writes the prompt from it "
@@ -287,7 +288,7 @@ class Bridge:
             suffix = f" [{label}]" if label else ""
             self.pipeline = "workflow" if wf else req.mode
             gp = p
-            if hint and wf and prompt_phase_nodes(workflows.load_template(wf)):
+            if hint and wf and req.enhance and prompt_phase_nodes(workflows.load_template(wf)):
                 gp = dataclasses.replace(p, prompt=p.prompt.strip() + hint)  # text-model workflows only
             graph, out_node = self._graph(req, gp, image_name, mask_name, wf)
             prompt_id = self.comfy.queue(graph)
@@ -345,7 +346,10 @@ class Bridge:
     def _graph(self, req: Request, p, image_name, mask_name, wf: str | None = None):
         if wf:
             tpl = workflows.load_template(wf)
-            return workflows.apply_template(tpl, p, image_name, mask_name)
+            graph, out_node = workflows.apply_template(tpl, p, image_name, mask_name)
+            if not req.enhance:
+                graph = workflows.bypass_prompt_writer(graph, p.prompt)
+            return graph, out_node
         if not p.checkpoint:
             raise BridgeError("Pick a model (checkpoint) or a custom workflow.")
         if req.mode == "txt2img":
