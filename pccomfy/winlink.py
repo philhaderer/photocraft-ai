@@ -73,7 +73,7 @@ class Win32Api:
         finally:
             self.k.CloseHandle(h)
 
-    def windows(self) -> list[dict]:
+    def windows(self, everything: bool = False) -> list[dict]:
         out = []
 
         def cb(hwnd, _):
@@ -82,7 +82,10 @@ class Win32Api:
                 self.u.GetWindowTextW(hwnd, title, 256)
                 r = self.w.RECT()
                 self.u.GetWindowRect(hwnd, self.c.byref(r))
-                out.append({"hwnd": int(hwnd), "visible": bool(self.u.IsWindowVisible(hwnd)),
+                cls = self.c.create_unicode_buffer(128)
+                self.u.GetClassNameW(hwnd, cls, 128)
+                out.append({"class": cls.value, "iconic": bool(self.u.IsIconic(hwnd)),
+                            "rect": (r.left, r.top, r.right, r.bottom), "hwnd": int(hwnd), "visible": bool(self.u.IsWindowVisible(hwnd)),
                             "owner": int(self.u.GetWindow(hwnd, GW_OWNER) or 0), "title": title.value,
                             "exstyle": int(self.u.GetWindowLongW(hwnd, GWL_EXSTYLE)), "exe": "",
                             "area": max(0, r.right - r.left) * max(0, r.bottom - r.top)})
@@ -91,8 +94,8 @@ class Win32Api:
             return True
 
         self.u.EnumWindows(self.proto(cb), 0)
-        for w in out:   # look up the exe only for plausible candidates
-            if w["visible"] and not w["owner"] and w["title"]:
+        for w in out:   # look up the exe only for plausible candidates (all of them with `everything`)
+            if everything or (w["visible"] and not w["owner"] and w["title"]):
                 w["exe"] = self._exe(w["hwnd"])
         return out
 
@@ -126,3 +129,20 @@ def unlink(root, api=None) -> None:
         api.set_owner(api.toplevel(root), 0)
     except Exception:
         pass
+
+
+def describe(api=None) -> str:
+    """Debug: every window of PhotoCraft's process and which one the bridge window would be tied to."""
+    api = api or Win32Api()
+    infos = api.windows(everything=True)
+    exe = exe_name()
+    mine = [w for w in infos if os.path.basename((w.get("exe") or "").replace("\\", "/")).lower() == exe]
+    pick = pick_window(infos, exe)
+    lines = [f"Windows of {exe}: {len(mine)}  (chosen: {pick})"]
+    for w in sorted(mine, key=lambda w: -w.get("area", 0)):
+        lines.append(f"{'->' if w['hwnd'] == pick else '  '} hwnd={w['hwnd']} class={w.get('class')!r} title={w['title']!r} "
+                     f"visible={w['visible']} iconic={w.get('iconic')} owner={w['owner']} exstyle={w['exstyle']:#x} "
+                     f"rect={w.get('rect')} area={w.get('area')}")
+    if not mine:
+        lines.append("None found. Is PhotoCraft running? Another program name: set PCC_PHOTOCRAFT_EXE=name.exe")
+    return "\n".join(lines)

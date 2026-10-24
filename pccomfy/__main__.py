@@ -96,6 +96,7 @@ def main(argv=None) -> int:
     sub = ap.add_subparsers(dest="cmd")
     sub.add_parser("gui", help="bridge window (default)")
     sub.add_parser("check", help="check connections and list models")
+    sub.add_parser("windows", help="debug: list PhotoCraft's windows (what the bridge window is tied to)")
     sub.add_parser("probe", help="debug: print what PhotoCraft answers on the control channel")
     r = sub.add_parser("run", help="one generation from the command line")
     r.add_argument("mode", choices=MODES)
@@ -123,6 +124,10 @@ def main(argv=None) -> int:
     cfg = cfgmod.load(a.config)
     if a.cmd == "check":
         return cmd_check(cfg)
+    if a.cmd == "windows":
+        from . import winlink
+        print(winlink.describe() if winlink.available() else "Only on Windows.")
+        return 0
     if a.cmd == "probe":
         return cmd_probe(cfg)
     if a.cmd == "run":
