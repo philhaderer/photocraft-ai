@@ -32,6 +32,34 @@ def mask_bbox(mask: Image.Image, threshold: int = 3) -> Box | None:
     return Box(int(xs.min()), int(ys.min()), int(xs.max() - xs.min() + 1), int(ys.max() - ys.min() + 1))
 
 
+def content_box(img: Image.Image, threshold: int = 250) -> Box | None:
+    """Bounding box of the opaque content of an image that has transparent canvas around it.
+
+    None when there is no transparency at all, when nothing is opaque, or when the content fills the whole image,
+    i.e. when there is no empty canvas to fill.
+    """
+    if img.mode not in ("RGBA", "LA") and "transparency" not in img.info:
+        return None
+    opaque = np.asarray(img.convert("RGBA"))[..., 3] >= threshold
+    rows, cols = np.flatnonzero(opaque.any(axis=1)), np.flatnonzero(opaque.any(axis=0))
+    if len(rows) == 0:
+        return None
+    box = Box(int(cols[0]), int(rows[0]), int(cols[-1] - cols[0] + 1), int(rows[-1] - rows[0] + 1))
+    return None if (box.w, box.h) == img.size else box
+
+
+def new_area_rect(keep: Box, canvas: tuple[int, int], overlap: int) -> tuple[int, int, int, int]:
+    """Rectangle (x0, y0, x1, y1) to subtract from "select all" so the selection is the empty canvas around `keep`
+    plus `overlap` px onto the existing image, on every side where canvas was added."""
+    W, H = canvas
+    ov = max(0, int(overlap))
+    x0 = keep.x + (ov if keep.x > 0 else 0)
+    y0 = keep.y + (ov if keep.y > 0 else 0)
+    x1 = keep.x + keep.w - (ov if keep.x + keep.w < W else 0)
+    y1 = keep.y + keep.h - (ov if keep.y + keep.h < H else 0)
+    return x0, y0, x1, y1
+
+
 def grow_box(b: Box, canvas: tuple[int, int], context: float, min_px: int = 32) -> Box:
     """Grow the box by context (fraction of the longer side, at least min_px), clipped to the canvas."""
     W, H = canvas

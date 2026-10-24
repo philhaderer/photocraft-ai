@@ -11,8 +11,8 @@ Flow for inpaint ("Generative Fill"):
      Paste at the crop position, then paste a soft mask into the new layer's layer mask
      (or Edit › Paste Special › Paste Into for a hard mask from the selection).
 
-Outpaint: Canvas Size first (transparent extension), select the new area with an overlap onto
-the original, then the same as inpaint.
+Outpaint: the user extends the canvas visually (Crop tool, transparent extension); the bridge finds
+the empty area, selects it with an overlap onto the original, then the same as inpaint.
 """
 
 from __future__ import annotations
@@ -236,8 +236,8 @@ class Bridge:
         doc = pc.document()
 
         if req.mode == "outpaint":
-            progress(0.02, "Expanding the canvas", phase="prepare")
-            self._expand_canvas(req)
+            progress(0.02, "Finding the empty canvas area", phase="prepare")
+            self._select_new_area(req, orig, tag)
             doc = pc.document()
 
         W, H = doc["width"], doc["height"]
@@ -434,10 +434,31 @@ class Bridge:
             self._try("layer.hideLayers", {"layer": layer})
         return layer
 
-    def _expand_canvas(self, req: Request) -> None:
+    def _select_new_area(self, req: Request, orig: int, tag: str) -> None:
+        """Outpaint: select the empty (transparent) canvas plus an overlap onto the existing image.
+
+        The canvas is opened by the user (Crop tool); the transparent area is found in the merged image.
+        Explicit pixel amounts (command line, tests) are applied first with Canvas Size instead.
+        """
+        if any(max(0, int(v)) for v in req.outpaint):
+            keep = self._expand_canvas(req)
+        else:
+            src, _ = self._export(orig, f"{tag}-probe", need_mask=False)
+            keep = imaging.content_box(src)
+            if keep is None:
+                raise BridgeError("No empty canvas area found. Extend the canvas first (Crop tool, confirm with Enter), "
+                                  "then generate again.")
+        doc = self.pc.document()
+        x0, y0, x1, y1 = imaging.new_area_rect(keep, (doc["width"], doc["height"]), req.overlap)
+        self.pc.execute("select.all")
+        if x1 > x0 and y1 > y0:
+            # feather only the edge against the original (feathering the whole selection would round the canvas corners)
+            self.pc.execute("select.rect", {"x": x0, "y": y0, "width": x1 - x0, "height": y1 - y0,
+                                            "mode": "subtract", "feather": max(0, int(req.overlap) // 2)})
+
+    def _expand_canvas(self, req: Request) -> "imaging.Box":
+        """Add the requested pixels around the image; returns where the original now lies."""
         left, top, right, bottom = (max(0, int(v)) for v in req.outpaint)
-        if not any((left, top, right, bottom)):
-            raise BridgeError("Set how many pixels to expand by (left/top/right/bottom).")
         doc = self.pc.document()
         W0, H0 = doc["width"], doc["height"]
         for amount, size, anchor in ((left, "width", "right"), (right, "width", "left"),
@@ -446,16 +467,7 @@ class Bridge:
                 params = {"width": 0, "height": 0, "relative": True, "anchor": anchor, "extensionColor": "transparent"}
                 params[size] = amount
                 self.pc.execute("image.canvasSize", params)
-        ov = max(0, int(req.overlap))
-        x0 = left + (ov if left else 0)
-        y0 = top + (ov if top else 0)
-        x1 = left + W0 - (ov if right else 0)
-        y1 = top + H0 - (ov if bottom else 0)
-        self.pc.execute("select.all")
-        if x1 > x0 and y1 > y0:
-            # feather only the edge against the original (feathering the whole selection would round the canvas corners)
-            self.pc.execute("select.rect", {"x": x0, "y": y0, "width": x1 - x0, "height": y1 - y0,
-                                            "mode": "subtract", "feather": max(0, ov // 2)})
+        return imaging.Box(left, top, W0, H0)
 
     def _find_doc(self, index: int, name: str) -> int:
         """The user may have opened/closed tabs meanwhile – find the document by name."""

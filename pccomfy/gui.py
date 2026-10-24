@@ -108,7 +108,6 @@ class App:
         self.v_grow = tk.IntVar(value=g("mask_grow", d["mask_grow"]))
         self.v_blur = tk.IntVar(value=g("mask_blur", d["mask_blur"]))
         self.v_overlap = tk.IntVar(value=g("overlap", d["overlap"]))
-        self.v_expand = [tk.IntVar(value=v) for v in g("expand", [0, 0, 256, 0])]
         self.v_top = tk.BooleanVar(value=g("on_top", True))
         self.v_feather = tk.DoubleVar(value=g("feather_pct", 2.0))
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
@@ -243,12 +242,12 @@ class App:
         self.cb_sched.grid(row=0, column=3, sticky="ew", padx=6)
         self.recipe_widgets += [self.cb_sampler, self.cb_sched]
 
-        self.f_out = ttk.LabelFrame(r, text="Expand by (px)")
-        for i, lbl in enumerate(("Left", "Top", "Right", "Bottom")):
-            ttk.Label(self.f_out, text=lbl, style="Muted.TLabel").grid(row=0, column=i, sticky="w", padx=6)
-            self._spin(self.f_out, self.v_expand[i], 0, 8192, 64, 6).grid(row=1, column=i, padx=6, pady=(0, 6))
-        ttk.Label(self.f_out, text="Overlap", style="Muted.TLabel").grid(row=0, column=4, sticky="w", padx=6)
-        self._spin(self.f_out, self.v_overlap, 0, 512, 8, 5).grid(row=1, column=4, padx=6, pady=(0, 6))
+        self.f_out = ttk.LabelFrame(r, text="Expand image")
+        ttk.Label(self.f_out, text="Extend the canvas with the Crop tool (confirm with Enter).\nThe empty area is filled.",
+                  style="Muted.TLabel", justify="left").grid(row=0, column=0, rowspan=2, sticky="w", padx=6, pady=(0, 6))
+        ttk.Label(self.f_out, text="Overlap", style="Muted.TLabel").grid(row=0, column=1, sticky="w", padx=6)
+        self._spin(self.f_out, self.v_overlap, 0, 512, 8, 5).grid(row=1, column=1, padx=6, pady=(0, 6))
+        self.f_out.columnconfigure(0, weight=1)
 
         self.f_adv = ttk.LabelFrame(r, text="Advanced")
         self.f_adv.pack(fill="x", **pad)
@@ -416,7 +415,7 @@ class App:
             "sampler": self.v_sampler.get(), "scheduler": self.v_scheduler.get(),
             "base_res": int(self.v_res.get()), "context": float(self.v_context.get()),
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
-            "expand": [int(v.get()) for v in self.v_expand], "fooocus": bool(self.v_fooocus.get()),
+            "fooocus": bool(self.v_fooocus.get()),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "soft"),
             "feather_pct": round(float(self.v_feather.get()), 1),
             "prompt": self.t_prompt.get("1.0", "end").strip(), "negative": self.t_neg.get("1.0", "end").strip(),
@@ -467,12 +466,6 @@ class App:
         self._on_feather()
         if "layer_mask" in s:
             self.v_lmask.set(LAYER_MASKS.get(s["layer_mask"], LAYER_MASKS["soft"]))
-        if "expand" in s:
-            for var, val in zip(self.v_expand, s["expand"]):
-                try:
-                    var.set(int(val))
-                except (tk.TclError, ValueError, TypeError):
-                    notes.append("expand")
         for widget, key in ((self.t_prompt, "prompt"), (self.t_neg, "negative")):
             # an empty prompt in a preset means "not part of the preset": never wipe what was typed
             if str(s.get(key, "")).strip():
@@ -563,7 +556,7 @@ class App:
         p.clip = "" if self.v_clip.get() in ("", CLIP_DEFAULT) else self.v_clip.get().strip()
         return Request(mode=self.v_mode.get(), params=p, workflow=wf_path, base_res=int(self.v_res.get()),
                        context=float(self.v_context.get()), mask_grow=int(self.v_grow.get()),
-                       mask_blur=int(self.v_blur.get()), outpaint=tuple(int(v.get()) for v in self.v_expand),
+                       mask_blur=int(self.v_blur.get()),
                        overlap=int(self.v_overlap.get()), variants=int(self.v_variants.get()),
                        fooocus=bool(self.v_fooocus.get()),
                        layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "soft"),
@@ -680,7 +673,7 @@ class App:
             "negative": p.negative, "steps": p.steps, "cfg": p.cfg, "denoise": self.v_denoise.get(),
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap,
-            "expand": list(req.outpaint), "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "fooocus": req.fooocus, "layer_mask": req.layer_mask,
+            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "fooocus": req.fooocus, "layer_mask": req.layer_mask,
         })
 
     def _quit(self):

@@ -116,7 +116,7 @@ def main():
         app.v_res.set(768)
         app.v_variants.set(3)
         app.v_lmask.set(gui.LAYER_MASKS["selection"])
-        app.v_expand[2].set(128)
+        app.v_overlap.set(96)
 
     # save
     setup()
@@ -127,7 +127,7 @@ def main():
     data = json.loads(f.read_text(encoding="utf-8"))
     s = data["settings"]
     assert s["prompt"] == "make the jacket red" and s["clip"] == "gemma.safetensors" and s["base_res"] == 768, s
-    assert s["layer_mask"] == "selection" and s["expand"][2] == 128 and s["variants"] == 3
+    assert s["layer_mask"] == "selection" and s["overlap"] == 96 and s["variants"] == 3
     assert app.v_preset.get() == "My Test_" and app.cb_preset["values"] == ["My Test_"]
     print("save OK:", sorted(s))
 
@@ -139,11 +139,11 @@ def main():
     app.t_prompt.insert("1.0", "something else")
     app.v_denoise.set(0.3)
     app.v_res.set(512)
-    app.v_expand[2].set(0)
+    app.v_overlap.set(8)
     app.load_preset("My Test_")
     assert app.v_mode.get() == "inpaint" and app.v_workflow.get() == "fibo2-edit-both.group.json"
     assert app.v_clip.get() == "gemma.safetensors" and app.v_res.get() == 768 and app.v_denoise.get() == 0.8
-    assert app.t_prompt.get("1.0", "end").strip() == "make the jacket red" and app.v_expand[2].get() == 128
+    assert app.t_prompt.get("1.0", "end").strip() == "make the jacket red" and app.v_overlap.get() == 96
     assert app.v_lmask.get() == gui.LAYER_MASKS["selection"]
     print("load OK:", app.v_status.get())
 
