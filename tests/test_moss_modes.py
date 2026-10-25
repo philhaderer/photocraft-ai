@@ -82,6 +82,14 @@ def main():
     g = b.comfy.graphs[0]
     assert "5" not in g and "7" in g and g["7"]["inputs"]["model"] == ["6", 0]
 
+    # the Lenovo LoRA has a strength slider of its own; the DMD2 strength is not touched
+    for wf in (T2I, FILL):
+        _, b, _ = run(wf=wf, mode="inpaint" if wf == FILL else "txt2img", stage_on=True, stage_strengths={"5": 0.6})
+        g = b.comfy.graphs[0]
+        assert g["5"]["inputs"]["strength_model"] == 0.6 and g["6"]["inputs"]["strength_model"] == 1.0
+    assert workflows.stage_info(workflows.load_template(T2I))[0]["strength"] == 1.0
+    assert workflows.stage_info(workflows.load_template(T2I))[1]["strength"] is None
+
     # typed steps / CFG reach the sampler
     _, b, _ = run(sampler_override={"steps": 12, "cfg": 2.0})
     ks = b.comfy.graphs[0]["40"]["inputs"]

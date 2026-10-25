@@ -557,8 +557,23 @@ def stage_info(graph: dict) -> list[dict]:
     out = []
     for nid, label in stage_switches(graph):
         spec = graph[nid]["_meta"]["pc_stage_off"]
-        out.append({"id": nid, "label": label, "tip": str(spec.get("tip", "")), "default_on": bool(spec.get("default_on", True))})
+        strength = None
+        if spec.get("strength"):    # a stage that is a LoRA loader: the window shows a strength slider for it
+            v = graph[nid].get("inputs", {}).get("strength_model")
+            strength = float(v) if isinstance(v, (int, float)) else 1.0
+        out.append({"id": nid, "label": label, "tip": str(spec.get("tip", "")), "default_on": bool(spec.get("default_on", True)),
+                    "strength": strength})
     return out
+
+
+def set_stage_strengths(graph: dict, values: dict) -> dict:
+    """{stage node id: strength}: the LoRA loaders of those stages run at that strength (a copy is returned)."""
+    g = json.loads(json.dumps(graph))
+    for nid, v in (values or {}).items():
+        inp = g.get(str(nid), {}).get("inputs", {})
+        if "strength_model" in inp and not isinstance(inp["strength_model"], list):
+            inp["strength_model"] = round(float(v), 3)
+    return g
 
 
 def lora_tip(graph: dict) -> str:

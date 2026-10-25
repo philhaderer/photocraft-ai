@@ -43,16 +43,21 @@ def main():
 
     # MOSS: text to image, Generative fill, Expand (a test); the DMD2 LoRA is its own LoRA, Lenovo and SLG are switches
     app.v_model.set("moss")
+    app.v_mode.set("txt2img")
     app._on_model()
     assert app.v_mode.get() == "txt2img" and app.v_workflow.get() == "moss-image-t2i.json" and app.v_res.get() == 1280
     assert app.v_enhance.get() is False and "Qwen 3.5 9B" in app.tt_enhance.text      # which text model writes the prompt (starts off)
     assert app.cb_enhance["text"] == "LLM prompt enhancement (Qwen 3.5 9B)"
     assert app.v_turbo.get() is True and app.cb_turbo["text"].startswith("DMD2") and app.v_lora_str.get() == 1.0
-    assert [k for k, rb in app.rb_modes.items() if rb["state"] == "normal"] == ["txt2img", "outpaint"]   # Generative fill is greyed out
+    assert [k for k, rb in app.rb_modes.items() if rb["state"] == "normal"] == ["txt2img", "inpaint", "outpaint"]   # Generative fill works with the same inpaint workflow as Expand
     assert [c["text"] for c in app.stage_cbs] == ["Lenovo UltraReal LoRA", "Skip-layer guidance (SLG)", "Stage"]
     assert app.v_stage.get() and app.v_stage2.get()                                    # Lenovo on, SLG on
     r = app._request()
     assert r.stage_on is True and r.stages_off == [] and r.turbo is True
+    assert r.stage_strengths == {"5": 1.0}                                              # the Lenovo LoRA has a strength slider
+    app.v_sstr[0].set(0.6)
+    assert app._request().stage_strengths == {"5": 0.6}
+    app.v_sstr[0].set(1.0)
     assert r.sampler_override == {} and (app.v_steps.get(), app.v_cfg.get()) == (8, 1.5)   # the fields show the workflow's values
     app.v_turbo.set(False)
     app._on_workflow()
@@ -84,9 +89,11 @@ def main():
     app.v_mode.set("upscale")
     app._on_model()
     assert app.v_workflow.get() == "flux3-klein-upscale.json" and app.v_scale.get() == "1.5"
-    assert app.t_prompt.get("1.0", "end").strip() == models.PLACEHOLDER
+    assert app.t_prompt.get("1.0", "end").strip() == models.FLUX3_DEFAULT            # the workflow's own prompt, to describe in front of
+    assert app._hint_text == models.DESCRIBE_TIP
     app.v_mode.set("edit")
     app._on_mode()
+    assert app._hint_text == ""
     assert app.v_workflow.get() == "flux3-klein-edit.json" and app.t_prompt.get("1.0", "end").strip() == ""
     app.t_prompt.insert("1.0", "make it night")
     app.v_mode.set("refine")
@@ -175,8 +182,42 @@ def main():
     assert mm["fibo"].modes["inpaint"].settings["layer_mask"] == "soft"
     assert mm["flux3"].modes["txt2img"].settings["enhance"] is False
     assert [p[0] for p in mm["flux2"].modes["refine"].prompts] == ["Default", "Neutral", "Studio portrait"]
-    assert mm["flux3"].modes["refine"].prompts == mm["flux2"].modes["refine"].prompts      # taken over for testing
-    assert mm["flux2"].modes["upscale"].prompts == ()
+    assert mm["flux3"].modes["refine"].prompts == () and mm["flux2"].modes["upscale"].prompts == ()   # Flux 3: the workflow's own prompt only
+    # the prompt a refine starts with is the one the workflow sends by default
+    import json as _j
+    wf2 = _j.loads((t.ROOT / "workflows" / "flux2-klein-upscale.json").read_text(encoding="utf-8"))
+    wf3 = _j.loads((t.ROOT / "workflows" / "flux3-klein-upscale.json").read_text(encoding="utf-8"))
+    assert wf2["206"]["_meta"]["pc_default_prompt"] == models.FLUX2_DEFAULT == mm["flux2"].modes["refine"].prompt_hint
+    assert wf3["24"]["_meta"]["pc_default_prompt"] == models.FLUX3_DEFAULT == mm["flux3"].modes["refine"].prompt_hint
+    assert wf3["159"]["inputs"]["text"] == ["24", 0] and "158" not in wf3
+    assert mm["flux2"].modes["refine"].prompt_tip == mm["flux3"].modes["upscale"].prompt_tip == "Describe the image for better results in front of the prompt."
+    # Remove (a test) for Flux 2 and 3: the Qwen way, soft mask with 10 % feather
+    for k in ("flux2", "flux3"):
+        assert mm[k].modes["remove"].settings["feather_pct"] == 10.0 and mm[k].modes["remove"].settings["layer_mask"] == "soft"
+    assert "inpaint" in mm["moss"].modes and mm["moss"].modes["inpaint"].workflow == "moss-image-inpaint.json"
+    # every mode of every model has a tooltip of its own, and none of them names another model
+    names = ("Qwen", "Fibo", "Flux", "MOSS")
+    for m in models.MODELS:
+        assert set(m.mode_tips) == set(m.modes), m.key
+        for tip in m.mode_tips.values():
+            others = [n for n in names if n.lower() not in (m.key, m.label.lower()) and n.lower() in tip.lower() and not m.label.lower().startswith(n.lower())]
+            assert not others, (m.key, others)
+    app.v_model.set("qwen")
+    app.v_mode.set("inpaint")
+    app._on_model()
+    q_tip = app.tt_modes["remove"].text
+    app.v_model.set("fibo")
+    app.v_mode.set("inpaint")
+    app._on_model()
+    assert app.tt_modes["remove"].text != q_tip and "Qwen" not in app.tt_modes["remove"].text
+    # the copy button for the enhanced prompt
+    assert app._last_vgl == ""
+    app.root.clipboard_clear = lambda: None
+    got = []
+    app.root.clipboard_append = lambda x: got.append(x)
+    app._last_vgl = "a long enhanced prompt"
+    app._copy_enhanced()
+    assert got == ["a long enhanced prompt"]
 
     app.v_model.set("qwen")
     app.v_mode.set("inpaint")

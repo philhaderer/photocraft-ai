@@ -63,7 +63,8 @@
      "5"
     ],
     "default_on": false,
-    "tip": "A realism LoRA for MOSS (photographic, phone-camera look). Starts off: switch it on and compare with the same seed. Add it with a lower strength under Extra LoRAs if it is too strong."
+    "tip": "A realism LoRA for MOSS (photographic, phone-camera look). Starts off: switch it on and compare with the same seed. Add it with a lower strength under Extra LoRAs if it is too strong.",
+    "strength": true
    }
   }
  },

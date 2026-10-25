@@ -87,6 +87,46 @@ def main():
         raise AssertionError("hidden reference accepted")
     except bridge.BridgeError as e:
         assert "switched off" in str(e)
+    # a switched-off TOP layer (the user's case) must not break Refine / Expand: the duplicate has layer ids of its own
+    from pccomfy import models
+    for wf_name, mode, kw in (("flux3-klein-upscale.json", "refine", {}), ("flux2-klein-upscale.json", "refine", {}),
+                              ("flux3-klein-edit.json", "outpaint", {}), ("qwen-image-21-edit.json", "outpaint", {})):
+        pc, _, b = T.make(tempfile.mkdtemp(), with_sel=False)
+        pc.docs[0].layers[-1]["visible"] = False        # layers[-1] is the top one in the simulator
+        if mode == "outpaint":
+            pc.docs[0].layers[0]["img"].paste((255, 255, 255, 255), (T.W - 40, 0, T.W, T.H))   # the empty strip to fill
+        b.comfy = T.FakeComfy()
+        req = Request(mode=mode, workflow=str(ROOT / "workflows" / wf_name), preset="X", run_no=1, scale=1.0, overlap=8)
+        req.params = workflows.GenParams(prompt="", seed=5)
+        b.run(req)
+        assert b.comfy.graphs, wf_name
+    # Refine: the prompt field holds the whole request; empty = the workflow's own prompt, typed text is sent as it is
+    for wf_name, default in (("flux3-klein-upscale.json", models.FLUX3_DEFAULT), ("flux2-klein-upscale.json", models.FLUX2_DEFAULT)):
+        for typed, want in (("", default), ("A young woman. " + default, "A young woman. " + default)):
+            pc, _, b = T.make(tempfile.mkdtemp(), with_sel=False)
+            b.comfy = T.FakeComfy()
+            req = Request(mode="refine", workflow=str(ROOT / "workflows" / wf_name), preset="X", run_no=1, scale=1.0)
+            req.params = workflows.GenParams(prompt=typed, seed=5)
+            b.run(req)
+            g = b.comfy.graphs[0]
+            node = next(n for n in g.values() if n.get("_meta", {}).get("title", "").startswith("pc:prompt"))
+            sent = node["inputs"]["text"]
+            assert sent == want, (wf_name, sent)
+            assert [n for n in g.values() if n.get("inputs", {}).get("text") == sent or n.get("inputs", {}).get("text") in ([k, 0] for k in g)]
+    # the last graph sent to ComfyUI is kept (exchange folder) for diagnosis
+    assert (Path(b.exchange) / "last-graph.json").exists()
+    # Remove with a selection for Flux 2 / 3 (editor workflows without a mask node): red outline + instruction, no mask upload
+    for wf_name in ("flux2-klein-edit.json", "flux3-klein-edit.json"):
+        pc, _, b = T.make(tempfile.mkdtemp(), with_sel=True)
+        b.comfy = T.FakeComfy()
+        req = Request(mode="remove", workflow=str(ROOT / "workflows" / wf_name), preset="X", run_no=1, enhance=False,
+                      layer_mask="soft", feather_pct=10.0)
+        req.params = workflows.GenParams(prompt="", seed=5)
+        res = b.run(req)
+        assert res["layers"] and not any(k.endswith("-mask.png") for k in b.comfy.uploads), wf_name
+        g = b.comfy.graphs[0]
+        txt = next(n for n in g.values() if n.get("_meta", {}).get("title", "").startswith("pc:prompt"))["inputs"]["text"]
+        assert "erase" in txt.lower() or "remove" in txt.lower(), txt
     assert bridge.layer_visible({"visible": False}) is False and bridge.layer_visible({"hidden": True}) is False
     assert bridge.layer_visible({"id": 1}) is None
     print("ALL OK (round bridge)")

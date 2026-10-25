@@ -72,6 +72,7 @@ class Request:
     ref_collage: bool = True             # reference mode: also paste a rough copy of the reference where it should go
     lora_strength: float | None = None   # strength of the workflow's pc:lora loader (None = what the workflow has)
     stage_on: bool = True                # workflows with a switchable stage (pc_stage_off, e.g. SeedVR2): False = skip the first one
+    stage_strengths: dict = field(default_factory=dict)   # stage node id -> LoRA strength (a stage with a slider, e.g. MOSS' Lenovo LoRA)
     stages_off: list = field(default_factory=list)   # node ids of more stages (pc_stage_off) to skip: an optional LoRA, SLG ...
     detail: float = 1.0                  # Upscale/Refine: share of the new result mixed with the plainly scaled original (1 = all new)
     ref_cutout: bool = True              # reference mode, simple style: the sentence also asks to remove the reference's background
@@ -593,6 +594,7 @@ class Bridge:
                                              prompt=remove_prompt(mask.crop(region.pil()), attempt))
                     p.seed = gp.seed
                 graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name, force_plain=marked and not (fill and req.enhance and prompt_phase_nodes(workflows.load_template(wf))))
+                self._save_graph(graph)
                 prompt_id = self.comfy.queue(graph)
                 progress(start, f"Queued in ComfyUI ({self.pipeline}{suffix})" if not attempt
                          else f"Object still there, trying again ({attempt + 1}/{tries})", phase="prepare")
@@ -710,6 +712,8 @@ class Bridge:
                 tpl = workflows.bypass_lora(tpl)
             elif req.lora_strength is not None:
                 tpl = workflows.set_lora_strength(tpl, req.lora_strength)
+            if req.stage_strengths:
+                tpl = workflows.set_stage_strengths(tpl, req.stage_strengths)
             off = [str(x) for x in req.stages_off]
             if not req.stage_on:
                 first = next((nid for nid, _ in workflows.stage_switches(tpl)), None)
@@ -742,6 +746,13 @@ class Bridge:
         return workflows.inpaint(p, image_name, mask_name), "out"
 
     # ---------- PhotoCraft ----------
+
+    def _save_graph(self, graph: dict):
+        """The last workflow sent to ComfyUI (exchange folder, last-graph.json): what it really got - prompt, LoRAs, steps."""
+        try:
+            (self.exchange / "last-graph.json").write_text(json.dumps(graph, indent=1, ensure_ascii=False), encoding="utf-8")
+        except (OSError, TypeError, ValueError):
+            pass
 
     def _path(self, tag: str, suffix: str) -> tuple[str, Path]:
         name = f"pcc-{tag}-{suffix}.png"

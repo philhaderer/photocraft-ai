@@ -82,6 +82,9 @@ class FakePC:
             self.docs.append(nd)
             self.active = len(self.docs) - 1
         elif cmd == "layer.delete":
+            if not any(l["id"] == params["layer"] for l in d.layers):   # PhotoCraft refuses an id the document does not have
+                from pccomfy.photocraft import PhotoCraftError
+                raise PhotoCraftError(f'layer.delete: engine.execute: no such layer {params["layer"]}')
             d.layers = [l for l in d.layers if l["id"] != params["layer"]]
         elif cmd == "layer.flattenImage":
             if len(d.layers) < 2:

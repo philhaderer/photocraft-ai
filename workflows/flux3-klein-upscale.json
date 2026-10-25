@@ -106,7 +106,8 @@
    "text": ""
   },
   "_meta": {
-   "title": "pc:prompt Describe your picture (optional)"
+   "title": "pc:prompt The request (what each tile is asked to do)",
+   "pc_default_prompt": "Restore the photo: remove blur, noise and compression artifacts and recover sharp, natural detail, keeping the same composition, people and colors."
   }
  },
  "144": {
@@ -325,7 +326,8 @@
      "150",
      "151",
      "152"
-    ]
+    ],
+    "tip": "SeedVR2 cleans the picture before Flux 3 redraws it in tiles. Off = Flux 3 works on the plainly scaled picture (less of the SeedVR2 sharpness)."
    }
   }
  },
@@ -346,50 +348,11 @@
    "title": "Tiled Upscale - Cut into tiles at this size"
   }
  },
- "158": {
-  "class_type": "AUSBOSS_NODES_Text",
-  "inputs": {
-   "text": "Restore the photo: remove blur, noise and compression artifacts and recover sharp, natural detail, keeping the same composition, people and colors."
-  },
-  "_meta": {
-   "title": "Text - What each tile is asked to do"
-  }
- },
- "169": {
-  "class_type": "StringConcatenate",
-  "inputs": {
-   "string_a": [
-    "158",
-    0
-   ],
-   "string_b": [
-    "24",
-    0
-   ],
-   "delimiter": " "
-  },
-  "_meta": {
-   "title": "Concatenate - The sentence, then your words"
-  }
- },
- "170": {
-  "class_type": "StringTrim",
-  "inputs": {
-   "string": [
-    "169",
-    0
-   ],
-   "mode": "Both"
-  },
-  "_meta": {
-   "title": "Trim - No space left when your words are empty"
-  }
- },
  "159": {
   "class_type": "CLIPTextEncode",
   "inputs": {
    "text": [
-    "170",
+    "24",
     0
    ],
    "clip": [
