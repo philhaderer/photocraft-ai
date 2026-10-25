@@ -50,6 +50,11 @@ def main():
     r.params = workflows.GenParams(prompt="", seed=2)
     res = b.run(r)
     assert res["layers"]
+    # extra LoRAs: chained in front of the samplers, never in front of SeedVR2's
+    ex = workflows.add_loras(f3, [("a.safetensors", 0.5), ("b.safetensors", 0.8)])
+    extra = {k: v for k, v in ex.items() if k.startswith("pcx")}
+    assert len(extra) == 2 and links_ok(ex) and ex["163"]["inputs"]["model"][0] in extra and ex["150"]["inputs"]["model"] == f3["150"]["inputs"]["model"]
+    assert workflows.add_loras(f3, []) == f3
     print("ALL OK (flux3 controls)")
 
 

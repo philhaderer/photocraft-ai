@@ -310,6 +310,7 @@ class App:
         self.v_conn = tk.StringVar(value="")
 
         self._build(d)
+        self._set_loras(self.state.get("loras"))
         self._booting = True    # the saved window state is shown as it was: the model's starting settings are not applied
         self._on_mode()
         self._booting = False
@@ -571,6 +572,19 @@ class App:
         self.t_neg.insert("1.0", self.state.get("negative", d["negative"]))
 
         mf.pack(fill="x", **pad)
+        self.f_xl = ttk.Frame(r)       # extra LoRAs: a search box with a drop-down and a strength each
+        self.f_xl.pack(fill="x", padx=10, pady=(2, 4))
+        self.all_loras: list[str] = []
+        self.lora_rows: list[dict] = []
+        head = ttk.Frame(self.f_xl)
+        head.pack(fill="x")
+        ttk.Label(head, text="Extra LoRAs (style, detail ...)", style="Muted.TLabel").pack(side="left")
+        self.b_addlora = ttk.Button(head, text="+ Add", style="Link.TButton", command=self._add_lora_row)
+        self.b_addlora.pack(side="left", padx=8)
+        Tooltip(self.b_addlora, "Adds a LoRA on top of the model's own ones. Type to search the list; the drop-down offers the LoRAs "
+                                "of this model's folder first. Strength 0 to 1.5.")
+        self.f_xl_rows = ttk.Frame(self.f_xl)
+        self.f_xl_rows.pack(fill="x")
         sf = ttk.Frame(r)
         sf.pack(fill="x", **pad)
         af = ttk.Frame(self.adv_body)
@@ -812,6 +826,64 @@ class App:
 
     def _px(self, n: int) -> int:
         return round(n * getattr(self, "ui", 1.0))
+
+    # ---------- extra LoRAs ----------
+
+    LORA_MAX = 4
+    LORA_HINTS = {"qwen": ("qwen",), "flux2": ("flux 2", "flux2", "flux_2"), "flux3": ("flux 3", "flux3", "flux_3"),
+                  "moss": ("moss",), "fibo": ("fibo", "bria")}
+
+    def _lora_choices(self, typed: str = "") -> list[str]:
+        """The LoRA list for a drop-down: this model's folder first, filtered by what was typed (all words, any case)."""
+        hints = self.LORA_HINTS.get(self.v_model.get(), ())
+        names = sorted(self.all_loras, key=lambda n: (not any(h in n.lower() for h in hints), n.lower()))
+        words = typed.lower().split()
+        return [n for n in names if all(w in n.lower() for w in words)]
+
+    def _add_lora_row(self, name: str = "", strength: float = 1.0):
+        if len(self.lora_rows) >= self.LORA_MAX:
+            return
+        row = ttk.Frame(self.f_xl_rows)
+        row.pack(fill="x", pady=1)
+        row.columnconfigure(0, weight=1)
+        v_name, v_str = tk.StringVar(value=name), tk.DoubleVar(value=strength)
+        cb = ttk.Combobox(row, textvariable=v_name, values=self._lora_choices())
+        cb.grid(row=0, column=0, sticky="ew")
+        cb.bind("<KeyRelease>", lambda e, c=cb, v=v_name: c.configure(values=self._lora_choices(v.get())))
+        sp = ttk.Spinbox(row, textvariable=v_str, from_=0.0, to=1.5, increment=0.05, width=5)
+        sp.grid(row=0, column=1, padx=4)
+        rec = {"frame": row, "name": v_name, "strength": v_str, "combo": cb}
+        rm = ttk.Button(row, text="x", style="Link.TButton", width=2, command=lambda: self._remove_lora_row(rec))
+        rm.grid(row=0, column=2)
+        Tooltip(rm, "Remove this LoRA")
+        Tooltip(cb, "Type to search; the list shows this model's LoRAs first.")
+        self.lora_rows.append(rec)
+        self.b_addlora.configure(state="normal" if len(self.lora_rows) < self.LORA_MAX else "disabled")
+
+    def _remove_lora_row(self, rec: dict):
+        if rec in self.lora_rows:
+            self.lora_rows.remove(rec)
+            rec["frame"].destroy()
+        self.b_addlora.configure(state="normal")
+        self._fit_height()
+
+    def _loras(self) -> list[list]:
+        """What the rows say: [[file, strength], ...] for the rows with a name."""
+        out = []
+        for r in self.lora_rows:
+            n = r["name"].get().strip()
+            if n:
+                try:
+                    out.append([n, round(float(r["strength"].get()), 2)])
+                except (tk.TclError, ValueError):
+                    out.append([n, 1.0])
+        return out
+
+    def _set_loras(self, items):
+        for r in list(self.lora_rows):
+            self._remove_lora_row(r)
+        for n, st in (items or [])[: self.LORA_MAX]:
+            self._add_lora_row(str(n), float(st))
 
     def _model(self):
         return models.BY_KEY.get(self.v_model.get())
@@ -1193,6 +1265,7 @@ class App:
                 info["ckpts"] = self.comfy.checkpoints()
                 info["samplers"] = self.comfy.samplers()
                 info["clips"] = self.comfy.clips()
+                info["loras"] = self.comfy.loras()
                 info["scheds"] = self.comfy.schedulers()
                 info["fooocus"] = self.comfy.fooocus_inpaint()
                 info["comfy"] = "ComfyUI ●"
@@ -1210,6 +1283,10 @@ class App:
             self.cb_clip["values"] = [CLIP_DEFAULT] + info["clips"]
             if self.v_clip.get() not in self.cb_clip["values"]:
                 self.v_clip.set(CLIP_DEFAULT)
+        if info.get("loras") is not None:
+            self.all_loras = list(info["loras"])
+            for r in self.lora_rows:
+                r["combo"].configure(values=self._lora_choices())
         if info.get("samplers"):
             self.cb_sampler["values"] = info["samplers"]
         if info.get("scheds"):
@@ -1249,7 +1326,7 @@ class App:
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
             "scale": self._scale(), "ref_style": self._ref_style(),
             "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
-            "turbo": bool(self.v_turbo.get()), "stage_on": bool(self.v_stage.get()), "detail": round(float(self.v_detail.get()), 2),
+            "turbo": bool(self.v_turbo.get()), "stage_on": bool(self.v_stage.get()), "loras": self._loras(), "detail": round(float(self.v_detail.get()), 2),
             "lora_strength": round(float(self.v_lora_str.get()), 2), "ref_collage": bool(self.v_collage.get()), "ref_cutout": bool(self.v_cutout.get()),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
             "feather_pct": round(float(self.v_feather.get()), 1),
@@ -1300,6 +1377,8 @@ class App:
         put(self.v_fooocus, "fooocus", bool)
         put(self.v_enhance, "enhance", bool)
         put(self.v_turbo, "turbo", bool)
+        if "loras" in s:
+            self._set_loras(s["loras"])
         put(self.v_stage, "stage_on", bool)
         put(self.v_detail, "detail", float)
         if "lora_strength" in s:
@@ -1411,7 +1490,7 @@ class App:
                        fooocus=bool(self.v_fooocus.get()), enhance=bool(self.v_enhance.get()),
                        turbo=bool(self.v_turbo.get()), scale=self._scale(),
                        lora_strength=(round(float(self.v_lora_str.get()), 2) if self._has_lora_switch() else None),
-                       stage_on=bool(self.v_stage.get()) or not self._stage_label(), detail=round(float(self.v_detail.get()), 2), ref_style=self._ref_style(), ref_collage=bool(self.v_collage.get()), ref_cutout=bool(self.v_cutout.get()),
+                       stage_on=bool(self.v_stage.get()) or not self._stage_label(), loras=[tuple(x) for x in self._loras()], detail=round(float(self.v_detail.get()), 2), ref_style=self._ref_style(), ref_collage=bool(self.v_collage.get()), ref_cutout=bool(self.v_cutout.get()),
                        layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2)
 
@@ -1551,7 +1630,7 @@ class App:
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
             "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
-            "stage_on": req.stage_on, "detail": req.detail, "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
+            "stage_on": req.stage_on, "detail": req.detail, "loras": [list(x) for x in req.loras], "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
             "ref_collage": req.ref_collage, "ref_style": req.ref_style, "ref_cutout": req.ref_cutout, "runs": dict(self.state.get("runs", {})),
         })
 

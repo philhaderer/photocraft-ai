@@ -393,6 +393,48 @@ def bypass_lora(graph: dict) -> dict:
     return g
 
 
+SAMPLING_NODES = ("KSampler", "KSamplerAdvanced", "CFGGuider", "DualCFGGuider", "SamplerCustom", "BasicGuider")
+
+
+def _model_root(g: dict, link) -> str:
+    """Title of the loader a model link starts from (follows LoRA / patch nodes upstream)."""
+    seen = 0
+    while isinstance(link, list) and link and str(link[0]) in g and seen < 40:
+        node = g[str(link[0])]
+        nxt = node.get("inputs", {}).get("model")
+        if not isinstance(nxt, list):
+            return str(node.get("_meta", {}).get("title", ""))
+        link, seen = nxt, seen + 1
+    return ""
+
+
+def add_loras(graph: dict, loras: list) -> dict:
+    """Extra LoRAs the user picked: [(file name, strength), ...] are chained in front of every sampler / guider that
+    takes a model - except one fed by a helper model (a loader titled SeedVR2). A copy is returned."""
+    g = json.loads(json.dumps(graph))
+    loras = [(str(n), float(st)) for n, st in loras or [] if n]
+    if not loras:
+        return g
+    sinks = [(nid, n) for nid, n in g.items() if isinstance(n, dict) and n.get("class_type") in SAMPLING_NODES
+             and isinstance(n.get("inputs", {}).get("model"), list) and "seedvr" not in _model_root(g, n["inputs"]["model"]).lower()]
+    made: dict[tuple, list] = {}
+    for nid, n in sinks:
+        src = n["inputs"]["model"]
+        key = (str(src[0]), src[1])
+        if key not in made:
+            link = list(src)
+            for i, (name, st) in enumerate(loras):
+                new = f"pcx{len(g)}_{i}"
+                while new in g:
+                    new += "_"
+                g[new] = {"class_type": "LoraLoaderModelOnly", "inputs": {"lora_name": name, "strength_model": round(st, 3), "model": link},
+                          "_meta": {"title": f"Extra LoRA {name}"}}
+                link = [new, 0]
+            made[key] = link
+        n["inputs"]["model"] = made[key]
+    return g
+
+
 def lora_strength(graph: dict) -> float | None:
     """The strength the workflow's pc:lora loader is set to (LoraLoaderModelOnly, or AusBoss' LoRA list), None without one."""
     for nid in lora_switches(graph):

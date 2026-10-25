@@ -105,6 +105,9 @@ class ComfyUI:
     def clips(self) -> list[str]:
         return self._choices("CLIPLoader", "clip_name")
 
+    def loras(self) -> list[str]:
+        return self._choices("LoraLoaderModelOnly", "lora_name")
+
     def samplers(self) -> list[str]:
         return self._choices("KSampler", "sampler_name")
 

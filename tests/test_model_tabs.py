@@ -78,10 +78,29 @@ def main():
     app._apply_settings({"workflow": "qwen-image-21-edit.json", "mode": "inpaint"})
     assert app.v_model.get() == "qwen"
 
+    # extra LoRAs: rows, search order (the model's folder first), request, state
+    app.all_loras = ["flux 3\\b.safetensors", "qwen\\style_a.safetensors", "qwen\\Style_B.safetensors", "misc\\c.safetensors"]
+    app.v_model.set("qwen")
+    assert app._lora_choices()[:2] == ["qwen\\style_a.safetensors", "qwen\\Style_B.safetensors"]
+    assert app._lora_choices("style b") == ["qwen\\Style_B.safetensors"]
+    app._add_lora_row("qwen\\style_a.safetensors", 0.6)
+    app._add_lora_row("", 1.0)                       # an empty row is not a LoRA
+    assert app._request().loras == [("qwen\\style_a.safetensors", 0.6)]
+    assert app._collect()["loras"] == [["qwen\\style_a.safetensors", 0.6]]
+    for _ in range(6):
+        app._add_lora_row("misc\\c.safetensors")
+    assert len(app.lora_rows) == app.LORA_MAX and app.b_addlora["state"] == "disabled"
+    app._set_loras([["x", 0.3]])
+    assert len(app.lora_rows) == 1 and app._loras() == [["x", 0.3]] and app.b_addlora["state"] == "normal"
+    app._apply_settings({"loras": []})
+    assert app._loras() == []
+    app._set_loras([["qwen\\style_a.safetensors", 0.6]])
+
     # saved with the state
     app._save_state(app._request())
     import json
     assert json.loads((Path(t.TMP) / "state.json").read_text(encoding="utf-8"))["model"] == "qwen"
+    assert json.loads((Path(t.TMP) / "state.json").read_text(encoding="utf-8"))["loras"] == [["qwen\\style_a.safetensors", 0.6]]
     shutil.rmtree(t.TMP, ignore_errors=True)
     print("ALL OK (model tabs)")
 

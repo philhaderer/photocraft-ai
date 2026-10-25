@@ -74,6 +74,7 @@ class Request:
     stage_on: bool = True                # workflows with a switchable stage (pc_stage_off, e.g. SeedVR2): False = skip it
     detail: float = 1.0                  # Upscale/Refine: share of the new result mixed with the plainly scaled original (1 = all new)
     ref_cutout: bool = True              # reference mode, simple style: the sentence also asks to remove the reference's background
+    loras: list = field(default_factory=list)   # extra LoRAs [(file name, strength), ...] chained in front of the samplers
     label: str = ""                      # added to the layer names (a comparison run: "res 1024")
     preset: str = ""                     # name of the preset used: the layers are named "<preset> #<run_no>"
     run_no: int = 0                      # running number of this preset's runs (kept by the window)
@@ -642,6 +643,8 @@ class Bridge:
                 tpl = workflows.set_lora_strength(tpl, req.lora_strength)
             if not req.stage_on:
                 tpl = workflows.bypass_stage(tpl)
+            if req.loras:
+                tpl = workflows.add_loras(tpl, req.loras)
             return workflows.apply_template(tpl, p, image_name, mask_name, ref_name,
                                             ref_first=req.ref_style != "simple")
         if not p.checkpoint:
