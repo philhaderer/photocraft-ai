@@ -59,6 +59,9 @@ class Widget:
     def configure(self, *a, **k):
         self._o.update(k)
 
+    def cget(self, k):
+        return self._o.get(k, "normal" if k == "state" else "")
+
     def winfo_width(self):
         return 420
 
@@ -163,8 +166,10 @@ def main():
     assert app.v_workflow.get() == "fibo2-edit-both.group.json" and app.v_clip.get() == gui.CLIP_DEFAULT
     print("missing items OK:", app.v_status.get())
 
-    # the shipped example preset
-    shutil.copy(ROOT / "presets" / "Fibo VGL Bionic Gemma12B.json", Path(TMP) / "presets" / "Fibo VGL Bionic Gemma12B.json")
+    # a saved preset (the plugin ships none any more: the model tabs bring the settings)
+    (Path(TMP) / "presets" / "Fibo VGL Bionic Gemma12B.json").write_text(json.dumps({"format": 1, "name": "Fibo VGL Bionic Gemma12B", "settings": {
+        "mode": "inpaint", "workflow": "fibo2-edit-vgl-bionic-gemma4-12b.json", "clip": "", "denoise": 1.0, "variants": 1, "base_res": 1024,
+        "context": 0.4, "mask_grow": 8, "mask_blur": 8, "overlap": 48, "layer_mask": "auto"}}), encoding="utf-8")
     app.cb_workflow["values"] = [gui.BUILTIN, "fibo2-edit-vgl-bionic-gemma4-12b.json"]
     app.refresh_presets()
     app.load_preset("Fibo VGL Bionic Gemma12B")

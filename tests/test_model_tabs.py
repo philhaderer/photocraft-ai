@@ -49,7 +49,7 @@ def main():
     assert app.v_enhance.get() is False and "Qwen 3.5 9B" in app.tt_enhance.text      # which text model writes the prompt (starts off)
     assert app.cb_enhance["text"] == "LLM prompt enhancement (Qwen 3.5 9B)"
     assert app.v_turbo.get() is True and app.cb_turbo["text"].startswith("DMD2") and app.v_lora_str.get() == 1.0
-    assert [k for k, rb in app.rb_modes.items() if rb["state"] == "normal"] == ["txt2img", "inpaint", "outpaint"]   # Generative fill works with the same inpaint workflow as Expand
+    assert [k for k, rb in app.rb_modes.items() if rb["state"] == "normal"] == ["txt2img", "outpaint"]   # Generative fill is off again (not good enough)
     assert [c["text"] for c in app.stage_cbs] == ["Lenovo UltraReal LoRA", "Skip-layer guidance (SLG)", "Stage"]
     assert app.v_stage.get() and app.v_stage2.get()                                    # Lenovo on, SLG on
     r = app._request()
@@ -190,11 +190,11 @@ def main():
     assert wf2["206"]["_meta"]["pc_default_prompt"] == models.FLUX2_DEFAULT == mm["flux2"].modes["refine"].prompt_hint
     assert wf3["24"]["_meta"]["pc_default_prompt"] == models.FLUX3_DEFAULT == mm["flux3"].modes["refine"].prompt_hint
     assert wf3["159"]["inputs"]["text"] == ["24", 0] and "158" not in wf3
-    assert mm["flux2"].modes["refine"].prompt_tip == mm["flux3"].modes["upscale"].prompt_tip == "Describe the image for better results in front of the prompt."
+    assert mm["flux2"].modes["refine"].prompt_tip == mm["flux3"].modes["upscale"].prompt_tip == models.DESCRIBE_TIP
     # Remove (a test) for Flux 2 and 3: the Qwen way, soft mask with 10 % feather
     for k in ("flux2", "flux3"):
         assert mm[k].modes["remove"].settings["feather_pct"] == 10.0 and mm[k].modes["remove"].settings["layer_mask"] == "soft"
-    assert "inpaint" in mm["moss"].modes and mm["moss"].modes["inpaint"].workflow == "moss-image-inpaint.json"
+    assert "inpaint" not in mm["moss"].modes
     # every mode of every model has a tooltip of its own, and none of them names another model
     names = ("Qwen", "Fibo", "Flux", "MOSS")
     for m in models.MODELS:
@@ -210,6 +210,36 @@ def main():
     app.v_mode.set("inpaint")
     app._on_model()
     assert app.tt_modes["remove"].text != q_tip and "Qwen" not in app.tt_modes["remove"].text
+    # Fibo: text to image has its own workflow (no image inputs), Refine runs as a whole-image edit with a ready prompt
+    assert mm["fibo"].modes["txt2img"].workflow == "fibo2-t2i.json" and mm["fibo"].modes["refine"].run_as == "edit"
+    assert mm["fibo"].modes["refine"].prompt_hint == models.FIBO_REFINE == "relight the scene to natural lighting"
+    app.v_model.set("fibo")
+    app.v_mode.set("refine")
+    app._on_model()
+    assert app.v_workflow.get() == "fibo2-edit-plain.json" and app._request().mode == "edit"
+    assert app._prompt_text() == models.FIBO_REFINE and app.v_mode.get() == "refine" and app._layer_prefix().endswith("Refine")
+    app.v_mode.set("txt2img")
+    app._on_mode()
+    assert app.v_workflow.get() == "fibo2-t2i.json" and app._request().mode == "txt2img" and app._prompt_text() == ""
+    app.v_llm.set("Qwen 3.5 9B (bionic)")
+    app.v_mode.set("edit")
+    app._on_mode()
+    assert app.v_workflow.get() == "fibo2-edit-plain.json"
+    # Remove for Flux: the field shows the instruction that is sent (read-only); other models leave it empty
+    from pccomfy.bridge import REMOVE_PROMPT
+    for k in ("flux2", "flux3"):
+        app.v_model.set(k)
+        app.v_mode.set("remove")
+        app._on_model()
+        assert app.t_prompt.get("1.0", "end").strip() == REMOVE_PROMPT.format(shape="outline"), k
+        assert str(app.t_prompt.cget("state")) == "disabled"
+        app.v_mode.set("edit")
+        app._on_mode()
+        assert app.t_prompt.get("1.0", "end").strip() == "" and str(app.t_prompt.cget("state")) == "normal"
+    app.v_model.set("qwen")
+    app.v_mode.set("remove")
+    app._on_model()
+    assert app.t_prompt.get("1.0", "end").strip() == ""
     # the copy button for the enhanced prompt
     assert app._last_vgl == ""
     app.root.clipboard_clear = lambda: None

@@ -18,6 +18,8 @@ class Mode:
     prompt_hint: str = ""           # what an empty prompt field starts with in this mode
     prompts: tuple = ()             # (label, text, tip): ready-made prompts, shown as radio buttons next to "Prompt"
     prompt_tip: str = ""            # an orange hint under the prompt field in this mode (the field gets an orange frame)
+    run_as: str = ""                # the mode the bridge runs when it is another one (Fibo "Refine" runs as a whole-image edit)
+    fixed_prompt: bool = False      # the mode sends a fixed instruction (Remove): the field shows it, read-only
 
 
 @dataclass(frozen=True)
@@ -51,8 +53,9 @@ FLUX2_REFINE_PROMPTS = (
     ("Neutral", RELIGHT_NEUTRAL, "Relight: soft, even, neutral light without harsh shadows, true-to-life colours."),
     ("Studio portrait", RELIGHT_STUDIO, "Relight: a professionally lit studio portrait with soft, diffused light."),
 )
-DESCRIBE_TIP = "Describe the image for better results in front of the prompt."
-STOCK_PROMPTS = {PLACEHOLDER, FLUX2_DEFAULT, FLUX3_DEFAULT, RELIGHT_NEUTRAL, RELIGHT_STUDIO}   # texts the window may replace when the mode changes
+FIBO_REFINE = "relight the scene to natural lighting"
+DESCRIBE_TIP = "Describe the image before this text for better results."
+STOCK_PROMPTS = {PLACEHOLDER, FLUX2_DEFAULT, FLUX3_DEFAULT, RELIGHT_NEUTRAL, RELIGHT_STUDIO, FIBO_REFINE}   # texts the window may replace when the mode changes
 
 # The tooltips of the mode buttons are written per model: each tab shows only what is true for its own model.
 _TXT = "Creates a new picture from text only, as a new layer in the size of the canvas. A selection is ignored."
@@ -94,14 +97,14 @@ FLUX2 = Model(
     "FLUX.2 Klein 9B: whole-image edits, Remove, Expand (a test), upscale and refine (the Ultra real LoRA is the switch).",
     {
         "edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none")),
-        "remove": Mode("flux2-klein-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0)),   # a test
+        "remove": Mode("flux2-klein-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0), fixed_prompt=True),
         "outpaint": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="auto")),
         "upscale": Mode("flux2-klein-upscale.json", dict(scale=1.5, turbo=True, context=0.0), FLUX2_DEFAULT, prompt_tip=DESCRIBE_TIP),
         "refine": Mode("flux2-klein-upscale.json", dict(turbo=True, context=0.0), FLUX2_DEFAULT, FLUX2_REFINE_PROMPTS, DESCRIBE_TIP),
     },
     mode_tips={
         "edit": _EDIT + "\nIf nothing happens, generate again (new seed) or word it more fully (\"Remove all buildings and fill with sky\").",
-        "remove": _REMOVE + "\nA test for Flux 2 Klein: it is an editor, so the selection is shown to it as a red outline.",
+        "remove": _REMOVE + "\nWorks only sometimes: generate again if the object is still there. The prompt field shows the instruction that is sent.",
         "outpaint": _EXPAND + "\nA test for Flux 2 Klein.",
         "upscale": "Enlarges the picture (or the selection) by the factor and opens the result as a NEW document; your document stays as it is.\n"
                    "The prompt starts with the workflow's own sentence; describe the picture in front of it for better results.\n"
@@ -117,7 +120,7 @@ FLUX3 = Model(
     {
         "txt2img": Mode("flux3-klein-t2i.json", dict(base_res=1536, layer_mask="none", enhance=False)),
         "edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none")),
-        "remove": Mode("flux3-klein-edit.json", dict(_SOFT, base_res=1536, context=0.4, feather_pct=10.0)),   # a test
+        "remove": Mode("flux3-klein-edit.json", dict(_SOFT, base_res=1536, context=0.4, feather_pct=10.0), fixed_prompt=True),
         "outpaint": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="auto")),
         "upscale": Mode("flux3-klein-upscale.json", dict(scale=1.5, turbo=True, stage_on=True, context=0.0), FLUX3_DEFAULT, prompt_tip=DESCRIBE_TIP),
         "refine": Mode("flux3-klein-upscale.json", dict(turbo=True, stage_on=True, context=0.0), FLUX3_DEFAULT, prompt_tip=DESCRIBE_TIP),
@@ -125,7 +128,7 @@ FLUX3 = Model(
     mode_tips={
         "txt2img": _TXT + "\nThe Flux 3 prompt upsampler (the checkbox under the prompt) can write the long prompt from your short text.",
         "edit": _EDIT + "\nIf nothing happens, generate again (new seed) or word it more fully (\"Remove all buildings and fill with sky\").",
-        "remove": _REMOVE + "\nA test for Flux 3 Klein: it is an editor, so the selection is shown to it as a red outline.",
+        "remove": _REMOVE + "\nThe prompt field shows the instruction that is sent.",
         "outpaint": _EXPAND + "\nA test for Flux 3 Klein.",
         "upscale": "Enlarges the picture (or the selection) by the factor and opens the result as a NEW document; your document stays as it is.\n"
                    "SeedVR2 cleans the photo, Flux 3 Klein redraws it in tiles. The prompt starts with the workflow's own sentence; "
@@ -140,27 +143,25 @@ FLUX3 = Model(
 _MOSS = dict(turbo=True, stage_on=True, stage2_on=True)
 MOSS = Model(
     "moss", "MOSS Image",
-    "MOSS-Image 5B: a text-to-image model. Text to image (with its own prompt enhancer), Generative fill and Expand "
-    "(the same model redraws the masked area). It has no instruction-edit functions (yet). Likes 1.5 to 2 MP. The DMD2 LoRA makes it fast (8 steps, CFG 1.5).",
+    "MOSS-Image 5B: a text-to-image model. Text to image (with its own prompt enhancer) and Expand. "
+    "It has no instruction-edit functions (yet) and no Generative fill. Likes 1.5 to 2 MP. The DMD2 LoRA makes it fast (8 steps, CFG 1.5).",
     {
         "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "base_res": 1280, "layer_mask": "none", "enhance": False}),
-        "inpaint": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "context": 0.4, "layer_mask": "soft", "mask_grow": 8,
-                                                    "mask_blur": 8, "feather_pct": 4.0, "match": 0.5}),
         "outpaint": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "auto", "match": 0.5}),
     },
     mode_tips={
         "txt2img": _TXT + "\nIts own prompt enhancer can write the long English caption MOSS likes.",
-        "inpaint": "Select an area (Lasso / Rectangular Marquee), type what should appear there (\"a red silk scarf\"), then Generate.\n"
-                   "MOSS redraws only the masked area and keeps the rest of the crop; the result is pasted with a soft edge.",
         "outpaint": _EXPAND,
     })
 
 FIBO = Model(
     "fibo", "Fibo 2.0 Edit",
-    "Fibo 2.0 Edit Turbo: an instruction editor. Fill, Remove, Reference (the simple style works best) and whole-image edits. "
+    "Fibo 2.0 Edit Turbo: an instruction editor. Text to image, Fill, Remove, Reference (the simple style works best), whole-image edits and Refine (relight). "
     "The VGL variants (a text model writes the prompt) are chosen under the prompt.",
     {
+        "txt2img": Mode("fibo2-t2i.json", dict(base_res=1224, layer_mask="none", enhance=False)),
         "edit": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="none", enhance=False)),
+        "refine": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="none", enhance=False), FIBO_REFINE, run_as="edit"),
         "inpaint": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False)),
         "outpaint": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
         "reference": Mode("fibo2-edit-plain.json", dict(base_res=1024, ref_style="simple", ref_cutout=True, layer_mask="auto", enhance=False)),
@@ -172,7 +173,10 @@ FIBO = Model(
          ("fibo2-edit-vgl-bionic-qwen35-9b.json", "Qwen 3.5 9B (bionic)"),
          ("fibo2-edit-vgl-qwen35-convrot.json", "Qwen 3.5 9B (native, convrot)")),
     mode_tips={
+        "txt2img": _TXT,
         "edit": _EDIT,
+        "refine": "Relights the whole picture (a whole-image edit) and puts the result on a new layer at the same size. "
+                  "The prompt starts with \"relight the scene to natural lighting\"; change it for other edits. A selection is ignored.",
         "inpaint": "Select an area (Lasso / Rectangular Marquee), type what should appear there (\"a helicopter on the meadow\"), "
                    "then Generate. A text is required; to take something away use Remove.\n"
                    "The selection is drawn into the picture as a red outline and your text is wrapped in a fixed instruction "

@@ -15,7 +15,7 @@ from tkinter import messagebox, simpledialog, ttk
 
 from . import config as cfgmod
 from . import models, winlink
-from .bridge import Bridge, BridgeError, Request, mask_is_used, prompt_phase_nodes
+from .bridge import REMOVE_PROMPT, Bridge, BridgeError, Request, mask_is_used, prompt_phase_nodes
 from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 from .workflows import _tags as workflows_tags
@@ -256,7 +256,7 @@ def sweep_requests(req: Request, res_list: list, ctx_list: list) -> list[Request
     return runs
 
 
-MIN_W = 420  # the window opens at this width; text fields etc. stretch to it
+MIN_W = 380  # the window's fixed width (it cannot be resized; the height follows the content)
 
 
 class App:
@@ -281,7 +281,7 @@ class App:
             self.ui = max(1.0, float(self.root.winfo_fpixels("1i")) / 96)   # display scaling (150 % = 1.5)
         except Exception:
             self.ui = 1.0
-        self.root.minsize(self._px(MIN_W), self._px(560))
+        self.root.resizable(False, False)       # a fixed width; the height is set from the content (_fit_height)
         self._sized = False
         self._style()
         self._scale_clicks()
@@ -583,7 +583,7 @@ class App:
         self.f_lora.columnconfigure(0, weight=1)
         self.w_lora_str = ttk.Scale(self.f_lora, from_=0.0, to=1.0, variable=self.v_lora_str, command=self._on_lora_str)
         self.w_lora_str.grid(row=0, column=0, sticky="ew")
-        self.lbl_lora_str = ttk.Label(self.f_lora, width=14, style="Muted.TLabel")
+        self.lbl_lora_str = ttk.Label(self.f_lora, width=5, style="Muted.TLabel")
         self.lbl_lora_str.grid(row=0, column=1, sticky="e", padx=(6, 0))
         Tooltip(self.w_lora_str, "How strong that LoRA works (0 = as if off, 1 = full). Starts at the value the workflow recommends.")
         # up to three switchable stages of a workflow (SeedVR2, an optional LoRA, skip-layer guidance ...), each its own checkbox
@@ -626,11 +626,11 @@ class App:
         ff.columnconfigure(1, weight=1)
         lbl_f = ttk.Label(ff, text="Edge feather")
         lbl_f.grid(row=0, column=0, sticky="w")
-        ttk.Label(ff, text="Softens the seam where the new area meets your picture (0 = a sharp cut).", style="Muted.TLabel",
-                  wraplength=self._px(380), justify="left").grid(row=1, column=0, columnspan=3, sticky="w")
+        ttk.Label(ff, text="Softens the seam where the new area meets your picture (0 = a sharp cut). In % of the selection's shorter side.", style="Muted.TLabel",
+                  wraplength=self._px(MIN_W - 40), justify="left").grid(row=1, column=0, columnspan=3, sticky="w")
         self.w_feather = sc = ttk.Scale(ff, from_=0, to=10, variable=self.v_feather, command=self._on_feather)
         sc.grid(row=0, column=1, sticky="ew", padx=8)
-        self.lbl_feather = ttk.Label(ff, width=22, style="Muted.TLabel")
+        self.lbl_feather = ttk.Label(ff, width=9, style="Muted.TLabel", anchor="e")
         self.lbl_feather.grid(row=0, column=2, sticky="e")
         self._on_feather()
         for w in (lbl_f, sc):
@@ -745,10 +745,10 @@ class App:
         sm.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(6, 0))
         sm.columnconfigure((1, 3), weight=1)
         ttk.Label(sm, text="Sampler", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
-        self.cb_sampler = ttk.Combobox(sm, textvariable=self.v_sampler, width=14)
+        self.cb_sampler = ttk.Combobox(sm, textvariable=self.v_sampler, width=10)
         self.cb_sampler.grid(row=0, column=1, sticky="ew", padx=6)
         ttk.Label(sm, text="Scheduler", style="Muted.TLabel").grid(row=0, column=2, sticky="w")
-        self.cb_sched = ttk.Combobox(sm, textvariable=self.v_scheduler, width=12)
+        self.cb_sched = ttk.Combobox(sm, textvariable=self.v_scheduler, width=9)
         self.cb_sched.grid(row=0, column=3, sticky="ew", padx=6)
         self.recipe_widgets += [self.cb_sampler, self.cb_sched]
 
@@ -777,7 +777,7 @@ class App:
         ttk.Label(self.f_detail, text="Mix source image/new image", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
         self.w_detail = ttk.Scale(self.f_detail, from_=0.0, to=1.0, variable=self.v_detail, command=self._on_detail)
         self.w_detail.grid(row=0, column=1, sticky="ew", padx=8)
-        self.lbl_detail = ttk.Label(self.f_detail, width=8, style="Muted.TLabel")
+        self.lbl_detail = ttk.Label(self.f_detail, width=5, style="Muted.TLabel")
         self.lbl_detail.grid(row=0, column=2)
         Tooltip(self.w_detail, "How much of the new image is used. 100 % = only the new image; less mixes in the plainly scaled source image, "
                                "which tames a result that is too sharp or has odd textures. 0 % = only the source image.")
@@ -790,7 +790,7 @@ class App:
         sty.pack(fill="x", padx=6, pady=(0, 4))
         lbs = ttk.Label(sty, text="Style", style="Muted.TLabel")
         lbs.pack(side="left")
-        self.cb_refstyle = ttk.Combobox(sty, textvariable=self.v_refstyle, values=list(REF_STYLES.values()), state="readonly", width=28)
+        self.cb_refstyle = ttk.Combobox(sty, textvariable=self.v_refstyle, values=list(REF_STYLES.values()), state="readonly", width=22)
         self.cb_refstyle.pack(side="left", padx=6)
         self.cb_refstyle.bind("<<ComboboxSelected>>", lambda e: self._update_availability())
         for w in (lbs, self.cb_refstyle):
@@ -843,7 +843,7 @@ class App:
         lm.pack(fill="x", padx=10, pady=(2, 4), before=self.f_adv)
         lb = ttk.Label(lm, text="Layer mask", style="Muted.TLabel")
         lb.pack(side="left")
-        self.cb_lm = cb_lm = ttk.Combobox(lm, textvariable=self.v_lmask, values=list(LAYER_MASKS.values()), state="readonly", width=20)
+        self.cb_lm = cb_lm = ttk.Combobox(lm, textvariable=self.v_lmask, values=list(LAYER_MASKS.values()), state="readonly", width=18)
         cb_lm.pack(side="left", padx=6)
         cb_lm.bind("<<ComboboxSelected>>", lambda e: self._update_feather_state())
         for w in (lb, cb_lm):
@@ -874,20 +874,22 @@ class App:
         self.v_pl = tk.StringVar(value="")
         row = ttk.Frame(r)
         row.pack(fill="x", padx=10, pady=(6, 0))
-        ttk.Label(row, textvariable=self.v_pl, width=22, style="Muted.TLabel").pack(side="left")
+        ttk.Label(row, textvariable=self.v_pl, width=12, style="Muted.TLabel").pack(side="left")
         self.pb = ttk.Progressbar(row, mode="determinate", maximum=1.0)
         self.pb.pack(side="left", fill="x", expand=True)
         self._bar_value = 0.0
         st = ttk.Frame(r)
         st.pack(fill="x", padx=10, pady=(4, 0))
         self.lbl_err = ttk.Label(st, text="!", style="Badge.TLabel", width=2, anchor="center")
-        self.lbl_status = ttk.Label(st, textvariable=self.v_status, wraplength=self._px(380), justify="left")
+        self.lbl_status = ttk.Label(st, textvariable=self.v_status, wraplength=self._px(MIN_W - 40), justify="left")
         self.lbl_status.pack(side="left", fill="x", expand=True)
         foot = ttk.Frame(r)
         foot.pack(fill="x", side="bottom", padx=10, pady=6)
         ttk.Label(foot, textvariable=self.v_conn, style="Muted.TLabel").pack(side="left")
         ttk.Button(foot, text="Refresh", command=self.refresh).pack(side="left", padx=(8, 0))
 
+        self._fit_job = None
+        r.bind("<Configure>", self._on_content_size, add="+")      # the window follows its content: nothing hangs off the bottom
         self.root.bind("<Button-1>", self._lora_outside, add="+")
         self.root.bind("<Control-Return>", lambda e: (self.generate(), "break")[1])
         self.root.bind("<Escape>", lambda e: self.stop())
@@ -905,15 +907,12 @@ class App:
     def _on_mode_ui(self):
         mode = self.v_mode.get()
         self._switch_context(mode)
-        if mode == "outpaint":
-            self.f_out.pack(fill="x", padx=10, pady=4, after=self.f_sharp)
-        else:
-            self.f_out.pack_forget()
+        self.f_out.pack_forget()      # the "Expand image" box (overlap) stays hidden: the default does the job
         if mode == "upscale":
             self.f_scale.pack(fill="x", padx=10, pady=4, after=self.f_sharp)
         else:
             self.f_scale.pack_forget()
-        if mode in SCALE_MODES:
+        if self._run_mode() in SCALE_MODES:
             self.f_detail.pack(fill="x", padx=10, pady=4, after=self.f_sharp)
         else:
             self.f_detail.pack_forget()
@@ -937,6 +936,13 @@ class App:
         self._update_availability()
         if self._sized:
             self._fit_height()
+
+    def _run_mode(self) -> str:
+        """The mode the bridge runs: the selected one, unless the model's mode says otherwise (Fibo Refine runs as Edit)."""
+        mode = self.v_mode.get()
+        m = self._model()
+        spec = m.modes.get(mode) if m else None
+        return (spec.run_as if spec and spec.run_as else mode)
 
     def _ref_style(self) -> str:
         return {v: k for k, v in REF_STYLES.items()}.get(self.v_refstyle.get(), "simple")
@@ -1042,13 +1048,19 @@ class App:
     def _sync_prompt_field(self, mode: str):
         """Remove object ignores the text: the field is emptied and greyed out, the typed text comes back afterwards."""
         t = self.t_prompt
+        m = self._model()
+        spec = m.modes.get(mode) if m else None
         if mode == "remove":
             if str(t.cget("state")) != "disabled":
                 self._prompt_kept = t.get("1.0", "end").strip()
-                t.delete("1.0", "end")
-                t.configure(state="disabled")
+            t.configure(state="normal")
+            t.delete("1.0", "end")
+            if spec is not None and spec.fixed_prompt:      # the instruction that is sent, for reading (and copying)
+                t.insert("1.0", REMOVE_PROMPT.format(shape="outline"))
+            t.configure(state="disabled")
         elif str(t.cget("state")) == "disabled":
             t.configure(state="normal")
+            t.delete("1.0", "end")                  # the fixed instruction shown for Remove goes away
             if getattr(self, "_prompt_kept", ""):
                 t.insert("1.0", self._prompt_kept)
             self._prompt_kept = ""
@@ -1227,7 +1239,7 @@ class App:
     def _update_llm_box(self):
         """The prompt-writer drop-down under the prompt: only on a tab whose model has text models to choose from."""
         m = self._model()
-        choices = m.llm if m is not None else ()
+        choices = m.llm if (m is not None and self.v_mode.get() != "txt2img") else ()   # no text-model variant of the t2i workflow
         shown = bool(self.f_llm.winfo_manager()) if hasattr(self.f_llm, "winfo_manager") else False
         if choices:
             self.cb_llm["values"] = [label for _, label in choices]
@@ -1274,7 +1286,7 @@ class App:
             self.v_mode.set(mode)
         spec = m.modes[mode]
         wf = self.v_workflow.get()
-        keep = wf in m.workflows() and (wf == spec.workflow or wf in m.alt_workflows)
+        keep = wf in m.workflows() and (wf == spec.workflow or (wf in m.alt_workflows and mode != "txt2img"))
         s = {"match": 0.0, **spec.settings}      # the colour pull-back belongs to the model's mode, it does not travel to the next tab
         if not keep:
             s["workflow"] = spec.workflow
@@ -1329,10 +1341,25 @@ class App:
         self._show_advanced()
         self._fit_height()
 
+    def _on_content_size(self, _event=None):
+        """The content changed its size (a section appeared, text wrapped): fit the window again, once, a moment later."""
+        if not getattr(self, "_sized", False) or self._fit_job is not None:
+            return
+
+        def fit():
+            self._fit_job = None
+            try:
+                if abs(self.root.winfo_reqheight() - self.root.winfo_height()) > 2:
+                    self._fit_height()
+            except tk.TclError:
+                pass
+        self._fit_job = self.root.after(60, fit)
+
     def _fit_height(self, width: int | None = None):
-        """Height to fit the content; the width stays (MIN_W at start, else what it is, e.g. after the user resized it)."""
+        """The window is MIN_W wide (fixed) and exactly as high as its content needs."""
         self.root.update_idletasks()
-        self.root.geometry(f"{width or self.root.winfo_width()}x{max(self._px(560), self.root.winfo_reqheight())}")
+        w, h = self._px(MIN_W), max(self._px(320), self.root.winfo_reqheight())
+        self.root.geometry(f"{w}x{h}")
 
     def _on_mode(self):
         if self.v_model.get():
@@ -1381,7 +1408,7 @@ class App:
 
     def _update_feather_state(self):
         """The edge feather is shown only while it has an effect (a soft layer mask is used)."""
-        on = self._uses_soft_mask()
+        on = self._uses_soft_mask() and self.v_mode.get() not in ("outpaint", "upscale", "refine")
         self.w_feather.configure(state="normal" if on else "disabled")
         shown = bool(self.f_feather.winfo_manager()) if hasattr(self.f_feather, "winfo_manager") else False
         if on and not shown:
@@ -1392,7 +1419,7 @@ class App:
             self._fit_height()
 
     def _on_lora_str(self, _value=None):
-        self.lbl_lora_str.configure(text=f"strength {float(self.v_lora_str.get()):.2f}")
+        self.lbl_lora_str.configure(text=f"{float(self.v_lora_str.get()):.2f}")
 
     def _on_match(self, _value=None):
         self.lbl_match.configure(text=f"{round(float(self.v_match.get()) * 100)} %")
@@ -1446,7 +1473,7 @@ class App:
 
     def _on_feather(self, _value=None):
         v = round(float(self.v_feather.get()) * 2) / 2
-        self.lbl_feather.configure(text="hard edge" if v <= 0 else f"{v:g} % of the shorter side")
+        self.lbl_feather.configure(text="hard edge" if v <= 0 else f"{v:g} %")
 
     def _wf_has_upscale(self, name: str) -> bool:
         if name == BUILTIN:
@@ -1507,7 +1534,7 @@ class App:
         """Grey out what has no effect in the current mode with the current workflow."""
         if not hasattr(self, "w_adv"):
             return
-        mode = self.v_mode.get()
+        mode = self._run_mode()
         scale = mode in SCALE_MODES
         masked = mode in ("inpaint", "remove", "reference", "outpaint")
         editor = self._ignores_mask()
@@ -1573,7 +1600,7 @@ class App:
                 cb.configure(state="disabled", text="Stage")
                 cb.grid_remove()          # a workflow without that stage shows nothing (the stages belong to MOSS / Flux 3 upscale)
         self._update_stage_scales(reset=reset_str)
-        self.w_detail.configure(state="normal" if self.v_mode.get() in SCALE_MODES else "disabled")
+        self.w_detail.configure(state="normal" if self._run_mode() in SCALE_MODES else "disabled")
         enhancing = has_writer and bool(self.v_enhance.get())
         self.cb_clip.configure(state="readonly" if (state == "disabled" and enhancing) else "disabled")
         self._update_feather_state()
@@ -1957,7 +1984,7 @@ class App:
                       sampler=self.v_sampler.get(), scheduler=self.v_scheduler.get(), seed=int(self.v_seed.get()),
                       denoise=1.0 if self.v_mode.get() == "txt2img" else float(self.v_denoise.get()))
         p.clip = "" if self.v_clip.get() in ("", CLIP_DEFAULT) else self.v_clip.get().strip()
-        return Request(mode=self.v_mode.get(), params=p, workflow=wf_path, base_res=int(self.v_res.get()),
+        return Request(mode=self._run_mode(), params=p, workflow=wf_path, base_res=int(self.v_res.get()),
                        context=float(self.v_context.get()), mask_grow=int(self.v_grow.get()),
                        mask_blur=int(self.v_blur.get()),
                        overlap=int(self.v_overlap.get()), variants=int(self.v_variants.get()),
@@ -1983,7 +2010,7 @@ class App:
             except (tk.TclError, ValueError):
                 pass
         try:
-            if self.v_mode.get() in SCALE_MODES and float(self.v_detail.get()) < 0.995:
+            if self._run_mode() in SCALE_MODES and float(self.v_detail.get()) < 0.995:
                 parts.append(f"mix{round(float(self.v_detail.get()) * 100)}")
         except (tk.TclError, ValueError):
             pass

@@ -29,7 +29,7 @@ mode, workflow, text model, denoise, base res., context, mask grow/blur, variant
 
 - Pick a preset in the dropdown to load it.
 - **Save** overwrites the selected preset, **Save as...** creates a new one, **Delete** removes it.
-- Presets are plain JSON files in `presets\`. Git tracks them, so you can share or revert them.
+- The model tabs bring each mode's settings; the plugin ships no presets any more (your own would be plain JSON files in `presets\`).
 - If a preset refers to a workflow or text model this machine does not have, the rest is still applied and the
   status line lists what was skipped.
 

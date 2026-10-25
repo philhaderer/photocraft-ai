@@ -127,6 +127,24 @@ def main():
         g = b.comfy.graphs[0]
         txt = next(n for n in g.values() if n.get("_meta", {}).get("title", "").startswith("pc:prompt"))["inputs"]["text"]
         assert "erase" in txt.lower() or "remove" in txt.lower(), txt
+    # Fibo text to image: its own workflow without image inputs (empty latent in the size of the canvas), nothing uploaded
+    pc, _, b = T.make(tempfile.mkdtemp(), with_sel=False)
+    b.comfy = T.FakeComfy()
+    req = Request(mode="txt2img", workflow=str(ROOT / "workflows" / "fibo2-t2i.json"), preset="X", run_no=1, enhance=False)
+    req.params = workflows.GenParams(prompt="a lighthouse at dusk", seed=5, width=64, height=64)
+    res = b.run(req)
+    g = b.comfy.graphs[0]
+    assert res["layers"] and links_ok(g) and not b.comfy.uploads, b.comfy.uploads
+    enc = next(n for n in g.values() if n["class_type"] == "TextEncodeFibo2")
+    assert enc["inputs"]["prompt"] == "a lighthouse at dusk" and not any(k.startswith("images.") for k in enc["inputs"])
+    lat = next(n for n in g.values() if n["class_type"] == "EmptyLatentImage")["inputs"]
+    assert (lat["width"], lat["height"]) == (res["size"][0], res["size"][1])
+    # Fibo Refine runs as a whole-image edit
+    pc, _, b = T.make(tempfile.mkdtemp(), with_sel=False)
+    b.comfy = T.FakeComfy()
+    req = Request(mode="edit", workflow=str(ROOT / "workflows" / "fibo2-edit-plain.json"), preset="X", run_no=1, enhance=False)
+    req.params = workflows.GenParams(prompt=models.FIBO_REFINE, seed=5)
+    assert b.run(req)["layers"]
     assert bridge.layer_visible({"visible": False}) is False and bridge.layer_visible({"hidden": True}) is False
     assert bridge.layer_visible({"id": 1}) is None
     print("ALL OK (round bridge)")
