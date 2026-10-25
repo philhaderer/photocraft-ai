@@ -27,9 +27,9 @@ MODE_LABELS = [
     ("txt2img", "Text to image"),
     ("edit", "Edit whole image"),
     ("inpaint", "Fill Selection"),
+    ("remove", "Remove Selection"),
     ("outpaint", "Expand image"),
     ("reference", "Insert reference image"),
-    ("remove", "Remove Selection"),
     ("upscale", "Upscale (new file)"),
     ("refine", "Refine (same size)"),
     ("img2img", "Image → image"),    # only for a workflow of your own (no model tab)
@@ -37,18 +37,15 @@ MODE_LABELS = [
 SHORT_MODES = {"txt2img": "Text", "edit": "Edit", "inpaint": "Fill Selection", "outpaint": "Expand", "reference": "Reference",
                "remove": "Remove Selection", "upscale": "Upscale", "refine": "Refine", "img2img": "Img2img"}   # layer names
 MODE_TIPS = {      # for a workflow of your own (no model tab); the tabs show the tips of their model (models.Model.mode_tips)
-    "inpaint": "Select an area (Lasso / Rectangular Marquee), type what should appear there, then Generate.",
-    "remove": "Select the object to remove (with the whole object inside), then Generate. Needs an editor workflow.",
-    "reference": "Insert a person or object from another picture.\n"
-                 "1. Put it on its own layer ABOVE everything else.\n2. Select where it should stand.\n3. Generate.\n"
-                 "The top layer is the reference; the visible layers below are the picture.",
-    "outpaint": "Extend the canvas with the Crop tool (confirm with Enter), then Generate: the empty area is filled.\n"
-                "Text is optional and describes what the new area shows.",
-    "edit": "Changes the WHOLE picture from your text. A selection is ignored.",
-    "img2img": "Reworks the picture (or the selection) from your text. Checkpoint workflows: Denoise says how far it may change.",
-    "upscale": "Enlarges the picture (or the selection) by the factor and opens the result as a NEW document. Needs an upscale workflow.",
-    "refine": "Cleans up the picture (or the selection) at the SAME size and puts the result on a new layer. Needs an upscale workflow.",
-    "txt2img": "Creates a new picture from text only, as a new layer in the size of the canvas. A selection is ignored.",
+    "inpaint": "Select an area, type what should appear there, then Generate.",
+    "remove": "Select the object (whole object inside), then Generate.",
+    "reference": "Put the reference on its own top layer, select where it goes, then Generate.",
+    "outpaint": "Extend the canvas with the Crop tool (Enter) and fill the new area white, then Generate.",
+    "edit": "Changes the whole picture from your text. A selection is ignored.",
+    "img2img": "Reworks the picture (or selection) from your text.",
+    "upscale": "Enlarges the picture (or selection) into a NEW document. Needs an upscale workflow.",
+    "refine": "Cleans up the picture (or selection) at the same size. Needs an upscale workflow.",
+    "txt2img": "New picture from text only, as a new layer. A selection is ignored.",
 }
 EXPAND_HINT = "Try removing the prompt for expanding"
 BUILTIN = "Built-in (checkpoint)"
@@ -202,12 +199,9 @@ class Tooltip:
             self.tip = None
 
 
-ENHANCE_TIP = ("On: the text model turns your short instruction into the detailed prompt the image model expects.\n"
-               "Off: your text goes to the image model exactly as typed.\n"
-               "Greyed out when the workflow has no text model.")
-LORA_TIP = ("A LoRA of the workflow that can be switched off (the checkbox names it); the slider sets how strong it works.\n"
-            "Greyed out when the workflow has no such LoRA.")
-STAGE_TIP = "A processing stage of the workflow that can be skipped (the checkbox names it)."
+ENHANCE_TIP = "On: a text model writes the detailed prompt from your short text. Off: your text is sent as typed."
+LORA_TIP = "The workflow's own LoRA: on/off, and its strength."
+STAGE_TIP = "A stage of the workflow you can switch off."
 FONT = "Segoe UI" if os.name == "nt" else "Sans"
 CLIP_DEFAULT = "(workflow default)"
 
@@ -555,16 +549,9 @@ class App:
             b.grid(row=0, column=2 + col, padx=(6 if col == 0 else 3, 0))
             Tooltip(b, tip)
 
-        ttk.Label(self.adv_body, text="Compare base res", style="Muted.TLabel").grid(row=4, column=0, sticky="w", pady=(6, 0))
+        # "Compare base res / context" (a test series) are not shown; the code behind them stays (the fields are never gridded)
         e1 = ttk.Entry(self.adv_body, textvariable=self.v_cmp_res)
-        e1.grid(row=4, column=1, sticky="ew", padx=6, pady=(6, 0))
-        ttk.Label(self.adv_body, text="Compare context", style="Muted.TLabel").grid(row=5, column=0, sticky="w", pady=(4, 0))
         e2 = ttk.Entry(self.adv_body, textvariable=self.v_cmp_ctx)
-        e2.grid(row=5, column=1, sticky="ew", padx=6, pady=(4, 0))
-        for w in (e1, e2):
-            Tooltip(w, "A test series: values separated by commas (1024, 1224, 1536 / 0.2, 0.4, 0.6). Generate then runs the "
-                       "same request once per value with the SAME seed; every result is a layer named with its value.\n"
-                       "Both filled = every combination.")
         self.f_enh = ttk.Frame(r)       # packed under Seed / Variants, above the prompt writer drop-down (see below)
         self.cb_enhance = ttk.Checkbutton(self.f_enh, text="LLM prompt enhancement", variable=self.v_enhance, command=self._on_workflow)
         self.cb_enhance.pack(side="left")
@@ -573,8 +560,7 @@ class App:
         self._last_vgl = ""             # the prompt the text model wrote in the last run
         self.b_copy = ttk.Button(self.f_enh, image=self._icons["copy"], style="Icon.TButton", command=self._copy_enhanced, state="disabled")
         self.b_copy.pack(side="left", padx=(8, 0))
-        self.tt_copy = Tooltip(self.b_copy, "Copy the enhanced prompt: puts the prompt the text model wrote in the last run on the clipboard "
-                                            "(greyed out until there is one).")
+        self.tt_copy = Tooltip(self.b_copy, "Copy the prompt the text model wrote in the last run.")
         self.cb_turbo = ttk.Checkbutton(mf, text="LoRA", variable=self.v_turbo)
         self.cb_turbo.grid(row=1, column=1, sticky="w", padx=6, pady=(4, 0))
         self.tt_turbo = Tooltip(self.cb_turbo, LORA_TIP)
@@ -586,7 +572,7 @@ class App:
         self.w_lora_str.grid(row=0, column=0, sticky="ew")
         self.lbl_lora_str = ttk.Label(self.f_lora, width=5, style="Muted.TLabel")
         self.lbl_lora_str.grid(row=0, column=1, sticky="e", padx=(6, 0))
-        Tooltip(self.w_lora_str, "How strong that LoRA works (0 = as if off, 1 = full). Starts at the value the workflow recommends.")
+        Tooltip(self.w_lora_str, "LoRA strength (0 = off, 1 = full).")
         # up to three switchable stages of a workflow (SeedVR2, an optional LoRA, skip-layer guidance ...), each its own checkbox
         self.stage_vars = [self.v_stage, self.v_stage2, self.v_stage3]
         self.stage_cbs, self.stage_tips = [], []
@@ -603,7 +589,7 @@ class App:
             sc.pack(side="left")
             lb = ttk.Label(sf, width=5, style="Muted.TLabel")
             lb.pack(side="left", padx=(4, 0))
-            Tooltip(sc, "How strong this LoRA works (0 = as if off, 1 = full).")
+            Tooltip(sc, "LoRA strength (0 = off, 1 = full).")
             sf.grid_remove()
             self.stage_scales.append((sf, sc, lb))
         self.cb_stage = self.stage_cbs[0]
@@ -626,7 +612,7 @@ class App:
         ff = ttk.Frame(r)               # shown only while a soft layer mask is used (see _update_feather_state)
         self.f_feather = ff
         ff.columnconfigure(1, weight=1)
-        lbl_f = ttk.Label(ff, text="Edge feather")
+        lbl_f = ttk.Label(ff, text="Edge feather", style="Muted.TLabel", width=14)
         lbl_f.grid(row=0, column=0, sticky="w")
         self.w_feather = sc = ttk.Scale(ff, from_=0, to=10, variable=self.v_feather, command=self._on_feather)
         sc.grid(row=0, column=1, sticky="ew", padx=8)
@@ -634,11 +620,7 @@ class App:
         self.lbl_feather.grid(row=0, column=2, sticky="e")
         self._on_feather()
         for w in (lbl_f, sc):
-            Tooltip(w, "Softens the seam where the new area meets your picture (0 = a sharp cut). "
-                       "How soft the edge of the new layer is, as a percentage of the selection's shorter side "
-                       "(2 % is the default, 0 = hard edge).\nApplies to the layer mask the result is pasted with. "
-                       "A feather you set in PhotoCraft (Weiche Kante) is kept as it is, this one is then ignored.\n"
-                       "Only shown when the result is pasted with a soft layer mask.")
+            Tooltip(w, "Softens the seam between the new area and your picture, in % of the selection's shorter side. 0 = hard edge.")
 
         self.f_ptop = ttk.Frame(r)      # "Prompt" and, where a mode has ready-made prompts, radio buttons that fill the field
         self.f_ptop.pack(fill="x", padx=10)
@@ -661,33 +643,29 @@ class App:
         self.grip = ttk.Frame(r, style="Grip.TFrame", height=self._px(7), cursor="sb_v_double_arrow")
         self.grip.pack(fill="x", padx=10, pady=(1, 0))
         self._grip_drag(self.grip, self.t_prompt)
-        Tooltip(self.grip, "Drag to make the prompt field taller or smaller.")
+        Tooltip(self.grip, "Drag to resize the prompt field.")
         self.lbl_hint = ttk.Label(r, text=EXPAND_HINT, style="Hint.TLabel")   # Expand image, Upscale, Refine (see _update_prompt_hint)
         self.t_prompt.insert("1.0", self.state.get("prompt", ""))
         self.f_sharp = ttk.Frame(r)     # a light sharpening of the finished result, always at hand
         self.f_sharp.pack(fill="x", padx=10, pady=(6, 0))
         self.f_sharp.columnconfigure(1, weight=1)
-        lb_sharp = ttk.Label(self.f_sharp, text="Sharpen result", style="Muted.TLabel")
+        lb_sharp = ttk.Label(self.f_sharp, text="Sharpen result", style="Muted.TLabel", width=14)
         lb_sharp.grid(row=0, column=0, sticky="w")
         self.w_sharpen = ttk.Scale(self.f_sharp, from_=0.0, to=1.0, variable=self.v_sharpen, command=self._on_sharpen)
         self.w_sharpen.grid(row=0, column=1, sticky="ew", padx=8)
-        self.lbl_sharpen = ttk.Label(self.f_sharp, width=6, style="Muted.TLabel")
+        self.lbl_sharpen = ttk.Label(self.f_sharp, width=9, style="Muted.TLabel", anchor="e")
         self.lbl_sharpen.grid(row=0, column=2)
-        Tooltip(self.w_sharpen, "Not a ComfyUI setting: after the picture is made, the plugin sharpens it a little (an unsharp mask; "
-                                "radius follows the picture's size). 0 = off, 100 % = clearly crisper.\n"
-                                "Helps a result that comes out slightly soft.")
+        Tooltip(self.w_sharpen, "Sharpens the finished result a little. 0 = off.")
         self._on_sharpen()
         self._sharp_widgets = (lb_sharp, self.w_sharpen, self.lbl_sharpen)   # hidden in Expand image
-        lb_match = ttk.Label(self.f_sharp, text="Match colours", style="Muted.TLabel")
+        lb_match = ttk.Label(self.f_sharp, text="Match colours", style="Muted.TLabel", width=14)
         lb_match.grid(row=1, column=0, sticky="w", pady=(2, 0))
         self.w_match = ttk.Scale(self.f_sharp, from_=0.0, to=1.0, variable=self.v_match, command=self._on_match)
         self.w_match.grid(row=1, column=1, sticky="ew", padx=8, pady=(2, 0))
-        self.lbl_match = ttk.Label(self.f_sharp, width=6, style="Muted.TLabel")
+        self.lbl_match = ttk.Label(self.f_sharp, width=9, style="Muted.TLabel", anchor="e")
         self.lbl_match.grid(row=1, column=2, pady=(2, 0))
         self._match_widgets = (lb_match, self.w_match, self.lbl_match)   # shown only where the function can use them
-        Tooltip(self.w_match, "Fill, Expand and Reference: when the new area is more colourful than its surroundings, its saturation is "
-                              "pulled back towards the picture's. 0 = off, 100 % = as far as the surroundings "
-                              "(never more than halved, never raised).")
+        Tooltip(self.w_match, "Pulls the new area's saturation back towards its surroundings. 0 = off.")
         self._on_match()
         self.f_neg = ttk.Frame(r)
         self.f_neg.pack(fill="x", padx=10, pady=(6, 0), before=self.f_sharp)     # directly under the prompt
@@ -709,8 +687,7 @@ class App:
         ttk.Label(head, text="Extra LoRAs (style, detail ...)", style="Muted.TLabel").pack(side="left")
         self.b_addlora = ttk.Button(head, text="+ Add", style="Link.TButton", command=self._add_lora_row)
         self.b_addlora.pack(side="left", padx=8)
-        Tooltip(self.b_addlora, "Adds a LoRA on top of the model's own ones. Type to search the list; the drop-down offers the LoRAs "
-                                "of this model's folder first. Strength 0 to 1.5.")
+        Tooltip(self.b_addlora, "Adds an extra LoRA (strength 0 to 1.5).")
         self.f_xl_rows = ttk.Frame(self.f_xl)
         self.f_xl_rows.pack(fill="x")
         sf = ttk.Frame(r)    # Seed and Variants: directly under the negative prompt
@@ -774,8 +751,7 @@ class App:
         self.w_detail.grid(row=0, column=1, sticky="ew", padx=8)
         self.lbl_detail = ttk.Label(self.f_detail, width=5, style="Muted.TLabel")
         self.lbl_detail.grid(row=0, column=2)
-        Tooltip(self.w_detail, "How much of the new image is used. 100 % = only the new image; less mixes in the plainly scaled source image, "
-                               "which tames a result that is too sharp or has odd textures. 0 % = only the source image.")
+        Tooltip(self.w_detail, "100 % = only the new image; less mixes in the plain scaled original (tames over-sharp results).")
         self._on_detail()
 
         self.f_ref = ttk.LabelFrame(r, text="Reference image")
@@ -789,33 +765,21 @@ class App:
         self.cb_refstyle.pack(side="left", padx=6)
         self.cb_refstyle.bind("<<ComboboxSelected>>", lambda e: self._update_availability())
         for w in (lbs, self.cb_refstyle):
-            Tooltip(w, "Two ways to tell the model what to do, to compare:\n"
-                       "Classic: the reference is image_1, the picture image_2, a long fixed instruction (keep the subject exactly, "
-                       "match the light), optional rough placement.\n"
-                       "Simple: the picture is image1, the reference image2 and one sentence: \"Put the subject from image2 into "
-                       "the <place> of the picture from image1.\" plus your text. No rough placement.")
+            Tooltip(w, "Classic: long instruction, reference first. Simple: one short sentence, picture first.")
         self.cb_cutout = ttk.Checkbutton(self.f_ref, text="Cut out the reference (remove its background)", variable=self.v_cutout)
         self.cb_cutout.pack(anchor="w", padx=6, pady=(0, 4))
-        Tooltip(self.cb_cutout, "Simple style: adds \"Remove the background of image2 first.\" to the sentence, so the reference "
-                                "needs no cutting out beforehand.\nPlace the reference layer where it belongs (or select the "
-                                "place): without a selection its position and size are the place.")
+        Tooltip(self.cb_cutout, "Asks the model to remove the reference's background first.")
         self.cb_collage = ttk.Checkbutton(self.f_ref, text="Rough placement in the picture", variable=self.v_collage)
         self.cb_collage.pack(anchor="w", padx=6, pady=(0, 6))
-        Tooltip(self.cb_collage, "Pastes a rough, scaled copy of the reference into the selection of the picture the model "
-                                 "sees, so it knows where the subject goes and how large it is. The model redraws it.\n"
-                                 "Off: the model only gets the instruction (and where the selection lies in words).\n"
-                                 "The text model is not used in this mode.")
+        Tooltip(self.cb_collage, "Pastes a rough copy of the reference into the selection to show where it goes.")
 
         self.f_img = ttk.LabelFrame(self.adv_body, text="Image and mask")
         self.f_img.grid(row=7, column=0, columnspan=2, sticky="ew", pady=(8, 0))
         tips = {
-            "Base res.": "Side (px) of the square whose area the model works at. Flux/Fibo/SDXL: 1024, SD 1.5: 512-768. "
-                         "Higher = more detail but slower.",
-            "Context": "How much of the surroundings the model sees around the selection, as a fraction of the selection's "
-                       "longer side (0.4 = 40 %). More context fits the scene better, but the area you fill gets smaller in the crop.",
-            "Mask grow": "Grows the mask the model gets by this many px so the generation overlaps the edge. Only for workflows "
-                         "that use the mask.",
-            "Mask blur": "Softens the edge of the mask the model gets by this many px. Same as above: only for workflows that use the mask.",
+            "Base res.": "Size (px) the model works at. Higher = more detail, slower.",
+            "Context": "Surroundings the model sees, as a fraction of the selection's longer side.",
+            "Mask grow": "Grows the model's mask by this many px (mask workflows only).",
+            "Mask blur": "Softens the model's mask edge (mask workflows only).",
         }
         self.w_adv = {}
         for i, (lbl, var, lo, hi, inc) in enumerate((("Base res.", self.v_res, 256, 2048, 64),
@@ -831,8 +795,7 @@ class App:
             Tooltip(sp, tips[lbl])
         self.cb_fooocus = ttk.Checkbutton(self.f_img, text="Fooocus inpaint (SDXL, as in Krita AI Diffusion)", variable=self.v_fooocus)
         self.cb_fooocus.grid(row=2, column=0, columnspan=4, sticky="w", padx=6, pady=(0, 6))
-        Tooltip(self.cb_fooocus, "Only for the built-in inpaint graph with an SDXL checkpoint (Fooocus inpaint patch). "
-                                 "Has no effect with a workflow.")
+        Tooltip(self.cb_fooocus, "Built-in SDXL inpaint graph only.")
         lm = ttk.Frame(r)               # under the edge feather, outside Advanced
         self.f_lm = lm
         lm.pack(fill="x", padx=10, pady=(2, 4), before=self.f_adv)
@@ -842,12 +805,7 @@ class App:
         cb_lm.pack(side="left", padx=6)
         cb_lm.bind("<<ComboboxSelected>>", lambda e: self._update_feather_state())
         for w in (lb, cb_lm):
-            Tooltip(w, "How the result is blended into your image.\n"
-                       "auto: no mask where the model redraws the whole crop on purpose (a mask would cut off what it changed,\n"
-                       "   e.g. a person's shadow); soft for everything else - recommended.\n"
-                       "soft: a feathered mask (see Edge feather).\n"
-                       "hard (from selection): the selection exactly as PhotoCraft has it, incl. a feather you set there.\n"
-                       "none: the whole generated area replaces the pixels, no mask.")
+            Tooltip(w, "How the result is blended into your picture: auto (recommended), soft (feathered), hard (selection as is), none.")
 
         bf = ttk.Frame(r)
         bf.pack(fill="x", padx=10, pady=(8, 2))
@@ -861,9 +819,8 @@ class App:
         self.b_undo.pack(side="left", fill="y", padx=(6, 0))
         self.b_redo = ttk.Button(bf, image=self._icons["redo"], style="Icon.TButton", command=self.redo_edit)
         self.b_redo.pack(side="left", fill="y", padx=(6, 0))
-        Tooltip(self.b_redo, "Brings the AI edit back after an Undo (until the next generation).")
-        Tooltip(self.b_undo, "Back to the state before the last generation in one click (a history snapshot taken at the start).\n"
-                             "The history list shows every step the plugin made; this skips them all.")
+        Tooltip(self.b_redo, "Brings the AI edit back after an Undo.")
+        Tooltip(self.b_undo, "Back to the state before the last generation.")
 
         # one bar for the whole run (prompt, then image) with the current step written next to it
         self.v_pl = tk.StringVar(value="")
@@ -1050,7 +1007,7 @@ class App:
             rb = ttk.Radiobutton(self.f_pchoice, text=label, value=label, variable=self.v_pchoice,
                                  command=lambda t=text: self._insert_prompt(t))
             rb.pack(side="left", padx=(0, 8))
-            Tooltip(rb, tip + "\n\nPuts this text into the prompt field; you can edit it.")
+            Tooltip(rb, tip)
 
     def _insert_prompt(self, text: str):
         t = self.t_prompt
@@ -1118,8 +1075,8 @@ class App:
         ent.bind("<Down>", lambda e: self._lora_focus_list(rec))
         ent.bind("<Escape>", lambda e: (self._lora_hide(rec), "break")[1])
         Tooltip(rm, "Remove this LoRA")
-        Tooltip(btn, "Show all LoRAs (this model's folder first); scroll the list with the wheel or the bar")
-        Tooltip(ent, "Type to search: a list opens under the box with the LoRAs that contain every word you typed. Click one to take it.")
+        Tooltip(btn, "Show all LoRAs")
+        Tooltip(ent, "Type to search, click a LoRA to take it.")
         self.lora_rows.append(rec)
         self.b_addlora.configure(state="normal" if len(self.lora_rows) < self.LORA_MAX else "disabled")
 
@@ -1562,7 +1519,7 @@ class App:
         has_writer = self._has_text_model() and self.v_mode.get() not in ("reference", "remove")  # these modes: fixed instruction
         self.cb_enhance.configure(state="normal" if has_writer else "disabled")
         llm = next((m for m in (writer_model(t) for t in self._wf_templates()) if m), "")
-        self.tt_enhance.text = ENHANCE_TIP + (f"\n\nText model in this workflow: {llm}" if llm else "")
+        self.tt_enhance.text = ENHANCE_TIP + (f"\nText model: {llm}" if llm else "")
         name = next((n for n in (writer_name(t) for t in self._wf_templates()) if n), "")
         self.cb_enhance.configure(text="LLM prompt enhancement" + (f" ({name})" if name else ""))
         has_lora = self._has_lora_switch()
@@ -1582,7 +1539,7 @@ class App:
                     break
         self.w_lora_str.configure(state="normal" if has_lora and self.v_turbo.get() else "disabled")
         tip = next((t for t in (lora_tip(x) for x in self._wf_templates()) if t), "")
-        self.tt_turbo.text = LORA_TIP + (("\n\n" + tip) if tip else "")
+        self.tt_turbo.text = tip or LORA_TIP
         stages = self._stages()
         reset_str = False
         if self.v_workflow.get() != self._stage_wf:   # another workflow: its stages start the way it says

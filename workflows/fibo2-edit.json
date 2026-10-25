@@ -176,7 +176,7 @@
   "_meta": {
    "title": "pc:prompt",
    "pc_llm_name": "Qwen 3.5 9B",
-   "pc_llm_tip": "Fibo prompt writer: Qwen 3.5 9B (native, int8 convrot) turns your short instruction into the long structured VGL prompt Fibo expects. About 15-25 s extra per run."
+   "pc_llm_tip": "Qwen 3.5 9B writes the long structured (VGL) prompt. About 20 s extra."
   }
  },
  "13": {

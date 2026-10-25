@@ -656,6 +656,19 @@ def fix_lora_names(graph: dict, available) -> tuple[dict, list[str]]:
                     inp["lora_name"] = real
                 else:
                     missing.append(name)
+        elif isinstance(inp.get("loras"), str):        # AusBoss' LoRA Loader: a JSON list of rows {name, strength, enabled}
+            try:
+                rows = json.loads(inp["loras"])
+            except ValueError:
+                continue
+            for row in rows if isinstance(rows, list) else []:
+                if isinstance(row, dict) and row.get("enabled", True) and row.get("name"):
+                    real = lora_file(str(row["name"]), available)
+                    if real:
+                        row["name"] = real
+                    else:
+                        missing.append(str(row["name"]))
+            inp["loras"] = json.dumps(rows, separators=(",", ":"))
     return g, missing
 
 

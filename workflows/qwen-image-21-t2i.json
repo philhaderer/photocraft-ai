@@ -22,7 +22,7 @@
   "_meta": {
    "title": "pc:lora Qwen turbo LoRA",
    "pc_lora_label": "Turbo LoRA",
-   "pc_lora_tip": "Qwen Image 2.1 Turbo LoRA: on = about 10 steps; off = the full 25 steps, slower."
+   "pc_lora_tip": "Turbo LoRA: about 10 steps. Off = 25 steps, slower."
   }
  },
  "3": {
@@ -196,7 +196,7 @@
   "_meta": {
    "title": "pc:prompt",
    "pc_llm_name": "Qwen 3.5 9B",
-   "pc_llm_tip": "Qwen Image 2.1 prompt enhancer: the Qwen 3.5 9B (W4A8 GPTQ) text model of MOSS with the official Qwen Image 2.1 enhancer system prompt. Not the dedicated enhancer checkpoint (qwen3.5_9b_qwen_image_2.1_pe_t2i, not installed)."
+   "pc_llm_tip": "Qwen prompt enhancer (Qwen 3.5 9B)."
   }
  },
  "17": {

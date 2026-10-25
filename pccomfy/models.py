@@ -53,48 +53,42 @@ FLUX2_REFINE_PROMPTS = (
     ("Studio portrait", RELIGHT_STUDIO, "Relight: a professionally lit studio portrait with soft, diffused light."),
 )
 FIBO_REFINE = "relight the scene to natural lighting"
-REMOVE_NAME_TIP = "Optional: name what to remove (\"the dog\"). Empty = everything inside the selection."
-DESCRIBE_TIP = "Describe the image before this text for better results."
+REMOVE_NAME_TIP = "Optional: name what to remove (\"the dog\")."
+DESCRIBE_TIP = "Describe the image before this text."
 STOCK_PROMPTS = {PLACEHOLDER, FLUX2_DEFAULT, FLUX3_DEFAULT, RELIGHT_NEUTRAL, RELIGHT_STUDIO, FIBO_REFINE}   # texts the window may replace when the mode changes
 
 # The tooltips of the mode buttons are written per model: each tab shows only what is true for its own model.
-_TXT = "Creates a new picture from text only, as a new layer in the size of the canvas. A selection is ignored."
-_EDIT = ("Changes the WHOLE picture from your text, like talking to an image editor (\"make it night\", \"turn the car red\"). "
-         "A selection is ignored.")
-_EXPAND = ("Extend the canvas with the Crop tool (confirm with Enter), then Generate: the empty area is filled.\n"
-           "The text is optional and describes what the new area shows; an empty prompt often fills best.\n"
-           "Large extensions drift in style and tone at the seam: extend in smaller steps and repeat.")
-_REMOVE = "Select the object to remove (tightly, but with the whole object inside), then Generate. No text needed."
+_TXT = "New picture from text only, as a new layer. A selection is ignored."
+_EDIT = "Changes the whole picture from your text (\"make it night\"). A selection is ignored."
+_EXPAND = ("Extend the canvas with the Crop tool (Enter) and fill the new area white, then Generate.\n"
+           "Text is optional; an empty prompt often works best. Expand large areas in small steps.")
+_REMOVE = "Select the object (whole object inside), then Generate. Text is optional: name what to remove (\"the dog\")."
+_REF = "Put the reference on its own top layer, select where it goes, then Generate. The layers below are the picture."
+_UP = "Enlarges the picture (or selection) into a NEW document. Describe the picture before the prompt text. Max 24 MP."
 
 QWEN = Model(
     "qwen", "Qwen 2.1 Edit",
-    "Qwen Image 2.1 Edit: an instruction editor with a very good Fill Selection, Remove Selection (works without a prompt), "
-    "Expand and whole-image edits. Reference images work with the picture as image 1 and the inserted one as image 2.\n"
-    "Base res. 1024 is the best size for it: 1224 and 1536 shift the filled area.",
+    "Qwen Image 2.1 Edit: instruction editor, best at Fill Selection, Remove Selection and Expand. Base res. 1024 works best.",
     {
         "txt2img": Mode("qwen-image-21-t2i.json", dict(base_res=1024, turbo=True, layer_mask="none", enhance=False)),
         "edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="none")),
         "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=4.0)),
         "outpaint": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="auto")),
         "reference": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, ref_style="simple", ref_cutout=True, layer_mask="auto")),
-        "remove": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=10.0)),
+        "remove": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
     },
     mode_tips={
         "txt2img": _TXT,
         "edit": _EDIT,
-        "inpaint": "Select an area (Lasso / Rectangular Marquee), type what should appear there (\"a helicopter on the meadow\"), "
-                   "then Generate.\nQwen redraws the area in its surroundings; the text is wrapped in a fixed instruction.",
+        "inpaint": "Select an area, type what should appear there, then Generate.",
         "outpaint": _EXPAND,
-        "reference": "Insert a person or object with the look of another picture.\n"
-                     "1. Put it on its own layer ABOVE everything else.\n2. Select where it should stand.\n3. Generate.\n"
-                     "The top layer is the reference (image 2); the visible layers below are the picture (image 1). "
-                     "\"Cut out the reference\" adds a sentence that removes its background first.",
-        "remove": _REMOVE + "\nThe object is erased and the scenery behind it painted.",
+        "reference": _REF,
+        "remove": _REMOVE,
     })
 
 FLUX2 = Model(
     "flux2", "Flux 2 Klein Edit",
-    "FLUX.2 Klein 9B: whole-image edits, Remove Selection, Expand, upscale and refine (the Ultra real LoRA is the switch).",
+    "FLUX.2 Klein 9B: whole-image edits, Remove Selection, Expand, Upscale, Refine.",
     {
         "edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none")),
         "remove": Mode("flux2-klein-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
@@ -103,21 +97,16 @@ FLUX2 = Model(
         "refine": Mode("flux2-klein-upscale.json", dict(turbo=True, context=0.0), FLUX2_DEFAULT, FLUX2_REFINE_PROMPTS, DESCRIBE_TIP),
     },
     mode_tips={
-        "edit": _EDIT + "\nIf nothing happens, generate again (new seed) or word it more fully (\"Remove all buildings and fill with sky\").",
-        "remove": _REMOVE + "\nThe text is optional: naming the object (\"the dog\") tells the model what to take out. "
-                  "Works only sometimes: generate again if the object is still there.",
+        "edit": _EDIT + " Nothing happens? Generate again or word it more fully.",
+        "remove": _REMOVE + " Works only sometimes: generate again.",
         "outpaint": _EXPAND,
-        "upscale": "Enlarges the picture (or the selection) by the factor and opens the result as a NEW document; your document stays as it is.\n"
-                   "The prompt starts with the workflow's own sentence; describe the picture in front of it for better results.\n"
-                   "Results above 24 megapixels are refused.",
-        "refine": "Cleans up the picture (or the selection) at the SAME size and puts the result on a new layer.\n"
-                  "The prompt starts with the workflow's own sentence; describe the picture in front of it for better results. "
-                  "Neutral / Studio portrait relight the picture.",
+        "upscale": _UP,
+        "refine": "Cleans up the picture (or selection) at the same size, as a new layer. Describe the picture before the prompt text.",
     })
 
 FLUX3 = Model(
     "flux3", "Flux 3 Klein Edit",
-    "FLUX.3 Klein: text to image (with the Flux 3 prompt upsampler, switchable) and whole-image edits (base res 1536), Remove Selection, Expand and the SeedVR2 + tiles upscale (the Restore LoRA and the SeedVR2 stage are switches).",
+    "FLUX.3 Klein: text to image, whole-image edits, Remove Selection, Expand, Upscale.",
     {
         "txt2img": Mode("flux3-klein-t2i.json", dict(base_res=1536, layer_mask="none", enhance=False)),
         "edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none")),
@@ -126,13 +115,11 @@ FLUX3 = Model(
         "upscale": Mode("flux3-klein-upscale.json", dict(scale=1.5, turbo=True, stage_on=True, context=0.0), FLUX3_DEFAULT, prompt_tip=DESCRIBE_TIP),
     },
     mode_tips={
-        "txt2img": _TXT + "\nThe Flux 3 prompt upsampler (the checkbox under the prompt) can write the long prompt from your short text.",
-        "edit": _EDIT + "\nIf nothing happens, generate again (new seed) or word it more fully (\"Remove all buildings and fill with sky\").",
-        "remove": _REMOVE + "\nThe text is optional: naming the object (\"the dog\") tells the model what to take out.",
+        "txt2img": _TXT + " The checkbox lets the prompt upsampler write the long prompt.",
+        "edit": _EDIT + " Nothing happens? Generate again or word it more fully.",
+        "remove": _REMOVE,
         "outpaint": _EXPAND,
-        "upscale": "Enlarges the picture (or the selection) by the factor and opens the result as a NEW document; your document stays as it is.\n"
-                   "SeedVR2 cleans the photo, Flux 3 Klein redraws it in tiles. The prompt starts with the workflow's own sentence; "
-                   "describe the picture in front of it for better results.\nResults above 24 megapixels are refused.",
+        "upscale": "Enlarges into a NEW document: SeedVR2 cleans, Flux 3 redraws in tiles. Describe the picture before the prompt text. Max 24 MP.",
     })
 
 # MOSS: the DMD2 speed LoRA (8 steps, CFG 1.5) is the model's own LoRA; the Lenovo UltraReal LoRA and the skip-layer
@@ -140,14 +127,13 @@ FLUX3 = Model(
 _MOSS = dict(turbo=True, stage_on=True, stage2_on=True)
 MOSS = Model(
     "moss", "MOSS Image",
-    "MOSS-Image 5B: a text-to-image model. Text to image (with its own prompt enhancer) and Expand. "
-    "It has no instruction-edit functions (yet) and no Fill Selection. Likes 1.5 to 2 MP. The DMD2 LoRA makes it fast (8 steps, CFG 1.5).",
+    "MOSS-Image: text to image and Expand. No edit functions.",
     {
         "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "base_res": 1280, "layer_mask": "none", "enhance": False}),
         "outpaint": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "auto", "match": 0.5}),
     },
     mode_tips={
-        "txt2img": _TXT + "\nIts own prompt enhancer can write the long English caption MOSS likes.",
+        "txt2img": _TXT + " The checkbox lets MOSS's own enhancer write the prompt.",
         "outpaint": _EXPAND,
     })
 
@@ -155,21 +141,19 @@ MOSS = Model(
 # (starts off, like the other models'); Expand redraws the new area with the same mask recipe as MOSS.
 KREA2 = Model(
     "krea2", "Krea 2 Turbo",
-    "Krea-2 Turbo: a fast text-to-image model (8 steps). Text to image (with its own prompt enhancer, switchable) and Expand. "
-    "It has no instruction-edit functions and no Fill Selection.",
+    "Krea-2 Turbo: fast text to image and Expand.",
     {
         "txt2img": Mode("krea2-turbo-t2i.json", dict(base_res=1024, layer_mask="none", enhance=False)),
         "outpaint": Mode("krea2-turbo-inpaint.json", dict(base_res=1024, layer_mask="auto")),
     },
     mode_tips={
-        "txt2img": _TXT + "\nIts own prompt enhancer (the checkbox under the prompt) can write the long prompt from your short text.",
-        "outpaint": _EXPAND + "\nA test for Krea 2 Turbo.",
+        "txt2img": _TXT + " The checkbox lets Krea's own enhancer write the prompt.",
+        "outpaint": _EXPAND,
     })
 
 FIBO = Model(
     "fibo", "Fibo 2.0 Edit",
-    "Fibo 2.0 Edit Turbo: an instruction editor. Text to image, Fill, Remove Selection, Reference (the simple style works best), whole-image edits and Refine (relight). "
-    "The checkbox \"LLM prompt enhancement\" lets Qwen 3.5 9B write the long structured prompt (VGL) from your short text.",
+    "Fibo 2.0 Edit Turbo: instruction editor with all edit functions.",
     {
         "txt2img": Mode("fibo2-t2i.json", dict(base_res=1224, layer_mask="none", enhance=False)),
         "edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False)),
@@ -177,28 +161,16 @@ FIBO = Model(
         "inpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False)),
         "outpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
         "reference": Mode("fibo2-edit.json", dict(base_res=1024, ref_style="simple", ref_cutout=True, layer_mask="auto", enhance=False)),
-        "remove": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False)),
+        "remove": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
     },
     mode_tips={
         "txt2img": _TXT,
         "edit": _EDIT,
-        "refine": "Relights the whole picture (a whole-image edit) and puts the result on a new layer at the same size. "
-                  "The prompt starts with \"relight the scene to natural lighting\"; change it for other edits. A selection is ignored.",
-        "inpaint": "Select an area (Lasso / Rectangular Marquee), type what should appear there (\"a helicopter on the meadow\"), "
-                   "then Generate. A text is required; to take something away use Remove Selection.\n"
-                   "The selection is drawn into the picture as a red outline and your text is wrapped in a fixed instruction "
-                   "(place it only inside the outline), so the object lands where you marked.\n"
-                   "With \"LLM prompt enhancement\" on, a text model writes the long prompt from your text (about 20 s slower).",
+        "refine": "Relights the whole picture as a new layer at the same size. Change the prompt for other edits.",
+        "inpaint": "Select an area, type what should appear there (text required), then Generate. To take something away use Remove Selection.",
         "outpaint": _EXPAND,
-        "reference": "Insert a person or object with the look of a picture (e.g. a Viking).\n"
-                     "1. Put it on its own layer ABOVE everything else (cut out, transparent).\n2. Select where it should stand.\n3. Generate.\n"
-                     "The top layer is the reference; the visible layers below are the picture. "
-                     "\"Rough placement\" (classic style) pastes a scaled copy into the selection so the position is kept. "
-                     "Your text is added to a fixed instruction (\"standing, facing left\").",
-        "remove": _REMOVE + "\nA red outline is drawn into the picture the model gets (never into your document) and a fixed "
-                  "instruction says: erase everything inside it and paint the scenery behind. "
-                  "If the object is still there the plugin tries again by itself (up to 3 times, new seed each).\n"
-                  "If a part of the object is already gone, include what is left in the selection.",
+        "reference": _REF + " Cut the reference out first.",
+        "remove": _REMOVE + " Retries up to 3 times if the object stays.",
     })
 
 MODELS = [QWEN, FLUX2, FLUX3, MOSS, KREA2, FIBO]

@@ -175,7 +175,7 @@
   "_meta": {
    "title": "pc:prompt",
    "pc_llm_name": "Qwen 3.5 9B",
-   "pc_llm_tip": "Flux 3 prompt upsampler: Qwen 3.5 9B (W4A8) with a text-to-image system prompt that keeps natural colours."
+   "pc_llm_tip": "Flux 3 prompt upsampler (Qwen 3.5 9B)."
   }
  },
  "173": {

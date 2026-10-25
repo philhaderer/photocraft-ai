@@ -158,6 +158,22 @@ def main():
     assert packs and packs[0][1].get("after") is app.f_neg, packs
     assert app.sep_adv is not None
 
+    # Restore LoRA (AusBoss loader): the name is matched against the server's list; a missing file is an error, never a silent skip
+    f3 = workflows.load_template(t.ROOT / "workflows" / "flux3-klein-upscale.json")
+    assert f3["9"]["inputs"]["on_missing"] == "error"
+    g3, miss = workflows.fix_lora_names(f3, ["Flux 3\\flux-3-image-klein-restore.safetensors"])
+    assert not miss and json.loads(g3["9"]["inputs"]["loras"])[0]["name"] == "Flux 3\\flux-3-image-klein-restore.safetensors"
+    g3, miss = workflows.fix_lora_names(f3, ["Flux 3/Flux-3-Image-Klein-Restore.safetensors"])      # other separator / case: the listed name is used
+    assert not miss and json.loads(g3["9"]["inputs"]["loras"])[0]["name"] == "Flux 3/Flux-3-Image-Klein-Restore.safetensors"
+    _, miss = workflows.fix_lora_names(f3, ["Flux 2\\ultra_real_v4.safetensors"])
+    assert miss == ["Flux 3\\flux-3-image-klein-restore.safetensors"]
+    off, miss = workflows.fix_lora_names(workflows.bypass_lora(f3), [])                          # switched off: nothing to find
+    assert not miss
+    # Remove Selection: the text box is usable on every model that has the function
+    for key in ("qwen", "flux2", "flux3", "fibo"):
+        assert models.BY_KEY[key].modes["remove"].remove_text, key
+    assert [k for k, _ in gui.MODE_LABELS][:6] == ["txt2img", "edit", "inpaint", "remove", "outpaint", "reference"]
+
     # Remove Selection with the name of the object (Flux Klein): the instruction names it; runs.jsonl says what was sent
     import tempfile
     import test_reference_mode as T

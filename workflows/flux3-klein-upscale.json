@@ -69,7 +69,7 @@
   "inputs": {
    "loras": "[{\"name\":\"Flux 3\\\\flux-3-image-klein-restore.safetensors\",\"strength\":1,\"enabled\":true,\"triggers\":\"\"}]",
    "trigger_separator": ", ",
-   "on_missing": "skip",
+   "on_missing": "error",
    "model": [
     "8",
     0
@@ -78,7 +78,7 @@
   "_meta": {
    "title": "pc:lora LoRA Loader - Restore LoRA",
    "pc_lora_label": "Restore LoRA",
-   "pc_lora_tip": "Restore LoRA: on = faces and details stay closer to the picture; off = plain Flux 3 Klein."
+   "pc_lora_tip": "Restore LoRA: faces and details stay closer to the picture."
   }
  },
  "10": {
@@ -327,7 +327,7 @@
      "151",
      "152"
     ],
-    "tip": "SeedVR2 cleans the picture before Flux 3 redraws it in tiles. Off = Flux 3 works on the plainly scaled picture (less of the SeedVR2 sharpness)."
+    "tip": "SeedVR2 cleans the photo before Flux redraws it."
    }
   }
  },

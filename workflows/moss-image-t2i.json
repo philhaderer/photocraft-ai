@@ -42,7 +42,7 @@
   "_meta": {
    "title": "pc:lora DMD2 speed LoRA",
    "pc_lora_label": "DMD2 speed LoRA (8 steps)",
-   "pc_lora_tip": "DMD2 is a distillation LoRA: 8 steps at CFG 1.5 instead of 25 steps at CFG 2.5 - about three times faster. Strength 1.0 is what it is trained for; 0.7 is sometimes nicer (less contrast). Off = the full recipe (25 steps, CFG 2.5)."
+   "pc_lora_tip": "DMD2 speed LoRA: 8 steps instead of 25. Off = full recipe (25 steps, CFG 2.5)."
   }
  },
  "5": {
@@ -63,7 +63,7 @@
      "5"
     ],
     "default_on": false,
-    "tip": "A realism LoRA for MOSS (photographic, phone-camera look). Starts off: switch it on and compare with the same seed. Add it with a lower strength under Extra LoRAs if it is too strong.",
+    "tip": "Realism LoRA (phone-camera look).",
     "strength": true
    }
   }
@@ -88,7 +88,7 @@
      "7"
     ],
     "default_on": false,
-    "tip": "Skip-layer guidance: the negative branch skips layer 22 for the first half of the steps (the official MOSS setting). Gives cleaner detail, can look over-processed / over-saturated. Off = more natural but details can collapse. Only works with CFG above 1. Test it with the same seed."
+    "tip": "Skip-layer guidance: cleaner detail, can look over-processed."
    }
   }
  },
@@ -157,7 +157,7 @@
   },
   "_meta": {
    "title": "pc:prompt",
-   "pc_llm_tip": "MOSS prompt enhancer: the text encoder of the model itself (Qwen 3.5 9B, W4A8 GPTQ) with the official MOSS system prompt (plus a line that asks for natural colours).",
+   "pc_llm_tip": "MOSS prompt enhancer (Qwen 3.5 9B).",
    "pc_llm_name": "Qwen 3.5 9B"
   }
  },

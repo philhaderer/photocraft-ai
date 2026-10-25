@@ -66,7 +66,7 @@
   "_meta": {
    "title": "pc:prompt",
    "pc_llm_name": "Qwen 3 VL 4B",
-   "pc_llm_tip": "Krea-2 prompt enhancer: the model's own text encoder (Qwen 3 VL 4B) expands your short text into a full image prompt with the official Krea-2 system prompt."
+   "pc_llm_tip": "Krea-2 prompt enhancer (Qwen 3 VL 4B)."
   }
  },
  "13": {
