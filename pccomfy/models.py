@@ -178,7 +178,7 @@ FIBO = Model(
         "remove": _REMOVE + " Retries up to 3 times if the object stays.",
     })
 
-MODELS = [QWEN, FLUX2, FLUX3, MOSS, KREA2, FIBO]
+MODELS = [FLUX3, FLUX2, QWEN, FIBO, KREA2, MOSS]      # the order of the tabs
 BY_KEY = {m.key: m for m in MODELS}
 
 

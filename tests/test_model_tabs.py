@@ -20,7 +20,7 @@ def main():
             assert (t.ROOT / "workflows" / w).exists(), (m.key, w)
         for mode in m.modes:
             assert mode in dict(gui.MODE_LABELS), (m.key, mode)
-    assert [m.label for m in models.MODELS] == ["Qwen 2.1 Edit", "Flux 2 Klein Edit", "Flux 3 Klein Edit", "MOSS Image", "Krea 2 Turbo", "Fibo 2.0 Edit"]
+    assert [m.label for m in models.MODELS] == ["Flux 3 Klein Edit", "Flux 2 Klein Edit", "Qwen 2.1 Edit", "Fibo 2.0 Edit", "Krea 2 Turbo", "MOSS Image"]
 
     app = gui.App(cfgmod.load())
     wfdir = Path(app.workflows_dir)
