@@ -255,6 +255,16 @@ def main():
     assert models.EDIT_TIP == "To remove something, say what replaces it: \u201cRemove the dog and paint the wall behind him\u201d"
     assert app.lbl_hint["wraplength"]
 
+    # the Upscale factor sits directly under the negative prompt, above the LoRA box
+    scale_pack = rec(app.f_scale, "pack")
+    pick("flux3", "upscale")
+    assert scale_pack and scale_pack[-1][1].get("after") is app.f_neg, scale_pack
+    packs2 = rec(app.f_opts, "pack")
+    app.f_scale.winfo_manager = lambda: "pack"
+    app.f_opts.winfo_manager = lambda: ""
+    app._update_options_box(True, [])
+    assert packs2[-1][1].get("after") is app.f_scale
+
     # Remove Selection with the name of the object (Flux Klein): the instruction names it; runs.jsonl says what was sent
     import tempfile
     import test_reference_mode as T

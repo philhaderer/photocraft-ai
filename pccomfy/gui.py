@@ -898,7 +898,7 @@ class App:
         mode = self.v_mode.get()
         self._switch_context(mode)
         if mode == "upscale":
-            self.f_scale.pack(fill="x", padx=10, pady=4, after=self.f_sharp)
+            self.f_scale.pack(fill="x", padx=10, pady=4, after=self.f_neg)      # at the top of the block, above the LoRA
         else:
             self.f_scale.pack_forget()
         if self._run_mode() in SCALE_MODES:
@@ -1652,7 +1652,7 @@ class App:
         want = bool(has_lora or stages)
         shown = bool(self.f_opts.winfo_manager())
         if want and not shown:
-            self.f_opts.pack(fill="x", padx=10, pady=4, after=self.f_neg)
+            self.f_opts.pack(fill="x", padx=10, pady=4, after=self.f_scale if self.f_scale.winfo_manager() else self.f_neg)
         elif not want and shown:
             self.f_opts.pack_forget()
         if want != shown and getattr(self, "_sized", False):
