@@ -41,5 +41,5 @@ assert app._bar_value == 0.5 and app.pb.calls == [{"value": 0.5}]
 app._reset_progress()
 assert app._bar_value == 0.0 and app.v_pl.v == ""
 app._reset_progress(done=True)
-assert app._bar_value == 1.0 and app.v_pl.v == "Done"
+assert app._bar_value == 1.0 and app.v_pl.v == ""
 print("ALL OK (bars)")

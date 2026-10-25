@@ -156,7 +156,8 @@
   },
   "_meta": {
    "title": "pc:prompt",
-   "pc_llm_tip": "MOSS prompt enhancer: the text encoder of the model itself (Qwen 3.5 9B, W4A8 GPTQ) with the official MOSS system prompt (plus a line that asks for natural colours)."
+   "pc_llm_tip": "MOSS prompt enhancer: the text encoder of the model itself (Qwen 3.5 9B, W4A8 GPTQ) with the official MOSS system prompt (plus a line that asks for natural colours).",
+   "pc_llm_name": "Qwen 3.5 9B"
   }
  },
  "13": {

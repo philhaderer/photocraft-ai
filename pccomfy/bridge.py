@@ -131,6 +131,12 @@ def mask_is_used(graph: dict) -> bool:
                for n in graph.values() for v in n.get("inputs", {}).values())
 
 
+def has_tag(graph: dict, tag: str) -> bool:
+    """True when a node of the workflow is titled pc:<tag> (e.g. an image node: an instruction editor that needs a picture)."""
+    import re
+    return any(tag in re.findall(r"pc:\s*([a-z]+)", n.get("_meta", {}).get("title", "").lower()) for n in graph.values())
+
+
 def effective_layer_mask(choice: str, mode: str, editor: bool, has_sel: bool) -> str:
     """The layer mask that is really used. "auto" = none for a Fill with an instruction-based editor (Fibo): it
     regenerates the whole crop and ignores the mask, so a layer mask would cut off parts it changed on purpose
@@ -512,6 +518,10 @@ class Bridge:
         progress(0.1, f"Sending to ComfyUI ({gw}×{gh})", phase="prepare")
 
         image_name = mask_name = None
+        if req.mode == "txt2img" and wf_paths[0] and any(has_tag(json.loads(Path(w).read_text(encoding="utf-8")), "image") for w in wf_paths):
+            # an instruction editor (Qwen) as text-to-image: it needs a picture, an empty white canvas of the result's size,
+            # not the document (it would copy things from it)
+            image_name = self.comfy.upload_image(Image.new("RGB", (gw, gh), "white"), f"pcc-{tag}-image.png")
         if req.mode != "txt2img":
             crop_full = src.crop(region.pil())
             if req.mode == "reference" and req.ref_collage and req.ref_style != "simple":
@@ -630,7 +640,8 @@ class Bridge:
                                           layer_mask=layer_mask))
         if req.mode == "outpaint":
             self._last_expand = {"doc": orig_name, "size": (W, H), "keep": keep, "layers": list(layers)}
-            self._try("select.deselect")   # the new-area selection is not needed any more; a rerun finds the area again
+            if self.pc.document().get("hasSelection"):    # (PhotoCraft prints "no selection" in its status bar otherwise)
+                self._try("select.deselect")   # the new-area selection is not needed any more; a rerun finds the area again
         elif has_sel:
             self._try("select.reselect")  # selection comes back, ready for another generation
         progress(1.0, f"Done (seed {p.seed})", phase="place")

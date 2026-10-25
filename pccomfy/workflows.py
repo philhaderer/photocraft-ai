@@ -455,6 +455,19 @@ def writer_model(graph: dict) -> str:
     return ""
 
 
+def writer_name(graph: dict) -> str:
+    """The short name of the text model that writes the prompt, for the checkbox ("LLM prompt enhancement (Qwen 3.5 9B)"):
+    `pc_llm_name` of the writer node, else the model's file name without its extension. "" = no text model."""
+    for nid in prompt_writers(graph):
+        name = str(graph[nid].get("_meta", {}).get("pc_llm_name", "")).strip()
+        if name:
+            return name
+    raw = writer_model(graph)
+    if not raw or " " in raw.strip():     # a sentence (pc_llm_tip) is not a name
+        return ""
+    return re.sub(r"\.(safetensors|gguf)$", "", raw.strip())
+
+
 def main_sampler(graph: dict) -> str | None:
     """Id of the sampler that draws the picture: a KSampler / KSamplerAdvanced titled pc:sampler, else the last one that is
     not fed by a helper model (SeedVR2). None when the workflow has none (or sets its values another way)."""

@@ -19,7 +19,7 @@ from .bridge import Bridge, BridgeError, Request, mask_is_used, prompt_phase_nod
 from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 from .workflows import _tags as workflows_tags
-from .workflows import GenParams, has_upscale_slot, list_templates, load_template, bypass_lora, lora_strength, lora_switches, lora_tip, resolve, sampler_values, stage_info, stage_switches, writer_model
+from .workflows import GenParams, has_upscale_slot, list_templates, load_template, bypass_lora, lora_strength, lora_switches, lora_tip, resolve, sampler_values, stage_info, stage_switches, writer_model, writer_name
 
 FILL_CONTEXT = 0.2   # Context (margin) that Generative fill starts with
 
@@ -74,7 +74,8 @@ MODE_TIPS = {
                "Only MOSS Image has it (its own prompt enhancer can write the long English caption it likes).",
 }
 BUILTIN = "Built-in (checkpoint)"
-LAYER_MASKS = {"auto": "auto (recommended)", "soft": "soft (same as the model's)", "selection": "hard (from selection)", "none": "none"}
+PROMPT_LINES = 5     # height of the prompt field in lines (it can be dragged taller or smaller)
+LAYER_MASKS = {"auto": "auto (recommended)", "soft": "soft", "selection": "hard (from selection)", "none": "none"}
 
 def word_left(before: str) -> int:
     """How many characters Ctrl+Left moves back, as in an editor: over spaces/punctuation/line breaks, then over the word."""
@@ -410,6 +411,8 @@ class App:
         s.configure("TRadiobutton", indicatorbackground=PANEL)
         s.configure("TSpinbox", fieldbackground=PANEL, foreground=FG, arrowcolor=FG)
         s.configure("Horizontal.TProgressbar", background=ACCENT)
+        s.configure("Grip.TFrame", background="#454545")
+        s.configure("Hint.TLabel", foreground=ACCENT)
         # greyed out must be visible on the dark theme (clam keeps nearly the normal text colour)
         for w in ("TCheckbutton", "TRadiobutton", "TLabel"):
             s.map(w, foreground=[("disabled", DISABLED)])
@@ -546,9 +549,8 @@ class App:
         # behind them is the same)
         self.cb_workflow = ttk.Combobox(self.adv_body, textvariable=self.v_workflow, state="readonly", width=8)
         self.cb_workflow.bind("<<ComboboxSelected>>", lambda e: self._workflow_picked())
-        ttk.Label(self.adv_body, text="Text model", style="Muted.TLabel").grid(row=1, column=0, sticky="w", pady=(4, 0))
+        # the text model is chosen by the workflow / the LLM list under the prompt: no picker (the widget stays, never gridded)
         self.cb_clip = ttk.Combobox(self.adv_body, textvariable=self.v_clip, state="readonly", width=8)
-        self.cb_clip.grid(row=1, column=1, sticky="ew", padx=6, pady=(4, 0))
         pf = ttk.Frame(self.adv_body)    # never gridded: presets are hidden
         pf.columnconfigure(1, weight=1)
         ttk.Label(pf, text="Preset").grid(row=0, column=0, sticky="w")
@@ -629,9 +631,29 @@ class App:
                        "A feather you set in PhotoCraft (Weiche Kante) is kept as it is, this one is then ignored.\n"
                        "Only shown when the result is pasted with a soft layer mask.")
 
-        ttk.Label(r, text="Prompt").pack(anchor="w", padx=10)
-        self.t_prompt = self._text(r, 4)
-        self.t_prompt.pack(fill="x", padx=10)
+        self.f_ptop = ttk.Frame(r)      # "Prompt" and, where a mode has ready-made prompts, radio buttons that fill the field
+        self.f_ptop.pack(fill="x", padx=10)
+        ttk.Label(self.f_ptop, text="Prompt").pack(side="left")
+        self.f_pchoice = ttk.Frame(self.f_ptop)
+        self.f_pchoice.pack(side="left", padx=(10, 0))
+        self.v_pchoice = tk.StringVar(value="")
+        self._pchoice_key = None
+        self.f_prompt = ttk.Frame(r)
+        self.f_prompt.pack(fill="x", padx=10)
+        try:
+            lines = max(3, min(30, int(self.state.get("prompt_h", PROMPT_LINES))))
+        except (TypeError, ValueError):
+            lines = PROMPT_LINES
+        self.t_prompt = self._text(self.f_prompt, lines)
+        sb = ttk.Scrollbar(self.f_prompt, orient="vertical", command=self.t_prompt.yview)
+        self.t_prompt.configure(yscrollcommand=sb.set)
+        sb.pack(side="right", fill="y")
+        self.t_prompt.pack(side="left", fill="x", expand=True)
+        self.grip = ttk.Frame(r, style="Grip.TFrame", height=self._px(7), cursor="sb_v_double_arrow")
+        self.grip.pack(fill="x", padx=10, pady=(1, 0))
+        self._grip_drag(self.grip, self.t_prompt)
+        Tooltip(self.grip, "Drag to make the prompt field taller or smaller.")
+        self.lbl_hint = ttk.Label(r, text="Try removing the prompt for expanding", style="Hint.TLabel")   # Expand image only
         self.t_prompt.insert("1.0", self.state.get("prompt", ""))
         self.f_llm = ttk.Frame(r)       # Fibo: which text model writes the prompt (shown on that tab only)
         self.f_llm.columnconfigure(1, weight=1)
@@ -655,17 +677,19 @@ class App:
                                 "radius follows the picture's size). 0 = off, 100 % = clearly crisper.\n"
                                 "Helps models that come out slightly soft, e.g. MOSS (tip: about 50 %).")
         self._on_sharpen()
-        ttk.Label(self.f_sharp, text="Match colours", style="Muted.TLabel").grid(row=1, column=0, sticky="w", pady=(2, 0))
+        lb_match = ttk.Label(self.f_sharp, text="Match colours", style="Muted.TLabel")
+        lb_match.grid(row=1, column=0, sticky="w", pady=(2, 0))
         self.w_match = ttk.Scale(self.f_sharp, from_=0.0, to=1.0, variable=self.v_match, command=self._on_match)
         self.w_match.grid(row=1, column=1, sticky="ew", padx=8, pady=(2, 0))
         self.lbl_match = ttk.Label(self.f_sharp, width=6, style="Muted.TLabel")
         self.lbl_match.grid(row=1, column=2, pady=(2, 0))
+        self._match_widgets = (lb_match, self.w_match, self.lbl_match)   # shown only where the function can use them
         Tooltip(self.w_match, "Fill, Expand and Reference: when the new area is more colourful than its surroundings (a common look of "
                               "text-to-image models, e.g. MOSS), its saturation is pulled back towards the picture's. 0 = off, 100 % = "
                               "as far as the surroundings (never more than halved, never raised).")
         self._on_match()
         self.f_neg = ttk.Frame(r)
-        self.f_neg.pack(fill="x", padx=10, pady=(6, 0))
+        self.f_neg.pack(fill="x", padx=10, pady=(6, 0), before=self.f_sharp)     # directly under the prompt
         self.v_neg_open = tk.BooleanVar(value=bool(self.state.get("neg_open", False)))
         self.btn_neg = ttk.Button(self.f_neg, command=self._toggle_negative, style="Link.TButton")
         self.btn_neg.pack(anchor="w")
@@ -675,8 +699,8 @@ class App:
         self.t_neg.insert("1.0", self.state.get("negative", d["negative"]))
 
         mf.pack(fill="x", **pad)
-        self.f_xl = ttk.Frame(r)       # extra LoRAs: a search box with a drop-down and a strength each
-        self.f_xl.pack(fill="x", padx=10, pady=(2, 4))
+        self.f_xl = ttk.Frame(self.adv_body)       # extra LoRAs: a search box with a drop-down and a strength each (under Advanced)
+        self.f_xl.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(6, 0))
         self.all_loras: list[str] = []
         self.lora_rows: list[dict] = []
         head = ttk.Frame(self.f_xl)
@@ -688,8 +712,8 @@ class App:
                                 "of this model's folder first. Strength 0 to 1.5.")
         self.f_xl_rows = ttk.Frame(self.f_xl)
         self.f_xl_rows.pack(fill="x")
-        sf = ttk.Frame(r)
-        sf.pack(fill="x", **pad)
+        sf = ttk.Frame(self.adv_body)    # Seed and Variants (under Advanced)
+        sf.grid(row=0, column=0, columnspan=2, sticky="ew")
         self.f_sf = sf
         af = ttk.Frame(self.adv_body)
         af.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
@@ -757,7 +781,7 @@ class App:
         sty.pack(fill="x", padx=6, pady=(0, 4))
         lbs = ttk.Label(sty, text="Style", style="Muted.TLabel")
         lbs.pack(side="left")
-        self.cb_refstyle = ttk.Combobox(sty, textvariable=self.v_refstyle, values=list(REF_STYLES.values()), state="readonly", width=38)
+        self.cb_refstyle = ttk.Combobox(sty, textvariable=self.v_refstyle, values=list(REF_STYLES.values()), state="readonly", width=28)
         self.cb_refstyle.pack(side="left", padx=6)
         self.cb_refstyle.bind("<<ComboboxSelected>>", lambda e: self._update_availability())
         for w in (lbs, self.cb_refstyle):
@@ -806,11 +830,12 @@ class App:
         self.cb_fooocus.grid(row=2, column=0, columnspan=4, sticky="w", padx=6, pady=(0, 6))
         Tooltip(self.cb_fooocus, "Only for the built-in inpaint graph with an SDXL checkpoint (Fooocus inpaint patch). "
                                  "Has no effect with a workflow such as the Fibo ones.")
-        lm = ttk.Frame(self.f_img)
-        lm.grid(row=3, column=0, columnspan=4, sticky="w", padx=6, pady=(0, 6))
+        lm = ttk.Frame(r)               # under the edge feather, outside Advanced
+        self.f_lm = lm
+        lm.pack(fill="x", padx=10, pady=(2, 4), before=self.f_adv)
         lb = ttk.Label(lm, text="Layer mask", style="Muted.TLabel")
         lb.pack(side="left")
-        self.cb_lm = cb_lm = ttk.Combobox(lm, textvariable=self.v_lmask, values=list(LAYER_MASKS.values()), state="readonly", width=24)
+        self.cb_lm = cb_lm = ttk.Combobox(lm, textvariable=self.v_lmask, values=list(LAYER_MASKS.values()), state="readonly", width=20)
         cb_lm.pack(side="left", padx=6)
         cb_lm.bind("<<ComboboxSelected>>", lambda e: self._update_feather_state())
         for w in (lb, cb_lm):
@@ -823,8 +848,9 @@ class App:
 
         bf = ttk.Frame(r)
         bf.pack(fill="x", padx=10, pady=(8, 2))
-        self.b_go = ttk.Button(bf, text="Generate  (Ctrl+Enter)", style="Accent.TButton", command=self.generate)
-        self.b_go.pack(side="left", fill="both", expand=True)
+        self.b_go = ttk.Button(bf, text="Generate", width=11, style="Accent.TButton", command=self.generate)
+        self.b_go.pack(side="left", fill="y")
+        Tooltip(self.b_go, "Generate (Ctrl+Enter)")
         self.b_stop = ttk.Button(bf, text="Cancel", command=self.stop, state="disabled")
         self.b_stop.pack(side="left", fill="y", padx=(6, 0))
         self._icons.update({"undo": icon_image(self.root, "undo", FG), "redo": icon_image(self.root, "redo", FG)})
@@ -840,7 +866,7 @@ class App:
         self.v_pl = tk.StringVar(value="")
         row = ttk.Frame(r)
         row.pack(fill="x", padx=10, pady=(6, 0))
-        ttk.Label(row, textvariable=self.v_pl, width=24, style="Muted.TLabel").pack(side="left")
+        ttk.Label(row, textvariable=self.v_pl, width=22, style="Muted.TLabel").pack(side="left")
         self.pb = ttk.Progressbar(row, mode="determinate", maximum=1.0)
         self.pb.pack(side="left", fill="x", expand=True)
         self._bar_value = 0.0
@@ -878,22 +904,28 @@ class App:
         mode = self.v_mode.get()
         self._switch_context(mode)
         if mode == "outpaint":
-            self.f_out.pack(fill="x", padx=10, pady=4, after=self.f_neg)
+            self.f_out.pack(fill="x", padx=10, pady=4, after=self.f_sharp)
         else:
             self.f_out.pack_forget()
         if mode == "upscale":
-            self.f_scale.pack(fill="x", padx=10, pady=4, after=self.f_neg)
+            self.f_scale.pack(fill="x", padx=10, pady=4, after=self.f_sharp)
         else:
             self.f_scale.pack_forget()
         if mode in SCALE_MODES:
-            self.f_detail.pack(fill="x", padx=10, pady=4, after=self.f_neg)
+            self.f_detail.pack(fill="x", padx=10, pady=4, after=self.f_sharp)
         else:
             self.f_detail.pack_forget()
         if mode == "reference":
-            self.f_ref.pack(fill="x", padx=10, pady=4, after=self.f_neg)
+            self.f_ref.pack(fill="x", padx=10, pady=4, after=self.f_sharp)
         else:
             self.f_ref.pack_forget()
         self.w_denoise.configure(state="disabled" if mode == "txt2img" or self._ignores_mask() else "normal")   # an editor always runs at 1.0
+        for w in self._match_widgets:      # pulling colours back only makes sense where a new area meets the old picture
+            if mode in ("inpaint", "outpaint", "reference"):
+                w.grid()
+            else:
+                w.grid_remove()
+        self._expand_hint(mode == "outpaint")
         self._sync_prompt_field(mode)
         self._update_feather_state()
         self._update_availability()
@@ -914,6 +946,71 @@ class App:
         if str(self.t_prompt.cget("state")) == "disabled":
             return getattr(self, "_prompt_kept", "")
         return self.t_prompt.get("1.0", "end").strip()
+
+    def _grip_drag(self, grip, t):
+        """The strip under the prompt field: drag it to change the field's height (in lines)."""
+        st: dict = {}
+
+        def line_h():
+            try:
+                return max(8, int(t.tk.call("font", "metrics", t.cget("font"), "-linespace")))
+            except Exception:
+                return self._px(16)
+
+        def press(e):
+            st.update(y=e.y_root, h=self._prompt_lines(), lh=line_h())
+
+        def move(e):
+            if "y" not in st:
+                return
+            n = max(3, min(30, st["h"] + round((e.y_root - st["y"]) / st["lh"])))
+            if n != self._prompt_lines():
+                t.configure(height=n)
+                self._fit_height()
+        grip.bind("<ButtonPress-1>", press)
+        grip.bind("<B1-Motion>", move)
+
+    def _prompt_lines(self) -> int:
+        try:
+            return int(self.t_prompt.cget("height"))
+        except (TypeError, ValueError, tk.TclError):
+            return PROMPT_LINES
+
+    def _expand_hint(self, on: bool):
+        """Expand image: the prompt field turns orange with a hint (an empty prompt often fills best)."""
+        self.t_prompt.configure(highlightbackground=ACCENT if on else "#454545", highlightthickness=2 if on else 1)
+        if on:
+            self.lbl_hint.pack(anchor="w", padx=10, after=self.grip)
+        else:
+            self.lbl_hint.pack_forget()
+
+    def _update_prompt_choices(self):
+        """Ready-made prompts of a mode (Flux 2 refine): radio buttons next to "Prompt" that put the text into the field."""
+        m = self._model()
+        spec = m.modes.get(self.v_mode.get()) if m else None
+        choices = spec.prompts if spec else ()
+        key = (m.key, self.v_mode.get()) if choices else None
+        if key == self._pchoice_key:
+            return
+        self._pchoice_key = key
+        for w in (self.f_pchoice.winfo_children() or []):
+            w.destroy()
+        if not choices:
+            return
+        cur = self.t_prompt.get("1.0", "end").strip()
+        self.v_pchoice.set(next((lb for lb, text, _ in choices if text.strip() == cur), ""))
+        for label, text, tip in choices:
+            rb = ttk.Radiobutton(self.f_pchoice, text=label, value=label, variable=self.v_pchoice,
+                                 command=lambda t=text: self._insert_prompt(t))
+            rb.pack(side="left", padx=(0, 8))
+            Tooltip(rb, tip + "\n\nPuts this text into the prompt field; you can edit it.")
+
+    def _insert_prompt(self, text: str):
+        t = self.t_prompt
+        if str(t.cget("state")) == "disabled":
+            return
+        t.delete("1.0", "end")
+        t.insert("1.0", text)
 
     def _sync_prompt_field(self, mode: str):
         """Remove object ignores the text: the field is emptied and greyed out, the typed text comes back afterwards."""
@@ -952,97 +1049,32 @@ class App:
         row.pack(fill="x", pady=1)
         row.columnconfigure(0, weight=1)
         v_name, v_str = tk.StringVar(value=name), tk.DoubleVar(value=strength)
-        ent = ttk.Entry(row, textvariable=v_name)
-        ent.grid(row=0, column=0, sticky="ew")
-        rec = {"frame": row, "name": v_name, "strength": v_str, "entry": ent, "list": None}
-        btn = ttk.Button(row, text="\u25be", style="Link.TButton", width=2, command=lambda: self._lora_list(rec, ""))
-        btn.grid(row=0, column=1, padx=(2, 0))
+        rec = {"frame": row, "name": v_name, "strength": v_str}
+        # an editable drop-down: type to search, the arrow lists the LoRAs that contain every word typed (this model's folder first)
+        cb = ttk.Combobox(row, textvariable=v_name, values=self._lora_choices(), width=8, postcommand=lambda: self._lora_fill(rec))
+        cb.grid(row=0, column=0, sticky="ew")
+        rec["entry"] = cb
+        cb.bind("<KeyRelease>", lambda e: self._lora_fill(rec))
         sp = ttk.Spinbox(row, textvariable=v_str, from_=0.0, to=1.5, increment=0.05, width=5)
-        sp.grid(row=0, column=2, padx=4)
+        sp.grid(row=0, column=1, padx=4)
         rm = ttk.Button(row, text="x", style="Link.TButton", width=2, command=lambda: self._remove_lora_row(rec))
-        rm.grid(row=0, column=3)
-        # the list under the row narrows with every key; Down moves into it, Enter / a click takes the entry
-        ent.bind("<KeyRelease>", lambda e: self._lora_key(rec, e))
-        ent.bind("<Down>", lambda e: self._lora_focus_list(rec))
-        ent.bind("<Escape>", lambda e: (self._lora_hide(rec), "break")[1])
-        ent.bind("<FocusOut>", lambda e: self.root.after(250, lambda: self._lora_hide_unless_used(rec)))
+        rm.grid(row=0, column=2)
         Tooltip(rm, "Remove this LoRA")
-        Tooltip(btn, "Show the LoRAs (this model's folder first)")
-        Tooltip(ent, "Type to search: the list under the box shows only the LoRAs that contain every word you typed.")
+        Tooltip(cb, "Type to search, then open the list with the arrow: it shows only the LoRAs that contain every word you typed "
+                    "(this model's folder first).")
         self.lora_rows.append(rec)
         self.b_addlora.configure(state="normal" if len(self.lora_rows) < self.LORA_MAX else "disabled")
 
-    def _lora_key(self, rec: dict, e):
-        if getattr(e, "keysym", "") in ("Return", "Escape", "Tab", "Up", "Down", "Left", "Right", "Shift_L", "Shift_R", "Control_L", "Control_R"):
-            return
-        self._lora_list(rec, rec["name"].get())
-
-    def _lora_list(self, rec: dict, typed: str):
-        """The search list under a LoRA row: the matches for what was typed (at most 40)."""
-        names = self._lora_choices(typed)[:40]
-        if not names:
-            self._lora_hide(rec)
-            return
-        lb = rec.get("list")
-        if lb is None:
-            lb = tk.Listbox(self.f_xl_rows, height=min(7, len(names)), exportselection=False, activestyle="none",
-                            bg=PANEL, fg=FG, selectbackground=ACCENT, selectforeground="#1b1b1b", relief="flat",
-                            highlightthickness=1, highlightbackground="#454545", font=(FONT, 9))
-            lb.pack(fill="x", after=rec["frame"])
-            lb.bind("<ButtonRelease-1>", lambda e: self._lora_pick(rec))
-            lb.bind("<Return>", lambda e: self._lora_pick(rec))
-            lb.bind("<Escape>", lambda e: (self._lora_hide(rec), rec["entry"].focus_set(), "break")[2])
-            rec["list"] = lb
-        lb.configure(height=min(7, len(names)))
-        lb.delete(0, "end")
-        for n in names:
-            lb.insert("end", n)
-        if self._sized:
-            self._fit_height()
-
-    def _lora_focus_list(self, rec: dict):
-        if rec.get("list") is None:
-            self._lora_list(rec, rec["name"].get())
-        lb = rec.get("list")
-        if lb is not None:
-            lb.focus_set()
-            lb.selection_set(0)
-            lb.activate(0)
-        return "break"
-
-    def _lora_pick(self, rec: dict):
-        lb = rec.get("list")
-        if lb is None:
-            return
-        sel = lb.curselection()
-        if sel:
-            rec["name"].set(lb.get(sel[0]))
-        self._lora_hide(rec)
-        rec["entry"].focus_set()
-
-    def _lora_hide(self, rec: dict):
-        lb = rec.get("list")
-        if lb is not None:
-            lb.destroy()
-            rec["list"] = None
-            if self._sized:
-                self._fit_height()
-
-    def _lora_hide_unless_used(self, rec: dict):
-        lb = rec.get("list")
-        if lb is None:
-            return
-        try:
-            if self.root.focus_get() is lb:
-                return
-        except (KeyError, tk.TclError):
-            pass
-        self._lora_hide(rec)
+    def _lora_fill(self, rec: dict):
+        """The list of a LoRA drop-down: what was typed narrows it (a complete file name shows the whole list again)."""
+        typed = rec["name"].get().strip()
+        names = self._lora_choices("" if typed in self.all_loras else typed)
+        rec["entry"]["values"] = names[:300]
+        return names
 
     def _remove_lora_row(self, rec: dict):
         if rec in self.lora_rows:
             self.lora_rows.remove(rec)
-            self._lora_hide(rec)
             rec["frame"].destroy()
         self.b_addlora.configure(state="normal")
         self._fit_height()
@@ -1149,6 +1181,7 @@ class App:
             if spec.prompt_hint:
                 t.insert("1.0", spec.prompt_hint)
         self._update_mode_radios()
+        self._update_prompt_choices()
 
     def _sync_model(self):
         """The window was set from a preset / the saved state / the workflow list: show the tab that belongs to it."""
@@ -1241,7 +1274,7 @@ class App:
         self.w_feather.configure(state="normal" if on else "disabled")
         shown = bool(self.f_feather.winfo_manager()) if hasattr(self.f_feather, "winfo_manager") else False
         if on and not shown:
-            self.f_feather.pack(fill="x", padx=10, pady=4, before=self.f_sf)
+            self.f_feather.pack(fill="x", padx=10, pady=(4, 0), before=self.f_lm)
         elif not on and shown:
             self.f_feather.pack_forget()
         if on != shown and getattr(self, "_sized", False):
@@ -1378,6 +1411,8 @@ class App:
         self.cb_enhance.configure(state="normal" if has_writer else "disabled")
         llm = next((m for m in (writer_model(t) for t in self._wf_templates()) if m), "")
         self.tt_enhance.text = ENHANCE_TIP + (f"\n\nText model in this workflow: {llm}" if llm else "")
+        name = next((n for n in (writer_name(t) for t in self._wf_templates()) if n), "")
+        self.cb_enhance.configure(text="LLM prompt enhancement" + (f" ({name})" if name else ""))
         has_lora = self._has_lora_switch()
         self.cb_turbo.configure(state="normal" if has_lora else "disabled", text=self._lora_label())
         if self.v_workflow.get() != self._lora_wf:   # another workflow: the slider starts at the value it ships with
@@ -1518,9 +1553,15 @@ class App:
             return
         if winlink.link(self.root):
             self._link_tries = 0
+            self._pc_seen, self._pc_gone = True, 0
             if not getattr(self, "_popup_job", None):
                 self._popup_job = self.root.after(300, self._yield_popups)
         else:
+            if getattr(self, "_pc_seen", False) and winlink.owner_present() is False:
+                self._pc_gone = getattr(self, "_pc_gone", 0) + 1
+                if self._pc_gone >= 2:       # PhotoCraft was closed: this window closes with it
+                    self._quit()
+                    return
             self._link_tries = getattr(self, "_link_tries", 0) + 1
             if self._link_tries == 20:
                 self.v_status.set("PhotoCraft window not found - this window stays free until it appears")
@@ -1900,12 +1941,11 @@ class App:
                 if kind == "progress":
                     f, msg, phase, pf, elapsed = data
                     self._set_progress(f, msg, phase, pf, elapsed)
-                    if phase == "prompt":      # the bar's label has the time and the steps; the line below only names the step
-                        self._status("Expanding Prompt…")
-                    elif phase == "image":
-                        self._status("Generating the image…")
-                    elif msg:
+                    # the bar's label names the step, the line below it says nothing then (no second copy of the same words)
+                    if msg and msg.startswith(("Comparison", "Object still")):
                         self._status(msg)
+                    else:
+                        self._status("")
                 elif kind in ("note", "note-error"):
                     self._status(data, error=(kind == "note-error"))
                     self.b_undo.configure(state="normal")
@@ -1928,7 +1968,7 @@ class App:
     def _reset_progress(self, done: bool = False):
         self._bar_value = 1.0 if done else 0.0
         self.pb.configure(value=self._bar_value)
-        self.v_pl.set("Done" if done else "")
+        self.v_pl.set("")      # a finished run says "Done (seed …)" in the line below
 
     def _set_progress(self, fraction: float, msg: str | None, phase: str, phase_fraction: float, elapsed: float | None):
         """Move the single bar and name the step. Idempotent and only forward: Tk is touched only when the value or the
@@ -1957,7 +1997,7 @@ class App:
             "negative": p.negative, "steps": p.steps, "cfg": p.cfg, "denoise": self.v_denoise.get(),
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
-            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
+            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "prompt_h": self._prompt_lines(), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
             "stage_on": req.stage_on, "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "detail": req.detail, "sharpen": req.sharpen, "match": req.match, "loras": [list(x) for x in req.loras], "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
             "ref_collage": req.ref_collage, "ref_style": req.ref_style, "ref_cutout": req.ref_cutout, "runs": dict(self.state.get("runs", {})),
         })

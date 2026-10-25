@@ -95,7 +95,7 @@ tk.StringVar, tk.IntVar, tk.DoubleVar, tk.BooleanVar = Var, IntVar, DoubleVar, V
 tk.Text, tk.TclError = Text, TclError
 tk.PhotoImage = tk.Listbox = Widget
 for n in ("Frame", "Label", "Combobox", "Button", "Radiobutton", "Checkbutton", "Spinbox", "Entry", "LabelFrame",
-          "Progressbar", "Style", "Notebook", "Scale"):
+          "Progressbar", "Style", "Notebook", "Scale", "Scrollbar"):
     setattr(ttk, n, Widget)
 mb.askyesno = lambda *a, **k: True
 sd.askstring = lambda *a, **k: None

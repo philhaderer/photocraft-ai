@@ -166,6 +166,17 @@ def link(root, api=None) -> bool:
         return False
 
 
+def owner_present(api=None) -> bool | None:
+    """Does PhotoCraft's main window exist? None = cannot tell (not Windows). Used to close the bridge with PhotoCraft."""
+    if not available() and api is None:
+        return None
+    try:
+        api = api or Win32Api()
+        return pick_window(api.windows(), exe_name()) is not None
+    except Exception:
+        return None
+
+
 def popups_over(infos: list[dict], exe: str, top: int, owner: int | None) -> int | None:
     """infos in z-order, topmost first (EnumWindows order). Returns the popup of PhotoCraft's process (a menu, a drop-down,
     a tooltip) that lies BELOW the bridge window `top` and overlaps it - the one the bridge window must give way to - or
