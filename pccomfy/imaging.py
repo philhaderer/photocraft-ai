@@ -172,6 +172,15 @@ def to_rgb(img: Image.Image) -> Image.Image:
     return img.convert("RGB")
 
 
+def sharpen(im: Image.Image, amount: float) -> Image.Image:
+    """A light sharpening: amount 0 = none, 1 = strong. Unsharp mask (the same idea as a high-pass sharpen)."""
+    if amount <= 0:
+        return im
+    from PIL import ImageFilter
+    r = max(1.0, max(im.size) / 1000)   # the radius follows the picture size
+    return im.filter(ImageFilter.UnsharpMask(radius=r, percent=int(min(1.0, amount) * 150), threshold=2))
+
+
 def layer_box(layer: Image.Image) -> "Box | None":
     """Where a layer's visible pixels lie on the canvas (the layer exported at canvas size), or None when it is empty."""
     box = layer.convert("RGBA").getchannel("A").point(lambda a: 255 if a > 8 else 0).getbbox()

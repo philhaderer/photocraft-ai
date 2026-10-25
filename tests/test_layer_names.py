@@ -46,6 +46,13 @@ def main():
     assert bridge.strip_placeholder("<DESCRIBE THE IMAGE>") == ""
     assert bridge.strip_placeholder("a woman <DESCRIBE THE IMAGE>") == "a woman"
     assert bridge.strip_placeholder("a woman with a hat") == "a woman with a hat"
+    from PIL import Image, ImageDraw
+    from pccomfy import imaging
+    im = Image.new("RGB", (200, 200), (100, 100, 100))
+    ImageDraw.Draw(im).rectangle((80, 80, 120, 120), fill=(140, 140, 140))
+    assert imaging.sharpen(im, 0) is im
+    sh = imaging.sharpen(im, 0.5)
+    assert sh.size == im.size and sh.getpixel((82, 100))[0] >= im.getpixel((82, 100))[0]
     print("ALL OK (layer names)")
 
 

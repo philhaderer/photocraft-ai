@@ -297,6 +297,7 @@ class App:
         self.v_turbo = tk.BooleanVar(value=g("turbo", True))
         self.v_lora_str = tk.DoubleVar(value=g("lora_strength", 1.0))
         self.v_model = tk.StringVar(value=g("model", ""))   # the tab; "" = a workflow of your own (everything enabled)
+        self.v_sharpen = tk.DoubleVar(value=g("sharpen", 0.0))
         self.v_cmp_res = tk.StringVar(value="")
         self.v_cmp_ctx = tk.StringVar(value="")
         self.v_stage = tk.BooleanVar(value=g("stage_on", True))
@@ -493,6 +494,17 @@ class App:
             b.grid(row=0, column=2 + col, padx=(6 if col == 0 else 3, 0))
             Tooltip(b, tip)
 
+        sh = ttk.Frame(self.adv_body)
+        sh.grid(row=8, column=0, columnspan=2, sticky="ew", pady=(6, 0))
+        sh.columnconfigure(1, weight=1)
+        ttk.Label(sh, text="Sharpen result", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
+        self.w_sharpen = ttk.Scale(sh, from_=0.0, to=1.0, variable=self.v_sharpen, command=self._on_sharpen)
+        self.w_sharpen.grid(row=0, column=1, sticky="ew", padx=8)
+        self.lbl_sharpen = ttk.Label(sh, width=6, style="Muted.TLabel")
+        self.lbl_sharpen.grid(row=0, column=2)
+        Tooltip(self.w_sharpen, "A light sharpening of the finished result (0 = off). Helps models that come out slightly soft, "
+                                "e.g. MOSS (tip: about 0.5).")
+        self._on_sharpen()
         ttk.Label(self.adv_body, text="Compare base res", style="Muted.TLabel").grid(row=4, column=0, sticky="w", pady=(6, 0))
         e1 = ttk.Entry(self.adv_body, textvariable=self.v_cmp_res)
         e1.grid(row=4, column=1, sticky="ew", padx=6, pady=(6, 0))
@@ -1034,6 +1046,9 @@ class App:
     def _on_lora_str(self, _value=None):
         self.lbl_lora_str.configure(text=f"strength {float(self.v_lora_str.get()):.2f}")
 
+    def _on_sharpen(self, _value=None):
+        self.lbl_sharpen.configure(text=f"{round(float(self.v_sharpen.get()) * 100)} %")
+
     def _on_detail(self, _value=None):
         self.lbl_detail.configure(text=f"{round(float(self.v_detail.get()) * 100)} %")
 
@@ -1326,7 +1341,7 @@ class App:
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
             "scale": self._scale(), "ref_style": self._ref_style(),
             "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
-            "turbo": bool(self.v_turbo.get()), "stage_on": bool(self.v_stage.get()), "loras": self._loras(), "detail": round(float(self.v_detail.get()), 2),
+            "turbo": bool(self.v_turbo.get()), "stage_on": bool(self.v_stage.get()), "loras": self._loras(), "sharpen": round(float(self.v_sharpen.get()), 2), "detail": round(float(self.v_detail.get()), 2),
             "lora_strength": round(float(self.v_lora_str.get()), 2), "ref_collage": bool(self.v_collage.get()), "ref_cutout": bool(self.v_cutout.get()),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
             "feather_pct": round(float(self.v_feather.get()), 1),
@@ -1381,6 +1396,8 @@ class App:
             self._set_loras(s["loras"])
         put(self.v_stage, "stage_on", bool)
         put(self.v_detail, "detail", float)
+        put(self.v_sharpen, "sharpen", float)
+        self._on_sharpen()
         if "lora_strength" in s:
             self._lora_wf = self.v_workflow.get()
             put(self.v_lora_str, "lora_strength", float)
@@ -1490,7 +1507,7 @@ class App:
                        fooocus=bool(self.v_fooocus.get()), enhance=bool(self.v_enhance.get()),
                        turbo=bool(self.v_turbo.get()), scale=self._scale(),
                        lora_strength=(round(float(self.v_lora_str.get()), 2) if self._has_lora_switch() else None),
-                       stage_on=bool(self.v_stage.get()) or not self._stage_label(), loras=[tuple(x) for x in self._loras()], detail=round(float(self.v_detail.get()), 2), ref_style=self._ref_style(), ref_collage=bool(self.v_collage.get()), ref_cutout=bool(self.v_cutout.get()),
+                       stage_on=bool(self.v_stage.get()) or not self._stage_label(), loras=[tuple(x) for x in self._loras()], sharpen=round(float(self.v_sharpen.get()), 2), detail=round(float(self.v_detail.get()), 2), ref_style=self._ref_style(), ref_collage=bool(self.v_collage.get()), ref_cutout=bool(self.v_cutout.get()),
                        layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2)
 
@@ -1630,7 +1647,7 @@ class App:
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
             "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
-            "stage_on": req.stage_on, "detail": req.detail, "loras": [list(x) for x in req.loras], "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
+            "stage_on": req.stage_on, "detail": req.detail, "sharpen": req.sharpen, "loras": [list(x) for x in req.loras], "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
             "ref_collage": req.ref_collage, "ref_style": req.ref_style, "ref_cutout": req.ref_cutout, "runs": dict(self.state.get("runs", {})),
         })
 
