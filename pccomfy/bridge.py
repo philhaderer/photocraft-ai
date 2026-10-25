@@ -70,6 +70,9 @@ class Request:
     ref_style: str = "simple"            # reference mode: "classic" = subject first (<image_1>), long instruction, rough placement;
                                          # "simple" = the picture first (image1), the reference second (image2), one short sentence
     ref_collage: bool = True             # reference mode: also paste a rough copy of the reference where it should go
+    lora_strength: float | None = None   # strength of the workflow's pc:lora loader (None = what the workflow has)
+    stage_on: bool = True                # workflows with a switchable stage (pc_stage_off, e.g. SeedVR2): False = skip it
+    detail: float = 1.0                  # Upscale/Refine: share of the new result mixed with the plainly scaled original (1 = all new)
     ref_cutout: bool = True              # reference mode, simple style: the sentence also asks to remove the reference's background
     preset: str = ""                     # name of the preset used: the layers are named "<preset> #<run_no>"
     run_no: int = 0                      # running number of this preset's runs (kept by the window)
@@ -566,6 +569,11 @@ class Bridge:
                 ims, p.seed = best[1], best[2]
             results.append((label, ims))
 
+        if req.mode in SCALE_MODES and req.detail < 0.999:
+            # tame an over-sharp result: mix it with the plainly (Lanczos) scaled original
+            plain = imaging.to_rgb(crop_full)
+            results = [(lb, [Image.blend(plain.resize(im.size, Image.LANCZOS), im.convert("RGB"), max(0.0, req.detail)) for im in ims])
+                       for lb, ims in results]
         progress(0.92, "Placing the result in PhotoCraft", phase="place")
         if req.mode == "upscale":
             return self._open_upscaled(results, orig, orig_name, region, p, tag, progress)
@@ -628,6 +636,10 @@ class Bridge:
                 tpl = workflows.bypass_prompt_writer(tpl, p.prompt)
             if not req.turbo:
                 tpl = workflows.bypass_lora(tpl)
+            elif req.lora_strength is not None:
+                tpl = workflows.set_lora_strength(tpl, req.lora_strength)
+            if not req.stage_on:
+                tpl = workflows.bypass_stage(tpl)
             return workflows.apply_template(tpl, p, image_name, mask_name, ref_name,
                                             ref_first=req.ref_style != "simple")
         if not p.checkpoint:

@@ -303,7 +303,29 @@
    ]
   },
   "_meta": {
-   "title": "Upscale Image - To the size of the result"
+   "title": "Upscale Image - To the size of the result",
+   "pc_stage_off": {
+    "label": "SeedVR2 pre-cleaning",
+    "set": {
+     "image": [
+      "2",
+      0
+     ]
+    },
+    "remove": [
+     "10",
+     "11",
+     "144",
+     "145",
+     "146",
+     "147",
+     "148",
+     "149",
+     "150",
+     "151",
+     "152"
+    ]
+   }
   }
  },
  "154": {

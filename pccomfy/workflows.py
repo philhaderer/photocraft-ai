@@ -393,6 +393,60 @@ def bypass_lora(graph: dict) -> dict:
     return g
 
 
+def lora_strength(graph: dict) -> float | None:
+    """The strength the workflow's pc:lora loader is set to (LoraLoaderModelOnly, or AusBoss' LoRA list), None without one."""
+    for nid in lora_switches(graph):
+        inp = graph[nid].get("inputs", {})
+        if isinstance(inp.get("strength_model"), (int, float, str)) and not isinstance(inp.get("strength_model"), list):
+            try:
+                return float(inp["strength_model"])
+            except ValueError:
+                pass
+        if isinstance(inp.get("loras"), str):
+            try:
+                items = json.loads(inp["loras"])
+                return float(items[0]["strength"])
+            except (ValueError, KeyError, IndexError, TypeError):
+                pass
+    return None
+
+
+def set_lora_strength(graph: dict, value: float) -> dict:
+    """The pc:lora loaders run at `value` (a copy of the graph is returned)."""
+    g = json.loads(json.dumps(graph))
+    for nid in lora_switches(g):
+        inp = g[nid].get("inputs", {})
+        if "strength_model" in inp and not isinstance(inp["strength_model"], list):
+            inp["strength_model"] = round(float(value), 3)
+        if isinstance(inp.get("loras"), str):
+            try:
+                items = json.loads(inp["loras"])
+                for it in items:
+                    it["strength"] = round(float(value), 3)
+                inp["loras"] = json.dumps(items, separators=(",", ":"))
+            except (ValueError, TypeError):
+                pass
+    return g
+
+
+def stage_switches(graph: dict) -> list[tuple[str, str]]:
+    """(node id, label) of the stages the window can switch off: a node whose _meta has `pc_stage_off`
+    ({"label": ..., "set": {input: link}, "remove": [node ids]}) - e.g. the SeedVR2 pre-cleaning of the Flux 3 upscale."""
+    return [(nid, str(n["_meta"]["pc_stage_off"].get("label", "Stage"))) for nid, n in graph.items()
+            if isinstance(n, dict) and isinstance(n.get("_meta", {}).get("pc_stage_off"), dict)]
+
+
+def bypass_stage(graph: dict) -> dict:
+    """Stage switched off: the nodes it lists are removed and the inputs it lists are set (a copy is returned)."""
+    g = json.loads(json.dumps(graph))
+    for nid, _ in stage_switches(g):
+        spec = g[nid]["_meta"]["pc_stage_off"]
+        g[nid]["inputs"].update(spec.get("set", {}))
+        for r in spec.get("remove", []):
+            g.pop(str(r), None)
+    return g
+
+
 def list_templates(folder: str | Path) -> list[Path]:
     folder = Path(folder).expanduser()
     return sorted(folder.glob("*.json")) if folder.is_dir() else []

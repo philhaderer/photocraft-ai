@@ -240,6 +240,25 @@ def main():
     app._on_mode_ui()
     print("upscale controls OK")
 
+    # Flux 3 controls: LoRA strength slider, the SeedVR2 stage switch, the detail mix
+    shutil.copy(ROOT / "workflows" / "flux3-klein-upscale.json", wfdir / "f3.json")
+    app.cb_workflow["values"] = [gui.BUILTIN, "plain.json", "f3.json"]
+    app.v_workflow.set("f3.json")
+    app.v_turbo.set(True)
+    app.v_mode.set("refine")
+    app._on_workflow()
+    assert app.cb_stage["state"] == "normal" and "SeedVR2" in app.cb_stage["text"] and app.w_lora_str["state"] == "normal"
+    assert app.v_lora_str.get() == 1.0
+    app.v_lora_str.set(0.4)
+    app.v_stage.set(False)
+    app.v_detail.set(0.8)
+    r = app._request()
+    assert r.lora_strength == 0.4 and r.stage_on is False and r.detail == 0.8, (r.lora_strength, r.stage_on, r.detail)
+    app.v_workflow.set("plain.json")
+    app._on_workflow()
+    assert app.cb_stage["state"] == "disabled" and app._request().lora_strength is None and app._request().stage_on is True
+    print("flux3 controls OK")
+
     # Mode and workflow go together: Upscale / Refine only with an upscale workflow, the other modes never with one
     shutil.copy(ROOT / "workflows" / "flux3-klein-upscale.json", wfdir / "up.json")
     app.cb_workflow["values"] = [gui.BUILTIN, "turbo.json", "plain.json", "up.json"]

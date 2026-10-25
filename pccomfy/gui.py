@@ -18,7 +18,7 @@ from .bridge import Bridge, BridgeError, Request, mask_is_used, prompt_phase_nod
 from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 from .workflows import _tags as workflows_tags
-from .workflows import GenParams, has_upscale_slot, list_templates, load_template, lora_switches, resolve
+from .workflows import GenParams, has_upscale_slot, list_templates, load_template, lora_strength, lora_switches, resolve, stage_switches
 
 FILL_CONTEXT = 0.2   # Context (margin) that Generative fill starts with
 
@@ -106,7 +106,29 @@ def icon_image(root, kind: str, color: str):
                 if fill or x in (x0, x1) or y in (y0, y1):
                     px[y][x] = c
 
-    if kind in ("save", "saveas"):
+    ART = {"undo": ["................",
+                    "................",
+                    "....#...........",
+                    "...##...........",
+                    "..###..######...",
+                    ".####.#######...",
+                    "..###.##....###.",
+                    "...##.#......##.",
+                    "....#........##.",
+                    "..............##",
+                    ".............###",
+                    "...........####.",
+                    "......#####.....",
+                    "................",
+                    "................",
+                    "................"]}
+    ART["redo"] = [row[::-1] for row in ART["undo"]]
+    if kind in ART:
+        for y, row in enumerate(ART[kind]):
+            for x, ch in enumerate(row):
+                if ch == "#":
+                    px[y][x] = color
+    elif kind in ("save", "saveas"):
         rect(0, 0, 13, 13, fill=False)          # the disk
         rect(3, 0, 10, 4)                        # the shutter
         rect(2, 8, 11, 13, fill=False)           # the label
@@ -248,6 +270,10 @@ class App:
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
         self.v_enhance = tk.BooleanVar(value=g("enhance", True))
         self.v_turbo = tk.BooleanVar(value=g("turbo", True))
+        self.v_lora_str = tk.DoubleVar(value=g("lora_strength", 1.0))
+        self.v_stage = tk.BooleanVar(value=g("stage_on", True))
+        self.v_detail = tk.DoubleVar(value=g("detail", 1.0))
+        self._lora_wf = g("workflow", "")   # the workflow the LoRA strength slider was last set for
         self.v_collage = tk.BooleanVar(value=g("ref_collage", True))
         self.v_cutout = tk.BooleanVar(value=g("ref_cutout", True))
         self.v_refstyle = tk.StringVar(value=REF_STYLES.get(g("ref_style", "simple"), REF_STYLES["simple"]))
@@ -433,6 +459,21 @@ class App:
                                "Flux 2 upscale - Ultra real LoRA: on = the realism LoRA at 0.3; off = plain Flux 2 Klein.\n"
                                "Greyed out when the workflow has no such LoRA.")
 
+        self.f_lora = ttk.Frame(mf)    # strength of that LoRA
+        self.f_lora.grid(row=2, column=1, sticky="ew", padx=6, pady=(2, 0))
+        self.f_lora.columnconfigure(0, weight=1)
+        self.w_lora_str = ttk.Scale(self.f_lora, from_=0.0, to=1.0, variable=self.v_lora_str, command=self._on_lora_str)
+        self.w_lora_str.grid(row=0, column=0, sticky="ew")
+        self.lbl_lora_str = ttk.Label(self.f_lora, width=14, style="Muted.TLabel")
+        self.lbl_lora_str.grid(row=0, column=1, sticky="e", padx=(6, 0))
+        Tooltip(self.w_lora_str, "How strong that LoRA works (0 = as if off, 1 = full). Starts at the value the workflow ships with.")
+        self.cb_stage = ttk.Checkbutton(mf, text="Stage", variable=self.v_stage)
+        self.cb_stage.grid(row=3, column=1, sticky="w", padx=6, pady=(2, 0))
+        Tooltip(self.cb_stage, "A processing stage of the workflow that can be skipped (the checkbox names it).\n"
+                               "Flux 3 upscale - SeedVR2: cleans the picture before Flux 3 redraws it. Off = Flux 3 works on the plainly "
+                               "scaled picture (less of the SeedVR2 sharpness).")
+        self._on_lora_str()
+
         modes = ttk.Frame(r)
         modes.pack(fill="x", **pad)
         self.f_modes = modes
@@ -520,6 +561,16 @@ class App:
         self.cb_scale = ttk.Combobox(self.f_scale, textvariable=self.v_scale, values=["1.5", "2", "3", "4"], width=5)
         self.cb_scale.grid(row=0, column=1, padx=6, pady=(0, 6))
         self.f_scale.columnconfigure(0, weight=1)
+        self.f_detail = ttk.Frame(r)      # Upscale and Refine
+        self.f_detail.columnconfigure(1, weight=1)
+        ttk.Label(self.f_detail, text="Detail", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
+        self.w_detail = ttk.Scale(self.f_detail, from_=0.0, to=1.0, variable=self.v_detail, command=self._on_detail)
+        self.w_detail.grid(row=0, column=1, sticky="ew", padx=8)
+        self.lbl_detail = ttk.Label(self.f_detail, width=8, style="Muted.TLabel")
+        self.lbl_detail.grid(row=0, column=2)
+        Tooltip(self.w_detail, "How much of the new result is used. 100 % = all of it; less mixes in the plainly scaled original, "
+                               "which tames a result that is too sharp or has odd textures.")
+        self._on_detail()
 
         self.f_ref = ttk.LabelFrame(r, text="Reference image")
         ttk.Label(self.f_ref, text="The top layer is the reference. Select where it should go.\nEverything below it is the picture.",
@@ -598,9 +649,10 @@ class App:
         self.b_go.pack(side="left", fill="x", expand=True)
         self.b_stop = ttk.Button(bf, text="Cancel", command=self.stop, state="disabled")
         self.b_stop.pack(side="left", padx=(6, 0))
-        self.b_undo = ttk.Button(bf, text="Undo", command=self.undo_edit)
+        self._icons.update({"undo": icon_image(self.root, "undo", FG), "redo": icon_image(self.root, "redo", FG)})
+        self.b_undo = ttk.Button(bf, image=self._icons["undo"], style="Icon.TButton", command=self.undo_edit)
         self.b_undo.pack(side="left", padx=(6, 0))
-        self.b_redo = ttk.Button(bf, text="Redo", command=self.redo_edit)
+        self.b_redo = ttk.Button(bf, image=self._icons["redo"], style="Icon.TButton", command=self.redo_edit)
         self.b_redo.pack(side="left", padx=(6, 0))
         Tooltip(self.b_redo, "Brings the AI edit back after an Undo (until the next generation).")
         Tooltip(self.b_undo, "Back to the state before the last generation in one click (a history snapshot taken at the start).\n"
@@ -655,6 +707,10 @@ class App:
             self.f_scale.pack(fill="x", padx=10, pady=4, after=self.f_modes)
         else:
             self.f_scale.pack_forget()
+        if mode in SCALE_MODES:
+            self.f_detail.pack(fill="x", padx=10, pady=4, after=self.f_modes)
+        else:
+            self.f_detail.pack_forget()
         if mode == "reference":
             self.f_ref.pack(fill="x", padx=10, pady=4, after=self.f_modes)
         else:
@@ -773,6 +829,27 @@ class App:
         on = self._uses_soft_mask()
         self.w_feather.configure(state="normal" if on else "disabled")
 
+    def _on_lora_str(self, _value=None):
+        self.lbl_lora_str.configure(text=f"strength {float(self.v_lora_str.get()):.2f}")
+
+    def _on_detail(self, _value=None):
+        self.lbl_detail.configure(text=f"{round(float(self.v_detail.get()) * 100)} %")
+
+    def _wf_templates(self):
+        wf = self.v_workflow.get()
+        if wf == BUILTIN:
+            return []
+        try:
+            return [load_template(w) for w in resolve(self.workflows_dir / wf)]
+        except (OSError, ValueError, KeyError):
+            return []
+
+    def _stage_label(self) -> str:
+        for t in self._wf_templates():
+            for _, label in stage_switches(t):
+                return label
+        return ""
+
     def _on_feather(self, _value=None):
         v = round(float(self.v_feather.get()) * 2) / 2
         self.lbl_feather.configure(text="hard edge" if v <= 0 else f"{v:g} % of the shorter side")
@@ -869,7 +946,20 @@ class App:
         # while the prompt enhancement is on
         has_writer = self._has_text_model() and self.v_mode.get() not in ("reference", "remove")  # these modes: fixed instruction
         self.cb_enhance.configure(state="normal" if has_writer else "disabled")
-        self.cb_turbo.configure(state="normal" if self._has_lora_switch() else "disabled", text=self._lora_label())
+        has_lora = self._has_lora_switch()
+        self.cb_turbo.configure(state="normal" if has_lora else "disabled", text=self._lora_label())
+        if self.v_workflow.get() != self._lora_wf:   # another workflow: the slider starts at the value it ships with
+            self._lora_wf = self.v_workflow.get()
+            for t in self._wf_templates():
+                d0 = lora_strength(t)
+                if d0 is not None:
+                    self.v_lora_str.set(min(1.0, d0))
+                    self._on_lora_str()
+                    break
+        self.w_lora_str.configure(state="normal" if has_lora and self.v_turbo.get() else "disabled")
+        stage = self._stage_label()
+        self.cb_stage.configure(state="normal" if stage else "disabled", text=stage or "Stage")
+        self.w_detail.configure(state="normal" if self.v_mode.get() in SCALE_MODES else "disabled")
         enhancing = has_writer and bool(self.v_enhance.get())
         self.cb_clip.configure(state="readonly" if (state == "disabled" and enhancing) else "disabled")
         self._update_feather_state()
@@ -1020,7 +1110,8 @@ class App:
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
             "scale": self._scale(), "ref_style": self._ref_style(),
             "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
-            "turbo": bool(self.v_turbo.get()), "ref_collage": bool(self.v_collage.get()), "ref_cutout": bool(self.v_cutout.get()),
+            "turbo": bool(self.v_turbo.get()), "stage_on": bool(self.v_stage.get()), "detail": round(float(self.v_detail.get()), 2),
+            "lora_strength": round(float(self.v_lora_str.get()), 2), "ref_collage": bool(self.v_collage.get()), "ref_cutout": bool(self.v_cutout.get()),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
             "feather_pct": round(float(self.v_feather.get()), 1),
             "prompt": self._prompt_text(), "negative": self.t_neg.get("1.0", "end").strip(),
@@ -1070,6 +1161,13 @@ class App:
         put(self.v_fooocus, "fooocus", bool)
         put(self.v_enhance, "enhance", bool)
         put(self.v_turbo, "turbo", bool)
+        put(self.v_stage, "stage_on", bool)
+        put(self.v_detail, "detail", float)
+        if "lora_strength" in s:
+            self._lora_wf = self.v_workflow.get()
+            put(self.v_lora_str, "lora_strength", float)
+            self._on_lora_str()
+        self._on_detail()
         put(self.v_collage, "ref_collage", bool)
         put(self.v_cutout, "ref_cutout", bool)
         put(self.v_refstyle, "ref_style", lambda v: REF_STYLES.get(v, REF_STYLES["classic"]))
@@ -1171,7 +1269,9 @@ class App:
                        mask_blur=int(self.v_blur.get()),
                        overlap=int(self.v_overlap.get()), variants=int(self.v_variants.get()),
                        fooocus=bool(self.v_fooocus.get()), enhance=bool(self.v_enhance.get()),
-                       turbo=bool(self.v_turbo.get()), scale=self._scale(), ref_style=self._ref_style(), ref_collage=bool(self.v_collage.get()), ref_cutout=bool(self.v_cutout.get()),
+                       turbo=bool(self.v_turbo.get()), scale=self._scale(),
+                       lora_strength=(round(float(self.v_lora_str.get()), 2) if self._has_lora_switch() else None),
+                       stage_on=bool(self.v_stage.get()) or not self._stage_label(), detail=round(float(self.v_detail.get()), 2), ref_style=self._ref_style(), ref_collage=bool(self.v_collage.get()), ref_cutout=bool(self.v_cutout.get()),
                        layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2)
 
@@ -1301,6 +1401,7 @@ class App:
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
             "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "neg_open": bool(self.v_neg_open.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
+            "stage_on": req.stage_on, "detail": req.detail, "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
             "ref_collage": req.ref_collage, "ref_style": req.ref_style, "ref_cutout": req.ref_cutout, "runs": dict(self.state.get("runs", {})),
         })
 
