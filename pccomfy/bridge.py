@@ -776,18 +776,25 @@ class Bridge:
         """The picture (and the selection as a mask) from a throw-away duplicate. With `drop_top` the top layer (the
         reference) is left out: the picture is all layers below it, flattened in the duplicate only."""
         pc = self.pc
-        # layers that are switched off must not end up in the picture the model sees: with any of them present the
-        # duplicate keeps its layers, drops the hidden ones and is flattened (the plain merged copy may include them)
-        hidden = [l["id"] for l in pc.document().get("layers", []) if isinstance(l, dict) and layer_visible(l) is False and "id" in l]
-        pc.execute("image.duplicate", {"name": f"pccomfy-{tag}", "mergedOnly": not (drop_top or hidden)})
+        # the picture the model sees is what is VISIBLE: layers that are switched off must not be in it. With any of them
+        # present the duplicate keeps its layers, drops the hidden ones and is flattened (the plain merged copy may include
+        # them). The duplicate has its own layer ids: the hidden layers are found again by their position in the stack.
+        layers0 = [l for l in pc.document().get("layers", []) if isinstance(l, dict)]
+        hidden_at = [i for i, l in enumerate(layers0) if layer_visible(l) is False]
+        pc.execute("image.duplicate", {"name": f"pccomfy-{tag}", "mergedOnly": not (drop_top or hidden_at)})
         try:
-            if hidden and not drop_top:
-                for lid in hidden:
+            if hidden_at:
+                dup = [l for l in pc.document().get("layers", []) if isinstance(l, dict)]
+                if len(dup) == len(layers0):
+                    ids = [dup[i]["id"] for i in hidden_at if "id" in dup[i]]
+                else:   # the stack differs (should not happen): by name
+                    names = {layers0[i].get("name") for i in hidden_at}
+                    ids = [l["id"] for l in dup if l.get("name") in names and "id" in l]
+                for lid in ids:
                     pc.execute("layer.delete", {"layer": lid})
-                self._try("layer.flattenImage")
+                if not drop_top:
+                    self._try("layer.flattenImage")
             if drop_top:
-                for lid in hidden:   # the hidden ones are gone from the picture too
-                    pc.execute("layer.delete", {"layer": lid})
                 pc.execute("layer.delete", {"layer": pc.document()["layers"][0]["id"]})
                 self._try("layer.flattenImage")  # nothing to flatten when only one layer is left
             src_name, src_full = self._path(tag, "src")

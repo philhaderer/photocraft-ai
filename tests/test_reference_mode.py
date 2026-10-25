@@ -75,6 +75,8 @@ class FakePC:
         if cmd == "image.duplicate":
             nd = copy.deepcopy(d)
             nd.name = params["name"]
+            for l in nd.layers:     # like PhotoCraft: a duplicate has layers of its own, with new ids
+                l["id"] = self._id()
             if params.get("mergedOnly"):
                 nd.layers = [{"id": self._id(), "img": self.composite(d), "visible": True}]
             self.docs.append(nd)
