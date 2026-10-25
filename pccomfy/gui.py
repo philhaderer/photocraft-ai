@@ -334,7 +334,7 @@ class App:
         self.v_blur = tk.IntVar(value=g("mask_blur", d["mask_blur"]))
         self.v_overlap = tk.IntVar(value=g("overlap", d["overlap"]))
         self.v_scale = tk.StringVar(value=str(g("scale", 1.5)).removesuffix(".0"))
-        self.v_top = tk.BooleanVar(value=g("on_top", True))
+        self.v_top = tk.BooleanVar(value=True)      # the window always belongs to PhotoCraft (no switch any more)
         self.v_feather = tk.DoubleVar(value=g("feather_pct", 2.0))
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
         self.v_enhance = tk.BooleanVar(value=g("enhance", True))
@@ -577,8 +577,9 @@ class App:
             Tooltip(w, "A test series: values separated by commas (1024, 1224, 1536 / 0.2, 0.4, 0.6). Generate then runs the "
                        "same request once per value with the SAME seed; every result is a layer named with its value.\n"
                        "Both filled = every combination.")
-        self.cb_enhance = ttk.Checkbutton(mf, text="LLM prompt enhancement", variable=self.v_enhance, command=self._on_workflow)
-        self.cb_enhance.grid(row=0, column=1, sticky="w", padx=6, pady=(4, 0))
+        self.f_enh = ttk.Frame(r)       # packed under Seed / Variants, above the prompt writer drop-down (see below)
+        self.cb_enhance = ttk.Checkbutton(self.f_enh, text="LLM prompt enhancement", variable=self.v_enhance, command=self._on_workflow)
+        self.cb_enhance.pack(anchor="w")
         self.tt_enhance = Tooltip(self.cb_enhance, ENHANCE_TIP)
         self.cb_turbo = ttk.Checkbutton(mf, text="LoRA", variable=self.v_turbo)
         self.cb_turbo.grid(row=1, column=1, sticky="w", padx=6, pady=(4, 0))
@@ -601,7 +602,7 @@ class App:
             self.stage_tips.append(Tooltip(cb, STAGE_TIP))
             self.stage_cbs.append(cb)
         self.cb_stage = self.stage_cbs[0]
-        for cb in self.stage_cbs[1:]:
+        for cb in self.stage_cbs:
             cb.grid_remove()
         self._on_lora_str()
 
@@ -620,6 +621,8 @@ class App:
         ff.columnconfigure(1, weight=1)
         lbl_f = ttk.Label(ff, text="Edge feather")
         lbl_f.grid(row=0, column=0, sticky="w")
+        ttk.Label(ff, text="Softens the seam where the new area meets your picture (0 = a sharp cut).", style="Muted.TLabel",
+                  wraplength=self._px(380), justify="left").grid(row=1, column=0, columnspan=3, sticky="w")
         self.w_feather = sc = ttk.Scale(ff, from_=0, to=10, variable=self.v_feather, command=self._on_feather)
         sc.grid(row=0, column=1, sticky="ew", padx=8)
         self.lbl_feather = ttk.Label(ff, width=22, style="Muted.TLabel")
@@ -690,6 +693,7 @@ class App:
         self._on_match()
         self.f_neg = ttk.Frame(r)
         self.f_neg.pack(fill="x", padx=10, pady=(6, 0), before=self.f_sharp)     # directly under the prompt
+        self.f_enh.pack(fill="x", padx=10, pady=(6, 0), before=self.f_sharp)
         self.v_neg_open = tk.BooleanVar(value=bool(self.state.get("neg_open", False)))
         self.btn_neg = ttk.Button(self.f_neg, command=self._toggle_negative, style="Link.TButton")
         self.btn_neg.pack(anchor="w")
@@ -712,8 +716,8 @@ class App:
                                 "of this model's folder first. Strength 0 to 1.5.")
         self.f_xl_rows = ttk.Frame(self.f_xl)
         self.f_xl_rows.pack(fill="x")
-        sf = ttk.Frame(self.adv_body)    # Seed and Variants (under Advanced)
-        sf.grid(row=0, column=0, columnspan=2, sticky="ew")
+        sf = ttk.Frame(r)    # Seed and Variants: directly under the negative prompt
+        sf.pack(fill="x", padx=10, pady=(6, 0), after=self.f_neg)
         self.f_sf = sf
         af = ttk.Frame(self.adv_body)
         af.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
@@ -879,14 +883,8 @@ class App:
         foot.pack(fill="x", side="bottom", padx=10, pady=6)
         ttk.Label(foot, textvariable=self.v_conn, style="Muted.TLabel").pack(side="left")
         ttk.Button(foot, text="Refresh", command=self.refresh).pack(side="left", padx=(8, 0))
-        cb_top = ttk.Checkbutton(foot, text="Stay with PhotoCraft" if winlink.available() else "Always on top",
-                                 variable=self.v_top, command=self._on_top)
-        cb_top.pack(side="right")
-        if winlink.available():
-            Tooltip(cb_top, "On: this window belongs to PhotoCraft - it minimizes and returns with PhotoCraft, stays above "
-                            "PhotoCraft only and does not cover other programs. It closes when PhotoCraft closes. "
-                            "Off: a normal, free window.")
 
+        self.root.bind("<Button-1>", self._lora_outside, add="+")
         self.root.bind("<Control-Return>", lambda e: (self.generate(), "break")[1])
         self.root.bind("<Escape>", lambda e: self.stop())
 
@@ -920,6 +918,10 @@ class App:
         else:
             self.f_ref.pack_forget()
         self.w_denoise.configure(state="disabled" if mode == "txt2img" or self._ignores_mask() else "normal")   # an editor always runs at 1.0
+        if mode == "txt2img":              # nothing to blend into: no layer mask
+            self.f_lm.pack_forget()
+        elif not self.f_lm.winfo_manager():
+            self.f_lm.pack(fill="x", padx=10, pady=(2, 4), before=self.f_adv)
         for w in self._match_widgets:      # pulling colours back only makes sense where a new area meets the old picture
             if mode in ("inpaint", "outpaint", "reference"):
                 w.grid()
@@ -1049,32 +1051,112 @@ class App:
         row.pack(fill="x", pady=1)
         row.columnconfigure(0, weight=1)
         v_name, v_str = tk.StringVar(value=name), tk.DoubleVar(value=strength)
-        rec = {"frame": row, "name": v_name, "strength": v_str}
-        # an editable drop-down: type to search, the arrow lists the LoRAs that contain every word typed (this model's folder first)
-        cb = ttk.Combobox(row, textvariable=v_name, values=self._lora_choices(), width=8, postcommand=lambda: self._lora_fill(rec))
-        cb.grid(row=0, column=0, sticky="ew")
-        rec["entry"] = cb
-        cb.bind("<KeyRelease>", lambda e: self._lora_fill(rec))
+        rec = {"frame": row, "name": v_name, "strength": v_str, "list": None, "box": None}
+        ent = ttk.Entry(row, textvariable=v_name)
+        ent.grid(row=0, column=0, sticky="ew")
+        rec["entry"] = ent
+        btn = ttk.Button(row, text="\u25be", style="Link.TButton", width=2, command=lambda: self._lora_toggle(rec))
+        btn.grid(row=0, column=1, padx=(2, 0))
+        rec["btn"] = btn
         sp = ttk.Spinbox(row, textvariable=v_str, from_=0.0, to=1.5, increment=0.05, width=5)
-        sp.grid(row=0, column=1, padx=4)
+        sp.grid(row=0, column=2, padx=4)
         rm = ttk.Button(row, text="x", style="Link.TButton", width=2, command=lambda: self._remove_lora_row(rec))
-        rm.grid(row=0, column=2)
+        rm.grid(row=0, column=3)
+        # typing opens a list under the row that narrows with every key; a click (or Down, Enter) takes the entry
+        ent.bind("<KeyRelease>", lambda e: self._lora_key(rec, e))
+        ent.bind("<Down>", lambda e: self._lora_focus_list(rec))
+        ent.bind("<Escape>", lambda e: (self._lora_hide(rec), "break")[1])
         Tooltip(rm, "Remove this LoRA")
-        Tooltip(cb, "Type to search, then open the list with the arrow: it shows only the LoRAs that contain every word you typed "
-                    "(this model's folder first).")
+        Tooltip(btn, "Show all LoRAs (this model's folder first); scroll the list with the wheel or the bar")
+        Tooltip(ent, "Type to search: a list opens under the box with the LoRAs that contain every word you typed. Click one to take it.")
         self.lora_rows.append(rec)
         self.b_addlora.configure(state="normal" if len(self.lora_rows) < self.LORA_MAX else "disabled")
 
-    def _lora_fill(self, rec: dict):
-        """The list of a LoRA drop-down: what was typed narrows it (a complete file name shows the whole list again)."""
-        typed = rec["name"].get().strip()
-        names = self._lora_choices("" if typed in self.all_loras else typed)
-        rec["entry"]["values"] = names[:300]
-        return names
+    def _lora_key(self, rec: dict, e):
+        if getattr(e, "keysym", "") in ("Return", "Escape", "Tab", "Up", "Down", "Left", "Right", "Shift_L", "Shift_R", "Control_L", "Control_R"):
+            return
+        self._lora_show(rec, rec["name"].get())
+
+    def _lora_toggle(self, rec: dict):
+        if rec.get("box") is not None:
+            self._lora_hide(rec)
+        else:
+            self._lora_show(rec, "")
+
+    def _lora_show(self, rec: dict, typed: str = ""):
+        """The list under a LoRA row: the matches for what was typed (scrollable; a click takes one)."""
+        try:
+            names = self._lora_choices(typed)[:400]
+            if not names:
+                self._lora_hide(rec)
+                return
+            box = rec.get("box")
+            if box is None:
+                box = ttk.Frame(self.f_xl_rows)
+                lb = tk.Listbox(box, height=8, exportselection=False, activestyle="none", bg=PANEL, fg=FG,
+                                selectbackground=ACCENT, selectforeground="#1b1b1b", relief="flat", highlightthickness=1,
+                                highlightbackground="#454545", font=(FONT, 9))
+                sb = ttk.Scrollbar(box, orient="vertical", command=lb.yview)
+                lb.configure(yscrollcommand=sb.set)
+                sb.pack(side="right", fill="y")
+                lb.pack(side="left", fill="both", expand=True)
+                box.pack(fill="x", after=rec["frame"])
+                lb.bind("<ButtonRelease-1>", lambda e: self._lora_pick(rec))
+                lb.bind("<Return>", lambda e: self._lora_pick(rec))
+                lb.bind("<Escape>", lambda e: (self._lora_hide(rec), rec["entry"].focus_set(), "break")[2])
+                rec["box"], rec["list"] = box, lb
+            lb = rec["list"]
+            lb.configure(height=max(1, min(8, len(names))))
+            lb.delete(0, "end")
+            for n in names:
+                lb.insert("end", n)
+            if self._sized:
+                self._fit_height()
+        except Exception as e:      # shown instead of silently doing nothing
+            self._status(f"LoRA list: {e}", error=True)
+
+    def _lora_focus_list(self, rec: dict):
+        if rec.get("box") is None:
+            self._lora_show(rec, rec["name"].get())
+        lb = rec.get("list")
+        if lb is not None:
+            lb.focus_set()
+            lb.selection_set(0)
+            lb.activate(0)
+        return "break"
+
+    def _lora_pick(self, rec: dict):
+        lb = rec.get("list")
+        if lb is None:
+            return
+        sel = lb.curselection()
+        if sel:
+            rec["name"].set(lb.get(sel[0]))
+        self._lora_hide(rec)
+        rec["entry"].focus_set()
+
+    def _lora_hide(self, rec: dict):
+        box = rec.get("box")
+        if box is not None:
+            box.destroy()
+            rec["box"] = rec["list"] = None
+            if self._sized:
+                self._fit_height()
+
+    def _lora_outside(self, e):
+        """A click anywhere but in a LoRA row or its list closes the lists."""
+        for rec in list(self.lora_rows):
+            if rec.get("box") is None:
+                continue
+            w = str(e.widget)
+            if w.startswith(str(rec["box"])) or w in (str(rec["entry"]), str(rec["btn"])):
+                continue
+            self._lora_hide(rec)
 
     def _remove_lora_row(self, rec: dict):
         if rec in self.lora_rows:
             self.lora_rows.remove(rec)
+            self._lora_hide(rec)
             rec["frame"].destroy()
         self.b_addlora.configure(state="normal")
         self._fit_height()
@@ -1250,6 +1332,8 @@ class App:
     def _uses_soft_mask(self) -> bool:
         """True when the new layer really gets the soft (feathered) layer mask, i.e. the feather has an effect."""
         choice = {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto")
+        if self.v_mode.get() == "txt2img":
+            return False
         if choice != "auto":
             return choice == "soft"
         if self.v_mode.get() == "upscale":
@@ -1274,7 +1358,7 @@ class App:
         self.w_feather.configure(state="normal" if on else "disabled")
         shown = bool(self.f_feather.winfo_manager()) if hasattr(self.f_feather, "winfo_manager") else False
         if on and not shown:
-            self.f_feather.pack(fill="x", padx=10, pady=(4, 0), before=self.f_lm)
+            self.f_feather.pack(fill="x", padx=10, pady=(4, 0), before=self.f_lm if self.f_lm.winfo_manager() else self.f_adv)
         elif not on and shown:
             self.f_feather.pack_forget()
         if on != shown and getattr(self, "_sized", False):
@@ -1438,8 +1522,7 @@ class App:
                 cb.grid()
             else:
                 cb.configure(state="disabled", text="Stage")
-                if i:
-                    cb.grid_remove()
+                cb.grid_remove()          # a workflow without that stage shows nothing (the stages belong to MOSS / Flux 3 upscale)
         self.w_detail.configure(state="normal" if self.v_mode.get() in SCALE_MODES else "disabled")
         enhancing = has_writer and bool(self.v_enhance.get())
         self.cb_clip.configure(state="readonly" if (state == "disabled" and enhancing) else "disabled")

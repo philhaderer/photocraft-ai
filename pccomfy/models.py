@@ -40,15 +40,14 @@ _SOFT = {"layer_mask": "soft", "mask_grow": 8, "mask_blur": 8}
 
 # Flux 2 Klein refine: the prompts of the relight workflow (live tested). "Default" leaves the field empty-ish: the workflow's own
 # sentence is used and the picture comes out a little brighter, which is a good standard.
-RELIGHT_MATTE = 'The scene utilizes fully diffuse, cross-polarized studio lighting to eliminate all specular reflections, glare, and hotspots, resulting in a perfectly flat-field exposure with uniform luminance across the skin. The skin exhibits a completely matte texture with purely diffuse (Lambertian) reflectance, no glossy or oily appearance, and no highlight clipping.\n\nRemove highlights on the cheeks and nose.\n\nThe white balance is calibrated to 5500K (daylight neutral), ensuring absolutely accurate, true-to-life colors with no warm or cool color casts.\n\nPhotographed with a Sony A7R V using a 55mm f/8 lens for maximum sharpness from edge to edge and zero distortion. The aesthetic is objective, documentary-style, and ultra-realistic. 8k resolution, clean ISO 100, raw output. Preserve the background. Remove watermarks and checkerboard patterns.'
 RELIGHT_NEUTRAL = 'A crystal-clear, high-fidelity photograph of the subject captured under perfectly neutral, even lighting. Preserve the face and facial details.\n\nThe scene utilizes soft global illumination to eliminate harsh shadows and high contrast, resulting in a balanced, flat-field exposure. The white balance is calibrated to 5500K (daylight neutral), ensuring absolutely accurate, true-to-life colors with no warm or cool color casts.\n\nPhotographed with a Sony A7R V using a 55mm f/8 lens for maximum sharpness from edge to edge and zero distortion. The aesthetic is objective, documentary-style, and ultra-realistic. 8k resolution, clean ISO 100, raw output. Remove watermarks and checkerboard patterns. Preserve the background.'
 RELIGHT_STUDIO = 'Transform the image into a professionally lit studio portrait with soft, diffused lighting. Remove harsh sunlight, strong contrast, and directional shadows.'
-FLUX2_REFINE_PROMPTS = (
-    ("Default", PLACEHOLDER, "The workflow's own sentence: a sharp, natural photograph of the same scene (a little brighter)."),
-    ("Matte", RELIGHT_MATTE, "Relight: diffuse light without highlights or glare, a matte skin texture, neutral white balance."),
+REFINE_PROMPTS = (
+    ("Default", PLACEHOLDER, "The workflow's own sentence (Flux 2: a sharp, natural photograph of the same scene, a little brighter; Flux 3: the Restore sentence)."),
     ("Neutral", RELIGHT_NEUTRAL, "Relight: soft, even, neutral light without harsh shadows, true-to-life colours."),
-    ("Studio", RELIGHT_STUDIO, "Relight: a professionally lit studio portrait with soft, diffused light."),
+    ("Studio portrait", RELIGHT_STUDIO, "Relight: a professionally lit studio portrait with soft, diffused light."),
 )
+FLUX2_REFINE_PROMPTS = REFINE_PROMPTS
 
 QWEN = Model(
     "qwen", "Qwen2.1",
@@ -56,12 +55,12 @@ QWEN = Model(
     "Expand and whole-image edits. Reference images work with the picture as image 1 and the inserted one as image 2.\n"
     "Base res. 1024 is the best size for it: 1224 and 1536 shift the filled area.",
     {
-        "txt2img": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="none")),
+        "txt2img": Mode("qwen-image-21-t2i.json", dict(base_res=1024, turbo=True, layer_mask="none", enhance=False)),
         "edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="none")),
         "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=4.0)),
         "outpaint": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="auto")),
         "reference": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, ref_style="simple", ref_cutout=True, layer_mask="auto")),
-        "remove": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=4.0)),
+        "remove": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=10.0)),
     })
 
 FLUX2 = Model(
@@ -78,11 +77,11 @@ FLUX3 = Model(
     "flux3", "Flux3Klein",
     "FLUX.3 Klein: text to image (with the Flux 3 prompt upsampler, switchable) and whole-image edits (base res 1536), Expand (a test), and the SeedVR2 + tiles upscale / refine (the Restore LoRA and the SeedVR2 stage are switches).",
     {
-        "txt2img": Mode("flux3-klein-t2i.json", dict(base_res=1536, layer_mask="none", enhance=True)),
+        "txt2img": Mode("flux3-klein-t2i.json", dict(base_res=1536, layer_mask="none", enhance=False)),
         "edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none")),
         "outpaint": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="auto")),
         "upscale": Mode("flux3-klein-upscale.json", dict(scale=1.5, turbo=True, stage_on=True), PLACEHOLDER),
-        "refine": Mode("flux3-klein-upscale.json", dict(turbo=True, stage_on=True), PLACEHOLDER),
+        "refine": Mode("flux3-klein-upscale.json", dict(turbo=True, stage_on=True), PLACEHOLDER, REFINE_PROMPTS),   # test: the Flux 2 prompts
     })
 
 # MOSS: the DMD2 speed LoRA (8 steps, CFG 1.5) is the model's own LoRA; the Lenovo UltraReal LoRA and the skip-layer
@@ -103,7 +102,7 @@ FIBO = Model(
     "The VGL variants (a text model writes the prompt) are chosen under the prompt.",
     {
         "edit": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="none", enhance=False)),
-        "inpaint": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
+        "inpaint": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False)),
         "outpaint": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
         "reference": Mode("fibo2-edit-plain.json", dict(base_res=1024, ref_style="simple", ref_cutout=True, layer_mask="auto", enhance=False)),
         "remove": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False)),

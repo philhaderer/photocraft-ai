@@ -42,6 +42,53 @@ def main():
     assert next(n for n in off.values() if n["class_type"] == "CLIPTextEncode")["inputs"]["text"] == "a fox"
     assert workflows.writer_name(workflows.load_template(ROOT / "workflows" / "moss-image-t2i.json")) == "Qwen 3.5 9B"
     assert workflows.writer_name(workflows.load_template(ROOT / "workflows" / "fibo2-edit-plain.json")) == ""
+    # Qwen text to image has a workflow of its own (no input picture) with the MOSS text model as prompt enhancer
+    q = workflows.load_template(ROOT / "workflows" / "qwen-image-21-t2i.json")
+    assert links_ok(q) and not bridge.has_tag(q, "image") and bridge.has_tag(q, "latent") and workflows.writer_name(q) == "Qwen 3.5 9B"
+    assert next(n for n in q.values() if n["class_type"] == "CLIPLoader" and "gptq" in n["inputs"]["clip_name"])
+    pc, _, b = T.make(tempfile.mkdtemp(), with_sel=False)
+    b.comfy = T.FakeComfy()
+    req = Request(mode="txt2img", workflow=str(ROOT / "workflows" / "qwen-image-21-t2i.json"), preset="X", run_no=1, base_res=1024, enhance=False)
+    req.params = workflows.GenParams(prompt="a red fox", seed=5)
+    b.run(req)
+    assert not b.comfy.uploads and any(n["class_type"] == "EmptyLatentImage" for n in b.comfy.graphs[0].values())
+
+    # Expand with the Flux 2 / 3 Klein edit workflows (no pc:mask node): no mask is sent, no error
+    from PIL import Image
+    for wf in ("flux2-klein-edit.json", "flux3-klein-edit.json"):
+        pc, _, b = T.make(tempfile.mkdtemp(), with_sel=False, layers=1)
+        pc.docs[0].layers[0]["img"].paste((255, 255, 255, 255), (T.W - 40, 0, T.W, T.H))
+        b.comfy = T.FakeComfy()
+        req = Request(mode="outpaint", workflow=str(ROOT / "workflows" / wf), preset="X", run_no=1, overlap=8)
+        req.params = workflows.GenParams(prompt="", seed=5)
+        res = b.run(req)
+        assert res["layers"] and not any(k.endswith("-mask.png") for k in b.comfy.uploads), wf
+
+    # new layers go on top of the stack; layers that are switched off are not in the picture; a hidden reference is reported
+    pc, _, b = T.make(tempfile.mkdtemp(), with_sel=False)
+    top_id = pc.docs[0].layers[-1]["id"]
+    pc.docs[0].layers[1]["visible"] = False
+    b.comfy = T.FakeComfy()
+    req = Request(mode="edit", workflow=str(ROOT / "workflows" / "flux2-klein-edit.json"), preset="X", run_no=1)
+    req.params = workflows.GenParams(prompt="make it night", seed=5)
+    b.run(req)
+    cmds = [c for c, _ in pc.log]
+    dup = next(p for c, p in pc.log if c == "image.duplicate")
+    assert dup["mergedOnly"] is False and any(c == "layer.delete" for c in cmds)       # the hidden layer was dropped
+    first_paste = cmds.index("edit.paste")
+    assert any(c == "layer.select" and p.get("layer") == top_id for c, p in pc.log[:first_paste]), "result not placed on top"
+    pc, _, b = T.make(tempfile.mkdtemp(), with_sel=True)
+    pc.docs[0].layers[-1]["visible"] = False
+    b.comfy = T.FakeComfy()
+    req = Request(mode="reference", workflow=str(ROOT / "workflows" / "qwen-image-21-edit.json"), preset="X", run_no=1, ref_style="simple")
+    req.params = workflows.GenParams(prompt="", seed=5)
+    try:
+        b.run(req)
+        raise AssertionError("hidden reference accepted")
+    except bridge.BridgeError as e:
+        assert "switched off" in str(e)
+    assert bridge.layer_visible({"visible": False}) is False and bridge.layer_visible({"hidden": True}) is False
+    assert bridge.layer_visible({"id": 1}) is None
     print("ALL OK (round bridge)")
 
 

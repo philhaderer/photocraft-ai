@@ -131,6 +131,21 @@ def mask_is_used(graph: dict) -> bool:
                for n in graph.values() for v in n.get("inputs", {}).values())
 
 
+def layer_visible(layer: dict) -> bool | None:
+    """Is this layer (an entry of document.inspect's "layers") switched on? None = the entry does not say."""
+    for k in ("visible", "isVisible", "is_visible", "show", "shown"):
+        if isinstance(layer.get(k), bool):
+            return layer[k]
+    if isinstance(layer.get("hidden"), bool):
+        return not layer["hidden"]
+    v = layer.get("visibility")
+    if isinstance(v, str):
+        return v.lower() in ("visible", "shown", "on", "true")
+    if isinstance(v, bool):
+        return v
+    return None
+
+
 def has_tag(graph: dict, tag: str) -> bool:
     """True when a node of the workflow is titled pc:<tag> (e.g. an image node: an instruction editor that needs a picture)."""
     import re
@@ -446,6 +461,8 @@ class Bridge:
         if req.mode == "reference":
             if len(doc.get("layers", [])) < 2:
                 raise BridgeError("Put the reference image on its own layer above the picture: the top layer is the reference.")
+            if layer_visible(doc["layers"][0]) is False:
+                raise BridgeError("The top layer (the reference image) is switched off in PhotoCraft. Switch it on (the eye icon) and generate again.")
 
         wf_paths = workflows.resolve(req.workflow) if req.workflow else [None]
         # an instruction-based editor (Fibo) never sees the mask: it gets the white margin as it is plus a sentence
@@ -473,7 +490,7 @@ class Bridge:
                     ref_full = self._export_top_layer(orig, tag)
                     ref_rgba, ref_rgb = imaging.reference_from_layer(ref_full)
                 except ValueError as e:
-                    raise BridgeError(str(e)) from None
+                    raise BridgeError(str(e) + " Is the top layer (the reference image) switched off in PhotoCraft?") from None
             src, mask = self._export(orig, tag, need_mask=has_sel, drop_top=(req.mode == "reference"))
             if req.mode == "reference" and mask is None:
                 # no selection: the reference layer, placed where it belongs, is the place (and its size)
@@ -534,7 +551,9 @@ class Bridge:
         ref_name = None
         if req.mode == "reference":
             ref_name = self.comfy.upload_image(ref_rgb, f"pcc-{tag}-ref.png")
-        if req.mode in ("inpaint", "reference", "outpaint"):
+        # a workflow without a pc:mask node (the Flux 2/3 Klein edit ones) gets the instruction only, no mask
+        wf_mask_node = (not wf_paths[0]) or any(has_tag(json.loads(Path(w).read_text(encoding="utf-8")), "mask") for w in wf_paths if w)
+        if req.mode in ("inpaint", "reference", "outpaint") and wf_mask_node:
             m = imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
             m = m.resize((gw, gh), Image.BILINEAR)
             mask_name = self.comfy.upload_image(m.convert("RGB"), f"pcc-{tag}-mask.png")
@@ -622,6 +641,11 @@ class Bridge:
             sel_small = mask.crop(region.pil()).resize(results[0][1][0].size, Image.NEAREST)
         items = [(label, i, im, len(ims)) for label, ims in results for i, im in enumerate(ims)]
         layers = []
+        if mode != "selection":     # the new layers go on top of the stack, whichever layer was active (else they can sit under it)
+            try:
+                self._try("layer.select", {"layer": self.pc.document()["layers"][0]["id"]})
+            except (KeyError, IndexError, TypeError, PhotoCraftError):
+                pass
         # last item first: #1 ends up on top, visible and active, the others hidden below it
         for n, g in enumerate(reversed(range(len(items)))):
             label, i, raw, count = items[g]
@@ -752,9 +776,18 @@ class Bridge:
         """The picture (and the selection as a mask) from a throw-away duplicate. With `drop_top` the top layer (the
         reference) is left out: the picture is all layers below it, flattened in the duplicate only."""
         pc = self.pc
-        pc.execute("image.duplicate", {"name": f"pccomfy-{tag}", "mergedOnly": not drop_top})
+        # layers that are switched off must not end up in the picture the model sees: with any of them present the
+        # duplicate keeps its layers, drops the hidden ones and is flattened (the plain merged copy may include them)
+        hidden = [l["id"] for l in pc.document().get("layers", []) if isinstance(l, dict) and layer_visible(l) is False and "id" in l]
+        pc.execute("image.duplicate", {"name": f"pccomfy-{tag}", "mergedOnly": not (drop_top or hidden)})
         try:
+            if hidden and not drop_top:
+                for lid in hidden:
+                    pc.execute("layer.delete", {"layer": lid})
+                self._try("layer.flattenImage")
             if drop_top:
+                for lid in hidden:   # the hidden ones are gone from the picture too
+                    pc.execute("layer.delete", {"layer": lid})
                 pc.execute("layer.delete", {"layer": pc.document()["layers"][0]["id"]})
                 self._try("layer.flattenImage")  # nothing to flatten when only one layer is left
             src_name, src_full = self._path(tag, "src")

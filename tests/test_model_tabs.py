@@ -123,11 +123,14 @@ def main():
     app._add_lora_row("", 1.0)                       # an empty row is not a LoRA
     row0 = app.lora_rows[0]
     row0["name"].set("style b")
-    assert app._lora_fill(row0) == ["qwen\\Style_B.safetensors"]       # the drop-down narrows with what is typed
-    row0["name"].set("zzz-no-such")
-    assert app._lora_fill(row0) == []
-    row0["name"].set("qwen\\style_a.safetensors")                  # a complete name shows the whole list again
-    assert len(app._lora_fill(row0)) == 4
+    app._lora_show(row0, "style b")                  # typing opens the list, narrowed to what was typed
+    assert row0["box"] is not None
+    app._lora_show(row0, "zzz-no-such")              # nothing matches: the list goes away
+    assert row0["box"] is None
+    app._lora_toggle(row0)                            # the arrow lists everything
+    assert row0["box"] is not None
+    app._lora_hide(row0)
+    row0["name"].set("qwen\\style_a.safetensors")
     assert app._request().loras == [("qwen\\style_a.safetensors", 0.6)]
     assert app._collect()["loras"] == [["qwen\\style_a.safetensors", 0.6]]
     for _ in range(6):
@@ -152,8 +155,8 @@ def main():
     app.v_mode.set("refine")
     app._on_model()
     assert app._pchoice_key == ("flux2", "refine")
-    app._insert_prompt(models.RELIGHT_MATTE)
-    assert app._prompt_text().startswith("The scene utilizes fully diffuse")
+    app._insert_prompt(models.RELIGHT_NEUTRAL)
+    assert app._prompt_text().startswith("A crystal-clear, high-fidelity photograph")
     app.v_mode.set("upscale")
     app._on_model()
     assert float(app.v_scale.get()) == 1.5 and app._pchoice_key is None
@@ -166,6 +169,14 @@ def main():
     assert app.t_prompt["highlightbackground"] != gui.ACCENT
     assert models.BY_KEY["moss"].modes["txt2img"].settings["enhance"] is False   # MOSS: the prompt enhancer starts off
     assert gui.PROMPT_LINES == 5
+    mm = models.BY_KEY
+    assert mm["qwen"].modes["txt2img"].workflow == "qwen-image-21-t2i.json" and mm["qwen"].modes["txt2img"].settings["enhance"] is False
+    assert mm["qwen"].modes["remove"].settings["feather_pct"] == 10.0 and mm["fibo"].modes["inpaint"].settings["feather_pct"] == 10.0
+    assert mm["fibo"].modes["inpaint"].settings["layer_mask"] == "soft"
+    assert mm["flux3"].modes["txt2img"].settings["enhance"] is False
+    assert [p[0] for p in mm["flux2"].modes["refine"].prompts] == ["Default", "Neutral", "Studio portrait"]
+    assert mm["flux3"].modes["refine"].prompts == mm["flux2"].modes["refine"].prompts      # taken over for testing
+    assert mm["flux2"].modes["upscale"].prompts == ()
 
     app.v_model.set("qwen")
     app.v_mode.set("inpaint")

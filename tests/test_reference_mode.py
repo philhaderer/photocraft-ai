@@ -66,7 +66,7 @@ class FakePC:
 
     def document(self):
         d = self.doc
-        return {"width": W, "height": H, "hasSelection": d.sel is not None, "layers": [{"id": l["id"]} for l in reversed(d.layers)]}
+        return {"width": W, "height": H, "hasSelection": d.sel is not None, "layers": [{"id": l["id"], "visible": l["visible"]} for l in reversed(d.layers)]}
 
     def execute(self, cmd, params=None):
         params = params or {}

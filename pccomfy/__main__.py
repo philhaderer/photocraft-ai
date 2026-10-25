@@ -63,6 +63,16 @@ def cmd_probe(cfg: dict, keys: list[str] | None = None) -> int:
     return 0
 
 
+def cmd_layers(cfg: dict) -> int:
+    """Debug: the layers of the active document exactly as PhotoCraft reports them (does it say which are switched off?)."""
+    from .bridge import layer_visible
+    b = make(cfg)
+    doc = b.pc.document()
+    for i, layer in enumerate(doc.get("layers", [])):
+        print(f"{i} (0 = top): {json.dumps(layer, ensure_ascii=False)}  -> visible: {layer_visible(layer)}")
+    return 0
+
+
 def cmd_commands(cfg: dict, pattern: str) -> int:
     """Debug: look for PhotoCraft commands whose name matches `pattern` (e.g. "history|undo|group")."""
     import re
@@ -189,6 +199,7 @@ def main(argv=None) -> int:
                    help="for N seconds print every window that appears (open a PhotoCraft menu meanwhile)")
     c = sub.add_parser("commands", help="debug: list PhotoCraft commands matching a pattern")
     c.add_argument("pattern", nargs="?", default="history|undo|group|transaction|step")
+    sub.add_parser("layers", help="debug: print the layers of the active document as PhotoCraft reports them")
     sub.add_parser("viewtest", help="debug: find the call that sets zoom and position")
     pr = sub.add_parser("probe", help="debug: print what PhotoCraft answers on the control channel")
     pr.add_argument("keys", nargs="*", help="parts of ui.inspect to print in full (e.g. view views)")
@@ -234,6 +245,8 @@ def main(argv=None) -> int:
         return 0
     if a.cmd == "viewtest":
         return cmd_viewtest(cfg)
+    if a.cmd == "layers":
+        return cmd_layers(cfg)
     if a.cmd == "probe":
         return cmd_probe(cfg, a.keys)
     if a.cmd == "commands":
