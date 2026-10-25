@@ -108,6 +108,11 @@ def main():
     assert app._lora_choices("style b") == ["qwen\\Style_B.safetensors"]
     app._add_lora_row("qwen\\style_a.safetensors", 0.6)
     app._add_lora_row("", 1.0)                       # an empty row is not a LoRA
+    row0 = app.lora_rows[0]
+    app._lora_list(row0, "style b")                  # the search list narrows with what is typed
+    assert row0["list"] is not None
+    app._lora_list(row0, "zzz-no-such")              # nothing matches: the list goes away
+    assert row0["list"] is None
     assert app._request().loras == [("qwen\\style_a.safetensors", 0.6)]
     assert app._collect()["loras"] == [["qwen\\style_a.safetensors", 0.6]]
     for _ in range(6):

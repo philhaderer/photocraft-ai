@@ -96,8 +96,42 @@ def word_right(after: str) -> int:
     return j
 
 
+def _arrow_icon(root, kind: str, color: str):
+    """Undo / Redo: a smooth U-turn arrow drawn with Pillow (8x supersampled), about 22 px at 100 % scaling, as a PNG PhotoImage."""
+    import base64
+    import io
+    from PIL import Image, ImageDraw, ImageOps
+    try:
+        ui = max(1.0, float(root.winfo_fpixels("1i")) / 96)
+    except Exception:
+        ui = 1.0
+    px = max(16, round(22 * ui))
+    sup = 8
+    n = px * sup
+    im = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    w = max(2, round(n * 0.105))
+    P = lambda x, y: (x * n, y * n)          # noqa: E731  (unit square -> pixels)
+    cx, cy, r = 0.60, 0.56, 0.25
+    d.arc([P(cx - r, cy - r), P(cx + r, cy + r)], start=270, end=90, fill=color, width=w)
+    d.line([P(cx, cy - r), P(0.38, cy - r)], fill=color, width=w)
+    d.line([P(cx, cy + r), P(0.34, cy + r)], fill=color, width=w)
+    ty = cy - r
+    d.polygon([P(0.16, ty), P(0.40, ty - 0.19), P(0.40, ty + 0.19)], fill=color)
+    if kind == "redo":
+        im = ImageOps.mirror(im)
+    buf = io.BytesIO()
+    im.resize((px, px), Image.LANCZOS).save(buf, "PNG")
+    return tk.PhotoImage(master=root, data=base64.b64encode(buf.getvalue()).decode("ascii"))
+
+
 def icon_image(root, kind: str, color: str):
     """A 16x16 icon for a button, drawn pixel by pixel: "save" (floppy disk), "saveas" (floppy with a plus), "trash"."""
+    if kind in ("undo", "redo"):
+        try:
+            return _arrow_icon(root, kind, color)
+        except Exception:
+            pass                     # no Pillow / PNG support: the pixel art below
     n = 16
     px = [[None] * n for _ in range(n)]
 
@@ -356,7 +390,7 @@ class App:
                   indicatorforeground=[("selected", "#1b1b1b")])
         s.configure("TButton", background=PANEL, foreground=FG, padding=6)
         s.map("TButton", background=[("active", "#5f5f5f")])
-        s.configure("Icon.TButton", padding=4)
+        s.configure("Icon.TButton", padding=(6, 4))
         s.configure("Tab.Toolbutton", background=PANEL, foreground=FG, padding=(4, 5), anchor="center", relief="flat",
                     borderwidth=0, font=(FONT, 10))
         s.map("Tab.Toolbutton", background=[("selected", ACCENT), ("active", "#5f5f5f")],
@@ -779,14 +813,14 @@ class App:
         bf = ttk.Frame(r)
         bf.pack(fill="x", padx=10, pady=(8, 2))
         self.b_go = ttk.Button(bf, text="Generate  (Ctrl+Enter)", style="Accent.TButton", command=self.generate)
-        self.b_go.pack(side="left", fill="x", expand=True)
+        self.b_go.pack(side="left", fill="both", expand=True)
         self.b_stop = ttk.Button(bf, text="Cancel", command=self.stop, state="disabled")
-        self.b_stop.pack(side="left", padx=(6, 0))
+        self.b_stop.pack(side="left", fill="y", padx=(6, 0))
         self._icons.update({"undo": icon_image(self.root, "undo", FG), "redo": icon_image(self.root, "redo", FG)})
         self.b_undo = ttk.Button(bf, image=self._icons["undo"], style="Icon.TButton", command=self.undo_edit)
-        self.b_undo.pack(side="left", padx=(6, 0))
+        self.b_undo.pack(side="left", fill="y", padx=(6, 0))
         self.b_redo = ttk.Button(bf, image=self._icons["redo"], style="Icon.TButton", command=self.redo_edit)
-        self.b_redo.pack(side="left", padx=(6, 0))
+        self.b_redo.pack(side="left", fill="y", padx=(6, 0))
         Tooltip(self.b_redo, "Brings the AI edit back after an Undo (until the next generation).")
         Tooltip(self.b_undo, "Back to the state before the last generation in one click (a history snapshot taken at the start).\n"
                              "The history list shows every step the plugin made; this skips them all.")
@@ -907,22 +941,97 @@ class App:
         row.pack(fill="x", pady=1)
         row.columnconfigure(0, weight=1)
         v_name, v_str = tk.StringVar(value=name), tk.DoubleVar(value=strength)
-        cb = ttk.Combobox(row, textvariable=v_name, values=self._lora_choices())
-        cb.grid(row=0, column=0, sticky="ew")
-        cb.bind("<KeyRelease>", lambda e, c=cb, v=v_name: c.configure(values=self._lora_choices(v.get())))
+        ent = ttk.Entry(row, textvariable=v_name)
+        ent.grid(row=0, column=0, sticky="ew")
+        rec = {"frame": row, "name": v_name, "strength": v_str, "entry": ent, "list": None}
+        btn = ttk.Button(row, text="\u25be", style="Link.TButton", width=2, command=lambda: self._lora_list(rec, ""))
+        btn.grid(row=0, column=1, padx=(2, 0))
         sp = ttk.Spinbox(row, textvariable=v_str, from_=0.0, to=1.5, increment=0.05, width=5)
-        sp.grid(row=0, column=1, padx=4)
-        rec = {"frame": row, "name": v_name, "strength": v_str, "combo": cb}
+        sp.grid(row=0, column=2, padx=4)
         rm = ttk.Button(row, text="x", style="Link.TButton", width=2, command=lambda: self._remove_lora_row(rec))
-        rm.grid(row=0, column=2)
+        rm.grid(row=0, column=3)
+        # the list under the row narrows with every key; Down moves into it, Enter / a click takes the entry
+        ent.bind("<KeyRelease>", lambda e: self._lora_key(rec, e))
+        ent.bind("<Down>", lambda e: self._lora_focus_list(rec))
+        ent.bind("<Escape>", lambda e: (self._lora_hide(rec), "break")[1])
+        ent.bind("<FocusOut>", lambda e: self.root.after(250, lambda: self._lora_hide_unless_used(rec)))
         Tooltip(rm, "Remove this LoRA")
-        Tooltip(cb, "Type to search; the list shows this model's LoRAs first.")
+        Tooltip(btn, "Show the LoRAs (this model's folder first)")
+        Tooltip(ent, "Type to search: the list under the box shows only the LoRAs that contain every word you typed.")
         self.lora_rows.append(rec)
         self.b_addlora.configure(state="normal" if len(self.lora_rows) < self.LORA_MAX else "disabled")
+
+    def _lora_key(self, rec: dict, e):
+        if getattr(e, "keysym", "") in ("Return", "Escape", "Tab", "Up", "Down", "Left", "Right", "Shift_L", "Shift_R", "Control_L", "Control_R"):
+            return
+        self._lora_list(rec, rec["name"].get())
+
+    def _lora_list(self, rec: dict, typed: str):
+        """The search list under a LoRA row: the matches for what was typed (at most 40)."""
+        names = self._lora_choices(typed)[:40]
+        if not names:
+            self._lora_hide(rec)
+            return
+        lb = rec.get("list")
+        if lb is None:
+            lb = tk.Listbox(self.f_xl_rows, height=min(7, len(names)), exportselection=False, activestyle="none",
+                            bg=PANEL, fg=FG, selectbackground=ACCENT, selectforeground="#1b1b1b", relief="flat",
+                            highlightthickness=1, highlightbackground="#454545", font=(FONT, 9))
+            lb.pack(fill="x", after=rec["frame"])
+            lb.bind("<ButtonRelease-1>", lambda e: self._lora_pick(rec))
+            lb.bind("<Return>", lambda e: self._lora_pick(rec))
+            lb.bind("<Escape>", lambda e: (self._lora_hide(rec), rec["entry"].focus_set(), "break")[2])
+            rec["list"] = lb
+        lb.configure(height=min(7, len(names)))
+        lb.delete(0, "end")
+        for n in names:
+            lb.insert("end", n)
+        if self._sized:
+            self._fit_height()
+
+    def _lora_focus_list(self, rec: dict):
+        if rec.get("list") is None:
+            self._lora_list(rec, rec["name"].get())
+        lb = rec.get("list")
+        if lb is not None:
+            lb.focus_set()
+            lb.selection_set(0)
+            lb.activate(0)
+        return "break"
+
+    def _lora_pick(self, rec: dict):
+        lb = rec.get("list")
+        if lb is None:
+            return
+        sel = lb.curselection()
+        if sel:
+            rec["name"].set(lb.get(sel[0]))
+        self._lora_hide(rec)
+        rec["entry"].focus_set()
+
+    def _lora_hide(self, rec: dict):
+        lb = rec.get("list")
+        if lb is not None:
+            lb.destroy()
+            rec["list"] = None
+            if self._sized:
+                self._fit_height()
+
+    def _lora_hide_unless_used(self, rec: dict):
+        lb = rec.get("list")
+        if lb is None:
+            return
+        try:
+            if self.root.focus_get() is lb:
+                return
+        except (KeyError, tk.TclError):
+            pass
+        self._lora_hide(rec)
 
     def _remove_lora_row(self, rec: dict):
         if rec in self.lora_rows:
             self.lora_rows.remove(rec)
+            self._lora_hide(rec)
             rec["frame"].destroy()
         self.b_addlora.configure(state="normal")
         self._fit_height()
@@ -1445,8 +1554,6 @@ class App:
                 self.v_clip.set(CLIP_DEFAULT)
         if info.get("loras") is not None:
             self.all_loras = list(info["loras"])
-            for r in self.lora_rows:
-                r["combo"].configure(values=self._lora_choices())
         if info.get("samplers"):
             self.cb_sampler["values"] = info["samplers"]
         if info.get("scheds"):
