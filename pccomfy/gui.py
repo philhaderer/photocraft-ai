@@ -15,7 +15,7 @@ from tkinter import messagebox, simpledialog, ttk
 
 from . import config as cfgmod
 from . import models, winlink
-from .bridge import REMOVE_PROMPT, Bridge, BridgeError, Request, mask_is_used, prompt_phase_nodes
+from .bridge import Bridge, BridgeError, Request, mask_is_used, prompt_phase_nodes
 from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 from .workflows import _tags as workflows_tags
@@ -767,13 +767,6 @@ class App:
         self._show_advanced()
         self._show_negative()
 
-        self.f_out = ttk.LabelFrame(r, text="Expand image")
-        ttk.Label(self.f_out, text="Extend the canvas with the Crop tool (confirm with Enter).\nThe empty area is filled.",
-                  style="Muted.TLabel", justify="left", wraplength=self._px(280)).grid(row=0, column=0, rowspan=2, sticky="w", padx=6, pady=(0, 6))
-        ttk.Label(self.f_out, text="Overlap", style="Muted.TLabel").grid(row=0, column=1, sticky="w", padx=6)
-        self._spin(self.f_out, self.v_overlap, 0, 512, 8, 5).grid(row=1, column=1, padx=6, pady=(0, 6))
-        self.f_out.columnconfigure(0, weight=1)
-
         self.f_scale = ttk.Frame(r)
         ttk.Label(self.f_scale, text="Upscale: opens new document", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
         self.cb_scale = ttk.Combobox(self.f_scale, textvariable=self.v_scale, values=["x 1.5", "x 2", "x 3", "x 4"], state="readonly", width=6)
@@ -793,12 +786,15 @@ class App:
         self.f_desc.columnconfigure(1, weight=1)
         self.cb_describe = ttk.Checkbutton(self.f_desc, text="Send LLM description", variable=self.v_describe)
         self.cb_describe.grid(row=0, column=0, sticky="w")
-        self.cb_dpos = ttk.Combobox(self.f_desc, textvariable=self.v_desc_pos, values=list(DESC_POS.values()), state="readonly", width=20)
+        self.cb_dpos = ttk.Combobox(self.f_desc, textvariable=self.v_desc_pos, values=list(DESC_POS.values()), state="readonly", width=18)
         self.cb_dpos.grid(row=0, column=1, sticky="e", padx=(8, 0))
+        self.b_copy2 = ttk.Button(self.f_desc, image=self._icons["copy"], style="Icon.TButton", command=self._copy_enhanced, state="disabled")
+        self.b_copy2.grid(row=0, column=2, padx=(6, 0))
+        Tooltip(self.b_copy2, "Copy the description the text model wrote in the last run.")
         lb_dmp = ttk.Label(self.f_desc, text="Resize for analysis", style="Muted.TLabel")
         lb_dmp.grid(row=1, column=0, sticky="w", pady=(2, 0))
         self.cb_dmp = ttk.Combobox(self.f_desc, textvariable=self.v_desc_mp, values=[desc_mp_text(x) for x in (0.25, 0.5, 1, 2, 0)],
-                                   state="readonly", width=20)
+                                   state="readonly", width=18)
         self.cb_dmp.grid(row=1, column=1, sticky="e", padx=(8, 0), pady=(2, 0))
         Tooltip(self.cb_describe, "A text model looks at the picture and adds its description to the prompt.")
         Tooltip(self.cb_dpos, "Where the description goes.")
@@ -889,7 +885,12 @@ class App:
         foot = ttk.Frame(r)
         foot.pack(fill="x", side="bottom", padx=10, pady=6)
         ttk.Label(foot, textvariable=self.v_conn, style="Muted.TLabel").pack(side="left")
-        ttk.Button(foot, text="Refresh", command=self.refresh).pack(side="left", padx=(8, 0))
+        b_refresh = ttk.Button(foot, text="Refresh", command=self.refresh)
+        b_refresh.pack(side="left", padx=(8, 0))
+        Tooltip(b_refresh, "Reads PhotoCraft's and ComfyUI's state again: connection, installed LoRAs, samplers, text models, workflows.")
+        b_reset = ttk.Button(foot, text="Reset", command=self.reset_settings)
+        b_reset.pack(side="left", padx=(6, 0))
+        Tooltip(b_reset, "Back to the startup settings of this tab and function.")
 
         for cb in (self.cb_scale, self.cb_lm, self.cb_refstyle, self.cb_sampler, self.cb_sched, self.cb_dpos, self.cb_dmp):
             self._open_on_click(cb)         # the list opens on a click anywhere in the box, not only on the arrow
@@ -912,7 +913,6 @@ class App:
     def _on_mode_ui(self):
         mode = self.v_mode.get()
         self._switch_context(mode)
-        self.f_out.pack_forget()      # the "Expand image" box (overlap) stays hidden: the default does the job
         if self._run_mode() in SCALE_MODES:
             self.f_desc.pack(fill="x", padx=10, pady=4, after=self.f_sharp)
         else:
@@ -931,7 +931,7 @@ class App:
             self.f_ref.pack_forget()
         self.w_denoise.configure(state="disabled" if mode == "txt2img" or self._ignores_mask() else "normal")   # an editor always runs at 1.0
         expand = mode == "outpaint"        # Expand image: the plugin's own defaults, none of the finishing options
-        if self._run_mode() in ("txt2img", "edit") or expand:    # nothing to blend into (or the whole picture is replaced): no layer mask
+        if self._run_mode() in ("txt2img", "edit") + SCALE_MODES or expand:    # nothing to blend into / a new document / the whole picture: no layer mask
             self.f_lm.pack_forget()
         elif not self.f_lm.winfo_manager():
             self.f_lm.pack(fill="x", padx=10, pady=(2, 4), before=self.f_adv)
@@ -1050,7 +1050,7 @@ class App:
             self.root.clipboard_clear()
             self.root.clipboard_append(text)
             self.root.update_idletasks()
-            self._status("Enhanced prompt copied to the clipboard.")
+            self._status("Copied to the clipboard.")
         except tk.TclError as e:
             self._status(f"Could not copy: {e}", error=True)
 
@@ -1092,12 +1092,10 @@ class App:
                 self._prompt_kept = t.get("1.0", "end").strip()
             t.configure(state="normal")
             t.delete("1.0", "end")
-            if spec is not None and spec.fixed_prompt:      # the instruction that is sent, for reading (and copying)
-                t.insert("1.0", REMOVE_PROMPT.format(shape="outline"))
             t.configure(state="disabled")
         elif str(t.cget("state")) == "disabled":
             t.configure(state="normal")
-            t.delete("1.0", "end")                  # the fixed instruction shown for Remove goes away
+            t.delete("1.0", "end")
             if getattr(self, "_prompt_kept", ""):
                 t.insert("1.0", self._prompt_kept)
             self._prompt_kept = ""
@@ -1390,6 +1388,52 @@ class App:
             self.v_denoise.set(1.0)  # full denoise inside the mask; lower it to keep more of the original
         elif mode == "img2img" and self.v_denoise.get() >= 0.99 and not self._ignores_mask():
             self.v_denoise.set(0.6)   # not for Fibo-type editors: below 1.0 they produce a different, broken picture
+
+    def reset_settings(self):
+        """Everything in the window back to what a fresh start has: this tab and function stay, their starting settings come back,
+        the prompt, the negative prompt, extra LoRAs, seed and the finishing sliders are cleared."""
+        if self.worker and self.worker.is_alive():
+            return
+        d = self.cfg["defaults"]
+        self.v_seed.set(-1)
+        self.v_variants.set(int(d["variants"]))
+        self.v_grow.set(int(d["mask_grow"]))
+        self.v_blur.set(int(d["mask_blur"]))
+        self.v_overlap.set(int(d["overlap"]))
+        self.v_res.set(int(d["base_res"]))
+        self.v_denoise.set(float(d["denoise"]))
+        self.v_sharpen.set(0.0)
+        self.v_match.set(0.0)
+        self.v_feather.set(2.0)
+        self.v_detail.set(1.0)
+        self.v_describe.set(False)
+        self.v_desc_pos.set(DESC_POS["front"])
+        self.v_desc_mp.set(desc_mp_text(0.5))
+        self.v_lmask.set(LAYER_MASKS["auto"])
+        self.v_refstyle.set(REF_STYLES["simple"])
+        self.v_collage.set(True)
+        self.v_cutout.set(True)
+        self.v_cmp_res.set("")
+        self.v_cmp_ctx.set("")
+        self.v_scale.set(scale_text(1.5))
+        self.t_neg.delete("1.0", "end")
+        if str(self.t_prompt.cget("state")) != "disabled":
+            self.t_prompt.delete("1.0", "end")
+        self._prompt_kept = ""
+        self._set_loras([])
+        self._ctx = {"inpaint": FILL_CONTEXT}
+        self.v_context.set(self._ctx.get(self.v_mode.get(), d["context"]))
+        self._ctx_mode = self.v_mode.get()
+        self._vals_key = None                    # steps / CFG / sampler / scheduler are read from the workflow again
+        if self.v_model.get():
+            self._apply_model_mode(force=True)
+        self._on_mode_ui()
+        self._on_workflow()
+        self._on_sharpen()
+        self._on_match()
+        self._on_feather()
+        self._fit_height()
+        self._status("Reset to the startup settings.")
 
     def _status(self, msg: str, error: bool = False):
         """The status line. An error gets a red "!" badge and red text, it never opens a dialog."""
@@ -2112,7 +2156,7 @@ class App:
                     res = self.bridge.run(rq, progress)
                     total += len(res["layers"])
                 self.events.put(("vgl", res.get("vgl", "")))
-                self.events.put(("done", f"Done ({res['pipeline']}) – seed {res['seed']}, layers: {total}"))
+                self.events.put(("done", f"Done · seed {res['seed']} · {total} layer{'s' if total != 1 else ''}"))
             except Cancelled:
                 self.events.put(("done", "Cancelled."))
             except (BridgeError, ComfyError, PhotoCraftError, ValueError, OSError) as e:
@@ -2166,25 +2210,27 @@ class App:
                     self.b_undo.configure(state="normal")
                     self.b_redo.configure(state="normal")
                 elif kind == "done":
-                    self._reset_progress(done=not data.startswith(("Error", "Cancel", "Unexpected")))
-                    self._status(data, error=data.startswith(("Error", "Unexpected")))
+                    ok = not data.startswith(("Error", "Cancel", "Unexpected"))
+                    self._reset_progress(done=ok, text=data if ok else "")      # the success line sits above the bar, nothing below it
+                    self._status("" if ok else data, error=data.startswith(("Error", "Unexpected")))
                     self.b_go.configure(state="normal")
                     self.b_undo.configure(state="normal")
                     self.b_redo.configure(state="normal")
                     self.b_stop.configure(state="disabled")
                 elif kind == "vgl":
                     self._last_vgl = str(data or "")      # not shown in the window; the copy button next to the LLM checkbox takes it
-                    self.b_copy.configure(state="normal" if self._last_vgl.strip() else "disabled")
+                    for b in (self.b_copy, self.b_copy2):
+                        b.configure(state="normal" if self._last_vgl.strip() else "disabled")
                 elif kind == "refresh":
                     self._apply_refresh(data)
         except queue.Empty:
             pass
         self.root.after(100, self._poll)
 
-    def _reset_progress(self, done: bool = False):
+    def _reset_progress(self, done: bool = False, text: str = ""):
         self._bar_value = 1.0 if done else 0.0
         self.pb.configure(value=self._bar_value)
-        self.v_pl.set("Done" if done else "")      # clearly readable above the full bar; the line below adds the seed
+        self.v_pl.set((text or "Done") if done else "")      # clearly readable above the full bar; the line below adds the seed
         self._pl_style("Done.TLabel" if done else "Muted.TLabel")
 
     def _pl_style(self, style: str):

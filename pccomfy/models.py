@@ -19,7 +19,6 @@ class Mode:
     prompts: tuple = ()             # (label, text, tip): ready-made prompts, shown as radio buttons next to "Prompt"
     prompt_tip: str = ""            # an orange hint under the prompt field in this mode (the field gets an orange frame)
     run_as: str = ""                # the mode the bridge runs when it is another one (Fibo "Refine" runs as a whole-image edit)
-    fixed_prompt: bool = False      # the mode sends a fixed instruction (Remove): the field shows it, read-only
     remove_text: bool = False       # Remove Selection: the field stays usable and takes an optional name of the object ("the dog")
 
 
@@ -88,8 +87,9 @@ QWEN = Model(
 
 FLUX2 = Model(
     "flux2", "Flux 2 Klein Edit",
-    "FLUX.2 Klein 9B: whole-image edits, Remove Selection, Expand, Upscale, Refine.",
+    "FLUX.2 Klein 9B: text to image, whole-image edits, Remove Selection, Expand, Upscale, Refine.",
     {
+        "txt2img": Mode("flux2-klein-t2i.json", dict(base_res=1024, layer_mask="none", enhance=False)),
         "edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none")),
         "remove": Mode("flux2-klein-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
         "outpaint": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="auto")),
@@ -97,6 +97,7 @@ FLUX2 = Model(
         "refine": Mode("flux2-klein-upscale.json", dict(turbo=True, context=0.0), FLUX2_DEFAULT, FLUX2_REFINE_PROMPTS, DESCRIBE_TIP),
     },
     mode_tips={
+        "txt2img": _TXT + " The checkbox lets the prompt upsampler write the long prompt.",
         "edit": _EDIT + " Nothing happens? Generate again or word it more fully.",
         "remove": _REMOVE + " Works only sometimes: generate again.",
         "outpaint": _EXPAND,

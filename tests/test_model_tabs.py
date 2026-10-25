@@ -105,7 +105,7 @@ def main():
     app.v_model.set("flux2")
     app.v_mode.set("inpaint")
     app._on_model()
-    assert app.v_mode.get() == "edit" and app.v_workflow.get() == "flux2-klein-edit.json"
+    assert app.v_mode.get() == "txt2img" and app.v_workflow.get() == "flux2-klein-t2i.json"      # Flux 2 starts with text to image
 
     # Fibo: one workflow with the LLM checkbox; its state stays while the mode changes; the tab follows a loaded workflow
     app.v_model.set("fibo")

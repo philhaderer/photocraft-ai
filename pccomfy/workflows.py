@@ -523,9 +523,8 @@ def set_sampler(graph: dict, steps=None, cfg=None, denoise=None, sampler=None, s
 
 
 DESCRIBE_LLM = "qwen3.5_9b_int8_convrot.safetensors"      # the Qwen 3.5 9B that writes Fibo's enhanced prompts (it can see pictures)
-DESCRIBE_SYSTEM = ("You describe pictures for an image restoration model. Write one factual paragraph: the main subjects (for people: "
-                   "apparent gender, age, hair, clothing), objects, setting, colours and lighting. Do not mention image quality, blur or "
-                   "noise. No lists, no preamble.")
+DESCRIBE_SYSTEM = ("Describe the picture in ONE short sentence of at most 25 words: the main subject(s) and the setting. For people "
+                   "give apparent gender and age. No colours, no lighting, no remarks on image quality, no preamble.")
 
 
 def add_description(graph: dict, position: str = "front", megapixels: float = 0.5, clip_name: str = DESCRIBE_LLM) -> dict:
@@ -546,9 +545,11 @@ def add_description(graph: dict, position: str = "front", megapixels: float = 0.
                      "inputs": {"clip_name": clip_name, "type": "stable_diffusion", "device": "default"}}
     g["pcd_sys"] = {"class_type": "PrimitiveStringMultiline", "_meta": {"title": "Describe: system prompt"}, "inputs": {"value": DESCRIBE_SYSTEM}}
     g["pcd_llm"] = {"class_type": "TextGenerate", "_meta": {"title": "Describe: the description"},
-                    "inputs": {"clip": ["pcd_clip", 0], "prompt": "Describe this image.", "image": src, "max_length": 256,
+                    "inputs": {"clip": ["pcd_clip", 0], "prompt": "Describe this image.", "image": src, "max_length": 80,
                                "sampling_mode": "off", "thinking": False, "use_default_template": True, "mtp": "auto",
                                "system_prompt": ["pcd_sys", 0]}}
+    g["pcd_show"] = {"class_type": "PreviewAny", "_meta": {"title": "pc:vgl Describe: the description (copy button)"},
+                     "inputs": {"source": ["pcd_llm", 0]}}
     node = g[prm]
     if node.get("class_type") == "CLIPTextEncode":          # the prompt is the node's own text
         own = node["inputs"].get("text", "")

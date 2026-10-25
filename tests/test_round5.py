@@ -213,6 +213,44 @@ def main():
     pick("qwen", "txt2img")
     assert app.v_turbo.get() is False and app.v_enhance.get() is True
 
+    # Flux 2 text to image with the Flux 3 prompt upsampler (the checkbox switches it off)
+    from pccomfy import bridge as _b
+    f2 = workflows.load_template(t.ROOT / "workflows" / "flux2-klein-t2i.json")
+    assert not _b.mask_is_used(f2) and not _b.has_tag(f2, "image") and workflows.writer_name(f2) == "Qwen 3.5 9B"
+    on, out = workflows.apply_template(f2, workflows.GenParams(prompt="a fox", seed=3, width=1024, height=768, batch=2), None, None)
+    assert next(n for n in on.values() if n["class_type"] == "TextGenerate")["inputs"]["prompt"] == "a fox"
+    lat = next(n for n in on.values() if n["class_type"] == "EmptyFlux2LatentImage")["inputs"]
+    sch = next(n for n in on.values() if n["class_type"] == "Flux2Scheduler")["inputs"]
+    assert (lat["width"], lat["height"], lat["batch_size"]) == (1024, 768, 2) and (sch["width"], sch["height"]) == (1024, 768)
+    off, _ = workflows.apply_template(workflows.bypass_prompt_writer(f2, "a fox"), workflows.GenParams(prompt="a fox", seed=3, width=1024, height=768), None, None)
+    assert not any(n["class_type"] == "TextGenerate" for n in off.values()) and next(n for n in off.values() if n["class_type"] == "CLIPTextEncode")["inputs"]["text"] == "a fox"
+    pick("flux2", "txt2img")
+    assert app.v_workflow.get() == "flux2-klein-t2i.json" and app.v_enhance.get() is False
+    # the description can be read (pc:vgl preview) and is short; Upscale / Refine have no layer mask
+    d = workflows.add_description(workflows.apply_template(workflows.load_template(t.ROOT / "workflows" / "flux2-klein-upscale.json"), workflows.GenParams(prompt="x"), "p.png", None)[0], "front", 0.5)
+    assert d["pcd_show"]["inputs"]["source"] == ["pcd_llm", 0] and "pc:vgl" in d["pcd_show"]["_meta"]["title"] and d["pcd_llm"]["inputs"]["max_length"] <= 80
+    assert "ONE short sentence" in workflows.DESCRIBE_SYSTEM
+    lm2 = rec(app.f_lm, "pack_forget")
+    for key, mode in (("flux2", "upscale"), ("flux2", "refine"), ("flux3", "upscale")):
+        lm2.clear()
+        pick(key, mode)
+        assert lm2, (key, mode, "no layer mask in Upscale / Refine")
+    # one progress line: the success text sits above the bar, nothing is set below it
+    app._reset_progress(done=True, text="Done · seed 5 · 1 layer")
+    assert app.v_pl.get() == "Done · seed 5 · 1 layer" and app._bar_value == 1.0
+    app._reset_progress()
+    assert app.v_pl.get() == ""
+    # Reset: back to the startup settings of this tab and function
+    pick("qwen", "edit")
+    app.v_seed.set(99); app.v_sharpen.set(0.5); app.v_describe.set(True); app.v_detail.set(0.3)
+    app.t_prompt.insert("1.0", "something"); app.t_neg.insert("1.0", "ugly"); app.v_turbo.set(False)
+    app._set_loras([["qwen\\style_a.safetensors", 0.6]])
+    app.reset_settings()
+    r = app._request()
+    assert app.v_seed.get() == -1 and app.v_sharpen.get() == 0.0 and app.v_describe.get() is False and app.v_detail.get() == 1.0
+    assert app._prompt_text() == "" and app.t_neg.get("1.0", "end").strip() == "" and r.loras == [] and app.v_turbo.get() is True
+    assert app.v_model.get() == "qwen" and app.v_mode.get() == "edit" and app.v_workflow.get() == "qwen-image-21-edit.json"
+
     # Remove Selection with the name of the object (Flux Klein): the instruction names it; runs.jsonl says what was sent
     import tempfile
     import test_reference_mode as T
