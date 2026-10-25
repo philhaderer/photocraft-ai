@@ -210,7 +210,7 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
                     if k in inp and not isinstance(inp[k], list):
                         inp[k] = v
             elif tag in ("latent", "size"):
-                for k, v in (("width", p.width), ("height", p.height), ("batch_size", p.batch)):
+                for k, v in (("width", p.width), ("height", p.height), ("batch_size", p.batch), ("amount", p.batch)):
                     if k in inp and not isinstance(inp[k], list):
                         inp[k] = v
             elif tag == "clip":
@@ -249,6 +249,13 @@ def default_prompt(node: dict) -> str:
     """What a pc:prompt node asks for when nothing is typed: the `pc_default_prompt` field in its _meta (the Flux 2
     Klein upscale: a description of a clean photo). Empty = the workflow has none."""
     return str(node.get("_meta", {}).get("pc_default_prompt", "")).strip()
+
+
+def size_multiple(graph: dict) -> int:
+    """The multiple the picture sent to the model must be a multiple of: `pc_size_multiple` in the _meta of a node
+    (Qwen Image 2.1 keeps reference images at multiples of 32; any other size shifts the edit). Default 16."""
+    vals = [int(n.get("_meta", {}).get("pc_size_multiple", 0) or 0) for n in graph.values() if isinstance(n, dict)]
+    return max([16] + vals)
 
 
 def image_tag(node: dict) -> str:

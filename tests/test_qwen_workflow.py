@@ -30,8 +30,11 @@ def main():
     g, out = workflows.apply_template(tpl, p, "pic.png", "mask.png")
     assert g[by_tag(g, "image")[0]]["inputs"]["image"] == "pic.png"
     assert g[by_tag(g, "mask")[0]]["inputs"]["image"] == "mask.png"
-    lat = g[by_tag(g, "latent")[0]]["inputs"]
-    assert (lat["width"], lat["height"], lat["batch_size"]) == (1024, 768, 2), lat
+    # the sampler's latent comes from the text encoder node (sized like the picture): any other size shifts the edit
+    rep = g[by_tag(g, "latent")[0]]
+    assert rep["class_type"] == "RepeatLatentBatch" and rep["inputs"]["samples"] == [by_tag(g, "prompt")[0], 2] and rep["inputs"]["amount"] == 2
+    assert g[by_tag(g, "sampler")[0]]["inputs"]["latent_image"] == [by_tag(g, "latent")[0], 0]
+    assert workflows.size_multiple(tpl) == 32 and workflows.size_multiple({}) == 16
     smp = g[by_tag(g, "sampler")[0]]["inputs"]
     assert smp["seed"] == 11 and smp["denoise"] == 1.0 and smp["steps"] == 10 and smp["cfg"] == 1
     assert g[out]["class_type"] == "PreviewImage"

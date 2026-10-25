@@ -98,18 +98,8 @@
   },
   "_meta": {
    "title": "pc:prompt",
-   "pc_image_tag": "<image1>"
-  }
- },
- "9": {
-  "class_type": "EmptyLatentImage",
-  "inputs": {
-   "width": 1024,
-   "height": 1024,
-   "batch_size": 1
-  },
-  "_meta": {
-   "title": "pc:latent"
+   "pc_image_tag": "<image1>",
+   "pc_size_multiple": 32
   }
  },
  "10": {
@@ -177,6 +167,19 @@
   },
   "_meta": {
    "title": "pc:ref"
+  }
+ },
+ "9": {
+  "class_type": "RepeatLatentBatch",
+  "inputs": {
+   "samples": [
+    "8",
+    2
+   ],
+   "amount": 1
+  },
+  "_meta": {
+   "title": "pc:latent"
   }
  }
 }

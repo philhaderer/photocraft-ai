@@ -20,7 +20,7 @@ def links_resolve(g):
 
 def main():
     p = workflows.GenParams(prompt="put the viking in")
-    assert len(FILES) == 5
+    assert len(FILES) == 4
     for f in FILES:
         name = Path(f).name
         tpl = workflows.load_template(f)

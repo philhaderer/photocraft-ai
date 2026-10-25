@@ -1,7 +1,0 @@
-{
- "title": "Fibo Edit: plain, then VGL (compare)",
- "workflows": [
-  "fibo2-edit-plain.json",
-  "fibo2-edit-vgl.json"
- ]
-}

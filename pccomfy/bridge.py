@@ -485,7 +485,8 @@ class Bridge:
                                   f"the limit is {MAX_RESULT_MP:.0f}. Select a smaller area or use a smaller factor.")
             p.extra["megapixels"] = mp
         else:
-            gw, gh = imaging.gen_size(region.w, region.h, req.base_res)
+            mult = max(workflows.size_multiple(workflows.load_template(w)) for w in wf_paths if w) if wf_paths[0] else 16
+            gw, gh = imaging.gen_size(region.w, region.h, req.base_res, multiple=mult)
         p.width, p.height = gw, gh
         progress(0.1, f"Sending to ComfyUI ({gw}×{gh})", phase="prepare")
 

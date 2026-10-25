@@ -68,12 +68,18 @@ class FakePhotoCraft:
 
 
 def main():
+    import shutil
+    gdir = Path(tempfile.mkdtemp())   # a group of two workflows, made here (the shipped example was removed)
+    for n in ("fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json"):
+        shutil.copy(ROOT / "workflows" / n, gdir / n)
+    group = gdir / "both.group.json"
+    group.write_text(json.dumps({"title": "plain, then VGL", "workflows": ["fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json"]}))
     srv = subprocess.Popen([sys.executable, str(ROOT / "tests" / "fake_comfy.py"), "8189"])
     time.sleep(1.0)
     try:
         for label, wf, variants, expect in (
-            ("group", ROOT / "workflows" / "fibo2-edit-both.group.json", 1, 2),
-            ("group x2 variants", ROOT / "workflows" / "fibo2-edit-both.group.json", 2, 4),
+            ("group", group, 1, 2),
+            ("group x2 variants", group, 2, 4),
             ("single plain", ROOT / "workflows" / "fibo2-edit-plain.json", 1, 1),
         ):
             with tempfile.TemporaryDirectory() as tmp:
@@ -81,7 +87,7 @@ def main():
                 b = Bridge(pc, ComfyUI("http://127.0.0.1:8189"), tmp)
                 req = Request(mode="inpaint", workflow=str(wf), variants=variants,
                               params=workflows.GenParams(prompt="make the shirt red", seed=42))
-                res = b.run(req, lambda f, m: None)
+                res = b.run(req, lambda f, m, **k: None)
                 names = [p["name"] for c, p in pc.log if c == "layer.renameLayer"]
                 hidden = sum(1 for c, _ in pc.log if c == "layer.hideLayers")
                 print(f"{label}: layers={len(res['layers'])} (expected {expect}), hidden={hidden}, size={res['size']}")
@@ -92,10 +98,10 @@ def main():
         print("last graph (plain): sampler =", {k: v for k, v in g["7"]["inputs"].items() if k in ("seed", "denoise", "steps")},
               "| encode =", {k: v for k, v in g["6"]["inputs"].items() if k in ("prompt", "width", "height", "batch_size")})
         # VGL graph check (apply_template only)
-        vgl = workflows.load_template(ROOT / "workflows" / "fibo2-edit-vgl.json")
+        vgl = workflows.load_template(ROOT / "workflows" / "fibo2-edit-vgl-bionic-qwen35-9b.json")
         gv, out = workflows.apply_template(vgl, workflows.GenParams(prompt="add a hat", seed=7, width=1024, height=768, batch=2),
                                            "img.png", "mask.png")
-        print("vgl: TextGenerate.prompt =", repr(gv["12"]["inputs"]["prompt"]), "| encode size =",
+        print("vgl: TextGenerate.prompt =", repr(gv["12"]["inputs"].get("prompt")), "| encode size =",
               (gv["6"]["inputs"]["width"], gv["6"]["inputs"]["height"], gv["6"]["inputs"]["batch_size"]),
               "| encode.prompt link =", gv["6"]["inputs"]["prompt"], "| output node =", out)
         print("ALL OK")

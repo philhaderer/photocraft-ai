@@ -20,7 +20,7 @@ def titles(g):
 
 def main():
     p = workflows.GenParams(prompt="a cat", seed=1)
-    for name in ("fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json", "fibo2-edit-vgl.json"):
+    for name in ("fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json"):
         # img2img: image, no mask -> mask slot gone, picture stays
         g, _ = workflows.apply_template(tpl(name), p, "pic.png", None)
         assert "pc:mask" not in titles(g) and "pc:image" in titles(g), name
