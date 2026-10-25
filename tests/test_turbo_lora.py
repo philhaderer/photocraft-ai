@@ -56,7 +56,7 @@ def main():
     assert sorted(c) == ["1", "4"] and c["4"]["inputs"]["model"] == ["1", 0] and c["4"]["inputs"]["steps"] == 8, c
 
     # a graph without a pc:lora node comes back unchanged
-    t = workflows.load_template(WF / "fibo2-edit-plain.json")
+    t = workflows.load_template(WF / "fibo2-edit.json")
     assert not workflows.lora_switches(t) and workflows.bypass_lora(t) == t
 
     # through the bridge: the Request decides
@@ -71,7 +71,7 @@ def main():
             assert any(n["class_type"] == "LoraLoaderModelOnly" for n in graph.values()) == has_lora
             assert links_resolve(graph)
     # Fibo ignores the switch
-    fibo = str(WF / "fibo2-edit-plain.json")
+    fibo = str(WF / "fibo2-edit.json")
     on, _ = bridge.Bridge._graph(object(), bridge.Request(workflow=fibo, params=p, turbo=True), p, "i.png", "m.png", fibo)
     off_, _ = bridge.Bridge._graph(object(), bridge.Request(workflow=fibo, params=p, turbo=False), p, "i.png", "m.png", fibo)
     assert on == off_

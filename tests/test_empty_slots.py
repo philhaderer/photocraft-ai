@@ -20,13 +20,13 @@ def titles(g):
 
 def main():
     p = workflows.GenParams(prompt="a cat", seed=1)
-    for name in ("fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json"):
+    for name in ("fibo2-edit.json",):
         # img2img: image, no mask -> mask slot gone, picture stays
         g, _ = workflows.apply_template(tpl(name), p, "pic.png", None)
         assert "pc:mask" not in titles(g) and "pc:image" in titles(g), name
         # txt2img: no image, no mask -> both gone, no dangling links
         t = tpl(name)
-        if name != "fibo2-edit-plain.json":
+        if workflows.prompt_writers(t):
             try:   # the text model needs the picture: with it on, Text to image keeps a clear error
                 workflows.apply_template(t, p, None, None)
                 raise SystemExit("expected error")

@@ -176,7 +176,7 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
     """Fill parameters into `pc:*` nodes. Returns (graph, output node id or None).
 
     A title may carry several tags (e.g. "pc:prompt pc:size" for one node that takes the prompt and the size).
-    `pc:prompt` fills the node's `text` field, else its `instruction` field (VGLBionicEditPrompt), else its `prompt` field
+    `pc:prompt` fills the node's `text` field, else its `instruction` field, else its `prompt` field
     (TextGenerate, TextEncodeFibo2, ...).
     `pc:ref` is the slot for a reference image (a LoadImage feeding TextEncodeFibo2's `images.image_2`). The slot is
     always in the workflow; with no reference (`ref_name` None) the node and the links to it are dropped, so the run

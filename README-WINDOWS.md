@@ -12,7 +12,7 @@ Local changes on top of the upstream bridge (Peszemeszek/photocraft-comfyui-brid
 
 1. Run `setup-windows.bat` once.
 2. Close PhotoCraft, then start `photocraft-ai.bat`. It starts PhotoCraft with `--control` and opens the bridge window.
-3. Open an image in PhotoCraft, make a selection, pick mode "Generative fill", type the edit as an instruction
+3. Open an image in PhotoCraft, make a selection, pick mode "Fill Selection", type the edit as an instruction
    ("Make the jacket red") and press Generate (Ctrl+Enter).
 4. The result is a new layer with a soft layer mask. With the "both" workflow you get two layers, `[plain]` on top and
    `[vgl]` hidden below it. Toggle the eye icons to compare.
@@ -20,7 +20,7 @@ Local changes on top of the upstream bridge (Peszemeszek/photocraft-comfyui-brid
 Fibo is an instruction editor, so write what to change, not what the selection should contain.
 It sees the selection plus some surrounding context (the "Context" setting) and the layer mask limits the change to the selection.
 
-Modes that fit the Fibo workflows: Generative fill and Image to image. Text to image and Expand have no source image for Fibo.
+Modes that fit the Fibo workflows: Fill Selection and Image to image. Text to image and Expand have no source image for Fibo.
 
 ## Presets (save and load)
 
@@ -44,16 +44,9 @@ Benchmark (two test images, 5 prompt writers, blind-rated results, thinking off)
 inside ComfyUI wrote the cleanest VGL and was the fastest valid option. The Flux3 prompt-upsampler wrote invalid JSON
 every time, so `fibo2-edit-vgl.json` (and the `both` group that uses it) is kept only for reference.
 
-| Workflow | Prompt writer | Preset |
-|---|---|---|
-| `fibo2-edit-vgl-qwen35-convrot.json` | ComfyUI `TextGenerate` + `qwen3.5_9b_int8_convrot` (about 6 s on top of Fibo) | Fibo VGL Qwen9B convrot nativ |
-| `fibo2-edit-vgl-bionic-qwen35-9b.json` | Bionic, `qwen3.5-9b-uncensored-hauhaucs-aggressive` | Fibo VGL Bionic Qwen9B |
-| `fibo2-edit-vgl-bionic-gemma4-12b.json` | Bionic, `gemma-4-12b-heretic-abliterated` | Fibo VGL Bionic Gemma12B |
-| `fibo2-edit-plain-vs-convrot.group.json` | plain prompt, then the convrot VGL, as two layers | Fibo plain und VGL convrot Vergleich |
-
-- The Bionic workflows need the ComfyUI custom node `ComfyUI-VGL-Bionic` and Bionic's local server (`http://localhost:1235/v1`).
-  The node unloads the model afterwards so Fibo gets the VRAM. The bridge's "Text model" dropdown only affects the native workflow.
-- `pc:prompt` fills the `instruction` field of the Bionic node, so you still type the edit as a plain instruction.
+The Fibo tab uses `fibo2-edit.json`: ComfyUI `TextGenerate` + `qwen3.5_9b_int8_convrot` writes the VGL prompt
+(about 6 to 20 s on top of Fibo). The checkbox **LLM prompt enhancement** switches it on; off, your text goes to Fibo as typed.
+The Bionic variants and the `ComfyUI-VGL-Bionic` node are gone.
 
 ## VGL writer
 

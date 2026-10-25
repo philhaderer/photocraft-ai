@@ -46,7 +46,7 @@ def main():
     assert red(out) < 40 * 4 * 5 + 200
 
     # Generative fill without text and an instruction editor: a clear error (Remove is for taking things away)
-    for wf in ("fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json"):
+    for wf in ("fibo2-edit.json", "fibo2-edit.json"):
         try:
             run(wf)
         except BridgeError as e:
@@ -55,7 +55,7 @@ def main():
             raise AssertionError("expected error")
 
     # Remove object: the removal instruction, text model bypassed even with enhance on, no "type an instruction" error
-    b, _ = run("fibo2-edit-vgl-bionic-qwen35-9b.json", enhance=True, mode="remove")
+    b, _ = run("fibo2-edit.json", enhance=True, mode="remove")
     assert prompt_of(b.comfy.graphs[0]) == bridge.REMOVE_PROMPT.format(shape="rectangle")
 
     # Remove object tries again (new seed) while the area is unchanged, and stops when it worked
@@ -73,7 +73,7 @@ def main():
         tmp = tempfile.mkdtemp()
         pc, _, b = t.make(tmp, layers=2)
         b.comfy = Unchanged(ok_on)
-        req = Request(mode="remove", workflow=str(ROOT / "workflows" / "fibo2-edit-plain.json"), enhance=False)
+        req = Request(mode="remove", workflow=str(ROOT / "workflows" / "fibo2-edit.json"), enhance=False)
         req.params = workflows.GenParams(prompt="", seed=7)
         b.run(req)
         seeds = [next(n["inputs"]["seed"] for n in g.values() if n["class_type"] == "KSampler") for g in b.comfy.graphs]
@@ -117,7 +117,7 @@ def main():
     assert "red outline" in bridge.remove_prompt(mm) and "red rectangle" in bridge.remove_prompt(Image.new("L", (50, 50), 255))
 
     # typed text (Generative fill): the selection is marked in the picture and the text is wrapped, one pass
-    b, _ = run("fibo2-edit-plain.json", prompt="a red car")
+    b, _ = run("fibo2-edit.json", prompt="a red car", enhance=False)
     img = next(v for k, v in b.comfy.uploads.items() if k.endswith("-image.png"))
     pr = prompt_of(b.comfy.graphs[0])
     assert red(img) > 0 and len(b.comfy.graphs) == 1
@@ -125,13 +125,13 @@ def main():
 
     # with a text-model workflow: Enhance on = the wrapped text goes to the text model as its instruction (no placement
     # hint on top), Enhance off = straight to Fibo
-    b, _ = run("fibo2-edit-vgl-bionic-qwen35-9b.json", prompt="a red car", enhance=True)
+    b, _ = run("fibo2-edit.json", prompt="a red car", enhance=True)
     g = b.comfy.graphs[0]
-    vgl = next(n for n in g.values() if n["class_type"] == "VGLBionicEditPrompt")
-    assert vgl["inputs"]["instruction"].startswith("a red car. Place it only inside the red ") and "Apply this only" not in vgl["inputs"]["instruction"]
-    b, _ = run("fibo2-edit-vgl-bionic-qwen35-9b.json", prompt="a red car", enhance=False)
+    vgl = next(n for n in g.values() if n["class_type"] == "TextGenerate")
+    assert vgl["inputs"]["prompt"].startswith("a red car. Place it only inside the red ") and "Apply this only" not in vgl["inputs"]["prompt"]
+    b, _ = run("fibo2-edit.json", prompt="a red car", enhance=False)
     g = b.comfy.graphs[0]
-    assert not any(n["class_type"] == "VGLBionicEditPrompt" for n in g.values())
+    assert not any(n["class_type"] == "TextGenerate" for n in g.values())
     assert prompt_of(g).startswith("a red car. Place it only inside the red ")
 
     print("ALL OK (remove object)")

@@ -186,7 +186,7 @@ def run(wf, prompt="", enhance=True, collage=True, style="classic", **kw):
 
 def expect_error(text, **kw):
     try:
-        run("fibo2-edit-plain.json", **kw)
+        run("fibo2-edit.json", **kw)
     except BridgeError as e:
         assert text in str(e), (text, str(e))
         return
@@ -216,7 +216,7 @@ def main():
     w = bridge.reference_where(imaging.Box(10, 10, 20, 20), imaging.Box(0, 0, 40, 40))
     assert "<image_2>" in w and "centre" in w and "25%" in w
 
-    for wf in ("fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json"):
+    for wf in ("fibo2-edit.json", "fibo2-edit.json"):
         # with the rough placement
         pc, b, res = run(wf, prompt="looking at the camera", enhance=True, collage=True)
         g = b.comfy.graphs[0]
@@ -246,7 +246,7 @@ def main():
     t = bridge.simple_reference_prompt("standing, facing left", "lower right")
     assert t == "Put the subject from image2 into the lower right of the picture from image1. standing, facing left", t
     assert bridge.simple_reference_prompt("", "centre").endswith("of the picture from image1.")
-    for wf in ("fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json"):
+    for wf in ("fibo2-edit.json", "fibo2-edit.json"):
         pc, b, res = run(wf, prompt="facing the camera", enhance=True, collage=True, style="simple")
         g = b.comfy.graphs[0]
         enc = next(n for n in g.values() if n["class_type"] == "TextEncodeFibo2")
@@ -261,7 +261,7 @@ def main():
 
     # errors, each with a clear message
     # no selection: the placed reference layer is the place (its position and size), and the sentence asks for the cut-out
-    pc, b, res = run("fibo2-edit-plain.json", prompt="", style="simple", with_sel=False)
+    pc, b, res = run("fibo2-edit.json", prompt="", style="simple", with_sel=False)
     assert res["layers"]
     assert bridge.simple_reference_prompt("", "centre", True).endswith("Remove the background of image2 first.")
     assert "Remove the background" not in bridge.simple_reference_prompt("", "centre")
@@ -273,7 +273,7 @@ def main():
     except BridgeError as e:
         assert "reference slot" in str(e)
     # two layers (one picture layer and the reference) work too: nothing left to flatten after dropping the top
-    pc, b, res = run("fibo2-edit-plain.json", layers=2)
+    pc, b, res = run("fibo2-edit.json", layers=2)
     assert res["layers"] and len(pc.docs) == 1
     print("ALL OK (reference mode)")
 

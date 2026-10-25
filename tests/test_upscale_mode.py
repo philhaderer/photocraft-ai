@@ -52,7 +52,7 @@ def main():
     # the workflow itself
     tpl = workflows.load_template(WF)
     assert links_resolve(tpl) and workflows.has_upscale_slot(tpl) and not workflows.has_upscale_slot(
-        workflows.load_template(ROOT / "workflows" / "fibo2-edit-plain.json"))
+        workflows.load_template(ROOT / "workflows" / "fibo2-edit.json"))
     assert not bridge.prompt_phase_nodes(tpl) and not workflows.prompt_writers(tpl)   # the description is plain text
     ti = {n["class_type"] for n in tpl.values()}
     assert "SaveImage" not in ti and "AUSBOSS_NODES_SaveImage" not in ti and "PreviewImage" in ti
@@ -108,7 +108,7 @@ def main():
     assert any(c == "history.newSnapshot" for c, _ in pc.log)          # a layer was added: one click back is kept
 
     # errors with a clear message
-    expect_error("pc:upscale", "upscale", wf=ROOT / "workflows" / "fibo2-edit-plain.json")
+    expect_error("pc:upscale", "upscale", wf=ROOT / "workflows" / "fibo2-edit.json")
     expect_error("pc:upscale", "refine", wf=None)
     expect_error("between 1 and 8", "upscale", scale=9)
     bridge.MAX_RESULT_MP = 1.0                                         # 200x120 at 8x = 1.5 megapixels

@@ -13,7 +13,7 @@ from pccomfy import bridge, workflows  # noqa: E402
 from pccomfy.bridge import BridgeError, Request  # noqa: E402
 import test_reference_mode as T  # noqa: E402
 
-WFS = ("fibo2-edit-plain.json", "qwen-image-21-edit.json", "flux2-klein-edit.json", "flux3-klein-edit.json")
+WFS = ("fibo2-edit.json", "qwen-image-21-edit.json", "flux2-klein-edit.json", "flux3-klein-edit.json")
 
 
 def links_ok(g):

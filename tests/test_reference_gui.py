@@ -18,15 +18,15 @@ def main():
     app = gui.App(cfgmod.load())
     wfdir = Path(app.workflows_dir)
     wfdir.mkdir(parents=True, exist_ok=True)
-    for f in ("fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json"):
+    for f in ("fibo2-edit.json", "fibo2-edit.json"):
         shutil.copy(t.ROOT / "workflows" / f, wfdir / f)
-    app.cb_workflow["values"] = [gui.BUILTIN, "fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json"]
+    app.cb_workflow["values"] = [gui.BUILTIN, "fibo2-edit.json", "fibo2-edit.json"]
     shown = []
     app.f_ref.pack = lambda *a, **k: shown.append("on")
     app.f_ref.pack_forget = lambda: shown.append("off")
 
     # the box appears only in this mode
-    app.v_workflow.set("fibo2-edit-vgl-bionic-qwen35-9b.json")
+    app.v_workflow.set("fibo2-edit.json")
     app.v_lmask.set(L["auto"])
     app.v_mode.set("inpaint")
     app._on_mode()

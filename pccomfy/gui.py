@@ -21,12 +21,12 @@ from .photocraft import PhotoCraft, PhotoCraftError
 from .workflows import _tags as workflows_tags
 from .workflows import GenParams, has_upscale_slot, list_templates, load_template, bypass_lora, lora_strength, lora_switches, lora_tip, resolve, sampler_values, stage_info, stage_switches, writer_model, writer_name
 
-FILL_CONTEXT = 0.2   # Context (margin) that Generative fill starts with
+FILL_CONTEXT = 0.2   # Context (margin) that Fill Selection starts with
 
 MODE_LABELS = [
     ("txt2img", "Text to image"),
     ("edit", "Edit whole image"),
-    ("inpaint", "Generative fill"),
+    ("inpaint", "Fill Selection"),
     ("outpaint", "Expand image"),
     ("reference", "Insert reference image"),
     ("remove", "Remove Selection"),
@@ -34,7 +34,7 @@ MODE_LABELS = [
     ("refine", "Refine (same size)"),
     ("img2img", "Image → image"),    # only for a workflow of your own (no model tab)
 ]
-SHORT_MODES = {"txt2img": "Text", "edit": "Edit", "inpaint": "Fill", "outpaint": "Expand", "reference": "Reference",
+SHORT_MODES = {"txt2img": "Text", "edit": "Edit", "inpaint": "Fill Selection", "outpaint": "Expand", "reference": "Reference",
                "remove": "Remove Selection", "upscale": "Upscale", "refine": "Refine", "img2img": "Img2img"}   # layer names
 MODE_TIPS = {      # for a workflow of your own (no model tab); the tabs show the tips of their model (models.Model.mode_tips)
     "inpaint": "Select an area (Lasso / Rectangular Marquee), type what should appear there, then Generate.",
@@ -302,7 +302,7 @@ class App:
         self.v_scheduler = tk.StringVar(value=g("scheduler", d["scheduler"]))
         self.v_res = tk.IntVar(value=g("base_res", d["base_res"]))
         self.v_context = tk.DoubleVar(value=g("context", d["context"]))
-        # Context is remembered per mode. Generative fill starts at 0.2: with a wide margin Fibo lets the new object grow
+        # Context is remembered per mode. Fill Selection starts at 0.2: with a wide margin Fibo lets the new object grow
         # beyond the selection or doubles it (live test); the other modes keep the global default.
         self._ctx_default = d["context"]
         self._ctx_mode = self.v_mode.get()
@@ -325,7 +325,6 @@ class App:
         self.v_model = tk.StringVar(value=g("model", ""))   # the tab; "" = a workflow of your own (everything enabled)
         self.v_sharpen = tk.DoubleVar(value=g("sharpen", 0.0))
         self.v_match = tk.DoubleVar(value=g("match", 0.0))
-        self.v_llm = tk.StringVar(value="")
         self.v_cmp_res = tk.StringVar(value="")
         self.v_cmp_ctx = tk.StringVar(value="")
         self.v_stage = tk.BooleanVar(value=g("stage_on", True))
@@ -400,6 +399,7 @@ class App:
         s.configure("Horizontal.TProgressbar", background=ACCENT)
         s.configure("Grip.TFrame", background="#454545")
         s.configure("Hint.TLabel", foreground=ACCENT)
+        s.configure("Sep.TFrame", background="#9a9a9a")
         s.configure("Done.TLabel", foreground=FG, font=(FONT, 10, "bold"))
         # greyed out must be visible on the dark theme (clam keeps nearly the normal text colour)
         for w in ("TCheckbutton", "TRadiobutton", "TLabel"):
@@ -664,16 +664,6 @@ class App:
         Tooltip(self.grip, "Drag to make the prompt field taller or smaller.")
         self.lbl_hint = ttk.Label(r, text=EXPAND_HINT, style="Hint.TLabel")   # Expand image, Upscale, Refine (see _update_prompt_hint)
         self.t_prompt.insert("1.0", self.state.get("prompt", ""))
-        self.f_llm = ttk.Frame(r)       # Fibo: which text model writes the prompt (shown on that tab only)
-        self.f_llm.columnconfigure(1, weight=1)
-        lb_llm = ttk.Label(self.f_llm, text="Prompt writer (LLM)", style="Muted.TLabel")
-        lb_llm.grid(row=0, column=0, sticky="w")
-        self.cb_llm = ttk.Combobox(self.f_llm, textvariable=self.v_llm, state="readonly", width=8)
-        self.cb_llm.grid(row=0, column=1, sticky="ew", padx=6)
-        self.cb_llm.bind("<<ComboboxSelected>>", lambda e: self._llm_picked())
-        for w in (lb_llm, self.cb_llm):
-            Tooltip(w, "Which text model turns your short instruction into the long structured prompt Fibo expects (VGL).\n"
-                       "None: your text goes to Fibo as typed (fast). The others add about 25 s per run.")
         self.f_sharp = ttk.Frame(r)     # a light sharpening of the finished result, always at hand
         self.f_sharp.pack(fill="x", padx=10, pady=(6, 0))
         self.f_sharp.columnconfigure(1, weight=1)
@@ -710,7 +700,6 @@ class App:
         self.t_neg.pack(fill="x")
         self.t_neg.insert("1.0", self.state.get("negative", d["negative"]))
 
-        mf.pack(fill="x", **pad)
         self.f_xl = ttk.Frame(self.adv_body)       # extra LoRAs: a search box with a drop-down and a strength each (under Advanced)
         self.f_xl.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(6, 0))
         self.all_loras: list[str] = []
@@ -727,6 +716,7 @@ class App:
         sf = ttk.Frame(r)    # Seed and Variants: directly under the negative prompt
         sf.pack(fill="x", padx=10, pady=(6, 0), after=self.f_neg)
         self.f_sf = sf
+        mf.pack(fill="x", padx=10, pady=4, after=self.f_neg)     # the LoRA / stage box: directly under the negative prompt
         af = ttk.Frame(self.adv_body)
         af.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
         items = [("Seed (-1 random)", self._spin(sf, self.v_seed, -1, 2**31 - 1, 1, 11)),
@@ -757,6 +747,8 @@ class App:
 
         self.v_adv_open = tk.BooleanVar(value=bool(self.state.get("adv_open", False)))
         self.btn_adv = ttk.Button(self.f_adv, command=self._toggle_advanced, style="Link.TButton")
+        self.sep_adv = ttk.Frame(self.f_adv, style="Sep.TFrame", height=1)     # a light line above "Advanced"
+        self.sep_adv.pack(fill="x", pady=(0, 6))
         self.btn_adv.pack(anchor="w")
         self.f_adv.pack(fill="x", padx=10, pady=4)
         self._show_advanced()
@@ -953,7 +945,7 @@ class App:
         """The "LLM prompt enhancement" row (with the copy button): not in Expand image."""
         shown = bool(self.f_enh.winfo_manager())
         if on and not shown:
-            self.f_enh.pack(fill="x", padx=10, pady=(6, 0), before=self.f_llm if self.f_llm.winfo_manager() else self.f_sharp)
+            self.f_enh.pack(fill="x", padx=10, pady=(6, 0), before=self.f_sharp)
         elif not on and shown:
             self.f_enh.pack_forget()
         if on != shown and getattr(self, "_sized", False):
@@ -1256,34 +1248,6 @@ class App:
             shown.append(key)
         for i, key in enumerate(shown):
             self.rb_modes[key].grid(row=i // 2, column=i % 2, sticky="w", padx=(0, 16), pady=1)
-        self._update_llm_box()
-
-    def _update_llm_box(self):
-        """The prompt-writer drop-down under the prompt: only on a tab whose model has text models to choose from."""
-        m = self._model()
-        choices = m.llm if (m is not None and self.v_mode.get() not in ("txt2img", "outpaint")) else ()   # no text-model variant of the t2i workflow; Expand has no prompt writer
-        shown = bool(self.f_llm.winfo_manager()) if hasattr(self.f_llm, "winfo_manager") else False
-        if choices:
-            self.cb_llm["values"] = [label for _, label in choices]
-            self.v_llm.set(next((label for wf, label in choices if wf == self.v_workflow.get()), choices[0][1]))
-            if not shown:
-                self.f_llm.pack(fill="x", padx=10, pady=(4, 0), before=self.f_sharp)
-        elif shown:
-            self.f_llm.pack_forget()
-        if bool(choices) != shown and self._sized:
-            self._fit_height()
-
-    def _llm_picked(self):
-        m = self._model()
-        wf = next((w for w, label in (m.llm if m else ()) if label == self.v_llm.get()), None)
-        if wf is None:
-            return
-        plain = m.llm[0][0]
-        self.v_workflow.set(wf)
-        self.v_enhance.set(wf != plain)      # a text model is only worth its 25 s when it writes the prompt
-        self._on_workflow()
-        self._sync_model()
-
     def _on_model(self):
         """A tab was clicked: keep the mode when the model has it, else its first one; start with the model's settings."""
         m = self._model()
@@ -1309,14 +1273,12 @@ class App:
             self.v_mode.set(mode)
         spec = m.modes[mode]
         wf = self.v_workflow.get()
-        keep = wf in m.workflows() and (wf == spec.workflow or (wf in m.alt_workflows and mode not in ("txt2img", "outpaint")))
+        keep = wf in m.workflows() and wf == spec.workflow
         s = {"match": 0.0, **spec.settings}      # the colour pull-back belongs to the model's mode, it does not travel to the next tab
-        if mode == "outpaint":
-            s["enhance"] = False                 # Expand image has no prompt writer
         if not keep:
             s["workflow"] = spec.workflow
-        elif wf in m.alt_workflows:
-            s.pop("enhance", None)       # the LLM picked under the prompt stays on
+        else:
+            s.pop("enhance", None)       # same workflow: the "LLM prompt enhancement" checkbox keeps what you set (Expand ignores it)
         self._switch_context(mode)   # first: the context memory belongs to the mode, the defaults below overwrite its value
         self._apply_settings(s)
         t = self.t_prompt
@@ -1649,7 +1611,7 @@ class App:
         want = bool(has_lora or stages)
         shown = bool(self.f_opts.winfo_manager())
         if want and not shown:
-            self.f_opts.pack(fill="x", padx=10, pady=4, before=self.f_modes)
+            self.f_opts.pack(fill="x", padx=10, pady=4, after=self.f_neg)
         elif not want and shown:
             self.f_opts.pack_forget()
         if want != shown and getattr(self, "_sized", False):
@@ -2055,7 +2017,7 @@ class App:
     def _doc_tag(self) -> str:
         """Model and options for the name of an upscaled document: "Flux3Klein x1.5 SeedVR2 Restore0.8"."""
         m = self._model()
-        parts = [re.sub(r"\W+", "", m.label) if m else "AI"]
+        parts = [re.sub(r'[\\/:*?"<>|]+', "", m.label) if m else "AI"]
         if self.v_mode.get() == "upscale":
             parts.append(f"x{self._scale():g}")
         for var, st in zip(self.stage_vars, self._stages()):

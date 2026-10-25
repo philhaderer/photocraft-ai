@@ -112,7 +112,7 @@ from pccomfy import config as cfgmod, gui  # noqa: E402
 
 def main():
     app = gui.App(cfgmod.load())
-    app.cb_workflow["values"] = [gui.BUILTIN, "fibo2-edit-both.group.json", "fibo2-edit-plain.json"]
+    app.cb_workflow["values"] = [gui.BUILTIN, "fibo2-edit-both.group.json", "fibo2-edit.json"]
     app.cb_clip["values"] = [gui.CLIP_DEFAULT, "qwen_a.safetensors", "gemma.safetensors"]
 
     def setup():
@@ -168,12 +168,12 @@ def main():
 
     # a saved preset (the plugin ships none any more: the model tabs bring the settings)
     (Path(TMP) / "presets" / "Fibo VGL Bionic Gemma12B.json").write_text(json.dumps({"format": 1, "name": "Fibo VGL Bionic Gemma12B", "settings": {
-        "mode": "inpaint", "workflow": "fibo2-edit-vgl-bionic-gemma4-12b.json", "clip": "", "denoise": 1.0, "variants": 1, "base_res": 1024,
+        "mode": "inpaint", "workflow": "fibo2-edit.json", "clip": "", "denoise": 1.0, "variants": 1, "base_res": 1024,
         "context": 0.4, "mask_grow": 8, "mask_blur": 8, "overlap": 48, "layer_mask": "auto"}}), encoding="utf-8")
-    app.cb_workflow["values"] = [gui.BUILTIN, "fibo2-edit-vgl-bionic-gemma4-12b.json"]
+    app.cb_workflow["values"] = [gui.BUILTIN, "fibo2-edit.json"]
     app.refresh_presets()
     app.load_preset("Fibo VGL Bionic Gemma12B")
-    assert app.v_workflow.get() == "fibo2-edit-vgl-bionic-gemma4-12b.json" and app.v_denoise.get() == 1.0
+    assert app.v_workflow.get() == "fibo2-edit.json" and app.v_denoise.get() == 1.0
     print("example preset OK")
 
     # the normal request path still works and remembers the preset name
@@ -203,7 +203,7 @@ def main():
                "2": {"class_type": "LoraLoaderModelOnly", "inputs": {"model": ["1", 0]}, "_meta": {"title": "pc:lora"}},
                "3": {"class_type": "KSampler", "inputs": {"model": ["2", 0], "steps": 10}, "_meta": {"title": "pc:sampler"}}}
     (wfdir / "turbo.json").write_text(json.dumps(lora_wf), encoding="utf-8")
-    shutil.copy(ROOT / "workflows" / "fibo2-edit-plain.json", wfdir / "plain.json")
+    shutil.copy(ROOT / "workflows" / "fibo2-edit.json", wfdir / "plain.json")
     app.workflows_dir = wfdir
     app.cb_workflow["values"] = [gui.BUILTIN, "turbo.json", "plain.json"]
     app.v_workflow.set("turbo.json")

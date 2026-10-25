@@ -41,7 +41,7 @@ def main():
     assert not any(n["class_type"] == "TextGenerate" for n in off.values()) and links_ok(off)
     assert next(n for n in off.values() if n["class_type"] == "CLIPTextEncode")["inputs"]["text"] == "a fox"
     assert workflows.writer_name(workflows.load_template(ROOT / "workflows" / "moss-image-t2i.json")) == "Qwen 3.5 9B"
-    assert workflows.writer_name(workflows.load_template(ROOT / "workflows" / "fibo2-edit-plain.json")) == ""
+    assert workflows.writer_name(workflows.load_template(ROOT / "workflows" / "fibo2-edit.json")) == "Qwen 3.5 9B"
     # Qwen text to image has a workflow of its own (no input picture) with the MOSS text model as prompt enhancer
     q = workflows.load_template(ROOT / "workflows" / "qwen-image-21-t2i.json")
     assert links_ok(q) and not bridge.has_tag(q, "image") and bridge.has_tag(q, "latent") and workflows.writer_name(q) == "Qwen 3.5 9B"
@@ -142,7 +142,7 @@ def main():
     # Fibo Refine runs as a whole-image edit
     pc, _, b = T.make(tempfile.mkdtemp(), with_sel=False)
     b.comfy = T.FakeComfy()
-    req = Request(mode="edit", workflow=str(ROOT / "workflows" / "fibo2-edit-plain.json"), preset="X", run_no=1, enhance=False)
+    req = Request(mode="edit", workflow=str(ROOT / "workflows" / "fibo2-edit.json"), preset="X", run_no=1, enhance=False)
     req.params = workflows.GenParams(prompt=models.FIBO_REFINE, seed=5)
     assert b.run(req)["layers"]
     assert bridge.layer_visible({"visible": False}) is False and bridge.layer_visible({"hidden": True}) is False

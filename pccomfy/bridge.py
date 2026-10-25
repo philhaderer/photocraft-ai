@@ -1,6 +1,6 @@
 """Orchestration: PhotoCraft → (image + mask) → ComfyUI → new layer back in PhotoCraft.
 
-Flow for inpaint ("Generative Fill"):
+Flow for inpaint ("Fill Selection"):
   1. Remember the active document and check the selection (document.inspect).
   2. image.duplicate {mergedOnly} → a flattened copy that keeps the selection.
      Save the composite to PNG (app.save); on the copy, fill a new layer white inside the
@@ -256,7 +256,7 @@ def _shape(mask: "Image.Image") -> str:
     return "rectangle" if rect else "outline"
 
 
-# Generative fill with an instruction editor (Fibo ignores the mask): the selection is drawn into the picture as a red
+# Fill Selection with an instruction editor (Fibo ignores the mask): the selection is drawn into the picture as a red
 # outline and this fixed sentence wraps the typed text. Live test (meadow + lake, "a red fox", "a campfire with a pot",
 # "a rowing boat", "a heron"): the objects appeared at the marked spot; without the outline they appeared anywhere.
 FILL_PROMPT = ("{text}. Place it only inside the red {shape}, scaled to fit it and blended into the scene "
@@ -377,7 +377,7 @@ class Bridge:
     def _kind(req: Request, p, wfs: list) -> str:
         """"remove": Remove, only with an instruction editor (a workflow that does not use the mask, i.e. Fibo): the
         selection is drawn into the picture as a red outline and a fixed instruction says what to do. "" = a normal run.
-        Generative fill with an editor and no text is an error: Remove is the way to take something away."""
+        Fill Selection with an editor and no text is an error: Remove is the way to take something away."""
         if req.mode != "inpaint" or not wfs or not wfs[0]:
             if req.remove:
                 raise BridgeError("Remove Selection needs an instruction-editor workflow (Fibo, Qwen, Flux Klein).")
@@ -388,7 +388,7 @@ class Bridge:
                 raise BridgeError("Remove Selection needs an instruction-editor workflow, this one uses the mask to inpaint.")
             return "remove"
         if editor and not p.prompt.strip():
-            raise BridgeError("Generative fill needs a text: describe what should appear in the selection "
+            raise BridgeError("Fill Selection needs a text: describe what should appear in the selection "
                               "(\"a helicopter on the meadow\"). To take something away use \"Remove Selection\".")
         return ""
 

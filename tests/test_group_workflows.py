@@ -70,17 +70,17 @@ class FakePhotoCraft:
 def main():
     import shutil
     gdir = Path(tempfile.mkdtemp())   # a group of two workflows, made here (the shipped example was removed)
-    for n in ("fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json"):
+    for n in ("fibo2-edit.json", "fibo2-edit.json"):
         shutil.copy(ROOT / "workflows" / n, gdir / n)
     group = gdir / "both.group.json"
-    group.write_text(json.dumps({"title": "plain, then VGL", "workflows": ["fibo2-edit-plain.json", "fibo2-edit-vgl-bionic-qwen35-9b.json"]}))
+    group.write_text(json.dumps({"title": "plain, then VGL", "workflows": ["fibo2-edit.json", "fibo2-edit.json"]}))
     srv = subprocess.Popen([sys.executable, str(ROOT / "tests" / "fake_comfy.py"), "8189"])
     time.sleep(1.0)
     try:
         for label, wf, variants, expect in (
             ("group", group, 1, 2),
             ("group x2 variants", group, 2, 4),
-            ("single plain", ROOT / "workflows" / "fibo2-edit-plain.json", 1, 1),
+            ("single plain", ROOT / "workflows" / "fibo2-edit.json", 1, 1),
         ):
             with tempfile.TemporaryDirectory() as tmp:
                 pc = FakePhotoCraft(Path(tmp))
@@ -98,7 +98,7 @@ def main():
         print("last graph (plain): sampler =", {k: v for k, v in g["7"]["inputs"].items() if k in ("seed", "denoise", "steps")},
               "| encode =", {k: v for k, v in g["6"]["inputs"].items() if k in ("prompt", "width", "height", "batch_size")})
         # VGL graph check (apply_template only)
-        vgl = workflows.load_template(ROOT / "workflows" / "fibo2-edit-vgl-bionic-qwen35-9b.json")
+        vgl = workflows.load_template(ROOT / "workflows" / "fibo2-edit.json")
         gv, out = workflows.apply_template(vgl, workflows.GenParams(prompt="add a hat", seed=7, width=1024, height=768, batch=2),
                                            "img.png", "mask.png")
         print("vgl: TextGenerate.prompt =", repr(gv["12"]["inputs"].get("prompt")), "| encode size =",

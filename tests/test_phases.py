@@ -5,9 +5,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from pccomfy.bridge import Bridge, after_prompt_nodes, prompt_phase_nodes
 
 ROOT = Path(__file__).resolve().parent.parent
-g = json.loads((ROOT / "workflows" / "fibo2-edit-vgl-bionic-gemma4-12b.json").read_text(encoding="utf-8"))
-assert prompt_phase_nodes(g) >= {"4", "11", "12"} and "7" in after_prompt_nodes(g)
-assert prompt_phase_nodes(json.loads((ROOT / "workflows" / "fibo2-edit-plain.json").read_text(encoding="utf-8"))) == set()
+g = json.loads((ROOT / "workflows" / "fibo2-edit.json").read_text(encoding="utf-8"))
+assert prompt_phase_nodes(g) >= {"10", "11", "12"} and "7" in after_prompt_nodes(g)
+assert prompt_phase_nodes(json.loads((ROOT / "workflows" / "fibo2-t2i.json").read_text(encoding="utf-8"))) == set()
 
 
 class FakeComfy:

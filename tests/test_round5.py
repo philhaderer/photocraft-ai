@@ -66,13 +66,12 @@ def main():
     assert json.loads((Path(t.TMP) / "state.json").read_text(encoding="utf-8"))["sharpen"] == 0.4   # ... and not forgotten
     pick("fibo", "edit")
     assert app._request().sharpen == 0.4
-    # the prompt writer drop-down is not offered in Expand
-    app.v_llm.set("Qwen 3.5 9B (bionic)")
-    app._llm_picked()
-    assert app.v_workflow.get() == "fibo2-edit-vgl-bionic-qwen35-9b.json"
+    # Expand sends no prompt enhancement even when the checkbox is on
+    app.v_enhance.set(True)
     app.v_mode.set("outpaint")
     app._on_mode()
-    assert app.v_workflow.get() == "fibo2-edit-plain.json" and app.v_enhance.get() is False
+    assert app.v_workflow.get() == "fibo2-edit.json" and app._request().enhance is False
+    app.v_enhance.set(False)
     # Match colours only in Fill and Reference
     for mode, shown in (("inpaint", True), ("reference", True), ("outpaint", False), ("edit", False)):
         grid = [rec(w, "grid") for w in app._match_widgets]
@@ -104,11 +103,11 @@ def main():
     pick("fibo", "edit")
     assert app._layer_prefix() == "Fibo 2.0 Edit"
     pick("flux3", "edit")
-    assert app._layer_prefix() == "Flux3Klein Edit"
+    assert app._layer_prefix() == "Flux 3 Klein Edit"
     pick("flux3", "remove")
-    assert app._layer_prefix() == "Flux3Klein Edit Remove Selection"
+    assert app._layer_prefix() == "Flux 3 Klein Edit Remove Selection"
     pick("qwen", "remove")
-    assert app._layer_prefix() == "Qwen2.1 Remove Selection" and dict(gui.MODE_LABELS)["remove"] == "Remove Selection"
+    assert app._layer_prefix() == "Qwen 2.1 Edit Remove Selection" and dict(gui.MODE_LABELS)["remove"] == "Remove Selection"
 
     # Sampler / scheduler: usable (readonly) where the workflow has them, a change is sent as an override
     pick("qwen", "edit")
@@ -129,6 +128,35 @@ def main():
     f2 = workflows.load_template(t.ROOT / "workflows" / "flux2-klein-edit.json")
     assert workflows.sampler_values(f2) == {"sampler": "euler"}
     assert workflows.set_sampler(f2, sampler="dpmpp_2m", scheduler="karras")["198"]["inputs"]["sampler_name"] == "dpmpp_2m"
+
+    # Krea 2 Turbo: Text to image (prompt enhancer switchable) and Expand (mask workflow); no LoRA box
+    from pccomfy import bridge
+    assert [k for k, rb in models.BY_KEY["krea2"].modes.items()] == ["txt2img", "outpaint"]
+    k2 = workflows.load_template(t.ROOT / "workflows" / "krea2-turbo-t2i.json")
+    ki = workflows.load_template(t.ROOT / "workflows" / "krea2-turbo-inpaint.json")
+    for g in (k2, ki):
+        assert all(str(v[0]) in g for n in g.values() for v in n["inputs"].values() if isinstance(v, list))
+    assert workflows.writer_name(k2) == "Qwen 3 VL 4B" and not workflows.lora_switches(k2) and bridge.mask_is_used(ki) and not bridge.mask_is_used(k2)
+    on, out = workflows.apply_template(k2, workflows.GenParams(prompt="a fox", seed=3, width=1024, height=768, batch=2), None, None)
+    assert on[out]["class_type"] == "PreviewImage" and next(n for n in on.values() if n["class_type"] == "TextGenerate")["inputs"]["prompt"] == "a fox"
+    assert next(n for n in on.values() if n["class_type"] == "EmptyLatentImage")["inputs"]["width"] == 1024
+    off, _ = workflows.apply_template(workflows.bypass_prompt_writer(k2, "a fox"), workflows.GenParams(prompt="a fox", seed=3, width=1024, height=768), None, None)
+    assert not any(n["class_type"] == "TextGenerate" for n in off.values())
+    assert next(n for n in off.values() if n["class_type"] == "CLIPTextEncode")["inputs"]["text"] == "a fox"
+    pick("krea2", "txt2img")
+    assert app.v_workflow.get() == "krea2-turbo-t2i.json" and app.v_res.get() == 1024 and app.v_enhance.get() is False
+    pick("krea2", "outpaint")
+    assert app.v_workflow.get() == "krea2-turbo-inpaint.json"
+    # the names: Fill Selection, no Bionic anywhere, one Fibo workflow with the LLM checkbox
+    assert dict(gui.MODE_LABELS)["inpaint"] == "Fill Selection" and gui.SHORT_MODES["inpaint"] == "Fill Selection"
+    assert sorted(p.name for p in (t.ROOT / "workflows").glob("fibo2*")) == ["fibo2-edit.json", "fibo2-t2i.json"]
+    assert not any("bionic" in p.read_text(encoding="utf-8").lower() for p in (t.ROOT / "workflows").glob("*.json"))
+    # the LoRA / stage box sits directly under the negative prompt, a light line above Advanced
+    packs = rec(app.f_opts, "pack")
+    app.f_opts.winfo_manager = lambda: ""
+    app._update_options_box(True, [])
+    assert packs and packs[0][1].get("after") is app.f_neg, packs
+    assert app.sep_adv is not None
 
     # Remove Selection with the name of the object (Flux Klein): the instruction names it; runs.jsonl says what was sent
     import tempfile

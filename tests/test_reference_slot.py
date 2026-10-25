@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from pccomfy import workflows  # noqa: E402
 
-FILES = sorted(glob.glob(str(ROOT / "workflows" / "fibo2-edit-vgl*.json")) + [str(ROOT / "workflows" / "fibo2-edit-plain.json")])
+FILES = sorted(glob.glob(str(ROOT / "workflows" / "fibo2-edit-vgl*.json")) + [str(ROOT / "workflows" / "fibo2-edit.json")])
 
 
 def links_resolve(g):
@@ -20,7 +20,7 @@ def links_resolve(g):
 
 def main():
     p = workflows.GenParams(prompt="put the viking in")
-    assert len(FILES) == 4
+    assert len(FILES) == 1
     for f in FILES:
         name = Path(f).name
         tpl = workflows.load_template(f)

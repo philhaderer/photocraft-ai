@@ -29,8 +29,6 @@ class Model:
     label: str
     tip: str
     modes: dict                     # mode key -> Mode (a mode that is not here is greyed out)
-    alt_workflows: tuple = ()       # more workflows of this model
-    llm: tuple = ()                 # (workflow, label) of the text models that can write the prompt (a drop-down under the prompt)
     mode_tips: dict = field(default_factory=dict)   # mode key -> the tooltip of that mode's radio button (this model only)
 
     def workflows(self) -> list[str]:
@@ -38,7 +36,7 @@ class Model:
         for m in self.modes.values():
             if m.workflow not in out:
                 out.append(m.workflow)
-        return out + [w for w in self.alt_workflows if w not in out]
+        return out
 
 
 _SOFT = {"layer_mask": "soft", "mask_grow": 8, "mask_blur": 8}
@@ -69,8 +67,8 @@ _EXPAND = ("Extend the canvas with the Crop tool (confirm with Enter), then Gene
 _REMOVE = "Select the object to remove (tightly, but with the whole object inside), then Generate. No text needed."
 
 QWEN = Model(
-    "qwen", "Qwen2.1",
-    "Qwen Image 2.1 Edit: an instruction editor with a very good Generative fill, Remove Selection (works without a prompt), "
+    "qwen", "Qwen 2.1 Edit",
+    "Qwen Image 2.1 Edit: an instruction editor with a very good Fill Selection, Remove Selection (works without a prompt), "
     "Expand and whole-image edits. Reference images work with the picture as image 1 and the inserted one as image 2.\n"
     "Base res. 1024 is the best size for it: 1224 and 1536 shift the filled area.",
     {
@@ -95,7 +93,7 @@ QWEN = Model(
     })
 
 FLUX2 = Model(
-    "flux2", "Flux2Klein Edit",
+    "flux2", "Flux 2 Klein Edit",
     "FLUX.2 Klein 9B: whole-image edits, Remove Selection, Expand, upscale and refine (the Ultra real LoRA is the switch).",
     {
         "edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none")),
@@ -118,7 +116,7 @@ FLUX2 = Model(
     })
 
 FLUX3 = Model(
-    "flux3", "Flux3Klein Edit",
+    "flux3", "Flux 3 Klein Edit",
     "FLUX.3 Klein: text to image (with the Flux 3 prompt upsampler, switchable) and whole-image edits (base res 1536), Remove Selection, Expand and the SeedVR2 + tiles upscale (the Restore LoRA and the SeedVR2 stage are switches).",
     {
         "txt2img": Mode("flux3-klein-t2i.json", dict(base_res=1536, layer_mask="none", enhance=False)),
@@ -143,7 +141,7 @@ _MOSS = dict(turbo=True, stage_on=True, stage2_on=True)
 MOSS = Model(
     "moss", "MOSS Image",
     "MOSS-Image 5B: a text-to-image model. Text to image (with its own prompt enhancer) and Expand. "
-    "It has no instruction-edit functions (yet) and no Generative fill. Likes 1.5 to 2 MP. The DMD2 LoRA makes it fast (8 steps, CFG 1.5).",
+    "It has no instruction-edit functions (yet) and no Fill Selection. Likes 1.5 to 2 MP. The DMD2 LoRA makes it fast (8 steps, CFG 1.5).",
     {
         "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "base_res": 1280, "layer_mask": "none", "enhance": False}),
         "outpaint": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "auto", "match": 0.5}),
@@ -153,24 +151,34 @@ MOSS = Model(
         "outpaint": _EXPAND,
     })
 
+# Krea-2 Turbo: a fast distilled text-to-image model (8 steps, CFG 1). Text to image has the model's own prompt enhancer
+# (starts off, like the other models'); Expand redraws the new area with the same mask recipe as MOSS.
+KREA2 = Model(
+    "krea2", "Krea 2 Turbo",
+    "Krea-2 Turbo: a fast text-to-image model (8 steps). Text to image (with its own prompt enhancer, switchable) and Expand. "
+    "It has no instruction-edit functions and no Fill Selection.",
+    {
+        "txt2img": Mode("krea2-turbo-t2i.json", dict(base_res=1024, layer_mask="none", enhance=False)),
+        "outpaint": Mode("krea2-turbo-inpaint.json", dict(base_res=1024, layer_mask="auto")),
+    },
+    mode_tips={
+        "txt2img": _TXT + "\nIts own prompt enhancer (the checkbox under the prompt) can write the long prompt from your short text.",
+        "outpaint": _EXPAND + "\nA test for Krea 2 Turbo.",
+    })
+
 FIBO = Model(
     "fibo", "Fibo 2.0 Edit",
     "Fibo 2.0 Edit Turbo: an instruction editor. Text to image, Fill, Remove Selection, Reference (the simple style works best), whole-image edits and Refine (relight). "
-    "The VGL variants (a text model writes the prompt) are chosen under the prompt.",
+    "The checkbox \"LLM prompt enhancement\" lets Qwen 3.5 9B write the long structured prompt (VGL) from your short text.",
     {
         "txt2img": Mode("fibo2-t2i.json", dict(base_res=1224, layer_mask="none", enhance=False)),
-        "edit": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="none", enhance=False)),
-        "refine": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="none", enhance=False), FIBO_REFINE, run_as="edit"),
-        "inpaint": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False)),
-        "outpaint": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
-        "reference": Mode("fibo2-edit-plain.json", dict(base_res=1024, ref_style="simple", ref_cutout=True, layer_mask="auto", enhance=False)),
-        "remove": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False)),
+        "edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False)),
+        "refine": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), FIBO_REFINE, run_as="edit"),
+        "inpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False)),
+        "outpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
+        "reference": Mode("fibo2-edit.json", dict(base_res=1024, ref_style="simple", ref_cutout=True, layer_mask="auto", enhance=False)),
+        "remove": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False)),
     },
-    alt_workflows=("fibo2-edit-vgl-bionic-gemma4-12b.json", "fibo2-edit-vgl-bionic-qwen35-9b.json", "fibo2-edit-vgl-qwen35-convrot.json"),
-    llm=(("fibo2-edit-plain.json", "None (your text as typed)"),
-         ("fibo2-edit-vgl-bionic-gemma4-12b.json", "Gemma 4 12B (bionic)"),
-         ("fibo2-edit-vgl-bionic-qwen35-9b.json", "Qwen 3.5 9B (bionic)"),
-         ("fibo2-edit-vgl-qwen35-convrot.json", "Qwen 3.5 9B (native, convrot)")),
     mode_tips={
         "txt2img": _TXT,
         "edit": _EDIT,
@@ -180,7 +188,7 @@ FIBO = Model(
                    "then Generate. A text is required; to take something away use Remove Selection.\n"
                    "The selection is drawn into the picture as a red outline and your text is wrapped in a fixed instruction "
                    "(place it only inside the outline), so the object lands where you marked.\n"
-                   "With a text model under the prompt, it writes the long prompt from your text (about 25 s slower).",
+                   "With \"LLM prompt enhancement\" on, a text model writes the long prompt from your text (about 20 s slower).",
         "outpaint": _EXPAND,
         "reference": "Insert a person or object with the look of a picture (e.g. a Viking).\n"
                      "1. Put it on its own layer ABOVE everything else (cut out, transparent).\n2. Select where it should stand.\n3. Generate.\n"
@@ -193,7 +201,7 @@ FIBO = Model(
                   "If a part of the object is already gone, include what is left in the selection.",
     })
 
-MODELS = [QWEN, FLUX2, FLUX3, MOSS, FIBO]
+MODELS = [QWEN, FLUX2, FLUX3, MOSS, KREA2, FIBO]
 BY_KEY = {m.key: m for m in MODELS}
 
 

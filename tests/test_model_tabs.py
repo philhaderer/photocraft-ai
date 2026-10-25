@@ -20,7 +20,7 @@ def main():
             assert (t.ROOT / "workflows" / w).exists(), (m.key, w)
         for mode in m.modes:
             assert mode in dict(gui.MODE_LABELS), (m.key, mode)
-    assert [m.label for m in models.MODELS] == ["Qwen2.1", "Flux2Klein Edit", "Flux3Klein Edit", "MOSS Image", "Fibo 2.0 Edit"]
+    assert [m.label for m in models.MODELS] == ["Qwen 2.1 Edit", "Flux 2 Klein Edit", "Flux 3 Klein Edit", "MOSS Image", "Krea 2 Turbo", "Fibo 2.0 Edit"]
 
     app = gui.App(cfgmod.load())
     wfdir = Path(app.workflows_dir)
@@ -82,7 +82,7 @@ def main():
     app.v_model.set("flux2")
     app._on_model()
     assert app.v_res.get() == 1024 and app.v_match.get() == 0.0
-    assert len(app.rb_tabs) == 5 and app.f_tabs is not None
+    assert len(app.rb_tabs) == 6 and app.f_tabs is not None
 
     # Flux 3: upscale brings its workflow, 1.5 and the placeholder; edit takes the placeholder away again
     app.v_model.set("flux3")
@@ -107,19 +107,24 @@ def main():
     app._on_model()
     assert app.v_mode.get() == "edit" and app.v_workflow.get() == "flux2-klein-edit.json"
 
-    # Fibo: the text model picked under the prompt stays while the mode changes; the tab follows a loaded workflow
+    # Fibo: one workflow with the LLM checkbox; its state stays while the mode changes; the tab follows a loaded workflow
     app.v_model.set("fibo")
     app.v_mode.set("inpaint")
     app._on_model()
-    assert app.v_workflow.get() == "fibo2-edit-plain.json" and app.v_enhance.get() is False
-    assert list(app.cb_llm["values"]) == [lb for _, lb in models.FIBO.llm] and app.v_llm.get() == models.FIBO.llm[0][1]
-    app.v_llm.set("Qwen 3.5 9B (bionic)")
-    app._llm_picked()
-    assert app.v_workflow.get() == "fibo2-edit-vgl-bionic-qwen35-9b.json" and app.v_enhance.get() is True
+    assert app.v_workflow.get() == "fibo2-edit.json" and app.v_enhance.get() is False
+    assert app.cb_enhance["text"] == "LLM prompt enhancement (Qwen 3.5 9B)"
+    app.v_enhance.set(True)
+    app.v_mode.set("edit")
+    app._on_mode()
+    assert app.v_enhance.get() is True and app._request().enhance is True                # the choice survives a mode change
     app.v_mode.set("outpaint")
     app._on_mode()
-    assert app.v_workflow.get() == "fibo2-edit-plain.json" and app.v_model.get() == "fibo" and app.v_enhance.get() is False   # Expand: no prompt writer
-    assert app._request().enhance is False
+    assert app.v_workflow.get() == "fibo2-edit.json" and app.v_model.get() == "fibo"
+    assert app._request().enhance is False                                               # Expand: no prompt writer
+    app.v_mode.set("edit")
+    app._on_mode()
+    assert app._request().enhance is True
+    app.v_enhance.set(False)
     app._apply_settings({"workflow": "qwen-image-21-edit.json", "mode": "inpaint"})
     assert app.v_model.get() == "qwen"
 
@@ -218,15 +223,14 @@ def main():
     app.v_model.set("fibo")
     app.v_mode.set("refine")
     app._on_model()
-    assert app.v_workflow.get() == "fibo2-edit-plain.json" and app._request().mode == "edit"
+    assert app.v_workflow.get() == "fibo2-edit.json" and app._request().mode == "edit"
     assert app._prompt_text() == models.FIBO_REFINE and app.v_mode.get() == "refine" and app._layer_prefix().endswith("Refine")
     app.v_mode.set("txt2img")
     app._on_mode()
     assert app.v_workflow.get() == "fibo2-t2i.json" and app._request().mode == "txt2img" and app._prompt_text() == ""
-    app.v_llm.set("Qwen 3.5 9B (bionic)")
     app.v_mode.set("edit")
     app._on_mode()
-    assert app.v_workflow.get() == "fibo2-edit-plain.json"
+    assert app.v_workflow.get() == "fibo2-edit.json"
     # Remove Selection for Flux: the field is free for an optional name of the object; it travels as remove_target
     for k in ("flux2", "flux3"):
         app.v_model.set(k)

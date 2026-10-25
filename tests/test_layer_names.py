@@ -23,7 +23,7 @@ def names(preset, run_no, variants=1):
     tmp = tempfile.mkdtemp()
     pc, _, b = T.make(tmp)
     b.comfy = Two() if variants > 1 else T.FakeComfy()
-    req = Request(mode="inpaint", workflow=str(ROOT / "workflows" / "fibo2-edit-plain.json"), variants=variants, preset=preset, run_no=run_no)
+    req = Request(mode="inpaint", workflow=str(ROOT / "workflows" / "fibo2-edit.json"), variants=variants, preset=preset, run_no=run_no)
     req.params = workflows.GenParams(prompt="a red hat", seed=7)
     b.run(req)
     return [p["name"] for c, p in pc.log if c == "layer.renameLayer"]
@@ -36,7 +36,7 @@ def main():
     tmp = tempfile.mkdtemp()
     pc, _, b = T.make(tmp)
     b.comfy = T.FakeComfy()
-    rq = Request(mode="inpaint", workflow=str(ROOT / "workflows" / "fibo2-edit-plain.json"), preset="P", run_no=4, label="res 1024")
+    rq = Request(mode="inpaint", workflow=str(ROOT / "workflows" / "fibo2-edit.json"), preset="P", run_no=4, label="res 1024")
     rq.params = workflows.GenParams(prompt="x", seed=1)
     b.run(rq)
     assert [p["name"] for c, p in pc.log if c == "layer.renameLayer"] == ["P #4 [res 1024]"]

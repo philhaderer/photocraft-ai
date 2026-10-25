@@ -21,8 +21,7 @@ def links_resolve(g):
 
 def main():
     p = workflows.GenParams(prompt="make the jacket red")
-    for name in ("fibo2-edit-vgl-bionic-qwen35-9b.json", "fibo2-edit-vgl-bionic-gemma4-12b.json",
-                 "fibo2-edit-vgl-qwen35-convrot.json"):
+    for name in ("fibo2-edit.json",):
         tpl = workflows.load_template(WF / name)
         g, out = workflows.apply_template(tpl, p, "img.png", "mask.png")
         assert workflows.prompt_writers(g), name
@@ -35,8 +34,8 @@ def main():
         assert out in off and workflows.bypass_prompt_writer(off, p.prompt) == off  # output kept, idempotent
         assert any(n["class_type"] == "TextGenerate" or n["class_type"] == "VGLBionicEditPrompt" for n in g.values())  # input untouched
     # a workflow without a text model is left alone
-    tpl = workflows.load_template(WF / "fibo2-edit-plain.json")
-    g, _ = workflows.apply_template(tpl, p, "img.png", "mask.png")
+    tpl = workflows.load_template(WF / "flux3-klein-edit.json")
+    g, _ = workflows.apply_template(tpl, p, "img.png", None)
     assert workflows.bypass_prompt_writer(g, p.prompt) == g
     print("ALL OK (enhance toggle)")
 

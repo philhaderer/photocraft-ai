@@ -26,7 +26,7 @@ def main():
     q = workflows.load_template(ROOT / "workflows" / "qwen-image-21-edit.json")
     assert workflows.lora_strength(q) == 1.0 and workflows.lora_strength(workflows.set_lora_strength(q, 0.7)) == 0.7
     assert workflows.lora_strength(workflows.load_template(ROOT / "workflows" / "flux2-klein-upscale.json")) == 0.3
-    assert workflows.lora_strength(workflows.load_template(ROOT / "workflows" / "fibo2-edit-plain.json")) is None
+    assert workflows.lora_strength(workflows.load_template(ROOT / "workflows" / "fibo2-edit.json")) is None
 
     assert [l for _, l in workflows.stage_switches(f3)] == ["SeedVR2 pre-cleaning"]
     off = workflows.bypass_stage(f3)

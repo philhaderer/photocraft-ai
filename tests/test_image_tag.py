@@ -48,7 +48,7 @@ def main():
     assert g["3"]["inputs"]["prompt"].startswith("<image1> a landscape in upper austria, replace white"), g["3"]["inputs"]["prompt"]
 
     # Fibo workflows name no tag: their prompts are exactly what they were
-    for name in ("fibo2-edit-plain.json", "fibo2-edit-vgl-qwen35-convrot.json"):
+    for name in ("fibo2-edit.json", "fibo2-edit.json"):
         g, _ = workflows.apply_template(workflows.load_template(WF / name), p, "img.png", "mask.png")
         texts = [v["inputs"].get("prompt", v["inputs"].get("text", v["inputs"].get("instruction")))
                  for v in g.values() if "prompt" in workflows._tags(v)]
