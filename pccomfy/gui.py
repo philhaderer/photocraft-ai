@@ -8,6 +8,7 @@ import queue
 import random
 import re
 import threading
+import time
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
@@ -235,6 +236,12 @@ def desc_mp_text(v) -> str:
         return "full size" if float(v) <= 0 else f"{float(v):g} MP"
     except (TypeError, ValueError):
         return "0.5 MP"
+
+
+def duration_text(seconds: float) -> str:
+    """"23 s", "1 min 05 s"."""
+    s = max(0, round(seconds))
+    return f"{s} s" if s < 60 else f"{s // 60} min {s % 60:02d} s"
 
 
 def scale_text(v) -> str:
@@ -680,7 +687,7 @@ class App:
         self.grip.pack(fill="x", padx=10, pady=(1, 0))
         self._grip_drag(self.grip, self.t_prompt)
         Tooltip(self.grip, "Drag to resize the prompt field.")
-        self.lbl_hint = ttk.Label(r, text=EXPAND_HINT, style="Hint.TLabel")   # Expand image, Upscale, Refine (see _update_prompt_hint)
+        self.lbl_hint = ttk.Label(r, text=EXPAND_HINT, style="Hint.TLabel", wraplength=self._px(MIN_W - 24), justify="left")   # Expand image, Upscale, Refine (see _update_prompt_hint)
         self.t_prompt.insert("1.0", self.state.get("prompt", ""))
         self.f_sharp = ttk.Frame(r)     # a light sharpening of the finished result, always at hand
         self.f_sharp.pack(fill="x", padx=10, pady=(6, 0))
@@ -2161,13 +2168,14 @@ class App:
         def work():
             try:
                 total = 0
+                t_start = time.monotonic()
                 for k, rq in enumerate(runs):
                     if len(runs) > 1:
                         self.events.put(("progress", (0.0, f"Comparison {k + 1}/{len(runs)}: {rq.label}", "prepare", -1.0, 0.0)))
                     res = self.bridge.run(rq, progress)
                     total += len(res["layers"])
                 self.events.put(("vgl", res.get("vgl", "")))
-                self.events.put(("done", f"Done · seed {res['seed']} · {total} layer{'s' if total != 1 else ''}"))
+                self.events.put(("done", f"Done · seed {res['seed']} · {total} layer{'s' if total != 1 else ''} · {duration_text(time.monotonic() - t_start)}"))
             except Cancelled:
                 self.events.put(("done", "Cancelled."))
             except (BridgeError, ComfyError, PhotoCraftError, ValueError, OSError) as e:

@@ -280,6 +280,12 @@ def main():
     for key in ("qwen", "flux2", "flux3", "fibo"):
         assert models.BY_KEY[key].modes["edit"].prompt_tip == models.EDIT_TIP, key
 
+    # run time next to "Done"; Flux 2 refine default without "people, faces"; the tip is a wrapped label
+    assert gui.duration_text(23.4) == "23 s" and gui.duration_text(65) == "1 min 05 s" and gui.duration_text(0.2) == "0 s"
+    assert "people" not in models.FLUX2_DEFAULT and models.FLUX2_DEFAULT_OLD in models.STOCK_PROMPTS and models.FLUX2_DEFAULT.endswith("Keep the composition, and colors exactly as they are.")
+    assert models.EDIT_TIP == "To remove something, say what replaces it: \u201cRemove the dog and paint the wall behind him\u201d"
+    assert app.lbl_hint["wraplength"]
+
     # Remove Selection with the name of the object (Flux Klein): the instruction names it; runs.jsonl says what was sent
     import tempfile
     import test_reference_mode as T
