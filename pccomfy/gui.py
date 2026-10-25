@@ -19,21 +19,23 @@ from .bridge import Bridge, BridgeError, Request, mask_is_used, prompt_phase_nod
 from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 from .workflows import _tags as workflows_tags
-from .workflows import GenParams, has_upscale_slot, list_templates, load_template, lora_strength, lora_switches, resolve, stage_switches
+from .workflows import GenParams, has_upscale_slot, list_templates, load_template, bypass_lora, lora_strength, lora_switches, lora_tip, resolve, sampler_values, stage_info, stage_switches
 
 FILL_CONTEXT = 0.2   # Context (margin) that Generative fill starts with
 
 MODE_LABELS = [
-    ("inpaint", "Generative fill"),
-    ("remove", "Remove"),
-    ("reference", "Insert reference image"),
-    ("outpaint", "Expand image"),
+    ("txt2img", "Text to image"),
     ("edit", "Edit whole image"),
-    ("img2img", "Image → image"),
-    ("txt2img", "Text → image"),
+    ("inpaint", "Generative fill"),
+    ("outpaint", "Expand image"),
+    ("reference", "Insert reference image"),
+    ("remove", "Remove"),
     ("upscale", "Upscale (new file)"),
     ("refine", "Refine (same size)"),
+    ("img2img", "Image → image"),    # only for a workflow of your own (no model tab)
 ]
+SHORT_MODES = {"txt2img": "Text", "edit": "Edit", "inpaint": "Fill", "outpaint": "Expand", "reference": "Reference",
+               "remove": "Remove", "upscale": "Upscale", "refine": "Refine", "img2img": "Img2img"}   # layer names
 MODE_TIPS = {
     "inpaint": "Select an area (Lasso / Rectangular Marquee), type what should appear there (\"a helicopter on the meadow\"), "
                "then Generate.\n"
@@ -58,7 +60,7 @@ MODE_TIPS = {
                 "Text is optional and describes what the new area shows.\n"
                 "Large extensions drift in style and tone at the seam: extend in smaller steps and repeat.",
     "edit": "Changes the WHOLE picture from your text, like talking to an image editor (\"make it night\", \"turn the car red\").\n"
-            "A selection is ignored. Needs an edit workflow (Fibo, Qwen Image 2.1 Edit, Flux 2/3 Klein edit): use a preset.",
+            "A selection is ignored. Works with Qwen Image 2.1 Edit, Flux 2/3 Klein and Fibo (not with MOSS).",
     "img2img": "Reworks the picture (or the selection) from your text.\n"
                "Checkpoint workflows: Denoise says how far it may change (low = stay close, high = new picture).\n"
                "Fibo workflows: type an instruction (\"make it night\"); no mask is needed.",
@@ -68,10 +70,8 @@ MODE_TIPS = {
                "Results above 24 megapixels are refused.",
     "refine": "Cleans up and re-detail the picture (or the selection) at the SAME size and puts the result on a new layer.\n"
               "Same workflow as Upscale (flux3-klein-upscale.json), factor 1. The text is optional (a few words about the picture).",
-    "txt2img": "Creates a new image from text only, in the size of the selection or the whole canvas.\n"
-               "Checkpoint workflows: describe the image.\n"
-               "Fibo Edit workflows: only with \"enhance\" switched off (the text model needs a picture). "
-               "Fibo Edit is made for editing, results may be arbitrary.",
+    "txt2img": "Creates a new picture from text only, as a new layer in the size of the canvas. A selection is ignored.\n"
+               "Only MOSS Image has it (its own prompt enhancer can write the long English caption it likes).",
 }
 BUILTIN = "Built-in (checkpoint)"
 LAYER_MASKS = {"auto": "auto (recommended)", "soft": "soft (same as the model's)", "selection": "hard (from selection)", "none": "none"}
@@ -183,6 +183,11 @@ class Tooltip:
             self.tip = None
 
 
+LORA_TIP = ("A LoRA of the workflow that can be switched off (the checkbox names it); the slider sets how strong it works.\n"
+            "Greyed out when the workflow has no such LoRA.")
+STAGE_TIP = ("A processing stage of the workflow that can be skipped (the checkbox names it).\n"
+             "Flux 3 upscale - SeedVR2: cleans the picture before Flux 3 redraws it. Off = Flux 3 works on the plainly "
+             "scaled picture (less of the SeedVR2 sharpness).")
 FONT = "Segoe UI" if os.name == "nt" else "Sans"
 CLIP_DEFAULT = "(workflow default)"
 
@@ -259,6 +264,7 @@ class App:
         self.root.minsize(self._px(MIN_W), self._px(560))
         self._sized = False
         self._style()
+        self._scale_clicks()
         self.root.after(200, lambda: winlink.caption(self.root, (0x40, 0x40, 0x40), (0xee, 0xee, 0xee)))
 
         g = lambda k, default: self.state.get(k, default)  # noqa: E731
@@ -298,10 +304,16 @@ class App:
         self.v_lora_str = tk.DoubleVar(value=g("lora_strength", 1.0))
         self.v_model = tk.StringVar(value=g("model", ""))   # the tab; "" = a workflow of your own (everything enabled)
         self.v_sharpen = tk.DoubleVar(value=g("sharpen", 0.0))
+        self.v_llm = tk.StringVar(value="")
         self.v_cmp_res = tk.StringVar(value="")
         self.v_cmp_ctx = tk.StringVar(value="")
         self.v_stage = tk.BooleanVar(value=g("stage_on", True))
+        self.v_stage2 = tk.BooleanVar(value=g("stage2_on", False))
+        self.v_stage3 = tk.BooleanVar(value=g("stage3_on", False))
+        self._stage_wf = g("workflow", "")   # the workflow the stage checkboxes were last set for
         self.v_detail = tk.DoubleVar(value=g("detail", 1.0))
+        self._vals_key = None                # (workflow, speed LoRA on) the steps / CFG / denoise fields were last read for
+        self._wf_vals: dict = {}
         self._lora_wf = g("workflow", "")   # the workflow the LoRA strength slider was last set for
         self.v_collage = tk.BooleanVar(value=g("ref_collage", True))
         self.v_cutout = tk.BooleanVar(value=g("ref_cutout", True))
@@ -378,6 +390,28 @@ class App:
         s.map("TButton", foreground=[("disabled", DISABLED)])
         self.root.option_add("*TCombobox*Listbox.background", PANEL)
         self.root.option_add("*TCombobox*Listbox.foreground", FG)
+
+    def _scale_clicks(self):
+        """A click on a slider's trough moves the handle to where it was clicked (Tk's own behaviour steps by a whole page,
+        i.e. to the start or end of a short slider), and dragging follows the mouse."""
+        def to_click(e):
+            w = e.widget
+            try:
+                if str(w.cget("state")) == "disabled":
+                    return "break"
+                lo, hi = float(w.cget("from")), float(w.cget("to"))
+                x0, x1 = float(w.coords(lo)[0]), float(w.coords(hi)[0])
+                if x1 - x0 < 1:
+                    return None
+                w.set(lo + min(1.0, max(0.0, (e.x - x0) / (x1 - x0))) * (hi - lo))
+            except (tk.TclError, ValueError, TypeError, IndexError, AttributeError):
+                return None
+            return "break"
+        try:
+            self.root.bind_class("TScale", "<Button-1>", to_click)
+            self.root.bind_class("TScale", "<B1-Motion>", to_click)
+        except Exception:
+            pass
 
     def _text(self, parent, height):
         t = tk.Text(parent, height=height, width=10, wrap="word", bg=PANEL, fg=FG, insertbackground=FG,
@@ -470,15 +504,14 @@ class App:
         self.f_adv = ttk.Frame(r)
         self.adv_body = ttk.Frame(self.f_adv)
         self.adv_body.columnconfigure(1, weight=1)
-        ttk.Label(self.adv_body, text="Workflow", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
+        # Workflow and Preset are not shown: the model tabs choose the workflow and its settings (the widgets stay, the code
+        # behind them is the same)
         self.cb_workflow = ttk.Combobox(self.adv_body, textvariable=self.v_workflow, state="readonly", width=8)
         self.cb_workflow.bind("<<ComboboxSelected>>", lambda e: self._workflow_picked())
-        self.cb_workflow.grid(row=0, column=1, sticky="ew", padx=6)
         ttk.Label(self.adv_body, text="Text model", style="Muted.TLabel").grid(row=1, column=0, sticky="w", pady=(4, 0))
         self.cb_clip = ttk.Combobox(self.adv_body, textvariable=self.v_clip, state="readonly", width=8)
         self.cb_clip.grid(row=1, column=1, sticky="ew", padx=6, pady=(4, 0))
-        pf = ttk.Frame(self.adv_body)
-        pf.grid(row=6, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+        pf = ttk.Frame(self.adv_body)    # never gridded: presets are hidden
         pf.columnconfigure(1, weight=1)
         ttk.Label(pf, text="Preset").grid(row=0, column=0, sticky="w")
         self.cb_preset = ttk.Combobox(pf, textvariable=self.v_preset, state="readonly", width=8)
@@ -494,17 +527,6 @@ class App:
             b.grid(row=0, column=2 + col, padx=(6 if col == 0 else 3, 0))
             Tooltip(b, tip)
 
-        sh = ttk.Frame(self.adv_body)
-        sh.grid(row=8, column=0, columnspan=2, sticky="ew", pady=(6, 0))
-        sh.columnconfigure(1, weight=1)
-        ttk.Label(sh, text="Sharpen result", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
-        self.w_sharpen = ttk.Scale(sh, from_=0.0, to=1.0, variable=self.v_sharpen, command=self._on_sharpen)
-        self.w_sharpen.grid(row=0, column=1, sticky="ew", padx=8)
-        self.lbl_sharpen = ttk.Label(sh, width=6, style="Muted.TLabel")
-        self.lbl_sharpen.grid(row=0, column=2)
-        Tooltip(self.w_sharpen, "A light sharpening of the finished result (0 = off). Helps models that come out slightly soft, "
-                                "e.g. MOSS (tip: about 0.5).")
-        self._on_sharpen()
         ttk.Label(self.adv_body, text="Compare base res", style="Muted.TLabel").grid(row=4, column=0, sticky="w", pady=(6, 0))
         e1 = ttk.Entry(self.adv_body, textvariable=self.v_cmp_res)
         e1.grid(row=4, column=1, sticky="ew", padx=6, pady=(6, 0))
@@ -522,11 +544,7 @@ class App:
                                  "Only for workflows that have a text model.")
         self.cb_turbo = ttk.Checkbutton(mf, text="LoRA", variable=self.v_turbo)
         self.cb_turbo.grid(row=1, column=1, sticky="w", padx=6, pady=(4, 0))
-        Tooltip(self.cb_turbo, "A LoRA of the workflow that can be switched off (the checkbox names it).\n"
-                               "Qwen Image 2.1 - Turbo LoRA: on = about 10 steps; off = the full 25 steps, slower.\n"
-                               "Flux 3 upscale - Restore LoRA: on = faces stay closer to the picture; off = plain Flux 3 Klein.\n"
-                               "Flux 2 upscale - Ultra real LoRA: on = the realism LoRA at 0.3; off = plain Flux 2 Klein.\n"
-                               "Greyed out when the workflow has no such LoRA.")
+        self.tt_turbo = Tooltip(self.cb_turbo, LORA_TIP)
 
         self.f_lora = ttk.Frame(mf)    # strength of that LoRA
         self.f_lora.grid(row=2, column=1, sticky="ew", padx=6, pady=(2, 0))
@@ -535,12 +553,18 @@ class App:
         self.w_lora_str.grid(row=0, column=0, sticky="ew")
         self.lbl_lora_str = ttk.Label(self.f_lora, width=14, style="Muted.TLabel")
         self.lbl_lora_str.grid(row=0, column=1, sticky="e", padx=(6, 0))
-        Tooltip(self.w_lora_str, "How strong that LoRA works (0 = as if off, 1 = full). Starts at the value the workflow ships with.")
-        self.cb_stage = ttk.Checkbutton(mf, text="Stage", variable=self.v_stage)
-        self.cb_stage.grid(row=3, column=1, sticky="w", padx=6, pady=(2, 0))
-        Tooltip(self.cb_stage, "A processing stage of the workflow that can be skipped (the checkbox names it).\n"
-                               "Flux 3 upscale - SeedVR2: cleans the picture before Flux 3 redraws it. Off = Flux 3 works on the plainly "
-                               "scaled picture (less of the SeedVR2 sharpness).")
+        Tooltip(self.w_lora_str, "How strong that LoRA works (0 = as if off, 1 = full). Starts at the value the workflow recommends.")
+        # up to three switchable stages of a workflow (SeedVR2, an optional LoRA, skip-layer guidance ...), each its own checkbox
+        self.stage_vars = [self.v_stage, self.v_stage2, self.v_stage3]
+        self.stage_cbs, self.stage_tips = [], []
+        for i, var in enumerate(self.stage_vars):
+            cb = ttk.Checkbutton(mf, text="Stage", variable=var)
+            cb.grid(row=3 + i, column=1, sticky="w", padx=6, pady=(2, 0))
+            self.stage_tips.append(Tooltip(cb, STAGE_TIP))
+            self.stage_cbs.append(cb)
+        self.cb_stage = self.stage_cbs[0]
+        for cb in self.stage_cbs[1:]:
+            cb.grid_remove()
         self._on_lora_str()
 
         modes = ttk.Frame(r)
@@ -553,8 +577,8 @@ class App:
             self.rb_modes[key] = rb
             Tooltip(rb, MODE_TIPS[key])
 
-        ff = ttk.Frame(r)
-        ff.pack(fill="x", **pad)
+        ff = ttk.Frame(r)               # shown only while a soft layer mask is used (see _update_feather_state)
+        self.f_feather = ff
         ff.columnconfigure(1, weight=1)
         lbl_f = ttk.Label(ff, text="Edge feather")
         lbl_f.grid(row=0, column=0, sticky="w")
@@ -567,12 +591,34 @@ class App:
             Tooltip(w, "How soft the edge of the new layer is, as a percentage of the selection's shorter side "
                        "(2 % is the default, 0 = hard edge).\nApplies to the layer mask the result is pasted with. "
                        "A feather you set in PhotoCraft (Weiche Kante) is kept as it is, this one is then ignored.\n"
-                       "Greyed out when no soft layer mask is used (Layer mask: none / hard, or auto with a Fibo-type editor).")
+                       "Only shown when the result is pasted with a soft layer mask.")
 
         ttk.Label(r, text="Prompt").pack(anchor="w", padx=10)
         self.t_prompt = self._text(r, 4)
         self.t_prompt.pack(fill="x", padx=10)
         self.t_prompt.insert("1.0", self.state.get("prompt", ""))
+        self.f_llm = ttk.Frame(r)       # Fibo: which text model writes the prompt (shown on that tab only)
+        self.f_llm.columnconfigure(1, weight=1)
+        lb_llm = ttk.Label(self.f_llm, text="Prompt writer (LLM)", style="Muted.TLabel")
+        lb_llm.grid(row=0, column=0, sticky="w")
+        self.cb_llm = ttk.Combobox(self.f_llm, textvariable=self.v_llm, state="readonly", width=8)
+        self.cb_llm.grid(row=0, column=1, sticky="ew", padx=6)
+        self.cb_llm.bind("<<ComboboxSelected>>", lambda e: self._llm_picked())
+        for w in (lb_llm, self.cb_llm):
+            Tooltip(w, "Which text model turns your short instruction into the long structured prompt Fibo expects (VGL).\n"
+                       "None: your text goes to Fibo as typed (fast). The others add about 25 s per run.")
+        self.f_sharp = ttk.Frame(r)     # a light sharpening of the finished result, always at hand
+        self.f_sharp.pack(fill="x", padx=10, pady=(6, 0))
+        self.f_sharp.columnconfigure(1, weight=1)
+        ttk.Label(self.f_sharp, text="Sharpen result", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
+        self.w_sharpen = ttk.Scale(self.f_sharp, from_=0.0, to=1.0, variable=self.v_sharpen, command=self._on_sharpen)
+        self.w_sharpen.grid(row=0, column=1, sticky="ew", padx=8)
+        self.lbl_sharpen = ttk.Label(self.f_sharp, width=6, style="Muted.TLabel")
+        self.lbl_sharpen.grid(row=0, column=2)
+        Tooltip(self.w_sharpen, "Not a ComfyUI setting: after the picture is made, the plugin sharpens it a little (an unsharp mask; "
+                                "radius follows the picture's size). 0 = off, 100 % = clearly crisper.\n"
+                                "Helps models that come out slightly soft, e.g. MOSS (tip: about 50 %).")
+        self._on_sharpen()
         self.f_neg = ttk.Frame(r)
         self.f_neg.pack(fill="x", padx=10, pady=(6, 0))
         self.v_neg_open = tk.BooleanVar(value=bool(self.state.get("neg_open", False)))
@@ -599,6 +645,7 @@ class App:
         self.f_xl_rows.pack(fill="x")
         sf = ttk.Frame(r)
         sf.pack(fill="x", **pad)
+        self.f_sf = sf
         af = ttk.Frame(self.adv_body)
         af.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
         items = [("Seed (-1 random)", self._spin(sf, self.v_seed, -1, 2**31 - 1, 1, 11)),
@@ -613,6 +660,7 @@ class App:
             w.grid(row=1, column=col, sticky="w", padx=(0, 6))
         self.w_denoise = items[4][1]
         self.w_variants = items[1][1]
+        self.w_steps, self.w_cfg = items[2][1], items[3][1]
         self.recipe_widgets = [items[2][1], items[3][1]]
 
         sm = ttk.Frame(self.adv_body)
@@ -785,19 +833,19 @@ class App:
         mode = self.v_mode.get()
         self._switch_context(mode)
         if mode == "outpaint":
-            self.f_out.pack(fill="x", padx=10, pady=4, after=self.f_modes)
+            self.f_out.pack(fill="x", padx=10, pady=4, after=self.f_neg)
         else:
             self.f_out.pack_forget()
         if mode == "upscale":
-            self.f_scale.pack(fill="x", padx=10, pady=4, after=self.f_modes)
+            self.f_scale.pack(fill="x", padx=10, pady=4, after=self.f_neg)
         else:
             self.f_scale.pack_forget()
         if mode in SCALE_MODES:
-            self.f_detail.pack(fill="x", padx=10, pady=4, after=self.f_modes)
+            self.f_detail.pack(fill="x", padx=10, pady=4, after=self.f_neg)
         else:
             self.f_detail.pack_forget()
         if mode == "reference":
-            self.f_ref.pack(fill="x", padx=10, pady=4, after=self.f_modes)
+            self.f_ref.pack(fill="x", padx=10, pady=4, after=self.f_neg)
         else:
             self.f_ref.pack_forget()
         self.w_denoise.configure(state="disabled" if mode == "txt2img" or self._ignores_mask() else "normal")   # an editor always runs at 1.0
@@ -901,20 +949,46 @@ class App:
         return models.BY_KEY.get(self.v_model.get())
 
     def _update_mode_radios(self):
-        """Only what the chosen model does well can be picked; a model-less workflow of your own keeps everything."""
+        """Only what the chosen model does well can be picked (the rest is greyed out in its place); a model-less workflow
+        of your own keeps everything. The buttons follow each other without gaps, two per row."""
         m = self._model()
-        for key, rb in self.rb_modes.items():
-            if m is None:
-                rb.grid()
-                rb.configure(state="normal")
-            elif key in m.modes:
-                rb.grid()
-                rb.configure(state="normal")
-            elif key in ("img2img", "txt2img"):
-                rb.grid_remove()           # nothing in the tabs uses these two
-            else:
-                rb.grid()
-                rb.configure(state="disabled")
+        shown = []
+        for key, _label in MODE_LABELS:
+            rb = self.rb_modes[key]
+            if key == "img2img" and m is not None:
+                rb.grid_remove()           # nothing in the tabs uses it
+                continue
+            rb.configure(state="normal" if (m is None or key in m.modes) else "disabled")
+            shown.append(key)
+        for i, key in enumerate(shown):
+            self.rb_modes[key].grid(row=i // 2, column=i % 2, sticky="w", padx=(0, 16), pady=1)
+        self._update_llm_box()
+
+    def _update_llm_box(self):
+        """The prompt-writer drop-down under the prompt: only on a tab whose model has text models to choose from."""
+        m = self._model()
+        choices = m.llm if m is not None else ()
+        shown = bool(self.f_llm.winfo_manager()) if hasattr(self.f_llm, "winfo_manager") else False
+        if choices:
+            self.cb_llm["values"] = [label for _, label in choices]
+            self.v_llm.set(next((label for wf, label in choices if wf == self.v_workflow.get()), choices[0][1]))
+            if not shown:
+                self.f_llm.pack(fill="x", padx=10, pady=(4, 0), before=self.f_sharp)
+        elif shown:
+            self.f_llm.pack_forget()
+        if bool(choices) != shown and self._sized:
+            self._fit_height()
+
+    def _llm_picked(self):
+        m = self._model()
+        wf = next((w for w, label in (m.llm if m else ()) if label == self.v_llm.get()), None)
+        if wf is None:
+            return
+        plain = m.llm[0][0]
+        self.v_workflow.set(wf)
+        self.v_enhance.set(wf != plain)      # a text model is only worth its 25 s when it writes the prompt
+        self._on_workflow()
+        self._sync_model()
 
     def _on_model(self):
         """A tab was clicked: keep the mode when the model has it, else its first one; start with the model's settings."""
@@ -944,6 +1018,8 @@ class App:
         s = dict(spec.settings)
         if not keep:
             s["workflow"] = spec.workflow
+        elif wf in m.alt_workflows:
+            s.pop("enhance", None)       # the LLM picked under the prompt stays on
         self._switch_context(mode)   # first: the context memory belongs to the mode, the defaults below overwrite its value
         self._apply_settings(s)
         t = self.t_prompt
@@ -1040,8 +1116,16 @@ class App:
             return False
 
     def _update_feather_state(self):
+        """The edge feather is shown only while it has an effect (a soft layer mask is used)."""
         on = self._uses_soft_mask()
         self.w_feather.configure(state="normal" if on else "disabled")
+        shown = bool(self.f_feather.winfo_manager()) if hasattr(self.f_feather, "winfo_manager") else False
+        if on and not shown:
+            self.f_feather.pack(fill="x", padx=10, pady=4, before=self.f_sf)
+        elif not on and shown:
+            self.f_feather.pack_forget()
+        if on != shown and getattr(self, "_sized", False):
+            self._fit_height()
 
     def _on_lora_str(self, _value=None):
         self.lbl_lora_str.configure(text=f"strength {float(self.v_lora_str.get()):.2f}")
@@ -1061,11 +1145,17 @@ class App:
         except (OSError, ValueError, KeyError):
             return []
 
-    def _stage_label(self) -> str:
+    def _stages(self) -> list[dict]:
+        """The switchable stages of the selected workflow ({id, label, tip, default_on}), at most three."""
         for t in self._wf_templates():
-            for _, label in stage_switches(t):
-                return label
-        return ""
+            info = stage_info(t)
+            if info:
+                return info[:3]
+        return []
+
+    def _stage_label(self) -> str:
+        st = self._stages()
+        return st[0]["label"] if st else ""
 
     def _on_feather(self, _value=None):
         v = round(float(self.v_feather.get()) * 2) / 2
@@ -1153,8 +1243,7 @@ class App:
     def _on_workflow(self):
         # a custom workflow carries its own model/steps/CFG/sampler – these fields apply to the built-in one only
         state = "normal" if self.v_workflow.get() == BUILTIN else "disabled"
-        for w in self.recipe_widgets:
-            w.configure(state=state)
+        self._sync_sampler_fields()
         # Fooocus inpaint only exists in the built-in graph
         if state == "normal":
             self.cb_fooocus.grid()
@@ -1175,13 +1264,69 @@ class App:
                     self._on_lora_str()
                     break
         self.w_lora_str.configure(state="normal" if has_lora and self.v_turbo.get() else "disabled")
-        stage = self._stage_label()
-        self.cb_stage.configure(state="normal" if stage else "disabled", text=stage or "Stage")
+        tip = next((t for t in (lora_tip(x) for x in self._wf_templates()) if t), "")
+        self.tt_turbo.text = LORA_TIP + (("\n\n" + tip) if tip else "")
+        stages = self._stages()
+        if self.v_workflow.get() != self._stage_wf:   # another workflow: its stages start the way it says
+            self._stage_wf = self.v_workflow.get()
+            for var, st in zip(self.stage_vars, stages):
+                var.set(st["default_on"])
+        for i, cb in enumerate(self.stage_cbs):
+            if i < len(stages):
+                cb.configure(state="normal", text=stages[i]["label"])
+                self.stage_tips[i].text = stages[i]["tip"] or STAGE_TIP
+                cb.grid()
+            else:
+                cb.configure(state="disabled", text="Stage")
+                if i:
+                    cb.grid_remove()
         self.w_detail.configure(state="normal" if self.v_mode.get() in SCALE_MODES else "disabled")
         enhancing = has_writer and bool(self.v_enhance.get())
         self.cb_clip.configure(state="readonly" if (state == "disabled" and enhancing) else "disabled")
         self._update_feather_state()
         self._update_availability()
+
+    def _sync_sampler_fields(self):
+        """Steps, CFG, Denoise (and sampler / scheduler) show what the selected workflow runs with - without its speed LoRA
+        when that is switched off. Steps and CFG can be typed over; sampler and scheduler are the workflow's."""
+        if self.v_workflow.get() == BUILTIN:
+            self._wf_vals, self._vals_key = {}, None
+            for w in self.recipe_widgets:
+                w.configure(state="normal")
+            return
+        speed = bool(self.v_turbo.get()) or not self._has_lora_switch()
+        key = (self.v_workflow.get(), speed)
+        vals = {}
+        for t in self._wf_templates():
+            vals = sampler_values(t if speed else bypass_lora(t))
+            if vals:
+                break
+        self._wf_vals = vals
+        if key != self._vals_key:
+            self._vals_key = key
+            for var, k in ((self.v_steps, "steps"), (self.v_cfg, "cfg"), (self.v_denoise, "denoise"),
+                           (self.v_sampler, "sampler"), (self.v_scheduler, "scheduler")):
+                if k in vals:
+                    try:
+                        var.set(vals[k])
+                    except (tk.TclError, ValueError):
+                        pass
+        for w in (self.w_steps, self.w_cfg):
+            w.configure(state="normal" if "steps" in vals else "disabled")
+        for w in (self.cb_sampler, self.cb_sched):
+            w.configure(state="disabled")
+
+    def _sampler_override(self) -> dict:
+        """Steps / CFG the user typed over the workflow's own (only what differs from what the fields showed)."""
+        out = {}
+        try:
+            if "steps" in self._wf_vals and int(self.v_steps.get()) != int(self._wf_vals["steps"]):
+                out["steps"] = int(self.v_steps.get())
+            if "cfg" in self._wf_vals and abs(float(self.v_cfg.get()) - float(self._wf_vals["cfg"])) > 1e-6:
+                out["cfg"] = float(self.v_cfg.get())
+        except (tk.TclError, ValueError):
+            pass
+        return out
 
     def _has_text_model(self) -> bool:
         """True when the selected workflow (or one of a group) contains a text model that writes the prompt."""
@@ -1341,7 +1486,7 @@ class App:
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
             "scale": self._scale(), "ref_style": self._ref_style(),
             "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
-            "turbo": bool(self.v_turbo.get()), "stage_on": bool(self.v_stage.get()), "loras": self._loras(), "sharpen": round(float(self.v_sharpen.get()), 2), "detail": round(float(self.v_detail.get()), 2),
+            "turbo": bool(self.v_turbo.get()), "stage_on": bool(self.v_stage.get()), "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "loras": self._loras(), "sharpen": round(float(self.v_sharpen.get()), 2), "detail": round(float(self.v_detail.get()), 2),
             "lora_strength": round(float(self.v_lora_str.get()), 2), "ref_collage": bool(self.v_collage.get()), "ref_cutout": bool(self.v_cutout.get()),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
             "feather_pct": round(float(self.v_feather.get()), 1),
@@ -1395,6 +1540,10 @@ class App:
         if "loras" in s:
             self._set_loras(s["loras"])
         put(self.v_stage, "stage_on", bool)
+        put(self.v_stage2, "stage2_on", bool)
+        put(self.v_stage3, "stage3_on", bool)
+        if any(k in s for k in ("stage_on", "stage2_on", "stage3_on")):
+            self._stage_wf = self.v_workflow.get()
         put(self.v_detail, "detail", float)
         put(self.v_sharpen, "sharpen", float)
         self._on_sharpen()
@@ -1507,9 +1656,40 @@ class App:
                        fooocus=bool(self.v_fooocus.get()), enhance=bool(self.v_enhance.get()),
                        turbo=bool(self.v_turbo.get()), scale=self._scale(),
                        lora_strength=(round(float(self.v_lora_str.get()), 2) if self._has_lora_switch() else None),
-                       stage_on=bool(self.v_stage.get()) or not self._stage_label(), loras=[tuple(x) for x in self._loras()], sharpen=round(float(self.v_sharpen.get()), 2), detail=round(float(self.v_detail.get()), 2), ref_style=self._ref_style(), ref_collage=bool(self.v_collage.get()), ref_cutout=bool(self.v_cutout.get()),
+                       stage_on=bool(self.v_stage.get()) or not self._stage_label(), stages_off=self._stages_off(), sampler_override=self._sampler_override(), doc_tag=self._doc_tag(), loras=[tuple(x) for x in self._loras()], sharpen=round(float(self.v_sharpen.get()), 2), detail=round(float(self.v_detail.get()), 2), ref_style=self._ref_style(), ref_collage=bool(self.v_collage.get()), ref_cutout=bool(self.v_cutout.get()),
                        layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2)
+
+    def _doc_tag(self) -> str:
+        """Model and options for the name of an upscaled document: "Flux3Klein x1.5 SeedVR2 Restore0.8"."""
+        m = self._model()
+        parts = [re.sub(r"\W+", "", m.label) if m else "AI"]
+        if self.v_mode.get() == "upscale":
+            parts.append(f"x{self._scale():g}")
+        for var, st in zip(self.stage_vars, self._stages()):
+            if var.get():
+                parts.append(st["label"].split()[0])
+        if self._has_lora_switch() and self.v_turbo.get():
+            try:
+                parts.append(f"{self._lora_label().split()[0]}{float(self.v_lora_str.get()):.2g}")
+            except (tk.TclError, ValueError):
+                pass
+        try:
+            if self.v_mode.get() in SCALE_MODES and float(self.v_detail.get()) < 0.995:
+                parts.append(f"mix{round(float(self.v_detail.get()) * 100)}")
+        except (tk.TclError, ValueError):
+            pass
+        return " ".join(parts)
+
+    def _layer_prefix(self) -> str:
+        """The name the result layers start with (presets are hidden): "Qwen2.1 Fill", then " #<running number>"."""
+        m = self._model()
+        return f"{m.label if m else 'AI'} {SHORT_MODES.get(self.v_mode.get(), self.v_mode.get())}"
+
+    def _stages_off(self) -> list[str]:
+        """Node ids of the second and third switchable stage when their checkboxes are off (the first one is stage_on)."""
+        st = self._stages()
+        return [s["id"] for s, var in zip(st[1:], self.stage_vars[1:]) if not var.get()]
 
     def generate(self):
         if self.worker and self.worker.is_alive():
@@ -1519,8 +1699,8 @@ class App:
         except (tk.TclError, ValueError) as e:
             self._status(f"Invalid value: {e}", error=True)
             return
-        req.preset = self.v_preset.get().strip()
-        if req.preset:   # running number per preset, kept between sessions
+        req.preset = self._layer_prefix()
+        if req.preset:   # running number per model and function, kept between sessions
             runs = dict(self.state.get("runs", {}))
             req.run_no = int(runs.get(req.preset, 0)) + 1
             runs[req.preset] = req.run_no
@@ -1593,7 +1773,11 @@ class App:
                 if kind == "progress":
                     f, msg, phase, pf, elapsed = data
                     self._set_progress(f, msg, phase, pf, elapsed)
-                    if msg:
+                    if phase == "prompt":      # the bar's label has the time and the steps; the line below only names the step
+                        self._status("Expanding Prompt…")
+                    elif phase == "image":
+                        self._status("Generating the image…")
+                    elif msg:
                         self._status(msg)
                 elif kind in ("note", "note-error"):
                     self._status(data, error=(kind == "note-error"))
@@ -1625,10 +1809,10 @@ class App:
         phase has no real progress (-1)."""
         secs = f"{elapsed:.0f} s" if elapsed is not None else ""
         if phase == "prompt":
-            text = f"Prompt · {secs}"
+            text = f"Expanding Prompt · {secs}"
         elif phase == "image":
             step = (msg or "").split("…")[0].strip()
-            text = "Image · " + (step if phase_fraction >= 0 and step else secs)
+            text = "Generating · " + (step if phase_fraction >= 0 and step else secs)
         elif phase == "place":
             text = "Placing the result"
         else:
@@ -1647,7 +1831,7 @@ class App:
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
             "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
-            "stage_on": req.stage_on, "detail": req.detail, "sharpen": req.sharpen, "loras": [list(x) for x in req.loras], "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
+            "stage_on": req.stage_on, "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "detail": req.detail, "sharpen": req.sharpen, "loras": [list(x) for x in req.loras], "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
             "ref_collage": req.ref_collage, "ref_style": req.ref_style, "ref_cutout": req.ref_cutout, "runs": dict(self.state.get("runs", {})),
         })
 

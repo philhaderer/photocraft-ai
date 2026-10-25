@@ -24,16 +24,16 @@ app.pb, app.v_pl, app._bar_value = Bar(), V(), 0.0
 # prompt phase without a real fraction: label counts seconds, the bar stays where it is
 for _ in range(20):
     app._set_progress(0.0, "Writing the prompt… 12 s", "prompt", -1.0, 12)
-assert app.v_pl.v == "Prompt · 12 s" and app.pb.calls == [] and app.v_pl.sets == 1, (app.v_pl.v, app.pb.calls)
+assert app.v_pl.v == "Expanding Prompt · 12 s" and app.pb.calls == [] and app.v_pl.sets == 1, (app.v_pl.v, app.pb.calls)
 
 # the image phase moves the bar forward, repeated identical updates change nothing
 for _ in range(20):
     app._set_progress(0.5, "Sampling 5/10…", "image", 0.5, 4)
-assert app.v_pl.v == "Image · Sampling 5/10" and app.pb.calls == [{"value": 0.5}], app.pb.calls
+assert app.v_pl.v == "Generating · Sampling 5/10" and app.pb.calls == [{"value": 0.5}], app.pb.calls
 
 # unknown progress (-1) or a lower value never moves the bar back
 app._set_progress(-1, "Generating the image… 6 s", "image", -1.0, 6)
-assert app.v_pl.v == "Image · 6 s"
+assert app.v_pl.v == "Generating · 6 s"
 app._set_progress(0.3, "Sampling 3/10…", "image", 0.3, 6)
 assert app._bar_value == 0.5 and app.pb.calls == [{"value": 0.5}]
 

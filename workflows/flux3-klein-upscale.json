@@ -77,7 +77,8 @@
   },
   "_meta": {
    "title": "pc:lora LoRA Loader - Restore LoRA",
-   "pc_lora_label": "Restore LoRA"
+   "pc_lora_label": "Restore LoRA",
+   "pc_lora_tip": "Restore LoRA: on = faces and details stay closer to the picture; off = plain Flux 3 Klein."
   }
  },
  "10": {

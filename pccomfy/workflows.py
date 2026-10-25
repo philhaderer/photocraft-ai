@@ -435,6 +435,45 @@ def add_loras(graph: dict, loras: list) -> dict:
     return g
 
 
+def main_sampler(graph: dict) -> str | None:
+    """Id of the sampler that draws the picture: a KSampler / KSamplerAdvanced titled pc:sampler, else the last one that is
+    not fed by a helper model (SeedVR2). None when the workflow has none (or sets its values another way)."""
+    nodes = [(nid, n) for nid, n in graph.items() if isinstance(n, dict) and n.get("class_type") in ("KSampler", "KSamplerAdvanced")
+             and "seedvr" not in _model_root(graph, n.get("inputs", {}).get("model")).lower()]
+    tagged = [nid for nid, n in nodes if "sampler" in _tags(n) and isinstance(n.get("inputs", {}).get("steps"), (int, float))]
+    if tagged:
+        return tagged[-1]
+    return nodes[-1][0] if nodes else None
+
+
+def sampler_values(graph: dict) -> dict:
+    """What the main sampler is set to: {steps, cfg, denoise, sampler, scheduler} (a key is missing when the workflow
+    wires it from elsewhere). Apply `bypass_lora` first to get the values without the speed LoRA."""
+    nid = main_sampler(graph)
+    out = {}
+    if nid is None:
+        return out
+    inp = graph[nid].get("inputs", {})
+    for key, name in (("steps", "steps"), ("cfg", "cfg"), ("denoise", "denoise"), ("sampler", "sampler_name"), ("scheduler", "scheduler")):
+        v = inp.get(name)
+        if v is not None and not isinstance(v, list):
+            out[key] = v
+    return out
+
+
+def set_sampler(graph: dict, steps=None, cfg=None, denoise=None) -> dict:
+    """The main sampler runs with these values (None = leave as the workflow has it). A copy is returned."""
+    g = json.loads(json.dumps(graph))
+    nid = main_sampler(g)
+    if nid is None:
+        return g
+    inp = g[nid].get("inputs", {})
+    for name, v in (("steps", steps), ("cfg", cfg), ("denoise", denoise)):
+        if v is not None and name in inp and not isinstance(inp[name], list):
+            inp[name] = v
+    return g
+
+
 def lora_strength(graph: dict) -> float | None:
     """The strength the workflow's pc:lora loader is set to (LoraLoaderModelOnly, or AusBoss' LoRA list), None without one."""
     for nid in lora_switches(graph):
@@ -473,20 +512,88 @@ def set_lora_strength(graph: dict, value: float) -> dict:
 
 def stage_switches(graph: dict) -> list[tuple[str, str]]:
     """(node id, label) of the stages the window can switch off: a node whose _meta has `pc_stage_off`
-    ({"label": ..., "set": {input: link}, "remove": [node ids]}) - e.g. the SeedVR2 pre-cleaning of the Flux 3 upscale."""
+    ({"label": ..., "set": {input: link}, "remove": [node ids], "rewire": [node ids], "default_on": bool}) - e.g. the
+    SeedVR2 pre-cleaning of the Flux 3 upscale, or an optional LoRA / skip-layer patch of MOSS (`rewire`: the node
+    drops out and whatever read its model reads the model it was given)."""
     return [(nid, str(n["_meta"]["pc_stage_off"].get("label", "Stage"))) for nid, n in graph.items()
             if isinstance(n, dict) and isinstance(n.get("_meta", {}).get("pc_stage_off"), dict)]
 
 
-def bypass_stage(graph: dict) -> dict:
-    """Stage switched off: the nodes it lists are removed and the inputs it lists are set (a copy is returned)."""
+def stage_info(graph: dict) -> list[dict]:
+    """The switchable stages of a workflow, in order: {id, label, tip, default_on} (tip: `tip` in pc_stage_off)."""
+    out = []
+    for nid, label in stage_switches(graph):
+        spec = graph[nid]["_meta"]["pc_stage_off"]
+        out.append({"id": nid, "label": label, "tip": str(spec.get("tip", "")), "default_on": bool(spec.get("default_on", True))})
+    return out
+
+
+def lora_tip(graph: dict) -> str:
+    """The hint of the workflow's pc:lora loader (`pc_lora_tip` in its _meta): what the LoRA does and its best strength."""
+    for nid in lora_switches(graph):
+        tip = str(graph[nid].get("_meta", {}).get("pc_lora_tip", "")).strip()
+        if tip:
+            return tip
+    return ""
+
+
+def stage_default_on(graph: dict, nid: str) -> bool:
+    """Does the stage start switched on? (`default_on` in its pc_stage_off, default true)"""
+    return bool(graph.get(nid, {}).get("_meta", {}).get("pc_stage_off", {}).get("default_on", True))
+
+
+def bypass_stage(graph: dict, only=None) -> dict:
+    """Stage switched off: the nodes it lists are removed and the inputs it lists are set (a copy is returned).
+    `only` = the node ids of the stages to switch off (None = all of them)."""
     g = json.loads(json.dumps(graph))
     for nid, _ in stage_switches(g):
+        if only is not None and nid not in {str(o) for o in only}:
+            continue
         spec = g[nid]["_meta"]["pc_stage_off"]
         g[nid]["inputs"].update(spec.get("set", {}))
         for r in spec.get("remove", []):
             g.pop(str(r), None)
+        for r in spec.get("rewire", []):
+            r = str(r)
+            node = g.get(r)
+            if node is None:
+                continue
+            src = node.get("inputs", {}).get("model")
+            for other in g.values():
+                for k, v in other.get("inputs", {}).items():
+                    if isinstance(v, list) and v and str(v[0]) == r:
+                        other["inputs"][k] = src
+            g.pop(r, None)
     return g
+
+
+def lora_file(name: str, available) -> str | None:
+    """The name ComfyUI lists for a LoRA file, whatever the folder separator / case in the workflow ("Moss/x" vs "Moss\\x")."""
+    key = lambda n: str(n).replace("\\", "/").lower()
+    by_key = {key(a): a for a in available}
+    if key(name) in by_key:
+        return by_key[key(name)]
+    tail = key(name).rsplit("/", 1)[-1]       # same file name in another folder
+    hits = [a for k, a in by_key.items() if k.rsplit("/", 1)[-1] == tail]
+    return hits[0] if len(hits) == 1 else None
+
+
+def fix_lora_names(graph: dict, available) -> tuple[dict, list[str]]:
+    """Every LoRA loader gets the file name the ComfyUI server lists (Windows: "Moss\\lenovo_moss.safetensors"). Returns
+    (graph, names that were not found)."""
+    g = json.loads(json.dumps(graph))
+    missing = []
+    for n in g.values():
+        inp = n.get("inputs", {}) if isinstance(n, dict) else {}
+        if n.get("class_type") in ("LoraLoader", "LoraLoaderModelOnly") if isinstance(n, dict) else False:
+            name = inp.get("lora_name")
+            if isinstance(name, str):
+                real = lora_file(name, available)
+                if real:
+                    inp["lora_name"] = real
+                else:
+                    missing.append(name)
+    return g, missing
 
 
 def list_templates(folder: str | Path) -> list[Path]:

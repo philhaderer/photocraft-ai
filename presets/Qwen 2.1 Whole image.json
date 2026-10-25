@@ -7,7 +7,7 @@
   "clip": "",
   "denoise": 1.0,
   "variants": 1,
-  "base_res": 1224,
+  "base_res": 1024,
   "workflow": "qwen-image-21-edit.json",
   "layer_mask": "none",
   "turbo": true

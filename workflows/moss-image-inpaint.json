@@ -29,19 +29,95 @@
    "title": "Load VAE (Flux 2 small)"
   }
  },
- "5": {
+ "6": {
   "class_type": "LoraLoaderModelOnly",
   "inputs": {
-   "lora_name": "moss/lenovo_moss.safetensors",
-   "strength_model": 1,
+   "lora_name": "Moss\\lora_dmd2.safetensors",
+   "strength_model": 1.0,
    "model": [
     "1",
     0
    ]
   },
   "_meta": {
-   "title": "pc:lora LoRA: Lenovo UltraReal (optional)",
-   "pc_lora_label": "Lenovo UltraReal LoRA"
+   "title": "pc:lora DMD2 speed LoRA",
+   "pc_lora_label": "DMD2 speed LoRA (8 steps)",
+   "pc_lora_tip": "DMD2 is a distillation LoRA: 8 steps at CFG 1.5 instead of 25 steps at CFG 2.5 - about three times faster. Strength 1.0 is what it is trained for; 0.7 is sometimes nicer (less contrast). Off = the full recipe (25 steps, CFG 2.5)."
+  }
+ },
+ "5": {
+  "class_type": "LoraLoaderModelOnly",
+  "inputs": {
+   "lora_name": "Moss\\lenovo_moss.safetensors",
+   "strength_model": 1.0,
+   "model": [
+    "6",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "LoRA: Lenovo UltraReal (optional)",
+   "pc_stage_off": {
+    "label": "Lenovo UltraReal LoRA",
+    "rewire": [
+     "5"
+    ],
+    "default_on": false,
+    "tip": "A realism LoRA for MOSS (photographic, phone-camera look). Starts off: switch it on and compare with the same seed. Add it with a lower strength under Extra LoRAs if it is too strong."
+   }
+  }
+ },
+ "7": {
+  "class_type": "SkipLayerGuidanceDiTSimple",
+  "inputs": {
+   "model": [
+    "5",
+    0
+   ],
+   "double_layers": "",
+   "single_layers": "22",
+   "start_percent": 0.0,
+   "end_percent": 0.5
+  },
+  "_meta": {
+   "title": "Skip-layer guidance (optional)",
+   "pc_stage_off": {
+    "label": "Skip-layer guidance (SLG)",
+    "rewire": [
+     "7"
+    ],
+    "default_on": false,
+    "tip": "Skip-layer guidance: the negative branch skips layer 22 for the first half of the steps (the official MOSS setting). Gives cleaner detail, can look over-processed / over-saturated. Off = more natural but details can collapse. Only works with CFG above 1. Test it with the same seed."
+   }
+  }
+ },
+ "21": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "text": "nsfw, worst quality, bad anatomy, watermark, jpeg artifact",
+   "clip": [
+    "2",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Negative prompt"
+  }
+ },
+ "50": {
+  "class_type": "VAEDecode",
+  "inputs": {
+   "samples": [
+    "40",
+    0
+   ],
+   "vae": [
+    "3",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Decode"
   }
  },
  "4": {
@@ -49,7 +125,7 @@
   "inputs": {
    "strength": 1,
    "model": [
-    "5",
+    "7",
     0
    ]
   },
@@ -101,19 +177,6 @@
    "title": "pc:prompt"
   }
  },
- "21": {
-  "class_type": "CLIPTextEncode",
-  "inputs": {
-   "text": "worst quality, bad anatomy, watermark, jpeg artifact",
-   "clip": [
-    "2",
-    0
-   ]
-  },
-  "_meta": {
-   "title": "Negative prompt"
-  }
- },
  "33": {
   "class_type": "VAEEncode",
   "inputs": {
@@ -127,7 +190,7 @@
    ]
   },
   "_meta": {
-   "title": "Encode the crop (the bridge cuts it around the selection and scales it to ~1.5 MP)"
+   "title": "Encode the crop (the bridge cuts it around the selection and scales it to the base resolution)"
   }
  },
  "34": {
@@ -166,30 +229,18 @@
     0
    ],
    "seed": 42,
-   "steps": 25,
-   "cfg": 2.5,
+   "steps": 8,
+   "cfg": 1.5,
    "sampler_name": "er_sde",
    "scheduler": "simple",
    "denoise": 1
   },
   "_meta": {
-   "title": "pc:sampler"
-  }
- },
- "50": {
-  "class_type": "VAEDecode",
-  "inputs": {
-   "samples": [
-    "40",
-    0
-   ],
-   "vae": [
-    "3",
-    0
-   ]
-  },
-  "_meta": {
-   "title": "Decode"
+   "title": "pc:sampler",
+   "pc_no_lora": {
+    "steps": 25,
+    "cfg": 2.5
+   }
   }
  },
  "52": {

@@ -34,16 +34,37 @@ def main():
     app.v_model.set("qwen")
     app.v_mode.set("inpaint")
     app._on_model()
-    assert app.v_workflow.get() == "qwen-image-21-edit.json" and app.v_res.get() == 1224 and app.v_turbo.get() is True
+    assert app.v_workflow.get() == "qwen-image-21-edit.json" and app.v_res.get() == 1024 and app.v_turbo.get() is True
     assert app.rb_modes["edit"]["state"] == "normal" and app.rb_modes["upscale"]["state"] == "disabled"
     assert app.rb_modes["refine"]["state"] == "disabled"
 
-    # MOSS: only Generative fill
+    # the modes follow each other in the order text, edit, fill, expand, reference, remove, upscale, refine
+    assert [k for k, _ in gui.MODE_LABELS] == ["txt2img", "edit", "inpaint", "outpaint", "reference", "remove", "upscale", "refine", "img2img"]
+
+    # MOSS: text to image, Generative fill, Expand (a test); the DMD2 LoRA is its own LoRA, Lenovo and SLG are switches
     app.v_model.set("moss")
     app._on_model()
     assert app.v_mode.get() == "inpaint" and app.v_workflow.get() == "moss-image-inpaint.json" and app.v_res.get() == 1216
-    assert app.v_turbo.get() is False
-    assert [k for k, rb in app.rb_modes.items() if rb["state"] == "normal"] == ["inpaint"]
+    assert app.v_turbo.get() is True and app.cb_turbo["text"].startswith("DMD2") and app.v_lora_str.get() == 1.0
+    assert [k for k, rb in app.rb_modes.items() if rb["state"] == "normal"] == ["txt2img", "inpaint", "outpaint"]
+    assert [c["text"] for c in app.stage_cbs] == ["Lenovo UltraReal LoRA", "Skip-layer guidance (SLG)", "Stage"]
+    assert not app.v_stage.get() and not app.v_stage2.get()
+    r = app._request()
+    assert r.stage_on is False and r.stages_off == ["7"] and r.turbo is True
+    assert r.sampler_override == {} and (app.v_steps.get(), app.v_cfg.get()) == (8, 1.5)   # the fields show the workflow's values
+    app.v_turbo.set(False)
+    app._on_workflow()
+    assert (app.v_steps.get(), app.v_cfg.get()) == (25, 2.5)                              # without DMD2: the full recipe
+    app.v_steps.set(30)
+    assert app._request().sampler_override == {"steps": 30}
+    app.v_turbo.set(True)
+    app._on_workflow()
+    app.v_mode.set("txt2img")
+    app._on_mode()
+    assert app.v_workflow.get() == "moss-image-t2i.json" and app.v_enhance.get() is True
+    assert app._request().mode == "txt2img" and app._layer_prefix() == "MOSS Image Text"
+    app.v_mode.set("inpaint")
+    app._on_mode()
 
     # Flux 3: upscale brings its workflow, 1.5 and the placeholder; edit takes the placeholder away again
     app.v_model.set("flux3")
@@ -65,16 +86,18 @@ def main():
     app._on_model()
     assert app.v_mode.get() == "edit" and app.v_workflow.get() == "flux2-klein-edit.json"
 
-    # Fibo: a VGL variant picked under Advanced stays while the mode changes; the tab follows a loaded workflow
+    # Fibo: the text model picked under the prompt stays while the mode changes; the tab follows a loaded workflow
     app.v_model.set("fibo")
     app.v_mode.set("inpaint")
     app._on_model()
-    assert app.v_workflow.get() == "fibo2-edit-plain.json"
-    app.v_workflow.set("fibo2-edit-vgl-bionic-qwen35-9b.json")
-    app._workflow_picked()
+    assert app.v_workflow.get() == "fibo2-edit-plain.json" and app.v_enhance.get() is False
+    assert list(app.cb_llm["values"]) == [lb for _, lb in models.FIBO.llm] and app.v_llm.get() == models.FIBO.llm[0][1]
+    app.v_llm.set("Qwen 3.5 9B (bionic)")
+    app._llm_picked()
+    assert app.v_workflow.get() == "fibo2-edit-vgl-bionic-qwen35-9b.json" and app.v_enhance.get() is True
     app.v_mode.set("outpaint")
     app._on_mode()
-    assert app.v_workflow.get() == "fibo2-edit-vgl-bionic-qwen35-9b.json" and app.v_model.get() == "fibo"
+    assert app.v_workflow.get() == "fibo2-edit-vgl-bionic-qwen35-9b.json" and app.v_model.get() == "fibo" and app.v_enhance.get() is True
     app._apply_settings({"workflow": "qwen-image-21-edit.json", "mode": "inpaint"})
     assert app.v_model.get() == "qwen"
 

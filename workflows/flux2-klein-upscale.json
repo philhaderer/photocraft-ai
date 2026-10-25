@@ -45,7 +45,8 @@
   },
   "_meta": {
    "title": "pc:lora Ultra real LoRA",
-   "pc_lora_label": "Ultra real LoRA"
+   "pc_lora_label": "Ultra real LoRA",
+   "pc_lora_tip": "Ultra real LoRA: on = the realism LoRA (starts at 0.3); off = plain Flux 2 Klein."
   }
  },
  "202": {

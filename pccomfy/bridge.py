@@ -71,11 +71,14 @@ class Request:
                                          # "simple" = the picture first (image1), the reference second (image2), one short sentence
     ref_collage: bool = True             # reference mode: also paste a rough copy of the reference where it should go
     lora_strength: float | None = None   # strength of the workflow's pc:lora loader (None = what the workflow has)
-    stage_on: bool = True                # workflows with a switchable stage (pc_stage_off, e.g. SeedVR2): False = skip it
+    stage_on: bool = True                # workflows with a switchable stage (pc_stage_off, e.g. SeedVR2): False = skip the first one
+    stages_off: list = field(default_factory=list)   # node ids of more stages (pc_stage_off) to skip: an optional LoRA, SLG ...
     detail: float = 1.0                  # Upscale/Refine: share of the new result mixed with the plainly scaled original (1 = all new)
     ref_cutout: bool = True              # reference mode, simple style: the sentence also asks to remove the reference's background
     loras: list = field(default_factory=list)   # extra LoRAs [(file name, strength), ...] chained in front of the samplers
     sharpen: float = 0.0                 # 0..1: a light sharpening of the result (high-pass style, like KJNodes' Image Sharpen)
+    sampler_override: dict = field(default_factory=dict)   # {"steps": .., "cfg": .., "denoise": ..} typed over the workflow's sampler
+    doc_tag: str = ""                    # Upscale: model and options in the new document's name ("Flux3Klein x1.5 SeedVR2")
     label: str = ""                      # added to the layer names (a comparison run: "res 1024")
     preset: str = ""                     # name of the preset used: the layers are named "<preset> #<run_no>"
     run_no: int = 0                      # running number of this preset's runs (kept by the window)
@@ -394,7 +397,7 @@ class Bridge:
             elapsed = now - marks["since"] if phase == "prompt" else now - t0 - (marks["prompt_secs"] or 0)
             if phase == "prompt":
                 pf = min(0.95, elapsed / expected) if expected else -1.0
-                text = f"Writing the prompt… {elapsed:.0f} s" + (f" (usually ~{expected:.0f} s)" if expected else "")
+                text = f"Expanding Prompt… {elapsed:.0f} s" + (f" (usually ~{expected:.0f} s)" if expected else "")
                 overall = start + span * 0.3 * (pf if pf >= 0 else 0)
             else:
                 if f >= 0:
@@ -428,7 +431,7 @@ class Bridge:
             doc = pc.document()
 
         W, H = doc["width"], doc["height"]
-        has_sel = bool(doc.get("hasSelection")) and req.mode != "edit"   # "edit" works on the whole picture, a selection is ignored
+        has_sel = bool(doc.get("hasSelection")) and req.mode not in ("edit", "txt2img")   # these work on the whole canvas, a selection is ignored
         if req.mode == "inpaint" and not has_sel:
             raise BridgeError("Select the area to fill first (e.g. Lasso or Rectangular Marquee).")
         if req.mode == "reference":
@@ -445,6 +448,8 @@ class Bridge:
             raise BridgeError("Edit whole image needs an instruction-based edit workflow (Fibo, Qwen Image 2.1 Edit, Flux 2/3 Klein edit).")
         if req.mode == "edit" and not p.prompt.strip():
             raise BridgeError("Describe the edit in the prompt (it applies to the whole picture).")
+        if req.mode == "txt2img" and not p.prompt.strip():
+            raise BridgeError("Describe the picture in the prompt.")
         if editor and p.denoise != 1.0:
             # live test (Image → image at 0.6): an instruction editor starts from an empty latent, so a denoise below 1.0
             # gives a broken picture (a whole creek of ducks); at 1.0 the same instruction edits the picture correctly
@@ -579,7 +584,7 @@ class Bridge:
                        for lb, ims in results]
         progress(0.92, "Placing the result in PhotoCraft", phase="place")
         if req.mode == "upscale":
-            return self._open_upscaled(results, orig, orig_name, region, p, tag, progress)
+            return self._open_upscaled(results, orig, orig_name, region, p, tag, progress, req)
         orig = self._find_doc(orig, orig_name)
         base = (p.prompt.strip() or ("object" if req.remove else req.mode))[:40]
         mode_name = "remove" if req.remove else req.mode
@@ -632,6 +637,21 @@ class Bridge:
                     return "\n".join(str(t) for t in text)
         return ""
 
+    def _real_lora_names(self, tpl: dict) -> dict:
+        """The LoRA files of the workflow under the names this ComfyUI lists (Windows: "Moss\\x.safetensors"); a file the
+        server does not have stops the run with its name instead of ComfyUI's "value not in list"."""
+        try:
+            available = self.comfy.loras()
+        except Exception:
+            return tpl
+        if not available:
+            return tpl
+        tpl, missing = workflows.fix_lora_names(tpl, available)
+        if missing:
+            raise BridgeError("ComfyUI does not list this LoRA file: " + ", ".join(missing)
+                              + ". Put it in the LoRA folder (or switch the LoRA off) and press Refresh.")
+        return tpl
+
     def _graph(self, req: Request, p, image_name, mask_name, wf: str | None = None, ref_name: str | None = None,
                force_plain: bool = False):
         if wf:
@@ -643,10 +663,20 @@ class Bridge:
                 tpl = workflows.bypass_lora(tpl)
             elif req.lora_strength is not None:
                 tpl = workflows.set_lora_strength(tpl, req.lora_strength)
+            off = [str(x) for x in req.stages_off]
             if not req.stage_on:
-                tpl = workflows.bypass_stage(tpl)
+                first = next((nid for nid, _ in workflows.stage_switches(tpl)), None)
+                if first is not None:
+                    off.append(first)
+            if off:
+                tpl = workflows.bypass_stage(tpl, off)
+            if req.sampler_override:
+                tpl = workflows.set_sampler(tpl, **{k: v for k, v in req.sampler_override.items() if k in ("steps", "cfg", "denoise")})
             if req.loras:
                 tpl = workflows.add_loras(tpl, req.loras)
+            names = getattr(self, "_real_lora_names", None)
+            if names:
+                tpl = names(tpl)
             return workflows.apply_template(tpl, p, image_name, mask_name, ref_name,
                                             ref_first=req.ref_style != "simple")
         if not p.checkpoint:
@@ -759,7 +789,7 @@ class Bridge:
             self._try("layer.hideLayers", {"layer": layer})
         return layer
 
-    def _open_upscaled(self, results, orig: int, orig_name: str, region: "imaging.Box", p, tag: str, progress) -> dict:
+    def _open_upscaled(self, results, orig: int, orig_name: str, region: "imaging.Box", p, tag: str, progress, req: Request | None = None) -> dict:
         """Upscale: every result becomes a new document (like Photoshop's Image Size into a new file); the original
         stays as it is. The first result is opened last, so it is the active one."""
         import re
@@ -770,7 +800,8 @@ class Bridge:
         for n, im in enumerate(reversed(items)):
             k = len(items) - n
             w, h = im.size
-            name = f"{stem} upscaled {w}x{h}" + (f" #{k}" if len(items) > 1 else "") + ".png"
+            tag_txt = re.sub(r"[^\w .()+-]", "_", req.doc_tag if req else "").strip()
+            name = f"{stem} {tag_txt + ' ' if tag_txt else ''}upscaled {w}x{h}" + (f" #{k}" if len(items) > 1 else "") + ".png"
             full = self.exchange / name
             self._tmp.append(full)
             im.convert("RGB").save(full)

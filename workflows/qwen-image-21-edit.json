@@ -21,7 +21,8 @@
   },
   "_meta": {
    "title": "pc:lora Qwen turbo LoRA",
-   "pc_lora_label": "Turbo LoRA"
+   "pc_lora_label": "Turbo LoRA",
+   "pc_lora_tip": "Qwen Image 2.1 Turbo LoRA: on = about 10 steps; off = the full 25 steps, slower."
   }
  },
  "3": {

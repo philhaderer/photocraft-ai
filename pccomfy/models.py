@@ -24,7 +24,8 @@ class Model:
     label: str
     tip: str
     modes: dict                     # mode key -> Mode (a mode that is not here is greyed out)
-    alt_workflows: tuple = ()       # more workflows of this model (listed under Advanced)
+    alt_workflows: tuple = ()       # more workflows of this model
+    llm: tuple = ()                 # (workflow, label) of the text models that can write the prompt (a drop-down under the prompt)
 
     def workflows(self) -> list[str]:
         out = []
@@ -39,13 +40,14 @@ _SOFT = {"layer_mask": "soft", "mask_grow": 8, "mask_blur": 8}
 QWEN = Model(
     "qwen", "Qwen2.1",
     "Qwen Image 2.1 Edit: an instruction editor with a very good Generative fill, Remove (works without a prompt), "
-    "Expand and whole-image edits. Reference images work with the picture as image 1 and the inserted one as image 2.",
+    "Expand and whole-image edits. Reference images work with the picture as image 1 and the inserted one as image 2.\n"
+    "Base res. 1024 is the best size for it: 1224 and 1536 shift the filled area.",
     {
-        "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1224, context=0.4, turbo=True, feather_pct=4.0)),
-        "remove": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1224, context=0.4, turbo=True, feather_pct=4.0)),
-        "reference": Mode("qwen-image-21-edit.json", dict(base_res=1224, turbo=True, ref_style="simple", ref_cutout=True, layer_mask="auto")),
-        "outpaint": Mode("qwen-image-21-edit.json", dict(base_res=1224, turbo=True, layer_mask="auto")),
-        "edit": Mode("qwen-image-21-edit.json", dict(base_res=1224, turbo=True, layer_mask="none")),
+        "edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="none")),
+        "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=4.0)),
+        "outpaint": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="auto")),
+        "reference": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, ref_style="simple", ref_cutout=True, layer_mask="auto")),
+        "remove": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=4.0)),
     })
 
 FLUX2 = Model(
@@ -66,26 +68,35 @@ FLUX3 = Model(
         "refine": Mode("flux3-klein-upscale.json", dict(turbo=True, stage_on=True), PLACEHOLDER),
     })
 
+# MOSS: the DMD2 speed LoRA (8 steps, CFG 1.5) is the model's own LoRA; the Lenovo UltraReal LoRA and the skip-layer
+# guidance (SLG) are switches that start off until they have been compared.
+_MOSS = dict(turbo=True, stage_on=False, stage2_on=False)
 MOSS = Model(
     "moss", "MOSS Image",
-    "MOSS-Image 5B: a text-to-image model; here Generative fill with a mask. It has no instruction-edit functions (yet). "
-    "Likes 1.5 to 2 MP.",
+    "MOSS-Image 5B: a text-to-image model. Text to image (with its own prompt enhancer) and Generative fill with a mask; "
+    "Expand is a test. It has no instruction-edit functions (yet). Likes 1.5 to 2 MP. The DMD2 LoRA makes it fast (8 steps, CFG 1.5).",
     {
-        "inpaint": Mode("moss-image-inpaint.json", dict(_SOFT, base_res=1216, context=0.4, turbo=False)),
+        "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "base_res": 1280, "layer_mask": "none", "enhance": True}),
+        "inpaint": Mode("moss-image-inpaint.json", {**_SOFT, **_MOSS, "base_res": 1216, "context": 0.4}),
+        "outpaint": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "auto"}),
     })
 
 FIBO = Model(
     "fibo", "Fibo 2.0 Edit",
     "Fibo 2.0 Edit Turbo: an instruction editor. Fill, Remove, Reference (the simple style works best) and whole-image edits. "
-    "The VGL variants (a text model writes the prompt) are under Advanced > Workflow.",
+    "The VGL variants (a text model writes the prompt) are chosen under the prompt.",
     {
-        "inpaint": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
-        "remove": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
-        "reference": Mode("fibo2-edit-plain.json", dict(base_res=1024, ref_style="simple", ref_cutout=True, layer_mask="auto", enhance=False)),
-        "outpaint": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
         "edit": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="none", enhance=False)),
+        "inpaint": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
+        "outpaint": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
+        "reference": Mode("fibo2-edit-plain.json", dict(base_res=1024, ref_style="simple", ref_cutout=True, layer_mask="auto", enhance=False)),
+        "remove": Mode("fibo2-edit-plain.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
     },
-    alt_workflows=("fibo2-edit-vgl-bionic-gemma4-12b.json", "fibo2-edit-vgl-bionic-qwen35-9b.json", "fibo2-edit-vgl-qwen35-convrot.json"))
+    alt_workflows=("fibo2-edit-vgl-bionic-gemma4-12b.json", "fibo2-edit-vgl-bionic-qwen35-9b.json", "fibo2-edit-vgl-qwen35-convrot.json"),
+    llm=(("fibo2-edit-plain.json", "None (your text as typed)"),
+         ("fibo2-edit-vgl-bionic-gemma4-12b.json", "Gemma 4 12B (bionic)"),
+         ("fibo2-edit-vgl-bionic-qwen35-9b.json", "Qwen 3.5 9B (bionic)"),
+         ("fibo2-edit-vgl-qwen35-convrot.json", "Qwen 3.5 9B (native, convrot)")))
 
 MODELS = [QWEN, FLUX2, FLUX3, MOSS, FIBO]
 BY_KEY = {m.key: m for m in MODELS}
