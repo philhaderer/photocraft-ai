@@ -14,7 +14,7 @@ from pathlib import Path
 from tkinter import messagebox, simpledialog, ttk
 
 from . import config as cfgmod
-from . import winlink
+from . import models, winlink
 from .bridge import Bridge, BridgeError, Request, mask_is_used, prompt_phase_nodes
 from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
@@ -296,6 +296,7 @@ class App:
         self.v_enhance = tk.BooleanVar(value=g("enhance", True))
         self.v_turbo = tk.BooleanVar(value=g("turbo", True))
         self.v_lora_str = tk.DoubleVar(value=g("lora_strength", 1.0))
+        self.v_model = tk.StringVar(value=g("model", ""))   # the tab; "" = a workflow of your own (everything enabled)
         self.v_cmp_res = tk.StringVar(value="")
         self.v_cmp_ctx = tk.StringVar(value="")
         self.v_stage = tk.BooleanVar(value=g("stage_on", True))
@@ -309,7 +310,9 @@ class App:
         self.v_conn = tk.StringVar(value="")
 
         self._build(d)
+        self._booting = True    # the saved window state is shown as it was: the model's starting settings are not applied
         self._on_mode()
+        self._booting = False
         self._on_top()
         self._fit_height(self._px(MIN_W))
         self._sized = True
@@ -340,6 +343,10 @@ class App:
         s.configure("TButton", background=PANEL, foreground=FG, padding=6)
         s.map("TButton", background=[("active", "#5f5f5f")])
         s.configure("Icon.TButton", padding=4)
+        s.configure("Tab.Toolbutton", background=PANEL, foreground=FG, padding=(4, 5), anchor="center", relief="flat",
+                    borderwidth=0, font=(FONT, 10))
+        s.map("Tab.Toolbutton", background=[("selected", ACCENT), ("active", "#5f5f5f")],
+              foreground=[("selected", "#1b1b1b")])
         s.configure("Link.TButton", background=BG, foreground=MUTED, padding=(0, 2), borderwidth=0, relief="flat")
         s.map("Link.TButton", foreground=[("active", FG)], background=[("active", BG)])
         s.configure("Accent.TButton", background=ACCENT, foreground="#1b1b1b", font=(FONT, 10, "bold"))
@@ -442,8 +449,34 @@ class App:
         r = self.root
         pad = {"padx": 10, "pady": 4}
 
-        pf = ttk.Frame(r)
-        pf.pack(fill="x", **pad)
+        self.f_tabs = ttk.Frame(r)      # one tab per model, two rows
+        self.f_tabs.pack(fill="x", padx=10, pady=(8, 2))
+        cols = (len(models.MODELS) + 1) // 2
+        for c in range(cols):
+            self.f_tabs.columnconfigure(c, weight=1, uniform="tab")
+        self.rb_tabs = {}
+        for i, m in enumerate(models.MODELS):
+            rb = ttk.Radiobutton(self.f_tabs, text=m.label, value=m.key, variable=self.v_model, style="Tab.Toolbutton",
+                                 command=self._on_model)
+            rb.grid(row=i // cols, column=i % cols, sticky="ew", padx=2, pady=2)
+            Tooltip(rb, m.tip)
+            self.rb_tabs[m.key] = rb
+
+        mf = ttk.Frame(r)
+        mf.columnconfigure(1, weight=1)
+        # Workflow and Text model live under "Advanced" (built below): the presets choose them.
+        self.f_adv = ttk.Frame(r)
+        self.adv_body = ttk.Frame(self.f_adv)
+        self.adv_body.columnconfigure(1, weight=1)
+        ttk.Label(self.adv_body, text="Workflow", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
+        self.cb_workflow = ttk.Combobox(self.adv_body, textvariable=self.v_workflow, state="readonly", width=8)
+        self.cb_workflow.bind("<<ComboboxSelected>>", lambda e: self._workflow_picked())
+        self.cb_workflow.grid(row=0, column=1, sticky="ew", padx=6)
+        ttk.Label(self.adv_body, text="Text model", style="Muted.TLabel").grid(row=1, column=0, sticky="w", pady=(4, 0))
+        self.cb_clip = ttk.Combobox(self.adv_body, textvariable=self.v_clip, state="readonly", width=8)
+        self.cb_clip.grid(row=1, column=1, sticky="ew", padx=6, pady=(4, 0))
+        pf = ttk.Frame(self.adv_body)
+        pf.grid(row=6, column=0, columnspan=2, sticky="ew", pady=(8, 0))
         pf.columnconfigure(1, weight=1)
         ttk.Label(pf, text="Preset").grid(row=0, column=0, sticky="w")
         self.cb_preset = ttk.Combobox(pf, textvariable=self.v_preset, state="readonly", width=8)
@@ -459,20 +492,6 @@ class App:
             b.grid(row=0, column=2 + col, padx=(6 if col == 0 else 3, 0))
             Tooltip(b, tip)
 
-        mf = ttk.Frame(r)
-        mf.pack(fill="x", **pad)
-        mf.columnconfigure(1, weight=1)
-        # Workflow and Text model live under "Advanced" (built below): the presets choose them.
-        self.f_adv = ttk.Frame(r)
-        self.adv_body = ttk.Frame(self.f_adv)
-        self.adv_body.columnconfigure(1, weight=1)
-        ttk.Label(self.adv_body, text="Workflow", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
-        self.cb_workflow = ttk.Combobox(self.adv_body, textvariable=self.v_workflow, state="readonly", width=8)
-        self.cb_workflow.bind("<<ComboboxSelected>>", lambda e: self._workflow_picked())
-        self.cb_workflow.grid(row=0, column=1, sticky="ew", padx=6)
-        ttk.Label(self.adv_body, text="Text model", style="Muted.TLabel").grid(row=1, column=0, sticky="w", pady=(4, 0))
-        self.cb_clip = ttk.Combobox(self.adv_body, textvariable=self.v_clip, state="readonly", width=8)
-        self.cb_clip.grid(row=1, column=1, sticky="ew", padx=6, pady=(4, 0))
         ttk.Label(self.adv_body, text="Compare base res", style="Muted.TLabel").grid(row=4, column=0, sticky="w", pady=(6, 0))
         e1 = ttk.Entry(self.adv_body, textvariable=self.v_cmp_res)
         e1.grid(row=4, column=1, sticky="ew", padx=6, pady=(6, 0))
@@ -514,9 +533,11 @@ class App:
         modes = ttk.Frame(r)
         modes.pack(fill="x", **pad)
         self.f_modes = modes
+        self.rb_modes = {}
         for i, (key, label) in enumerate(MODE_LABELS):
             rb = ttk.Radiobutton(modes, text=label, value=key, variable=self.v_mode, command=self._on_mode)
             rb.grid(row=i // 2, column=i % 2, sticky="w", padx=(0, 16), pady=1)
+            self.rb_modes[key] = rb
             Tooltip(rb, MODE_TIPS[key])
 
         ff = ttk.Frame(r)
@@ -549,6 +570,7 @@ class App:
         self.t_neg.pack(fill="x")
         self.t_neg.insert("1.0", self.state.get("negative", d["negative"]))
 
+        mf.pack(fill="x", **pad)
         sf = ttk.Frame(r)
         sf.pack(fill="x", **pad)
         af = ttk.Frame(self.adv_body)
@@ -638,8 +660,8 @@ class App:
                                  "Off: the model only gets the instruction (and where the selection lies in words).\n"
                                  "The text model is not used in this mode.")
 
-        self.f_adv = ttk.LabelFrame(r, text="Advanced")
-        self.f_adv.pack(fill="x", **pad)
+        self.f_img = ttk.LabelFrame(self.adv_body, text="Image and mask")
+        self.f_img.grid(row=7, column=0, columnspan=2, sticky="ew", pady=(8, 0))
         tips = {
             "Base res.": "Side (px) of the square whose area the model works at. Flux/Fibo/SDXL: 1024, SD 1.5: 512-768. "
                          "Higher = more detail but slower.",
@@ -654,18 +676,18 @@ class App:
                                                     ("Context", self.v_context, 0, 2, 0.1),
                                                     ("Mask grow", self.v_grow, 0, 128, 2),
                                                     ("Mask blur", self.v_blur, 0, 128, 2))):
-            lb = ttk.Label(self.f_adv, text=lbl, style="Muted.TLabel")
+            lb = ttk.Label(self.f_img, text=lbl, style="Muted.TLabel")
             lb.grid(row=0, column=i, sticky="w", padx=6)
-            sp = self._spin(self.f_adv, var, lo, hi, inc, 6)
+            sp = self._spin(self.f_img, var, lo, hi, inc, 6)
             sp.grid(row=1, column=i, padx=6, pady=(0, 6))
             self.w_adv[lbl] = sp
             Tooltip(lb, tips[lbl])
             Tooltip(sp, tips[lbl])
-        self.cb_fooocus = ttk.Checkbutton(self.f_adv, text="Fooocus inpaint (SDXL, as in Krita AI Diffusion)", variable=self.v_fooocus)
+        self.cb_fooocus = ttk.Checkbutton(self.f_img, text="Fooocus inpaint (SDXL, as in Krita AI Diffusion)", variable=self.v_fooocus)
         self.cb_fooocus.grid(row=2, column=0, columnspan=4, sticky="w", padx=6, pady=(0, 6))
         Tooltip(self.cb_fooocus, "Only for the built-in inpaint graph with an SDXL checkpoint (Fooocus inpaint patch). "
                                  "Has no effect with a workflow such as the Fibo ones.")
-        lm = ttk.Frame(self.f_adv)
+        lm = ttk.Frame(self.f_img)
         lm.grid(row=3, column=0, columnspan=4, sticky="w", padx=6, pady=(0, 6))
         lb = ttk.Label(lm, text="Layer mask", style="Muted.TLabel")
         lb.pack(side="left")
@@ -791,6 +813,74 @@ class App:
     def _px(self, n: int) -> int:
         return round(n * getattr(self, "ui", 1.0))
 
+    def _model(self):
+        return models.BY_KEY.get(self.v_model.get())
+
+    def _update_mode_radios(self):
+        """Only what the chosen model does well can be picked; a model-less workflow of your own keeps everything."""
+        m = self._model()
+        for key, rb in self.rb_modes.items():
+            if m is None:
+                rb.grid()
+                rb.configure(state="normal")
+            elif key in m.modes:
+                rb.grid()
+                rb.configure(state="normal")
+            elif key in ("img2img", "txt2img"):
+                rb.grid_remove()           # nothing in the tabs uses these two
+            else:
+                rb.grid()
+                rb.configure(state="disabled")
+
+    def _on_model(self):
+        """A tab was clicked: keep the mode when the model has it, else its first one; start with the model's settings."""
+        m = self._model()
+        if m is None:
+            return
+        if self.v_mode.get() not in m.modes:
+            self.v_mode.set(next(iter(m.modes)))
+        self._apply_model_mode(force=True)
+        self._on_mode_ui()
+        self._on_workflow()
+        self._fit_height()
+
+    def _apply_model_mode(self, force: bool = False):
+        """The mode (or tab) changed: its workflow (unless you picked another one of this model under Advanced) and its
+        starting settings. Settings you never touch stay what the model's mode defines."""
+        m = self._model()
+        if m is None or getattr(self, "_booting", False):
+            return
+        mode = self.v_mode.get()
+        if mode not in m.modes:
+            mode = next(iter(m.modes))
+            self.v_mode.set(mode)
+        spec = m.modes[mode]
+        wf = self.v_workflow.get()
+        keep = wf in m.workflows() and (wf == spec.workflow or wf in m.alt_workflows)
+        s = dict(spec.settings)
+        if not keep:
+            s["workflow"] = spec.workflow
+        self._switch_context(mode)   # first: the context memory belongs to the mode, the defaults below overwrite its value
+        self._apply_settings(s)
+        t = self.t_prompt
+        cur = t.get("1.0", "end").strip() if str(t.cget("state")) != "disabled" else ""
+        if cur in ("", models.PLACEHOLDER) and str(t.cget("state")) != "disabled":
+            t.delete("1.0", "end")
+            if spec.prompt_hint:
+                t.insert("1.0", spec.prompt_hint)
+        self._update_mode_radios()
+
+    def _sync_model(self):
+        """The window was set from a preset / the saved state / the workflow list: show the tab that belongs to it."""
+        wf = self.v_workflow.get()
+        m = models.model_for_workflow(wf) if wf and wf != BUILTIN else None
+        cur = self._model()
+        if m is not None and (cur is None or wf not in cur.workflows()):
+            self.v_model.set(m.key)
+        elif m is None and wf and cur is not None and wf not in cur.workflows():
+            self.v_model.set("")        # a workflow of your own: no tab, nothing restricted
+        self._update_mode_radios()
+
     def _show_negative(self):
         opened = bool(self.v_neg_open.get())
         self.btn_neg.configure(text=("\u25be Negative prompt" if opened else "\u25b8 Negative prompt"))
@@ -823,7 +913,10 @@ class App:
         self.root.geometry(f"{width or self.root.winfo_width()}x{max(self._px(560), self.root.winfo_reqheight())}")
 
     def _on_mode(self):
-        self._couple_workflow()
+        if self.v_model.get():
+            self._apply_model_mode()
+        else:
+            self._couple_workflow()
         self._on_mode_ui()
         self._on_workflow()  # the text model is not used in reference mode
         mode = self.v_mode.get()
@@ -944,6 +1037,7 @@ class App:
             self._on_mode()
         else:
             self._on_workflow()
+        self._sync_model()
 
     def _update_availability(self):
         """Grey out what has no effect in the current mode with the current workflow."""
@@ -1129,6 +1223,14 @@ class App:
         if self.v_workflow.get() not in self.cb_workflow["values"]:
             self.v_workflow.set(BUILTIN)
         self._on_workflow()
+        self._sync_model()
+        if not self.v_model.get() and self.v_workflow.get() == BUILTIN:
+            # nothing chosen yet (first start): open on the first model whose workflow is installed
+            names = {t.name for t in self.templates}
+            first = next((m for m in models.MODELS if set(m.workflows()) & names), None)
+            if first:
+                self.v_model.set(first.key)
+                self._on_model()
         if info.get("err"):
             self._status(info["err"], error=True)
 
@@ -1220,6 +1322,7 @@ class App:
                 widget.insert("1.0", str(s[key]))
         self._on_mode_ui()
         self._on_workflow()
+        self._sync_model()
         return notes
 
     def _preset_path(self, name: str) -> Path:
@@ -1447,7 +1550,7 @@ class App:
             "negative": p.negative, "steps": p.steps, "cfg": p.cfg, "denoise": self.v_denoise.get(),
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
-            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "neg_open": bool(self.v_neg_open.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
+            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
             "stage_on": req.stage_on, "detail": req.detail, "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
             "ref_collage": req.ref_collage, "ref_style": req.ref_style, "ref_cutout": req.ref_cutout, "runs": dict(self.state.get("runs", {})),
         })
