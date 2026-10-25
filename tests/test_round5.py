@@ -179,6 +179,40 @@ def main():
         assert workflows.sampler_values(workflows.load_template(t.ROOT / "workflows" / wf))["steps"] == 15, wf
     assert app.sep_prompt is not None and gui.scale_text(1.5) == "x 1.5" and gui.scale_text("2.0") == "x 2"
 
+    # Send LLM description (Upscale / Refine): a text model looks at the picture, the text joins the prompt in front or behind
+    for wf, mode in (("flux2-klein-upscale.json", "refine"), ("flux3-klein-upscale.json", "upscale")):
+        tpl = workflows.load_template(t.ROOT / "workflows" / wf)
+        base, _ = workflows.apply_template(tpl, workflows.GenParams(prompt="restore it"), "pic.png", None)
+        for pos in ("front", "after"):
+            d = workflows.add_description(base, pos, 0.5)
+            assert all(str(v[0]) in d for n in d.values() for v in n["inputs"].values() if isinstance(v, list) and v), (wf, pos)
+            cat = d["pcd_cat"]["inputs"]
+            llm_first = cat["string_a"] == ["pcd_llm", 0]
+            assert llm_first == (pos == "front"), (wf, pos, cat)
+            assert d["pcd_size"]["inputs"]["megapixels"] == 0.5 and d["pcd_llm"]["inputs"]["image"] == ["pcd_size", 0]
+            assert d["pcd_clip"]["inputs"]["clip_name"] == "qwen3.5_9b_int8_convrot.safetensors"
+        full = workflows.add_description(base, "front", 0)                 # 0 = the picture as it is, no resize node
+        assert "pcd_size" not in full and full["pcd_llm"]["inputs"]["image"][0] == next(k for k, n in base.items() if n["class_type"] == "LoadImage")
+        assert workflows.add_description({"1": {"class_type": "Foo", "inputs": {}}}) == {"1": {"class_type": "Foo", "inputs": {}}}
+    # (flux 3: the text node's readers read the joined text; flux 2: the encoder's own text is the joined text)
+    f3b, _ = workflows.apply_template(workflows.load_template(t.ROOT / "workflows" / "flux3-klein-upscale.json"), workflows.GenParams(prompt="x"), "pic.png", None)
+    assert workflows.add_description(f3b)["159"]["inputs"]["text"] == ["pcd_cat", 0]
+    pick("flux2", "upscale")
+    app.v_describe.set(True)
+    app.v_desc_pos.set(gui.DESC_POS["after"])
+    app.v_desc_mp.set("1 MP")
+    r = app._request()
+    assert (r.describe, r.describe_pos, r.describe_mp) == (True, "after", 1.0)
+    app.v_desc_mp.set("full size")
+    assert app._request().describe_mp == 0.0 and gui.desc_mp_text(0) == "full size"
+    pick("flux2", "edit")
+    assert app._request().describe is False                                   # only Upscale / Refine send it
+    # defaults: Flux 3 upscale starts without SeedVR2 and with the Restore LoRA at 50 %; Qwen text to image: no Turbo, enhancer on
+    assert models.BY_KEY["flux3"].modes["upscale"].settings["stage_on"] is False
+    assert workflows.stage_info(workflows.load_template(t.ROOT / "workflows" / "flux3-klein-upscale.json"))[0]["default_on"] is False
+    pick("qwen", "txt2img")
+    assert app.v_turbo.get() is False and app.v_enhance.get() is True
+
     # Remove Selection with the name of the object (Flux Klein): the instruction names it; runs.jsonl says what was sent
     import tempfile
     import test_reference_mode as T

@@ -70,7 +70,7 @@ QWEN = Model(
     "qwen", "Qwen 2.1 Edit",
     "Qwen Image 2.1 Edit: instruction editor, best at Fill Selection, Remove Selection and Expand. Base res. 1024 works best.",
     {
-        "txt2img": Mode("qwen-image-21-t2i.json", dict(base_res=1024, turbo=True, layer_mask="none", enhance=False)),
+        "txt2img": Mode("qwen-image-21-t2i.json", dict(base_res=1024, turbo=False, layer_mask="none", enhance=True)),
         "edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="none")),
         "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=4.0)),
         "outpaint": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="auto")),
@@ -112,7 +112,7 @@ FLUX3 = Model(
         "edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none")),
         "remove": Mode("flux3-klein-edit.json", dict(_SOFT, base_res=1536, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
         "outpaint": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="auto")),
-        "upscale": Mode("flux3-klein-upscale.json", dict(scale=1.5, turbo=True, stage_on=True, context=0.0), FLUX3_DEFAULT, prompt_tip=DESCRIBE_TIP),
+        "upscale": Mode("flux3-klein-upscale.json", dict(scale=1.5, turbo=True, stage_on=False, context=0.0), FLUX3_DEFAULT, prompt_tip=DESCRIBE_TIP),
     },
     mode_tips={
         "txt2img": _TXT + " The checkbox lets the prompt upsampler write the long prompt.",

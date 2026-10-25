@@ -67,7 +67,7 @@
  "9": {
   "class_type": "AUSBOSS_NODES_LoraLoader",
   "inputs": {
-   "loras": "[{\"name\":\"Flux 3\\\\flux-3-image-klein-restore.safetensors\",\"strength\":1,\"enabled\":true,\"triggers\":\"\"}]",
+   "loras": "[{\"name\":\"Flux 3\\\\flux-3-image-klein-restore.safetensors\",\"strength\":0.5,\"enabled\":true,\"triggers\":\"\"}]",
    "trigger_separator": ", ",
    "on_missing": "error",
    "model": [
@@ -327,7 +327,8 @@
      "151",
      "152"
     ],
-    "tip": "SeedVR2 cleans the photo before Flux redraws it."
+    "tip": "SeedVR2 cleans the photo before Flux redraws it.",
+    "default_on": false
    }
   }
  },

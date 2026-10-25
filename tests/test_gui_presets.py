@@ -253,7 +253,7 @@ def main():
     app.v_mode.set("refine")
     app._on_workflow()
     assert app.cb_stage["state"] == "normal" and "SeedVR2" in app.cb_stage["text"] and app.w_lora_str["state"] == "normal"
-    assert app.v_lora_str.get() == 1.0
+    assert app.v_lora_str.get() == 0.5 and app.v_stage.get() is False       # Restore LoRA 50 %, SeedVR2 off by default
     app.v_lora_str.set(0.4)
     app.v_stage.set(False)
     app.v_detail.set(0.8)

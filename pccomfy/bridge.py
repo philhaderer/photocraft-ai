@@ -61,6 +61,9 @@ class Request:
     fooocus: bool = True                 # inpaint/outpaint: Fooocus patch (SDXL) when the server has it
     remove: bool = False                 # "Remove" (the bridge runs it as an inpaint with the removal instruction)
     remove_tries: int = 3                # tries (new seed each) until the object is really gone
+    describe: bool = False               # Upscale / Refine: a text model describes the picture, the description joins the prompt
+    describe_pos: str = "front"          # "front" = in front of the prompt, "after" = behind it
+    describe_mp: float = 0.5             # megapixels the picture is scaled to for that analysis (0 = as it is)
     remove_target: str = ""              # Remove Selection (Flux Klein): the name of what to remove ("the dog"); empty = the whole selection
     enhance: bool = True                 # text-model workflows: let the text model write the prompt (off = typed text as is)
     turbo: bool = True                   # workflows with a speed (turbo) LoRA, nodes titled pc:lora: off = cut it out, full steps
@@ -741,8 +744,11 @@ class Bridge:
             names = getattr(self, "_real_lora_names", None)
             if names:
                 tpl = names(tpl)
-            return workflows.apply_template(tpl, p, image_name, mask_name, ref_name,
-                                            ref_first=req.ref_style != "simple")
+            g, out = workflows.apply_template(tpl, p, image_name, mask_name, ref_name,
+                                              ref_first=req.ref_style != "simple")
+            if req.describe and req.mode in SCALE_MODES:
+                g = workflows.add_description(g, req.describe_pos, req.describe_mp)
+            return g, out
         if not p.checkpoint:
             raise BridgeError("Pick a model (checkpoint) or a custom workflow.")
         if req.mode == "txt2img":
@@ -769,7 +775,7 @@ class Bridge:
             rec = {"time": time.strftime("%Y-%m-%d %H:%M:%S"), "mode": ("remove" if req.remove else req.mode), "attempt": attempt,
                    "workflow": Path(wf).name if wf else "builtin", "seed": gp.seed, "size": [gp.width, gp.height],
                    "turbo": req.turbo, "enhance": req.enhance, "layer_mask": req.layer_mask, "base_res": req.base_res,
-                   "context": req.context, "sampler": req.sampler_override, "prompt": (gp.prompt or "")[:600]}
+                   "context": req.context, "describe": req.describe and [req.describe_pos, req.describe_mp], "sampler": req.sampler_override, "prompt": (gp.prompt or "")[:600]}
             f.write_text("\n".join(old + [json.dumps(rec, ensure_ascii=False)]) + "\n", encoding="utf-8")
         except (OSError, TypeError, ValueError):
             pass

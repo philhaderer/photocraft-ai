@@ -20,9 +20,9 @@ def links_ok(g):
 
 def main():
     f3 = workflows.load_template(ROOT / "workflows" / "flux3-klein-upscale.json")
-    assert workflows.lora_strength(f3) == 1.0
+    assert workflows.lora_strength(f3) == 0.5          # the Restore LoRA starts at 50 %
     g = workflows.set_lora_strength(f3, 0.4)
-    assert workflows.lora_strength(g) == 0.4 and workflows.lora_strength(f3) == 1.0
+    assert workflows.lora_strength(g) == 0.4 and workflows.lora_strength(f3) == 0.5
     q = workflows.load_template(ROOT / "workflows" / "qwen-image-21-edit.json")
     assert workflows.lora_strength(q) == 1.0 and workflows.lora_strength(workflows.set_lora_strength(q, 0.7)) == 0.7
     assert workflows.lora_strength(workflows.load_template(ROOT / "workflows" / "flux2-klein-upscale.json")) == 0.3
