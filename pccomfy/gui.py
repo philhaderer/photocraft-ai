@@ -165,11 +165,22 @@ def preset_stem(name: str) -> str:
     """File-name-safe preset name."""
     return re.sub(r"[^\w .\-]", "_", name.strip(), flags=re.UNICODE).strip(". ") or "preset"
 
-BG, PANEL, FG, MUTED, ACCENT = "#535353", "#404040", "#eeeeee", "#a2a2a2", "#f28c28"   # PhotoCraft grey (measured from a screenshot), orange accent
-DISABLED = "#7d7d7d"   # text of a greyed-out control: clearly darker than MUTED, so it reads as "not available here"
+BG, PANEL, FG, MUTED, ACCENT = "#535353", "#404040", "#eeeeee", "#cfcfcf", "#f28c28"   # PhotoCraft grey (measured from a screenshot), orange accent
+DISABLED = "#8e8e8e"   # text of a greyed-out control: clearly darker than MUTED, so it reads as "not available here"
 REF_STYLES = {"classic": "Classic: subject first, long instruction", "simple": "Simple: picture first, one short sentence"}
 SCALE_MODES = ("upscale", "refine")   # these run only with an upscale workflow (a node titled pc:upscale)
 ERROR, ERROR_TEXT = "#e5484d", "#ffc2c2"
+def _dpi_aware() -> None:
+    try:
+        import ctypes
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)   # system DPI aware (Windows 8.1+)
+    except Exception:
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
+
+
 MIN_W = 420  # the window opens at this width; text fields etc. stretch to it
 
 
@@ -187,10 +198,15 @@ class App:
         self.events: queue.Queue = queue.Queue()
         self.worker: threading.Thread | None = None
 
+        _dpi_aware()   # without it Windows stretches the window as a bitmap on a scaled display: blurry text
         self.root = tk.Tk()
         self.root.title("PhotoCraft × ComfyUI")
         self.root.configure(bg=BG)
-        self.root.minsize(MIN_W, 560)
+        try:
+            self.ui = max(1.0, float(self.root.winfo_fpixels("1i")) / 96)   # display scaling (150 % = 1.5)
+        except Exception:
+            self.ui = 1.0
+        self.root.minsize(self._px(MIN_W), self._px(560))
         self._sized = False
         self._style()
 
@@ -238,7 +254,7 @@ class App:
         self._build(d)
         self._on_mode()
         self._on_top()
-        self._fit_height(MIN_W)
+        self._fit_height(self._px(MIN_W))
         self._sized = True
         self.root.after(100, self._poll)
         self.root.after(200, self.refresh)
@@ -288,7 +304,11 @@ class App:
               arrowcolor=[("disabled", DISABLED)])
         s.map("TCombobox", foreground=[("disabled", DISABLED), ("readonly", FG)], fieldbackground=[("disabled", BG), ("readonly", PANEL)],
               arrowcolor=[("disabled", DISABLED)])
-        s.map("TScale", background=[("disabled", BG)], troughcolor=[("disabled", BG)])
+        # the slider is orange while it works, grey when greyed out (the edge feather: orange = active)
+        s.configure("Horizontal.TScale", background=ACCENT, troughcolor="#3a3a3a", bordercolor="#454545",
+                    lightcolor=ACCENT, darkcolor=ACCENT)
+        s.map("Horizontal.TScale", background=[("disabled", "#6a6a6a")], lightcolor=[("disabled", "#6a6a6a")],
+              darkcolor=[("disabled", "#6a6a6a")], troughcolor=[("disabled", BG)])
         s.map("TButton", foreground=[("disabled", DISABLED)])
         self.root.option_add("*TCombobox*Listbox.background", PANEL)
         self.root.option_add("*TCombobox*Listbox.foreground", FG)
@@ -437,9 +457,14 @@ class App:
         self.t_prompt = self._text(r, 4)
         self.t_prompt.pack(fill="x", padx=10)
         self.t_prompt.insert("1.0", self.state.get("prompt", ""))
-        ttk.Label(r, text="Negative prompt").pack(anchor="w", padx=10, pady=(6, 0))
-        self.t_neg = self._text(r, 2)
-        self.t_neg.pack(fill="x", padx=10)
+        self.f_neg = ttk.Frame(r)
+        self.f_neg.pack(fill="x", padx=10, pady=(6, 0))
+        self.v_neg_open = tk.BooleanVar(value=bool(self.state.get("neg_open", False)))
+        self.btn_neg = ttk.Button(self.f_neg, command=self._toggle_negative, style="Link.TButton")
+        self.btn_neg.pack(anchor="w")
+        self.neg_body = ttk.Frame(self.f_neg)
+        self.t_neg = self._text(self.neg_body, 2)
+        self.t_neg.pack(fill="x")
         self.t_neg.insert("1.0", self.state.get("negative", d["negative"]))
 
         sf = ttk.Frame(r)
@@ -476,24 +501,25 @@ class App:
         self.btn_adv.pack(anchor="w")
         self.f_adv.pack(fill="x", padx=10, pady=4)
         self._show_advanced()
+        self._show_negative()
 
         self.f_out = ttk.LabelFrame(r, text="Expand image")
         ttk.Label(self.f_out, text="Extend the canvas with the Crop tool (confirm with Enter).\nThe empty area is filled.",
-                  style="Muted.TLabel", justify="left", wraplength=280).grid(row=0, column=0, rowspan=2, sticky="w", padx=6, pady=(0, 6))
+                  style="Muted.TLabel", justify="left", wraplength=self._px(280)).grid(row=0, column=0, rowspan=2, sticky="w", padx=6, pady=(0, 6))
         ttk.Label(self.f_out, text="Overlap", style="Muted.TLabel").grid(row=0, column=1, sticky="w", padx=6)
         self._spin(self.f_out, self.v_overlap, 0, 512, 8, 5).grid(row=1, column=1, padx=6, pady=(0, 6))
         self.f_out.columnconfigure(0, weight=1)
 
         self.f_scale = ttk.LabelFrame(r, text="Upscale")
         ttk.Label(self.f_scale, text="Factor per side (2 = four times the pixels). The result opens as a new document.",
-                  style="Muted.TLabel", justify="left", wraplength=280).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
+                  style="Muted.TLabel", justify="left", wraplength=self._px(280)).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
         self.cb_scale = ttk.Combobox(self.f_scale, textvariable=self.v_scale, values=["1.5", "2", "3", "4"], width=5)
         self.cb_scale.grid(row=0, column=1, padx=6, pady=(0, 6))
         self.f_scale.columnconfigure(0, weight=1)
 
         self.f_ref = ttk.LabelFrame(r, text="Reference image")
         ttk.Label(self.f_ref, text="The top layer is the reference. Select where it should go.\nEverything below it is the picture.",
-                  style="Muted.TLabel", justify="left", wraplength=360).pack(anchor="w", padx=6, pady=(0, 2))
+                  style="Muted.TLabel", justify="left", wraplength=self._px(360)).pack(anchor="w", padx=6, pady=(0, 2))
         sty = ttk.Frame(self.f_ref)
         sty.pack(fill="x", padx=6, pady=(0, 4))
         lbs = ttk.Label(sty, text="Style", style="Muted.TLabel")
@@ -587,11 +613,8 @@ class App:
         st = ttk.Frame(r)
         st.pack(fill="x", padx=10, pady=(4, 0))
         self.lbl_err = ttk.Label(st, text="!", style="Badge.TLabel", width=2, anchor="center")
-        self.lbl_status = ttk.Label(st, textvariable=self.v_status, wraplength=380, justify="left")
+        self.lbl_status = ttk.Label(st, textvariable=self.v_status, wraplength=self._px(380), justify="left")
         self.lbl_status.pack(side="left", fill="x", expand=True)
-        ttk.Label(r, text="Prompt written by the text model (VGL)", style="Muted.TLabel").pack(anchor="w", padx=10, pady=(6, 0))
-        self.t_vgl = tk.Text(r, height=6, width=10, wrap="word", state="disabled", font=(FONT, 8))
-        self.t_vgl.pack(fill="x", padx=10)
         foot = ttk.Frame(r)
         foot.pack(fill="x", side="bottom", padx=10, pady=6)
         ttk.Label(foot, textvariable=self.v_conn, style="Muted.TLabel").pack(side="left")
@@ -668,6 +691,22 @@ class App:
                 t.insert("1.0", self._prompt_kept)
             self._prompt_kept = ""
 
+    def _px(self, n: int) -> int:
+        return round(n * getattr(self, "ui", 1.0))
+
+    def _show_negative(self):
+        opened = bool(self.v_neg_open.get())
+        self.btn_neg.configure(text=("\u25be Negative prompt" if opened else "\u25b8 Negative prompt"))
+        if opened:
+            self.neg_body.pack(fill="x", pady=(4, 0))
+        else:
+            self.neg_body.pack_forget()
+
+    def _toggle_negative(self):
+        self.v_neg_open.set(not self.v_neg_open.get())
+        self._show_negative()
+        self._fit_height()
+
     def _show_advanced(self):
         opened = bool(self.v_adv_open.get())
         self.btn_adv.configure(text=("\u25be Advanced" if opened else "\u25b8 Advanced"))
@@ -684,7 +723,7 @@ class App:
     def _fit_height(self, width: int | None = None):
         """Height to fit the content; the width stays (MIN_W at start, else what it is, e.g. after the user resized it)."""
         self.root.update_idletasks()
-        self.root.geometry(f"{width or self.root.winfo_width()}x{max(560, self.root.winfo_reqheight())}")
+        self.root.geometry(f"{width or self.root.winfo_width()}x{max(self._px(560), self.root.winfo_reqheight())}")
 
     def _on_mode(self):
         self._couple_workflow()
@@ -1218,10 +1257,7 @@ class App:
                     self.b_redo.configure(state="normal")
                     self.b_stop.configure(state="disabled")
                 elif kind == "vgl":
-                    self.t_vgl.configure(state="normal")
-                    self.t_vgl.delete("1.0", "end")
-                    self.t_vgl.insert("1.0", data)
-                    self.t_vgl.configure(state="disabled")
+                    pass   # the text model's prompt is no longer shown in the window
                 elif kind == "refresh":
                     self._apply_refresh(data)
         except queue.Empty:
@@ -1260,7 +1296,7 @@ class App:
             "negative": p.negative, "steps": p.steps, "cfg": p.cfg, "denoise": self.v_denoise.get(),
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
-            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
+            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "neg_open": bool(self.v_neg_open.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
             "ref_collage": req.ref_collage, "ref_style": req.ref_style, "ref_cutout": req.ref_cutout, "runs": dict(self.state.get("runs", {})),
         })
 
