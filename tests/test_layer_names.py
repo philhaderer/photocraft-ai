@@ -33,6 +33,13 @@ def main():
     assert names("Qwen 2.1 Edit", 12) == ["Qwen 2.1 Edit #12"], names("Qwen 2.1 Edit", 12)
     got = names("Fibo plain", 3, variants=2)
     assert sorted(got) == ["Fibo plain #3.1", "Fibo plain #3.2"], got
+    tmp = tempfile.mkdtemp()
+    pc, _, b = T.make(tmp)
+    b.comfy = T.FakeComfy()
+    rq = Request(mode="inpaint", workflow=str(ROOT / "workflows" / "fibo2-edit-plain.json"), preset="P", run_no=4, label="res 1024")
+    rq.params = workflows.GenParams(prompt="x", seed=1)
+    b.run(rq)
+    assert [p["name"] for c, p in pc.log if c == "layer.renameLayer"] == ["P #4 [res 1024]"]
     old = names("", 0)
     assert len(old) == 1 and old[0].startswith("AI inpaint"), old        # no preset: the earlier name
     from pccomfy import bridge

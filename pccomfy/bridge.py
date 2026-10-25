@@ -74,6 +74,7 @@ class Request:
     stage_on: bool = True                # workflows with a switchable stage (pc_stage_off, e.g. SeedVR2): False = skip it
     detail: float = 1.0                  # Upscale/Refine: share of the new result mixed with the plainly scaled original (1 = all new)
     ref_cutout: bool = True              # reference mode, simple style: the sentence also asks to remove the reference's background
+    label: str = ""                      # added to the layer names (a comparison run: "res 1024")
     preset: str = ""                     # name of the preset used: the layers are named "<preset> #<run_no>"
     run_no: int = 0                      # running number of this preset's runs (kept by the window)
 
@@ -599,6 +600,7 @@ class Bridge:
         for n, g in enumerate(reversed(range(len(items)))):
             label, i, raw, count = items[g]
             im = raw.convert("RGB").resize((region.w, region.h), Image.LANCZOS)
+            label = " ".join(x for x in (label, req.label) if x)
             if req.preset:
                 name = f"{req.preset} #{req.run_no}" + (f".{i + 1}" if count > 1 else "") + (f" [{label}]" if label else "")
             else:

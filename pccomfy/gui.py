@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import queue
+import random
 import re
 import threading
 import tkinter as tk
@@ -206,6 +207,30 @@ def _dpi_aware() -> None:
             pass
 
 
+def parse_list(text: str, cast) -> list:
+    """"1024, 1224 1536" -> [1024, 1224, 1536]; whatever is not a number is skipped."""
+    out = []
+    for part in str(text).replace(";", ",").replace(" ", ",").split(","):
+        try:
+            if part.strip():
+                out.append(cast(part.strip().replace(",", ".")))
+        except ValueError:
+            pass
+    return out
+
+
+def sweep_requests(req: Request, res_list: list, ctx_list: list) -> list[Request]:
+    """The runs of a comparison: the same request (and the same seed) once per base res / context value."""
+    import dataclasses
+    runs = []
+    for rs in res_list or [None]:
+        for cx in ctx_list or [None]:
+            parts = ([f"res {rs}"] if rs else []) + ([f"ctx {cx:g}"] if cx is not None else [])
+            runs.append(dataclasses.replace(req, base_res=rs or req.base_res, context=cx if cx is not None else req.context,
+                                            label=" ".join(parts)))
+    return runs
+
+
 MIN_W = 420  # the window opens at this width; text fields etc. stretch to it
 
 
@@ -271,6 +296,8 @@ class App:
         self.v_enhance = tk.BooleanVar(value=g("enhance", True))
         self.v_turbo = tk.BooleanVar(value=g("turbo", True))
         self.v_lora_str = tk.DoubleVar(value=g("lora_strength", 1.0))
+        self.v_cmp_res = tk.StringVar(value="")
+        self.v_cmp_ctx = tk.StringVar(value="")
         self.v_stage = tk.BooleanVar(value=g("stage_on", True))
         self.v_detail = tk.DoubleVar(value=g("detail", 1.0))
         self._lora_wf = g("workflow", "")   # the workflow the LoRA strength slider was last set for
@@ -446,6 +473,16 @@ class App:
         ttk.Label(self.adv_body, text="Text model", style="Muted.TLabel").grid(row=1, column=0, sticky="w", pady=(4, 0))
         self.cb_clip = ttk.Combobox(self.adv_body, textvariable=self.v_clip, state="readonly", width=8)
         self.cb_clip.grid(row=1, column=1, sticky="ew", padx=6, pady=(4, 0))
+        ttk.Label(self.adv_body, text="Compare base res", style="Muted.TLabel").grid(row=4, column=0, sticky="w", pady=(6, 0))
+        e1 = ttk.Entry(self.adv_body, textvariable=self.v_cmp_res)
+        e1.grid(row=4, column=1, sticky="ew", padx=6, pady=(6, 0))
+        ttk.Label(self.adv_body, text="Compare context", style="Muted.TLabel").grid(row=5, column=0, sticky="w", pady=(4, 0))
+        e2 = ttk.Entry(self.adv_body, textvariable=self.v_cmp_ctx)
+        e2.grid(row=5, column=1, sticky="ew", padx=6, pady=(4, 0))
+        for w in (e1, e2):
+            Tooltip(w, "A test series: values separated by commas (1024, 1224, 1536 / 0.2, 0.4, 0.6). Generate then runs the "
+                       "same request once per value with the SAME seed; every result is a layer named with its value.\n"
+                       "Both filled = every combination.")
         self.cb_enhance = ttk.Checkbutton(mf, text="LLM prompt enhancement", variable=self.v_enhance, command=self._on_workflow)
         self.cb_enhance.grid(row=0, column=1, sticky="w", padx=6, pady=(4, 0))
         Tooltip(self.cb_enhance, "On: the text model turns your instruction into the detailed prompt the image model expects "
@@ -1299,11 +1336,21 @@ class App:
         def progress(f, msg, phase="", phase_fraction=-1.0, elapsed=0.0):
             self.events.put(("progress", (f, msg, phase, phase_fraction, elapsed)))
 
+        runs = sweep_requests(req, parse_list(self.v_cmp_res.get(), int), parse_list(self.v_cmp_ctx.get(), float))
+        if len(runs) > 1:
+            if req.params.seed is None or req.params.seed < 0:
+                req.params.seed = random.randint(0, 2**31 - 1)   # one seed for the whole series: only the value differs
+
         def work():
             try:
-                res = self.bridge.run(req, progress)
+                total = 0
+                for k, rq in enumerate(runs):
+                    if len(runs) > 1:
+                        self.events.put(("progress", (0.0, f"Comparison {k + 1}/{len(runs)}: {rq.label}", "prepare", -1.0, 0.0)))
+                    res = self.bridge.run(rq, progress)
+                    total += len(res["layers"])
                 self.events.put(("vgl", res.get("vgl", "")))
-                self.events.put(("done", f"Done ({res['pipeline']}) – seed {res['seed']}, layers: {len(res['layers'])}"))
+                self.events.put(("done", f"Done ({res['pipeline']}) – seed {res['seed']}, layers: {total}"))
             except Cancelled:
                 self.events.put(("done", "Cancelled."))
             except (BridgeError, ComfyError, PhotoCraftError, ValueError, OSError) as e:

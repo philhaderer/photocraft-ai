@@ -259,6 +259,15 @@ def main():
     assert app.cb_stage["state"] == "disabled" and app._request().lora_strength is None and app._request().stage_on is True
     print("flux3 controls OK")
 
+    # comparison series
+    assert gui.parse_list("1024, 1224;1536 x", int) == [1024, 1224, 1536] and gui.parse_list("0,2 0.4", float) == [0.0, 2.0, 0.4]
+    base = app._request()
+    runs = gui.sweep_requests(base, [1024, 1536], [0.2, 0.4])
+    assert [(r.base_res, r.context, r.label) for r in runs] == [(1024, 0.2, "res 1024 ctx 0.2"), (1024, 0.4, "res 1024 ctx 0.4"),
+                                                                (1536, 0.2, "res 1536 ctx 0.2"), (1536, 0.4, "res 1536 ctx 0.4")]
+    assert len(gui.sweep_requests(base, [], [])) == 1 and gui.sweep_requests(base, [], [])[0].label == ""
+    print("comparison OK")
+
     # Mode and workflow go together: Upscale / Refine only with an upscale workflow, the other modes never with one
     shutil.copy(ROOT / "workflows" / "flux3-klein-upscale.json", wfdir / "up.json")
     app.cb_workflow["values"] = [gui.BUILTIN, "turbo.json", "plain.json", "up.json"]
