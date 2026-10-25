@@ -1,0 +1,15 @@
+{
+ "format": 1,
+ "name": "Qwen 2.1 Whole image",
+ "saved": "2026-10-25T10:00:00",
+ "settings": {
+  "mode": "edit",
+  "clip": "",
+  "denoise": 1.0,
+  "variants": 1,
+  "base_res": 1224,
+  "workflow": "qwen-image-21-edit.json",
+  "layer_mask": "none",
+  "turbo": true
+ }
+}

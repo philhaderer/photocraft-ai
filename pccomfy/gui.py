@@ -27,6 +27,7 @@ MODE_LABELS = [
     ("remove", "Remove"),
     ("reference", "Insert reference image"),
     ("outpaint", "Expand image"),
+    ("edit", "Edit whole image"),
     ("img2img", "Image → image"),
     ("txt2img", "Text → image"),
     ("upscale", "Upscale (new file)"),
@@ -55,6 +56,8 @@ MODE_TIPS = {
     "outpaint": "Extend the canvas with the Crop tool (confirm with Enter), then Generate: the empty area is filled.\n"
                 "Text is optional and describes what the new area shows.\n"
                 "Large extensions drift in style and tone at the seam: extend in smaller steps and repeat.",
+    "edit": "Changes the WHOLE picture from your text, like talking to an image editor (\"make it night\", \"turn the car red\").\n"
+            "A selection is ignored. Needs an edit workflow (Fibo, Qwen Image 2.1 Edit, Flux 2/3 Klein edit): use a preset.",
     "img2img": "Reworks the picture (or the selection) from your text.\n"
                "Checkpoint workflows: Denoise says how far it may change (low = stay close, high = new picture).\n"
                "Fibo workflows: type an instruction (\"make it night\"); no mask is needed.",
@@ -731,7 +734,7 @@ class App:
         self._on_mode_ui()
         self._on_workflow()  # the text model is not used in reference mode
         mode = self.v_mode.get()
-        if mode in ("inpaint", "remove", "reference", "outpaint"):
+        if mode in ("inpaint", "remove", "reference", "outpaint", "edit"):
             self.v_denoise.set(1.0)  # full denoise inside the mask; lower it to keep more of the original
         elif mode == "img2img" and self.v_denoise.get() >= 0.99 and not self._ignores_mask():
             self.v_denoise.set(0.6)   # not for Fibo-type editors: below 1.0 they produce a different, broken picture

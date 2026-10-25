@@ -36,7 +36,7 @@ from . import imaging, workflows
 from .comfy import ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 
-MODES = ("inpaint", "remove", "reference", "outpaint", "img2img", "txt2img", "upscale", "refine")
+MODES = ("inpaint", "remove", "reference", "outpaint", "img2img", "edit", "txt2img", "upscale", "refine")
 SCALE_MODES = ("upscale", "refine")   # the picture goes to the workflow at its own size; the workflow sets the result's size
 MAX_RESULT_MP = 24.0                  # Upscale: refuse results above this many megapixels
 LAYER_MASKS = ("auto", "soft", "selection", "none")
@@ -422,7 +422,7 @@ class Bridge:
             doc = pc.document()
 
         W, H = doc["width"], doc["height"]
-        has_sel = bool(doc.get("hasSelection"))
+        has_sel = bool(doc.get("hasSelection")) and req.mode != "edit"   # "edit" works on the whole picture, a selection is ignored
         if req.mode == "inpaint" and not has_sel:
             raise BridgeError("Select the area to fill first (e.g. Lasso or Rectangular Marquee).")
         if req.mode == "reference":
@@ -435,6 +435,10 @@ class Bridge:
         editor = bool(wf_paths[0]) and not any(mask_is_used(json.loads(Path(w).read_text(encoding="utf-8")))
                                                for w in wf_paths)
 
+        if req.mode == "edit" and not (wf_paths[0] and editor):
+            raise BridgeError("Edit whole image needs an instruction-based edit workflow (Fibo, Qwen Image 2.1 Edit, Flux 2/3 Klein edit).")
+        if req.mode == "edit" and not p.prompt.strip():
+            raise BridgeError("Describe the edit in the prompt (it applies to the whole picture).")
         if editor and p.denoise != 1.0:
             # live test (Image → image at 0.6): an instruction editor starts from an empty latent, so a denoise below 1.0
             # gives a broken picture (a whole creek of ducks); at 1.0 the same instruction edits the picture correctly
