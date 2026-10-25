@@ -19,7 +19,7 @@ from .bridge import Bridge, BridgeError, Request, mask_is_used, prompt_phase_nod
 from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 from .workflows import _tags as workflows_tags
-from .workflows import GenParams, has_upscale_slot, list_templates, load_template, bypass_lora, lora_strength, lora_switches, lora_tip, resolve, sampler_values, stage_info, stage_switches
+from .workflows import GenParams, has_upscale_slot, list_templates, load_template, bypass_lora, lora_strength, lora_switches, lora_tip, resolve, sampler_values, stage_info, stage_switches, writer_model
 
 FILL_CONTEXT = 0.2   # Context (margin) that Generative fill starts with
 
@@ -217,6 +217,9 @@ class Tooltip:
             self.tip = None
 
 
+ENHANCE_TIP = ("On: the text model turns your instruction into the detailed prompt the image model expects "
+                                 "(VGL for Fibo).\nOff: your text goes to the image model exactly as typed.\n"
+                                 "Only for workflows that have a text model.")
 LORA_TIP = ("A LoRA of the workflow that can be switched off (the checkbox names it); the slider sets how strong it works.\n"
             "Greyed out when the workflow has no such LoRA.")
 STAGE_TIP = ("A processing stage of the workflow that can be skipped (the checkbox names it).\n"
@@ -522,7 +525,7 @@ class App:
 
         self.f_tabs = ttk.Frame(r)      # one tab per model, two rows
         self.f_tabs.pack(fill="x", padx=10, pady=(8, 2))
-        cols = (len(models.MODELS) + 1) // 2
+        cols = 2                        # never more than two side by side (the window stays narrow, however many models)
         for c in range(cols):
             self.f_tabs.columnconfigure(c, weight=1, uniform="tab")
         self.rb_tabs = {}
@@ -574,9 +577,7 @@ class App:
                        "Both filled = every combination.")
         self.cb_enhance = ttk.Checkbutton(mf, text="LLM prompt enhancement", variable=self.v_enhance, command=self._on_workflow)
         self.cb_enhance.grid(row=0, column=1, sticky="w", padx=6, pady=(4, 0))
-        Tooltip(self.cb_enhance, "On: the text model turns your instruction into the detailed prompt the image model expects "
-                                 "(VGL for Fibo).\nOff: your text goes to the image model exactly as typed.\n"
-                                 "Only for workflows that have a text model.")
+        self.tt_enhance = Tooltip(self.cb_enhance, ENHANCE_TIP)
         self.cb_turbo = ttk.Checkbutton(mf, text="LoRA", variable=self.v_turbo)
         self.cb_turbo.grid(row=1, column=1, sticky="w", padx=6, pady=(4, 0))
         self.tt_turbo = Tooltip(self.cb_turbo, LORA_TIP)
@@ -1375,6 +1376,8 @@ class App:
         # while the prompt enhancement is on
         has_writer = self._has_text_model() and self.v_mode.get() not in ("reference", "remove")  # these modes: fixed instruction
         self.cb_enhance.configure(state="normal" if has_writer else "disabled")
+        llm = next((m for m in (writer_model(t) for t in self._wf_templates()) if m), "")
+        self.tt_enhance.text = ENHANCE_TIP + (f"\n\nText model in this workflow: {llm}" if llm else "")
         has_lora = self._has_lora_switch()
         self.cb_turbo.configure(state="normal" if has_lora else "disabled", text=self._lora_label())
         if self.v_workflow.get() != self._lora_wf:   # another workflow: the slider starts at the value it ships with
@@ -1501,11 +1504,13 @@ class App:
             winlink.unlink(self.root)
 
     def _yield_popups(self):
-        """PhotoCraft's menus must not be hidden by this window: a few times a second it steps behind them."""
+        """PhotoCraft draws its menus inside its own window, so this window cannot be put below them. Instead (Windows):
+        a click in PhotoCraft's menu bar hides this window while the menu is in use; it returns with the next click
+        outside the menu bar, Escape or when the pointer leaves PhotoCraft (winlink.menu_step)."""
         self._popup_job = None
         if self.v_top.get() and winlink.available():
-            winlink.yield_to_popups(self.root)
-            self._popup_job = self.root.after(300, self._yield_popups)
+            self._menu_state = winlink.guard_menus(self.root, getattr(self, "_menu_state", {}), self.ui)
+            self._popup_job = self.root.after(80, self._yield_popups)
 
     def _try_link(self):
         self._link_job = None

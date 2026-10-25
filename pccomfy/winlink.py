@@ -125,6 +125,23 @@ class Win32Api:
             ok = (d(self.w.HWND(hwnd), attr, self.c.byref(v), 4) == 0) and ok
         return ok
 
+    def cursor(self) -> tuple[int, int]:
+        pt = self.w.POINT()
+        self.u.GetCursorPos(self.c.byref(pt))
+        return pt.x, pt.y
+
+    def key_down(self, vk: int) -> bool:
+        return bool(self.u.GetAsyncKeyState(vk) & 0x8000)
+
+    def rect(self, hwnd: int) -> tuple[int, int, int, int]:
+        r = self.w.RECT()
+        self.u.GetWindowRect(hwnd, self.c.byref(r))
+        return r.left, r.top, r.right, r.bottom
+
+    def show(self, hwnd: int, visible: bool) -> None:
+        """Hide / show without activating (SW_HIDE / SW_SHOWNOACTIVATE)."""
+        self.u.ShowWindow(hwnd, 4 if visible else 0)
+
     def place_below(self, hwnd: int, above: int) -> None:
         """Put `hwnd` directly below `above` in the z-order, without moving, resizing or activating it."""
         self.u.SetWindowPos(hwnd, above, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010)   # NOSIZE | NOMOVE | NOACTIVATE
@@ -194,6 +211,50 @@ def yield_to_popups(root, api=None) -> bool:
         return False
 
 
+MENU_BAND = int(os.environ.get("PCC_MENU_BAND", "70"))      # px (96 dpi) from the top of PhotoCraft's window: title bar + menu bar
+MENU_DROP = int(os.environ.get("PCC_MENU_DROP", "620"))     # px (96 dpi) below the top that an open menu can reach
+
+
+def menu_step(state: dict, cursor, lbutton: bool, esc: bool, owner_rect, win_rect, ui: float = 1.0) -> dict:
+    """The "menus win" rule for a bridge window that lies over PhotoCraft's menus (PhotoCraft draws its menus inside its own
+    window, so no z-order trick can put them above ours). Pure: state {hidden, l} in, state out.
+    A click in the menu bar (the top band of PhotoCraft's window) while the bridge window overlaps the area an open menu
+    covers hides the bridge window; it comes back with the next click outside the band (a menu item, a dismissal), Escape,
+    or when the pointer leaves PhotoCraft's window."""
+    hidden, was_down = bool(state.get("hidden")), bool(state.get("l"))
+    click = lbutton and not was_down
+    x, y = cursor
+    L, T, R, B = owner_rect
+    in_owner = L <= x < R and T <= y < B
+    in_band = in_owner and y < T + MENU_BAND * ui
+    wl, wt, wr, wb = win_rect
+    over = not (wr <= L or wl >= R or wb <= T or wt >= T + (MENU_BAND + MENU_DROP) * ui)
+    if not hidden:
+        if click and in_band and over:
+            hidden = True
+    elif (click and not in_band) or esc or not in_owner:
+        hidden = False
+    return {"hidden": hidden, "l": lbutton}
+
+
+def guard_menus(root, state: dict, ui: float = 1.0, api=None) -> dict:
+    """Run `menu_step` against the real windows (a few times per second). Returns the new state."""
+    if not available() and api is None:
+        return state
+    try:
+        api = api or Win32Api()
+        top = api.toplevel(root)
+        owner = api.owner_of(top) if top else 0
+        if not top or not owner:
+            return state
+        new = menu_step(state, api.cursor(), api.key_down(0x01), api.key_down(0x1B), api.rect(owner), api.rect(top), ui)
+        if new["hidden"] != bool(state.get("hidden")):
+            api.show(top, not new["hidden"])
+        return new
+    except Exception:
+        return state
+
+
 def unlink(root, api=None) -> None:
     if not available() and api is None:
         return
@@ -202,6 +263,8 @@ def unlink(root, api=None) -> None:
         top = api.toplevel(root)
         if top:
             api.set_owner(top, 0)
+            if hasattr(api, "show"):
+                api.show(top, True)        # it may have been hidden for a menu
     except Exception:
         pass
 

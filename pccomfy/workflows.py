@@ -435,6 +435,26 @@ def add_loras(graph: dict, loras: list) -> dict:
     return g
 
 
+def writer_model(graph: dict) -> str:
+    """Which text model writes the prompt: `pc_llm_tip` of the writer node, else the file name of the text model it reads
+    (the clip loader it is wired to, or a model name set on the node itself). "" = no text model in the workflow."""
+    for nid in prompt_writers(graph):
+        node = graph[nid]
+        tip = str(node.get("_meta", {}).get("pc_llm_tip", "")).strip()
+        if tip:
+            return tip
+        inp = node.get("inputs", {})
+        link = inp.get("clip")
+        if isinstance(link, list) and link and str(link[0]) in graph:
+            name = graph[str(link[0])].get("inputs", {}).get("clip_name")
+            if isinstance(name, str):
+                return name
+        for k in ("model", "model_name", "clip_name", "llm"):
+            if isinstance(inp.get(k), str):
+                return inp[k]
+    return ""
+
+
 def main_sampler(graph: dict) -> str | None:
     """Id of the sampler that draws the picture: a KSampler / KSamplerAdvanced titled pc:sampler, else the last one that is
     not fed by a helper model (SeedVR2). None when the workflow has none (or sets its values another way)."""

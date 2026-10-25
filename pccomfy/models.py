@@ -54,30 +54,30 @@ FLUX2 = Model(
     "flux2", "Flux2Klein",
     "FLUX.2 Klein 9B: whole-image edits, upscale and refine (the Ultra real LoRA is the switch).",
     {
-        "edit": Mode("flux2-klein-edit.json", dict(base_res=1224, layer_mask="none")),
+        "edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none")),
         "upscale": Mode("flux2-klein-upscale.json", dict(scale=2.0, turbo=True), PLACEHOLDER),
         "refine": Mode("flux2-klein-upscale.json", dict(turbo=True), PLACEHOLDER),
     })
 
 FLUX3 = Model(
     "flux3", "Flux3Klein",
-    "FLUX.3 Klein: whole-image edits, and the SeedVR2 + tiles upscale / refine (the Restore LoRA and the SeedVR2 stage are switches).",
+    "FLUX.3 Klein: text to image and whole-image edits (base res 1536), and the SeedVR2 + tiles upscale / refine (the Restore LoRA and the SeedVR2 stage are switches).",
     {
-        "edit": Mode("flux3-klein-edit.json", dict(base_res=1224, layer_mask="none")),
+        "txt2img": Mode("flux3-klein-t2i.json", dict(base_res=1536, layer_mask="none")),
+        "edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none")),
         "upscale": Mode("flux3-klein-upscale.json", dict(scale=1.5, turbo=True, stage_on=True), PLACEHOLDER),
         "refine": Mode("flux3-klein-upscale.json", dict(turbo=True, stage_on=True), PLACEHOLDER),
     })
 
 # MOSS: the DMD2 speed LoRA (8 steps, CFG 1.5) is the model's own LoRA; the Lenovo UltraReal LoRA and the skip-layer
 # guidance (SLG) are switches that start off until they have been compared.
-_MOSS = dict(turbo=True, stage_on=False, stage2_on=False)
+_MOSS = dict(turbo=True, stage_on=True, stage2_on=False)
 MOSS = Model(
     "moss", "MOSS Image",
-    "MOSS-Image 5B: a text-to-image model. Text to image (with its own prompt enhancer) and Generative fill with a mask; "
-    "Expand is a test. It has no instruction-edit functions (yet). Likes 1.5 to 2 MP. The DMD2 LoRA makes it fast (8 steps, CFG 1.5).",
+    "MOSS-Image 5B: a text-to-image model. Text to image (with its own prompt enhancer); Generative fill is greyed out for now "
+    "(not good enough yet), Expand is a test. It has no instruction-edit functions (yet). Likes 1.5 to 2 MP. The DMD2 LoRA makes it fast (8 steps, CFG 1.5).",
     {
         "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "base_res": 1280, "layer_mask": "none", "enhance": True}),
-        "inpaint": Mode("moss-image-inpaint.json", {**_SOFT, **_MOSS, "base_res": 1216, "context": 0.4, "match": 0.5}),
         "outpaint": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "auto", "match": 0.5}),
     })
 

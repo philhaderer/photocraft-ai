@@ -424,6 +424,8 @@ class Bridge:
         if req.mode != "upscale":   # Upscale only opens a new document: nothing to undo in this one
             self._snapshot(orig_name)   # one click back to here, however many history steps the run adds
         doc = pc.document()
+        if req.mode in ("edit", "txt2img") and doc.get("hasSelection"):
+            pc.execute("select.all")     # these work on the whole picture: show it (the selection is then the whole canvas)
 
         keep = None  # outpaint: where the original image lies in the extended canvas
         if req.mode == "outpaint":
@@ -490,7 +492,10 @@ class Bridge:
             region = imaging.Box(0, 0, W, H)
 
         removal = self._kind(req, p, wf_paths)
-        fill = bool(editor and req.mode == "inpaint" and has_sel and not removal and p.prompt.strip())
+        # the whole picture selected = a fresh picture from the text, not a fill: the red outline would end up as a frame
+        whole = bool(mask is not None and req.mode == "inpaint" and not removal
+                     and (np.asarray(mask.convert("L").crop(region.pil())) > 127).mean() > 0.97)
+        fill = bool(editor and req.mode == "inpaint" and has_sel and not removal and not whole and p.prompt.strip())
         marked = bool(removal) or fill
         if req.mode in SCALE_MODES:   # the picture goes in at its own size, the workflow sets the size of the result
             gw, gh = region.w, region.h
@@ -656,7 +661,7 @@ class Bridge:
         tpl, missing = workflows.fix_lora_names(tpl, available)
         if missing:
             raise BridgeError("ComfyUI does not list this LoRA file: " + ", ".join(missing)
-                              + ". Put it in the LoRA folder (or switch the LoRA off) and press Refresh.")
+                              + ". Put it in the LoRA folder and restart ComfyUI (it only re-reads the folder at start), or switch the LoRA off.")
         return tpl
 
     def _graph(self, req: Request, p, image_name, mask_name, wf: str | None = None, ref_name: str | None = None,

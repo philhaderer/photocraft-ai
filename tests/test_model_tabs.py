@@ -44,13 +44,14 @@ def main():
     # MOSS: text to image, Generative fill, Expand (a test); the DMD2 LoRA is its own LoRA, Lenovo and SLG are switches
     app.v_model.set("moss")
     app._on_model()
-    assert app.v_mode.get() == "inpaint" and app.v_workflow.get() == "moss-image-inpaint.json" and app.v_res.get() == 1216
+    assert app.v_mode.get() == "txt2img" and app.v_workflow.get() == "moss-image-t2i.json" and app.v_res.get() == 1280
+    assert app.v_enhance.get() is True and "Qwen 3.5 9B" in app.tt_enhance.text      # which text model writes the prompt
     assert app.v_turbo.get() is True and app.cb_turbo["text"].startswith("DMD2") and app.v_lora_str.get() == 1.0
-    assert [k for k, rb in app.rb_modes.items() if rb["state"] == "normal"] == ["txt2img", "inpaint", "outpaint"]
+    assert [k for k, rb in app.rb_modes.items() if rb["state"] == "normal"] == ["txt2img", "outpaint"]   # Generative fill is greyed out
     assert [c["text"] for c in app.stage_cbs] == ["Lenovo UltraReal LoRA", "Skip-layer guidance (SLG)", "Stage"]
-    assert not app.v_stage.get() and not app.v_stage2.get()
+    assert app.v_stage.get() and not app.v_stage2.get()                                # Lenovo on, SLG off
     r = app._request()
-    assert r.stage_on is False and r.stages_off == ["7"] and r.turbo is True
+    assert r.stage_on is True and r.stages_off == ["7"] and r.turbo is True
     assert r.sampler_override == {} and (app.v_steps.get(), app.v_cfg.get()) == (8, 1.5)   # the fields show the workflow's values
     app.v_turbo.set(False)
     app._on_workflow()
@@ -59,12 +60,23 @@ def main():
     assert app._request().sampler_override == {"steps": 30}
     app.v_turbo.set(True)
     app._on_workflow()
-    app.v_mode.set("txt2img")
-    app._on_mode()
-    assert app.v_workflow.get() == "moss-image-t2i.json" and app.v_enhance.get() is True
     assert app._request().mode == "txt2img" and app._layer_prefix() == "MOSS Image Text"
-    app.v_mode.set("inpaint")
+    app.v_mode.set("outpaint")
     app._on_mode()
+    assert app.v_workflow.get() == "moss-image-inpaint.json" and app.v_res.get() == 1216 and app.v_match.get() == 0.5
+
+    # Flux 3: text to image and edit share the settings (base res 1536); Flux 2 edit starts at 1024
+    app.v_model.set("flux3")
+    app.v_mode.set("txt2img")
+    app._on_model()
+    assert app.v_workflow.get() == "flux3-klein-t2i.json" and app.v_res.get() == 1536
+    app.v_mode.set("edit")
+    app._on_mode()
+    assert app.v_workflow.get() == "flux3-klein-edit.json" and app.v_res.get() == 1536
+    app.v_model.set("flux2")
+    app._on_model()
+    assert app.v_res.get() == 1024 and app.v_match.get() == 0.0
+    assert len(app.rb_tabs) == 5 and app.f_tabs is not None
 
     # Flux 3: upscale brings its workflow, 1.5 and the placeholder; edit takes the placeholder away again
     app.v_model.set("flux3")

@@ -95,7 +95,31 @@ def main():
     f = Fake([w(42, pc)])
     winlink.unlink(object(), f)
     assert f.calls == [(777, 0)]
-    print("winlink ok")
+    
+# menus: a click in the menu bar hides the bridge window while it overlaps the menu area; the next click elsewhere,
+# Escape, or leaving PhotoCraft brings it back
+owner, win = (0, 0, 1600, 900), (60, 150, 500, 800)
+st = {}
+st = winlink.menu_step(st, (300, 20), False, False, owner, win)           # hovering: nothing
+assert not st["hidden"]
+st = winlink.menu_step(st, (300, 20), True, False, owner, win)            # click on a menu
+assert st["hidden"]
+st = winlink.menu_step(st, (300, 120), False, False, owner, win)          # moving over the open menu
+assert st["hidden"]
+st = winlink.menu_step(st, (300, 120), True, False, owner, win)           # click on a menu item
+assert st["hidden"] is False
+st = winlink.menu_step({}, (300, 20), True, False, owner, win)
+st = winlink.menu_step(st, (300, 400), False, True, owner, win)           # Escape
+assert st["hidden"] is False
+st = winlink.menu_step({}, (300, 20), True, False, owner, win)
+st = winlink.menu_step(st, (1900, 400), False, False, owner, win)         # pointer left PhotoCraft
+assert st["hidden"] is False
+far = (60, 800, 500, 880)                                                  # a window below the menu area is left alone
+assert not winlink.menu_step({}, (300, 20), True, False, owner, far)["hidden"]
+st = winlink.menu_step({"hidden": True, "l": True}, (300, 20), True, False, owner, win)   # button held: no new click
+assert st["hidden"]
+print("ALL OK (menu guard)")
+print("winlink ok")
 
 
 if __name__ == "__main__":
