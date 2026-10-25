@@ -19,7 +19,7 @@ from .bridge import Bridge, BridgeError, Request, mask_is_used, prompt_phase_nod
 from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 from .workflows import _tags as workflows_tags
-from .workflows import GenParams, has_upscale_slot, list_templates, load_template, bypass_lora, lora_strength, lora_switches, lora_tip, resolve, sampler_values, stage_info, stage_switches, writer_model, writer_name
+from .workflows import FLUX2_SCHEDULER, GenParams, has_upscale_slot, list_templates, load_template, bypass_lora, lora_strength, lora_switches, lora_tip, resolve, sampler_values, stage_info, stage_switches, writer_model, writer_name
 
 FILL_CONTEXT = 0.2   # Context (margin) that Fill Selection starts with
 
@@ -828,6 +828,7 @@ class App:
             "Mask blur": "Softens the model's mask edge (mask workflows only).",
         }
         self.w_adv = {}
+        self.l_adv = {}
         for i, (lbl, var, lo, hi, inc) in enumerate((("Base res.", self.v_res, 256, 2048, 64),
                                                     ("Context", self.v_context, 0, 2, 0.1),
                                                     ("Mask grow", self.v_grow, 0, 128, 2),
@@ -837,6 +838,7 @@ class App:
             sp = self._spin(self.f_img, var, lo, hi, inc, 6)
             sp.grid(row=1, column=i, padx=6, pady=(0, 6))
             self.w_adv[lbl] = sp
+            self.l_adv[lbl] = lb
             Tooltip(lb, tips[lbl])
             Tooltip(sp, tips[lbl])
         self.cb_fooocus = ttk.Checkbutton(self.f_img, text="Fooocus inpaint (SDXL, as in Krita AI Diffusion)", variable=self.v_fooocus)
@@ -1606,6 +1608,13 @@ class App:
         on(self.w_denoise, not (mode == "txt2img" or editor or scale))
         on(self.w_variants, not scale)                       # the upscale workflow gives one picture
         on(self.w_adv["Base res."], not scale)               # the picture goes in at its own size
+        t2i = mode == "txt2img"            # Context, Mask grow and Mask blur mean nothing without a picture: not shown
+        for k in ("Context", "Mask grow", "Mask blur"):
+            for w in (self.l_adv[k], self.w_adv[k]):
+                if t2i:
+                    w.grid_remove()
+                else:
+                    w.grid()
         on(self.w_adv["Context"], masked)
         on(self.w_adv["Mask grow"], masked and not editor)
         on(self.w_adv["Mask blur"], masked and not editor)
@@ -1711,7 +1720,9 @@ class App:
                         pass
         for w in (self.w_steps, self.w_cfg):
             w.configure(state="normal" if "steps" in vals else "disabled")
-        # Sampler and Scheduler can be changed (under Advanced); a workflow that sets one another way (Flux 2's scheduler) keeps it
+        # Sampler and Scheduler can be changed (under Advanced); Flux 2 Klein's own scheduler is "Flux2Scheduler" in the list
+        names = [n for n in getattr(self, "_sched_names", []) if n != FLUX2_SCHEDULER]
+        self.cb_sched["values"] = ([FLUX2_SCHEDULER] + names) if vals.get("scheduler") == FLUX2_SCHEDULER else names
         self.cb_sampler.configure(state="readonly" if "sampler" in vals else "disabled")
         self.cb_sched.configure(state="readonly" if "scheduler" in vals else "disabled")
 
@@ -1859,7 +1870,7 @@ class App:
         if info.get("samplers"):
             self.cb_sampler["values"] = info["samplers"]
         if info.get("scheds"):
-            self.cb_sched["values"] = info["scheds"]
+            self._sched_names = list(info["scheds"])
         if "fooocus" in info:
             ok = info["fooocus"] is not None
             self.cb_fooocus.configure(state="normal" if ok else "disabled",

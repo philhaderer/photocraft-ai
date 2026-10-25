@@ -485,16 +485,62 @@ def sampler_values(graph: dict) -> dict:
     nid = main_sampler(graph)
     out = {}
     if nid is None:
-        sel = _sampler_select(graph)       # Flux 2 Klein: SamplerCustomAdvanced; only the sampler is a plain value
-        if sel is not None and isinstance(graph[sel].get("inputs", {}).get("sampler_name"), str):
-            out["sampler"] = graph[sel]["inputs"]["sampler_name"]
-        return out
+        return _custom_values(graph)
     inp = graph[nid].get("inputs", {})
     for key, name in (("steps", "steps"), ("cfg", "cfg"), ("denoise", "denoise"), ("sampler", "sampler_name"), ("scheduler", "scheduler")):
         v = inp.get(name)
         if v is not None and not isinstance(v, list):
             out[key] = v
     return out
+
+
+FLUX2_SCHEDULER = "Flux2Scheduler"      # what a Flux 2 Klein workflow runs when no other scheduler is picked
+
+
+def _custom_nodes(graph: dict) -> dict:
+    """The parts of a SamplerCustomAdvanced workflow (Flux 2 Klein): {select, guider, sched} node ids (missing ones are absent)."""
+    out = {}
+    for key, cls in (("select", ("KSamplerSelect",)), ("guider", ("CFGGuider",)), ("sched", ("Flux2Scheduler", "BasicScheduler"))):
+        ids = [nid for nid, n in graph.items() if isinstance(n, dict) and n.get("class_type") in cls]
+        if ids:
+            out[key] = ids[-1]
+    return out
+
+
+def _custom_values(graph: dict) -> dict:
+    parts, out = _custom_nodes(graph), {}
+    def plain(nid, name):
+        v = graph[nid].get("inputs", {}).get(name)
+        return v if v is not None and not isinstance(v, list) else None
+    if "select" in parts and isinstance(plain(parts["select"], "sampler_name"), str):
+        out["sampler"] = plain(parts["select"], "sampler_name")
+    if "guider" in parts and isinstance(plain(parts["guider"], "cfg"), (int, float)):
+        out["cfg"] = plain(parts["guider"], "cfg")
+    if "sched" in parts:
+        n = graph[parts["sched"]]
+        if isinstance(plain(parts["sched"], "steps"), (int, float)):
+            out["steps"] = plain(parts["sched"], "steps")
+        out["scheduler"] = FLUX2_SCHEDULER if n["class_type"] == "Flux2Scheduler" else plain(parts["sched"], "scheduler")
+    return {k: v for k, v in out.items() if v is not None}
+
+
+def _set_custom(g: dict, steps, cfg, sampler, scheduler) -> None:
+    parts = _custom_nodes(g)
+    if "select" in parts and sampler and "sampler_name" in g[parts["select"]]["inputs"]:
+        g[parts["select"]]["inputs"]["sampler_name"] = sampler
+    if "guider" in parts and cfg is not None and not isinstance(g[parts["guider"]]["inputs"].get("cfg"), list):
+        g[parts["guider"]]["inputs"]["cfg"] = cfg
+    if "sched" in parts:
+        node = g[parts["sched"]]
+        if steps is not None and not isinstance(node["inputs"].get("steps"), list):
+            node["inputs"]["steps"] = int(steps)
+        if scheduler and scheduler != FLUX2_SCHEDULER:
+            if node["class_type"] == "Flux2Scheduler" and "guider" in parts:     # another scheduler: a plain one in its place
+                model = g[parts["guider"]]["inputs"].get("model")
+                g[parts["sched"]] = {"class_type": "BasicScheduler", "_meta": node.get("_meta", {}),
+                                     "inputs": {"model": model, "scheduler": scheduler, "steps": node["inputs"].get("steps", 4), "denoise": 1.0}}
+            elif node["class_type"] == "BasicScheduler":
+                node["inputs"]["scheduler"] = scheduler
 
 
 def _sampler_select(graph: dict) -> str | None:
@@ -508,9 +554,7 @@ def set_sampler(graph: dict, steps=None, cfg=None, denoise=None, sampler=None, s
     g = json.loads(json.dumps(graph))
     nid = main_sampler(g)
     if nid is None:
-        sel = _sampler_select(g)
-        if sel is not None and sampler and "sampler_name" in g[sel].get("inputs", {}):
-            g[sel]["inputs"]["sampler_name"] = sampler
+        _set_custom(g, steps, cfg, sampler, scheduler)
         return g
     inp = g[nid].get("inputs", {})
     for name, v in (("sampler_name", sampler), ("scheduler", scheduler)):

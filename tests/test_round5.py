@@ -117,7 +117,7 @@ def main():
     app.v_scheduler.set("karras")
     assert app._request().sampler_override == {"sampler": "dpmpp_2m", "scheduler": "karras"}
     pick("flux2", "edit")                                   # SamplerCustomAdvanced: the sampler only
-    assert app.cb_sampler["state"] == "readonly" and app.cb_sched["state"] == "disabled"
+    assert app.cb_sampler["state"] == "readonly" and app.cb_sched["state"] == "readonly"      # Flux 2: its scheduler is in the list too
 
     # the workflow side: KSampler and KSamplerSelect
     tpl = workflows.load_template(t.ROOT / "workflows" / "qwen-image-21-edit.json")
@@ -126,7 +126,7 @@ def main():
     assert (ks["sampler_name"], ks["scheduler"], ks["steps"]) == ("dpmpp_2m", "karras", 12)
     assert tpl["10"]["inputs"]["sampler_name"] == "euler"   # the template itself is untouched
     f2 = workflows.load_template(t.ROOT / "workflows" / "flux2-klein-edit.json")
-    assert workflows.sampler_values(f2) == {"sampler": "euler"}
+    assert workflows.sampler_values(f2)["sampler"] == "euler"
     assert workflows.set_sampler(f2, sampler="dpmpp_2m", scheduler="karras")["198"]["inputs"]["sampler_name"] == "dpmpp_2m"
 
     # Krea 2 Turbo: Text to image (prompt enhancer switchable) and Expand (mask workflow); no LoRA box
@@ -250,6 +250,35 @@ def main():
     assert app.v_seed.get() == -1 and app.v_sharpen.get() == 0.0 and app.v_describe.get() is False and app.v_detail.get() == 1.0
     assert app._prompt_text() == "" and app.t_neg.get("1.0", "end").strip() == "" and r.loras == [] and app.v_turbo.get() is True
     assert app.v_model.get() == "qwen" and app.v_mode.get() == "edit" and app.v_workflow.get() == "qwen-image-21-edit.json"
+
+    # Flux 2 Klein (SamplerCustomAdvanced): steps, CFG, sampler and scheduler are usable and reach the graph
+    f2e = workflows.load_template(t.ROOT / "workflows" / "flux2-klein-edit.json")
+    assert workflows.sampler_values(f2e) == {"sampler": "euler", "cfg": 1, "steps": 4, "scheduler": "Flux2Scheduler"}
+    g2 = workflows.set_sampler(f2e, steps=8, cfg=2.5, sampler="dpmpp_2m", scheduler="Flux2Scheduler")
+    assert g2["205"]["inputs"]["steps"] == 8 and g2["204"]["inputs"]["cfg"] == 2.5 and g2["198"]["inputs"]["sampler_name"] == "dpmpp_2m"
+    assert g2["205"]["class_type"] == "Flux2Scheduler"                                    # the workflow's own scheduler stays
+    g2 = workflows.set_sampler(f2e, steps=6, scheduler="karras")
+    assert g2["205"]["class_type"] == "BasicScheduler" and g2["205"]["inputs"]["scheduler"] == "karras" and g2["205"]["inputs"]["steps"] == 6
+    assert g2["205"]["inputs"]["model"] == f2e["204"]["inputs"]["model"]
+    assert all(str(v[0]) in g2 for n in g2.values() for v in n["inputs"].values() if isinstance(v, list) and v)
+    assert f2e["205"]["class_type"] == "Flux2Scheduler"
+    pick("flux2", "edit")
+    assert app.w_steps["state"] == "normal" and app.w_cfg["state"] == "normal" and app.cb_sampler["state"] == "readonly" and app.cb_sched["state"] == "readonly"
+    assert app.cb_sched["values"][0] == "Flux2Scheduler" and app.v_scheduler.get() == "Flux2Scheduler" and app.v_steps.get() == 4
+    app.v_steps.set(6); app.v_scheduler.set("karras")
+    assert app._request().sampler_override == {"steps": 6, "scheduler": "karras"}
+    # Context, Mask grow and Mask blur are not shown for text to image (any model); shown again elsewhere
+    gone = {k: rec(app.w_adv[k], "grid_remove") for k in ("Context", "Mask grow", "Mask blur")}
+    back = {k: rec(app.w_adv[k], "grid") for k in ("Context", "Mask grow", "Mask blur")}
+    pick("flux3", "txt2img")
+    assert all(gone.values()) and not any(back.values())
+    for k in back: back[k].clear()
+    pick("flux3", "edit")
+    assert all(back.values())
+    # Flux 3 restore prompt without "people" (an older copy in the field is replaced); a tip under the prompt in Edit whole image
+    assert "people" not in models.FLUX3_DEFAULT and models.FLUX3_DEFAULT_OLD in models.STOCK_PROMPTS
+    for key in ("qwen", "flux2", "flux3", "fibo"):
+        assert models.BY_KEY[key].modes["edit"].prompt_tip == models.EDIT_TIP, key
 
     # Remove Selection with the name of the object (Flux Klein): the instruction names it; runs.jsonl says what was sent
     import tempfile

@@ -93,7 +93,7 @@ def main():
     assert app._hint_text == models.DESCRIBE_TIP
     app.v_mode.set("edit")
     app._on_mode()
-    assert app._hint_text == ""
+    assert app._hint_text == models.EDIT_TIP          # the tip under the prompt in Edit whole image
     assert app.v_workflow.get() == "flux3-klein-edit.json" and app.t_prompt.get("1.0", "end").strip() == ""
     app.t_prompt.insert("1.0", "make it night")
     app.v_mode.set("upscale")
@@ -179,6 +179,9 @@ def main():
     app._on_model()
     assert app.t_prompt["highlightbackground"] == gui.ACCENT
     app.v_mode.set("edit")
+    app._on_model()
+    assert app._hint_text == models.EDIT_TIP            # Edit whole image: the tip under the prompt, also orange
+    app.v_mode.set("txt2img")
     app._on_model()
     assert app.t_prompt["highlightbackground"] != gui.ACCENT
     assert models.BY_KEY["moss"].modes["txt2img"].settings["enhance"] is False   # MOSS: the prompt enhancer starts off

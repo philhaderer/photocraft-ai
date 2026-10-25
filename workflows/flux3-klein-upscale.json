@@ -107,7 +107,7 @@
   },
   "_meta": {
    "title": "pc:prompt The request (what each tile is asked to do)",
-   "pc_default_prompt": "Restore the photo: remove blur, noise and compression artifacts and recover sharp, natural detail, keeping the same composition, people and colors."
+   "pc_default_prompt": "Restore the photo: remove blur, noise and compression artifacts and recover sharp, natural detail, keeping the same composition and colors."
   }
  },
  "144": {

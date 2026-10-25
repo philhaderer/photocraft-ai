@@ -915,7 +915,7 @@ class Bridge:
             pc.open(name)
             sizes.append([w, h])
         progress(1.0, f"Done: opened as a new document (seed {p.seed})", phase="place")
-        return {"seed": p.seed, "vgl": "", "layers": [], "region": region.__dict__, "size": sizes[-1],
+        return {"seed": p.seed, "vgl": self.last_vgl, "layers": [], "region": region.__dict__, "size": sizes[-1],
                 "pipeline": self.pipeline, "documents": len(items)}
 
     def _select_new_area(self, req: Request, orig: int, tag: str) -> "imaging.Box":
