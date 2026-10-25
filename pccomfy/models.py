@@ -20,6 +20,7 @@ class Mode:
     prompt_tip: str = ""            # an orange hint under the prompt field in this mode (the field gets an orange frame)
     run_as: str = ""                # the mode the bridge runs when it is another one (Fibo "Refine" runs as a whole-image edit)
     fixed_prompt: bool = False      # the mode sends a fixed instruction (Remove): the field shows it, read-only
+    remove_text: bool = False       # Remove Selection: the field stays usable and takes an optional name of the object ("the dog")
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,7 @@ FLUX2_REFINE_PROMPTS = (
     ("Studio portrait", RELIGHT_STUDIO, "Relight: a professionally lit studio portrait with soft, diffused light."),
 )
 FIBO_REFINE = "relight the scene to natural lighting"
+REMOVE_NAME_TIP = "Optional: name what to remove (\"the dog\"). Empty = everything inside the selection."
 DESCRIBE_TIP = "Describe the image before this text for better results."
 STOCK_PROMPTS = {PLACEHOLDER, FLUX2_DEFAULT, FLUX3_DEFAULT, RELIGHT_NEUTRAL, RELIGHT_STUDIO, FIBO_REFINE}   # texts the window may replace when the mode changes
 
@@ -68,7 +70,7 @@ _REMOVE = "Select the object to remove (tightly, but with the whole object insid
 
 QWEN = Model(
     "qwen", "Qwen2.1",
-    "Qwen Image 2.1 Edit: an instruction editor with a very good Generative fill, Remove (works without a prompt), "
+    "Qwen Image 2.1 Edit: an instruction editor with a very good Generative fill, Remove Selection (works without a prompt), "
     "Expand and whole-image edits. Reference images work with the picture as image 1 and the inserted one as image 2.\n"
     "Base res. 1024 is the best size for it: 1224 and 1536 shift the filled area.",
     {
@@ -93,19 +95,20 @@ QWEN = Model(
     })
 
 FLUX2 = Model(
-    "flux2", "Flux2Klein",
-    "FLUX.2 Klein 9B: whole-image edits, Remove, Expand (a test), upscale and refine (the Ultra real LoRA is the switch).",
+    "flux2", "Flux2Klein Edit",
+    "FLUX.2 Klein 9B: whole-image edits, Remove Selection, Expand, upscale and refine (the Ultra real LoRA is the switch).",
     {
         "edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none")),
-        "remove": Mode("flux2-klein-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0), fixed_prompt=True),
+        "remove": Mode("flux2-klein-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
         "outpaint": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="auto")),
         "upscale": Mode("flux2-klein-upscale.json", dict(scale=1.5, turbo=True, context=0.0), FLUX2_DEFAULT, prompt_tip=DESCRIBE_TIP),
         "refine": Mode("flux2-klein-upscale.json", dict(turbo=True, context=0.0), FLUX2_DEFAULT, FLUX2_REFINE_PROMPTS, DESCRIBE_TIP),
     },
     mode_tips={
         "edit": _EDIT + "\nIf nothing happens, generate again (new seed) or word it more fully (\"Remove all buildings and fill with sky\").",
-        "remove": _REMOVE + "\nWorks only sometimes: generate again if the object is still there. The prompt field shows the instruction that is sent.",
-        "outpaint": _EXPAND + "\nA test for Flux 2 Klein.",
+        "remove": _REMOVE + "\nThe text is optional: naming the object (\"the dog\") tells the model what to take out. "
+                  "Works only sometimes: generate again if the object is still there.",
+        "outpaint": _EXPAND,
         "upscale": "Enlarges the picture (or the selection) by the factor and opens the result as a NEW document; your document stays as it is.\n"
                    "The prompt starts with the workflow's own sentence; describe the picture in front of it for better results.\n"
                    "Results above 24 megapixels are refused.",
@@ -115,27 +118,23 @@ FLUX2 = Model(
     })
 
 FLUX3 = Model(
-    "flux3", "Flux3Klein",
-    "FLUX.3 Klein: text to image (with the Flux 3 prompt upsampler, switchable) and whole-image edits (base res 1536), Remove, Expand (a test), and the SeedVR2 + tiles upscale / refine (the Restore LoRA and the SeedVR2 stage are switches).",
+    "flux3", "Flux3Klein Edit",
+    "FLUX.3 Klein: text to image (with the Flux 3 prompt upsampler, switchable) and whole-image edits (base res 1536), Remove Selection, Expand and the SeedVR2 + tiles upscale (the Restore LoRA and the SeedVR2 stage are switches).",
     {
         "txt2img": Mode("flux3-klein-t2i.json", dict(base_res=1536, layer_mask="none", enhance=False)),
         "edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none")),
-        "remove": Mode("flux3-klein-edit.json", dict(_SOFT, base_res=1536, context=0.4, feather_pct=10.0), fixed_prompt=True),
+        "remove": Mode("flux3-klein-edit.json", dict(_SOFT, base_res=1536, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
         "outpaint": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="auto")),
         "upscale": Mode("flux3-klein-upscale.json", dict(scale=1.5, turbo=True, stage_on=True, context=0.0), FLUX3_DEFAULT, prompt_tip=DESCRIBE_TIP),
-        "refine": Mode("flux3-klein-upscale.json", dict(turbo=True, stage_on=True, context=0.0), FLUX3_DEFAULT, prompt_tip=DESCRIBE_TIP),
     },
     mode_tips={
         "txt2img": _TXT + "\nThe Flux 3 prompt upsampler (the checkbox under the prompt) can write the long prompt from your short text.",
         "edit": _EDIT + "\nIf nothing happens, generate again (new seed) or word it more fully (\"Remove all buildings and fill with sky\").",
-        "remove": _REMOVE + "\nThe prompt field shows the instruction that is sent.",
-        "outpaint": _EXPAND + "\nA test for Flux 3 Klein.",
+        "remove": _REMOVE + "\nThe text is optional: naming the object (\"the dog\") tells the model what to take out.",
+        "outpaint": _EXPAND,
         "upscale": "Enlarges the picture (or the selection) by the factor and opens the result as a NEW document; your document stays as it is.\n"
                    "SeedVR2 cleans the photo, Flux 3 Klein redraws it in tiles. The prompt starts with the workflow's own sentence; "
                    "describe the picture in front of it for better results.\nResults above 24 megapixels are refused.",
-        "refine": "Cleans up the picture (or the selection) at the SAME size and puts the result on a new layer.\n"
-                  "Same workflow as Upscale at factor 1. The prompt starts with the workflow's own sentence; "
-                  "describe the picture in front of it for better results.",
     })
 
 # MOSS: the DMD2 speed LoRA (8 steps, CFG 1.5) is the model's own LoRA; the Lenovo UltraReal LoRA and the skip-layer
@@ -156,7 +155,7 @@ MOSS = Model(
 
 FIBO = Model(
     "fibo", "Fibo 2.0 Edit",
-    "Fibo 2.0 Edit Turbo: an instruction editor. Text to image, Fill, Remove, Reference (the simple style works best), whole-image edits and Refine (relight). "
+    "Fibo 2.0 Edit Turbo: an instruction editor. Text to image, Fill, Remove Selection, Reference (the simple style works best), whole-image edits and Refine (relight). "
     "The VGL variants (a text model writes the prompt) are chosen under the prompt.",
     {
         "txt2img": Mode("fibo2-t2i.json", dict(base_res=1224, layer_mask="none", enhance=False)),
@@ -178,7 +177,7 @@ FIBO = Model(
         "refine": "Relights the whole picture (a whole-image edit) and puts the result on a new layer at the same size. "
                   "The prompt starts with \"relight the scene to natural lighting\"; change it for other edits. A selection is ignored.",
         "inpaint": "Select an area (Lasso / Rectangular Marquee), type what should appear there (\"a helicopter on the meadow\"), "
-                   "then Generate. A text is required; to take something away use Remove.\n"
+                   "then Generate. A text is required; to take something away use Remove Selection.\n"
                    "The selection is drawn into the picture as a red outline and your text is wrapped in a fixed instruction "
                    "(place it only inside the outline), so the object lands where you marked.\n"
                    "With a text model under the prompt, it writes the long prompt from your text (about 25 s slower).",

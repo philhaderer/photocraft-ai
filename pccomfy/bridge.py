@@ -61,6 +61,7 @@ class Request:
     fooocus: bool = True                 # inpaint/outpaint: Fooocus patch (SDXL) when the server has it
     remove: bool = False                 # "Remove" (the bridge runs it as an inpaint with the removal instruction)
     remove_tries: int = 3                # tries (new seed each) until the object is really gone
+    remove_target: str = ""              # Remove Selection (Flux Klein): the name of what to remove ("the dog"); empty = the whole selection
     enhance: bool = True                 # text-model workflows: let the text model write the prompt (off = typed text as is)
     turbo: bool = True                   # workflows with a speed (turbo) LoRA, nodes titled pc:lora: off = cut it out, full steps
     layer_mask: str = "auto"             # "auto" = none for Fill with an editor that ignores the mask, else soft;
@@ -79,7 +80,7 @@ class Request:
     loras: list = field(default_factory=list)   # extra LoRAs [(file name, strength), ...] chained in front of the samplers
     match: float = 0.0                   # 0..1: pull colours that are louder than the surroundings back towards them (Fill / Expand / Reference)
     sharpen: float = 0.0                 # 0..1: a light sharpening of the result (high-pass style, like KJNodes' Image Sharpen)
-    sampler_override: dict = field(default_factory=dict)   # {"steps": .., "cfg": .., "denoise": ..} typed over the workflow's sampler
+    sampler_override: dict = field(default_factory=dict)   # {"steps": .., "cfg": .., "denoise": .., "sampler": .., "scheduler": ..} typed over the workflow's sampler
     doc_tag: str = ""                    # Upscale: model and options in the new document's name ("Flux3Klein x1.5 SeedVR2")
     label: str = ""                      # added to the layer names (a comparison run: "res 1024")
     preset: str = ""                     # name of the preset used: the layers are named "<preset> #<run_no>"
@@ -233,8 +234,19 @@ REMOVE_PROMPT_ALT = ("Erase everything inside the red {shape} completely: the wh
                      "surroundings. Also remove the red {shape} itself.")
 
 
-def remove_prompt(mask: "Image.Image", attempt: int = 0) -> str:
-    """The removal instruction; "rectangle" for a rectangular selection (tested), otherwise "outline"."""
+# With a name for the object (an optional text, Flux Klein): the model is told WHAT to remove, not only where.
+REMOVE_TARGET_PROMPT = ("Remove {target} that is inside the red {shape}, including every part of it and anything it holds or "
+                        "stands on. Paint the empty scenery behind it, continuing the surroundings. Also remove the red {shape} itself.")
+REMOVE_TARGET_PROMPT_ALT = ("Delete {target} inside the red {shape} completely and fill that area with the background that would be "
+                            "behind it. Keep everything outside the red {shape} as it is. Also remove the red {shape} itself.")
+
+
+def remove_prompt(mask: "Image.Image", attempt: int = 0, target: str = "") -> str:
+    """The removal instruction; "rectangle" for a rectangular selection (tested), otherwise "outline". With a `target`
+    (the name of the object) the instruction names it."""
+    target = target.strip().rstrip(".!")
+    if target:
+        return (REMOVE_TARGET_PROMPT_ALT if attempt % 2 else REMOVE_TARGET_PROMPT).format(target=target, shape=_shape(mask))
     return (REMOVE_PROMPT_ALT if attempt % 2 else REMOVE_PROMPT).format(shape=_shape(mask))
 
 
@@ -368,16 +380,16 @@ class Bridge:
         Generative fill with an editor and no text is an error: Remove is the way to take something away."""
         if req.mode != "inpaint" or not wfs or not wfs[0]:
             if req.remove:
-                raise BridgeError("Remove needs a Fibo workflow (pick one in the Workflow list).")
+                raise BridgeError("Remove Selection needs an instruction-editor workflow (Fibo, Qwen, Flux Klein).")
             return ""
         editor = not any(mask_is_used(json.loads(Path(w).read_text(encoding="utf-8"))) for w in wfs)
         if req.remove:
             if not editor:
-                raise BridgeError("Remove needs a Fibo workflow, this one uses the mask to inpaint.")
+                raise BridgeError("Remove Selection needs an instruction-editor workflow, this one uses the mask to inpaint.")
             return "remove"
         if editor and not p.prompt.strip():
             raise BridgeError("Generative fill needs a text: describe what should appear in the selection "
-                              "(\"a helicopter on the meadow\"). To take something away use \"Remove\".")
+                              "(\"a helicopter on the meadow\"). To take something away use \"Remove Selection\".")
         return ""
 
     # ---------- waiting for ComfyUI, with separate prompt / image phases ----------
@@ -577,7 +589,7 @@ class Bridge:
                 else:
                     gp = dataclasses.replace(p, prompt=reference_prompt(p.prompt, req.ref_collage, reference_where(bbox, region)))
             if removal:   # fixed instruction, the text model is bypassed
-                gp = dataclasses.replace(p, prompt=remove_prompt(mask.crop(region.pil())))
+                gp = dataclasses.replace(p, prompt=remove_prompt(mask.crop(region.pil()), 0, req.remove_target))
             elif fill:    # marked area + fixed wrapper around the typed text; goes through the text model only when the
                 #           workflow has one and "Enhance" is on (live test: the same placement, ~25 s slower, fewer
                 #           doubled objects in 1 of 5 pictures), otherwise it is sent as it is
@@ -591,10 +603,11 @@ class Bridge:
             for attempt in range(tries):
                 if attempt:   # the object is still there: same picture, new seed and the other wording
                     gp = dataclasses.replace(gp, seed=(gp.seed + 7919 * attempt) % (2**31),
-                                             prompt=remove_prompt(mask.crop(region.pil()), attempt))
+                                             prompt=remove_prompt(mask.crop(region.pil()), attempt, req.remove_target))
                     p.seed = gp.seed
                 graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name, force_plain=marked and not (fill and req.enhance and prompt_phase_nodes(workflows.load_template(wf))))
                 self._save_graph(graph)
+                self._log_run(req, gp, wf, attempt)
                 prompt_id = self.comfy.queue(graph)
                 progress(start, f"Queued in ComfyUI ({self.pipeline}{suffix})" if not attempt
                          else f"Object still there, trying again ({attempt + 1}/{tries})", phase="prepare")
@@ -722,7 +735,7 @@ class Bridge:
             if off:
                 tpl = workflows.bypass_stage(tpl, off)
             if req.sampler_override:
-                tpl = workflows.set_sampler(tpl, **{k: v for k, v in req.sampler_override.items() if k in ("steps", "cfg", "denoise")})
+                tpl = workflows.set_sampler(tpl, **{k: v for k, v in req.sampler_override.items() if k in ("steps", "cfg", "denoise", "sampler", "scheduler")})
             if req.loras:
                 tpl = workflows.add_loras(tpl, req.loras)
             names = getattr(self, "_real_lora_names", None)
@@ -746,6 +759,20 @@ class Bridge:
         return workflows.inpaint(p, image_name, mask_name), "out"
 
     # ---------- PhotoCraft ----------
+
+    def _log_run(self, req: Request, gp, wf, attempt: int = 0):
+        """One line per graph sent to ComfyUI (exchange folder, runs.jsonl, the last 100): when, which function and workflow, the
+        seed, the size and the prompt really sent - to see afterwards what a run that "did not work" was given."""
+        try:
+            f = self.exchange / "runs.jsonl"
+            old = f.read_text(encoding="utf-8").splitlines()[-99:] if f.exists() else []
+            rec = {"time": time.strftime("%Y-%m-%d %H:%M:%S"), "mode": ("remove" if req.remove else req.mode), "attempt": attempt,
+                   "workflow": Path(wf).name if wf else "builtin", "seed": gp.seed, "size": [gp.width, gp.height],
+                   "turbo": req.turbo, "enhance": req.enhance, "layer_mask": req.layer_mask, "base_res": req.base_res,
+                   "context": req.context, "sampler": req.sampler_override, "prompt": (gp.prompt or "")[:600]}
+            f.write_text("\n".join(old + [json.dumps(rec, ensure_ascii=False)]) + "\n", encoding="utf-8")
+        except (OSError, TypeError, ValueError):
+            pass
 
     def _save_graph(self, graph: dict):
         """The last workflow sent to ComfyUI (exchange folder, last-graph.json): what it really got - prompt, LoRAs, steps."""

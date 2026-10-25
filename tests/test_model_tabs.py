@@ -20,7 +20,7 @@ def main():
             assert (t.ROOT / "workflows" / w).exists(), (m.key, w)
         for mode in m.modes:
             assert mode in dict(gui.MODE_LABELS), (m.key, mode)
-    assert [m.label for m in models.MODELS] == ["Qwen2.1", "Flux2Klein", "Flux3Klein", "MOSS Image", "Fibo 2.0 Edit"]
+    assert [m.label for m in models.MODELS] == ["Qwen2.1", "Flux2Klein Edit", "Flux3Klein Edit", "MOSS Image", "Fibo 2.0 Edit"]
 
     app = gui.App(cfgmod.load())
     wfdir = Path(app.workflows_dir)
@@ -96,9 +96,10 @@ def main():
     assert app._hint_text == ""
     assert app.v_workflow.get() == "flux3-klein-edit.json" and app.t_prompt.get("1.0", "end").strip() == ""
     app.t_prompt.insert("1.0", "make it night")
-    app.v_mode.set("refine")
+    app.v_mode.set("upscale")
     app._on_mode()
     assert app.v_workflow.get() == "flux3-klein-upscale.json" and app.t_prompt.get("1.0", "end").strip() == "make it night"  # typed text stays
+    assert "refine" not in models.BY_KEY["flux3"].modes and app.rb_modes["refine"]["state"] == "disabled"   # Flux 3 Refine is off
 
     # a model without the current mode: the first one it has
     app.v_model.set("flux2")
@@ -117,7 +118,8 @@ def main():
     assert app.v_workflow.get() == "fibo2-edit-vgl-bionic-qwen35-9b.json" and app.v_enhance.get() is True
     app.v_mode.set("outpaint")
     app._on_mode()
-    assert app.v_workflow.get() == "fibo2-edit-vgl-bionic-qwen35-9b.json" and app.v_model.get() == "fibo" and app.v_enhance.get() is True
+    assert app.v_workflow.get() == "fibo2-edit-plain.json" and app.v_model.get() == "fibo" and app.v_enhance.get() is False   # Expand: no prompt writer
+    assert app._request().enhance is False
     app._apply_settings({"workflow": "qwen-image-21-edit.json", "mode": "inpaint"})
     assert app.v_model.get() == "qwen"
 
@@ -182,13 +184,13 @@ def main():
     assert mm["fibo"].modes["inpaint"].settings["layer_mask"] == "soft"
     assert mm["flux3"].modes["txt2img"].settings["enhance"] is False
     assert [p[0] for p in mm["flux2"].modes["refine"].prompts] == ["Default", "Neutral", "Studio portrait"]
-    assert mm["flux3"].modes["refine"].prompts == () and mm["flux2"].modes["upscale"].prompts == ()   # Flux 3: the workflow's own prompt only
+    assert mm["flux3"].modes["upscale"].prompts == () and mm["flux2"].modes["upscale"].prompts == ()   # Flux 3: the workflow's own prompt only
     # the prompt a refine starts with is the one the workflow sends by default
     import json as _j
     wf2 = _j.loads((t.ROOT / "workflows" / "flux2-klein-upscale.json").read_text(encoding="utf-8"))
     wf3 = _j.loads((t.ROOT / "workflows" / "flux3-klein-upscale.json").read_text(encoding="utf-8"))
     assert wf2["206"]["_meta"]["pc_default_prompt"] == models.FLUX2_DEFAULT == mm["flux2"].modes["refine"].prompt_hint
-    assert wf3["24"]["_meta"]["pc_default_prompt"] == models.FLUX3_DEFAULT == mm["flux3"].modes["refine"].prompt_hint
+    assert wf3["24"]["_meta"]["pc_default_prompt"] == models.FLUX3_DEFAULT == mm["flux3"].modes["upscale"].prompt_hint
     assert wf3["159"]["inputs"]["text"] == ["24", 0] and "158" not in wf3
     assert mm["flux2"].modes["refine"].prompt_tip == mm["flux3"].modes["upscale"].prompt_tip == models.DESCRIBE_TIP
     # Remove (a test) for Flux 2 and 3: the Qwen way, soft mask with 10 % feather
@@ -225,17 +227,19 @@ def main():
     app.v_mode.set("edit")
     app._on_mode()
     assert app.v_workflow.get() == "fibo2-edit-plain.json"
-    # Remove for Flux: the field shows the instruction that is sent (read-only); other models leave it empty
-    from pccomfy.bridge import REMOVE_PROMPT
+    # Remove Selection for Flux: the field is free for an optional name of the object; it travels as remove_target
     for k in ("flux2", "flux3"):
         app.v_model.set(k)
         app.v_mode.set("remove")
         app._on_model()
-        assert app.t_prompt.get("1.0", "end").strip() == REMOVE_PROMPT.format(shape="outline"), k
-        assert str(app.t_prompt.cget("state")) == "disabled"
+        assert str(app.t_prompt.cget("state")) == "normal" and app._hint_text == models.REMOVE_NAME_TIP, k
+        assert app._request().remove_target == ""
+        app.t_prompt.insert("1.0", "the dog")
+        assert app._request().remove_target == "the dog" and app._request().mode == "remove"
+        app.t_prompt.delete("1.0", "end")
         app.v_mode.set("edit")
         app._on_mode()
-        assert app.t_prompt.get("1.0", "end").strip() == "" and str(app.t_prompt.cget("state")) == "normal"
+        assert app._request().remove_target == ""
     app.v_model.set("qwen")
     app.v_mode.set("remove")
     app._on_model()

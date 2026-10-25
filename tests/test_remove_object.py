@@ -106,7 +106,7 @@ def main():
         req.params = workflows.GenParams(prompt="", seed=7)
         b.run(req)
     except BridgeError as e:
-        assert "Fibo workflow" in str(e)
+        assert "instruction-editor workflow" in str(e)
     else:
         raise AssertionError("expected error")
 

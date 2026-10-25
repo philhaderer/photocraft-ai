@@ -485,6 +485,9 @@ def sampler_values(graph: dict) -> dict:
     nid = main_sampler(graph)
     out = {}
     if nid is None:
+        sel = _sampler_select(graph)       # Flux 2 Klein: SamplerCustomAdvanced; only the sampler is a plain value
+        if sel is not None and isinstance(graph[sel].get("inputs", {}).get("sampler_name"), str):
+            out["sampler"] = graph[sel]["inputs"]["sampler_name"]
         return out
     inp = graph[nid].get("inputs", {})
     for key, name in (("steps", "steps"), ("cfg", "cfg"), ("denoise", "denoise"), ("sampler", "sampler_name"), ("scheduler", "scheduler")):
@@ -494,13 +497,25 @@ def sampler_values(graph: dict) -> dict:
     return out
 
 
-def set_sampler(graph: dict, steps=None, cfg=None, denoise=None) -> dict:
+def _sampler_select(graph: dict) -> str | None:
+    """Id of the KSamplerSelect node (the sampler name of a SamplerCustomAdvanced workflow), None when there is none."""
+    ids = [nid for nid, n in graph.items() if isinstance(n, dict) and n.get("class_type") == "KSamplerSelect"]
+    return ids[-1] if ids else None
+
+
+def set_sampler(graph: dict, steps=None, cfg=None, denoise=None, sampler=None, scheduler=None) -> dict:
     """The main sampler runs with these values (None = leave as the workflow has it). A copy is returned."""
     g = json.loads(json.dumps(graph))
     nid = main_sampler(g)
     if nid is None:
+        sel = _sampler_select(g)
+        if sel is not None and sampler and "sampler_name" in g[sel].get("inputs", {}):
+            g[sel]["inputs"]["sampler_name"] = sampler
         return g
     inp = g[nid].get("inputs", {})
+    for name, v in (("sampler_name", sampler), ("scheduler", scheduler)):
+        if v and name in inp and not isinstance(inp[name], list):
+            inp[name] = v
     for name, v in (("steps", steps), ("cfg", cfg), ("denoise", denoise)):
         if v is not None and name in inp and not isinstance(inp[name], list):
             inp[name] = v
