@@ -566,54 +566,6 @@ def set_sampler(graph: dict, steps=None, cfg=None, denoise=None, sampler=None, s
     return g
 
 
-DESCRIBE_LLM = "qwen3.5_9b_int8_convrot.safetensors"      # the Qwen 3.5 9B that writes Fibo's enhanced prompts (it can see pictures)
-DESCRIBE_SYSTEM = ("Describe the picture in ONE short sentence of at most 25 words: the main subject(s) and the setting. For people "
-                   "give apparent gender and age. No colours, no lighting, no remarks on image quality, no preamble.")
-
-
-def add_description(graph: dict, position: str = "front", megapixels: float = 0.5, clip_name: str = DESCRIBE_LLM) -> dict:
-    """"Send LLM description": a text model looks at the picture (scaled to `megapixels`, 0 = as it is) and writes a description that
-    is put in front of (`position` "front") or after the prompt of the pc:prompt node. Call it AFTER apply_template. A copy is
-    returned; a graph without a pc:image or pc:prompt node comes back unchanged."""
-    g = json.loads(json.dumps(graph))
-    img = next((nid for nid, n in g.items() if isinstance(n, dict) and "image" in _tags(n) and n.get("class_type") == "LoadImage"), None)
-    prm = next((nid for nid, n in g.items() if isinstance(n, dict) and "prompt" in _tags(n)), None)
-    if img is None or prm is None:
-        return g
-    src = [img, 0]
-    if megapixels and float(megapixels) > 0:
-        g["pcd_size"] = {"class_type": "ImageScaleToTotalPixels", "_meta": {"title": "Describe: picture for the analysis"},
-                         "inputs": {"upscale_method": "lanczos", "megapixels": round(float(megapixels), 3), "resolution_steps": 1, "image": src}}
-        src = ["pcd_size", 0]
-    g["pcd_clip"] = {"class_type": "CLIPLoader", "_meta": {"title": "Describe: text model"},
-                     "inputs": {"clip_name": clip_name, "type": "stable_diffusion", "device": "default"}}
-    g["pcd_sys"] = {"class_type": "PrimitiveStringMultiline", "_meta": {"title": "Describe: system prompt"}, "inputs": {"value": DESCRIBE_SYSTEM}}
-    g["pcd_llm"] = {"class_type": "TextGenerate", "_meta": {"title": "Describe: the description"},
-                    "inputs": {"clip": ["pcd_clip", 0], "prompt": "Describe this image.", "image": src, "max_length": 80,
-                               "sampling_mode": "off", "thinking": False, "use_default_template": True, "mtp": "auto",
-                               "system_prompt": ["pcd_sys", 0]}}
-    g["pcd_show"] = {"class_type": "PreviewAny", "_meta": {"title": "pc:vgl Describe: the description (copy button)"},
-                     "inputs": {"source": ["pcd_llm", 0]}}
-    node = g[prm]
-    if node.get("class_type") == "CLIPTextEncode":          # the prompt is the node's own text
-        own = node["inputs"].get("text", "")
-        pair = (["pcd_llm", 0], own) if position != "after" else (own, ["pcd_llm", 0])
-        g["pcd_cat"] = {"class_type": "StringConcatenate", "_meta": {"title": "Describe: description + prompt"},
-                        "inputs": {"string_a": pair[0], "string_b": pair[1], "delimiter": " "}}
-        node["inputs"]["text"] = ["pcd_cat", 0]
-    else:                                                    # a text node: whatever read its text reads the joined text
-        pair = (["pcd_llm", 0], [prm, 0]) if position != "after" else ([prm, 0], ["pcd_llm", 0])
-        g["pcd_cat"] = {"class_type": "StringConcatenate", "_meta": {"title": "Describe: description + prompt"},
-                        "inputs": {"string_a": pair[0], "string_b": pair[1], "delimiter": " "}}
-        for nid, other in g.items():
-            if nid in ("pcd_cat", prm) or not isinstance(other, dict):
-                continue
-            for k, v in other.get("inputs", {}).items():
-                if isinstance(v, list) and len(v) == 2 and str(v[0]) == str(prm) and nid != "pcd_cat":
-                    other["inputs"][k] = ["pcd_cat", 0]
-    return g
-
-
 def lora_strength(graph: dict) -> float | None:
     """The strength the workflow's pc:lora loader is set to (LoraLoaderModelOnly, or AusBoss' LoRA list), None without one."""
     for nid in lora_switches(graph):

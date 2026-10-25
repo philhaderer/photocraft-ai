@@ -179,34 +179,6 @@ def main():
         assert workflows.sampler_values(workflows.load_template(t.ROOT / "workflows" / wf))["steps"] == 15, wf
     assert app.sep_prompt is not None and gui.scale_text(1.5) == "x 1.5" and gui.scale_text("2.0") == "x 2"
 
-    # Send LLM description (Upscale / Refine): a text model looks at the picture, the text joins the prompt in front or behind
-    for wf, mode in (("flux2-klein-upscale.json", "refine"), ("flux3-klein-upscale.json", "upscale")):
-        tpl = workflows.load_template(t.ROOT / "workflows" / wf)
-        base, _ = workflows.apply_template(tpl, workflows.GenParams(prompt="restore it"), "pic.png", None)
-        for pos in ("front", "after"):
-            d = workflows.add_description(base, pos, 0.5)
-            assert all(str(v[0]) in d for n in d.values() for v in n["inputs"].values() if isinstance(v, list) and v), (wf, pos)
-            cat = d["pcd_cat"]["inputs"]
-            llm_first = cat["string_a"] == ["pcd_llm", 0]
-            assert llm_first == (pos == "front"), (wf, pos, cat)
-            assert d["pcd_size"]["inputs"]["megapixels"] == 0.5 and d["pcd_llm"]["inputs"]["image"] == ["pcd_size", 0]
-            assert d["pcd_clip"]["inputs"]["clip_name"] == "qwen3.5_9b_int8_convrot.safetensors"
-        full = workflows.add_description(base, "front", 0)                 # 0 = the picture as it is, no resize node
-        assert "pcd_size" not in full and full["pcd_llm"]["inputs"]["image"][0] == next(k for k, n in base.items() if n["class_type"] == "LoadImage")
-        assert workflows.add_description({"1": {"class_type": "Foo", "inputs": {}}}) == {"1": {"class_type": "Foo", "inputs": {}}}
-    # (flux 3: the text node's readers read the joined text; flux 2: the encoder's own text is the joined text)
-    f3b, _ = workflows.apply_template(workflows.load_template(t.ROOT / "workflows" / "flux3-klein-upscale.json"), workflows.GenParams(prompt="x"), "pic.png", None)
-    assert workflows.add_description(f3b)["159"]["inputs"]["text"] == ["pcd_cat", 0]
-    pick("flux2", "upscale")
-    app.v_describe.set(True)
-    app.v_desc_pos.set(gui.DESC_POS["after"])
-    app.v_desc_mp.set("1 MP")
-    r = app._request()
-    assert (r.describe, r.describe_pos, r.describe_mp) == (True, "after", 1.0)
-    app.v_desc_mp.set("full size")
-    assert app._request().describe_mp == 0.0 and gui.desc_mp_text(0) == "full size"
-    pick("flux2", "edit")
-    assert app._request().describe is False                                   # only Upscale / Refine send it
     # defaults: Flux 3 upscale starts without SeedVR2 and with the Restore LoRA at 50 %; Qwen text to image: no Turbo, enhancer on
     assert models.BY_KEY["flux3"].modes["upscale"].settings["stage_on"] is False
     assert workflows.stage_info(workflows.load_template(t.ROOT / "workflows" / "flux3-klein-upscale.json"))[0]["default_on"] is False
@@ -226,10 +198,7 @@ def main():
     assert not any(n["class_type"] == "TextGenerate" for n in off.values()) and next(n for n in off.values() if n["class_type"] == "CLIPTextEncode")["inputs"]["text"] == "a fox"
     pick("flux2", "txt2img")
     assert app.v_workflow.get() == "flux2-klein-t2i.json" and app.v_enhance.get() is False
-    # the description can be read (pc:vgl preview) and is short; Upscale / Refine have no layer mask
-    d = workflows.add_description(workflows.apply_template(workflows.load_template(t.ROOT / "workflows" / "flux2-klein-upscale.json"), workflows.GenParams(prompt="x"), "p.png", None)[0], "front", 0.5)
-    assert d["pcd_show"]["inputs"]["source"] == ["pcd_llm", 0] and "pc:vgl" in d["pcd_show"]["_meta"]["title"] and d["pcd_llm"]["inputs"]["max_length"] <= 80
-    assert "ONE short sentence" in workflows.DESCRIBE_SYSTEM
+    # Upscale / Refine have no layer mask
     lm2 = rec(app.f_lm, "pack_forget")
     for key, mode in (("flux2", "upscale"), ("flux2", "refine"), ("flux3", "upscale")):
         lm2.clear()
@@ -242,12 +211,12 @@ def main():
     assert app.v_pl.get() == ""
     # Reset: back to the startup settings of this tab and function
     pick("qwen", "edit")
-    app.v_seed.set(99); app.v_sharpen.set(0.5); app.v_describe.set(True); app.v_detail.set(0.3)
+    app.v_seed.set(99); app.v_sharpen.set(0.5); app.v_detail.set(0.3)
     app.t_prompt.insert("1.0", "something"); app.t_neg.insert("1.0", "ugly"); app.v_turbo.set(False)
     app._set_loras([["qwen\\style_a.safetensors", 0.6]])
     app.reset_settings()
     r = app._request()
-    assert app.v_seed.get() == -1 and app.v_sharpen.get() == 0.0 and app.v_describe.get() is False and app.v_detail.get() == 1.0
+    assert app.v_seed.get() == -1 and app.v_sharpen.get() == 0.0 and app.v_detail.get() == 1.0
     assert app._prompt_text() == "" and app.t_neg.get("1.0", "end").strip() == "" and r.loras == [] and app.v_turbo.get() is True
     assert app.v_model.get() == "qwen" and app.v_mode.get() == "edit" and app.v_workflow.get() == "qwen-image-21-edit.json"
 

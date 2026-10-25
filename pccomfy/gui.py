@@ -227,17 +227,6 @@ def _dpi_aware() -> None:
             pass
 
 
-DESC_POS = {"front": "in front of the prompt", "after": "after the prompt"}
-
-
-def desc_mp_text(v) -> str:
-    """The analysis size as the drop-down shows it: "0.5 MP", "full size" (0)."""
-    try:
-        return "full size" if float(v) <= 0 else f"{float(v):g} MP"
-    except (TypeError, ValueError):
-        return "0.5 MP"
-
-
 def duration_text(seconds: float) -> str:
     """"23 s", "1 min 05 s"."""
     s = max(0, round(seconds))
@@ -357,9 +346,6 @@ class App:
             sstr = []
         self.v_sstr = [tk.DoubleVar(value=(sstr[i] if i < len(sstr) else 1.0)) for i in range(3)]   # strength of a stage that is a LoRA
         self.v_detail = tk.DoubleVar(value=g("detail", 1.0))
-        self.v_describe = tk.BooleanVar(value=bool(g("describe", False)))
-        self.v_desc_pos = tk.StringVar(value=DESC_POS.get(g("describe_pos", "front"), DESC_POS["front"]))
-        self.v_desc_mp = tk.StringVar(value=desc_mp_text(g("describe_mp", 0.5)))
         self._vals_key = None                # (workflow, speed LoRA on) the steps / CFG / denoise fields were last read for
         self._wf_vals: dict = {}
         self._lora_wf = g("workflow", "")   # the workflow the LoRA strength slider was last set for
@@ -796,24 +782,6 @@ class App:
         Tooltip(self.w_detail, "100 % = only the new image; less mixes in the plain scaled original (tames over-sharp results).")
         self._on_detail()
 
-        self.f_desc = ttk.Frame(r)        # Upscale and Refine: a text model describes the picture, the description joins the prompt
-        self.f_desc.columnconfigure(1, weight=1)
-        self.cb_describe = ttk.Checkbutton(self.f_desc, text="Send LLM description", variable=self.v_describe)
-        self.cb_describe.grid(row=0, column=0, sticky="w")
-        self.cb_dpos = ttk.Combobox(self.f_desc, textvariable=self.v_desc_pos, values=list(DESC_POS.values()), state="readonly", width=18)
-        self.cb_dpos.grid(row=0, column=1, sticky="e", padx=(8, 0))
-        self.b_copy2 = ttk.Button(self.f_desc, image=self._icons["copy"], style="Icon.TButton", command=self._copy_enhanced, state="disabled")
-        self.b_copy2.grid(row=0, column=2, padx=(6, 0))
-        Tooltip(self.b_copy2, "Copy the description the text model wrote in the last run.")
-        lb_dmp = ttk.Label(self.f_desc, text="Resize for analysis", style="Muted.TLabel")
-        lb_dmp.grid(row=1, column=0, sticky="w", pady=(2, 0))
-        self.cb_dmp = ttk.Combobox(self.f_desc, textvariable=self.v_desc_mp, values=[desc_mp_text(x) for x in (0.25, 0.5, 1, 2, 0)],
-                                   state="readonly", width=18)
-        self.cb_dmp.grid(row=1, column=1, sticky="e", padx=(8, 0), pady=(2, 0))
-        Tooltip(self.cb_describe, "A text model looks at the picture and adds its description to the prompt.")
-        Tooltip(self.cb_dpos, "Where the description goes.")
-        Tooltip(self.cb_dmp, "The picture is scaled down for the text model: smaller = faster.")
-
         self.f_ref = ttk.LabelFrame(r, text="Reference image")
         ttk.Label(self.f_ref, text="The top layer is the reference. Select where it should go.\nEverything below it is the picture.",
                   style="Muted.TLabel", justify="left", wraplength=self._px(360)).pack(anchor="w", padx=6, pady=(0, 2))
@@ -908,7 +876,7 @@ class App:
         b_reset.pack(side="left", padx=(6, 0))
         Tooltip(b_reset, "Back to the startup settings of this tab and function.")
 
-        for cb in (self.cb_scale, self.cb_lm, self.cb_refstyle, self.cb_sampler, self.cb_sched, self.cb_dpos, self.cb_dmp):
+        for cb in (self.cb_scale, self.cb_lm, self.cb_refstyle, self.cb_sampler, self.cb_sched):
             self._open_on_click(cb)         # the list opens on a click anywhere in the box, not only on the arrow
         self._fit_job = None
         r.bind("<Configure>", self._on_content_size, add="+")      # the window follows its content: nothing hangs off the bottom
@@ -929,10 +897,6 @@ class App:
     def _on_mode_ui(self):
         mode = self.v_mode.get()
         self._switch_context(mode)
-        if self._run_mode() in SCALE_MODES:
-            self.f_desc.pack(fill="x", padx=10, pady=4, after=self.f_sharp)
-        else:
-            self.f_desc.pack_forget()
         if mode == "upscale":
             self.f_scale.pack(fill="x", padx=10, pady=4, after=self.f_sharp)
         else:
@@ -989,16 +953,6 @@ class App:
 
     def _ref_style(self) -> str:
         return {v: k for k, v in REF_STYLES.items()}.get(self.v_refstyle.get(), "simple")
-
-    def _desc_mp(self) -> float:
-        t = str(self.v_desc_mp.get()).strip().lower()
-        try:
-            return 0.0 if t.startswith("full") else max(0.05, float(t.replace("mp", "").strip()))
-        except ValueError:
-            return 0.5
-
-    def _desc_pos(self) -> str:
-        return {v: k for k, v in DESC_POS.items()}.get(self.v_desc_pos.get(), "front")
 
     def _scale(self) -> float:
         try:
@@ -1422,9 +1376,6 @@ class App:
         self.v_match.set(0.0)
         self.v_feather.set(2.0)
         self.v_detail.set(1.0)
-        self.v_describe.set(False)
-        self.v_desc_pos.set(DESC_POS["front"])
-        self.v_desc_mp.set(desc_mp_text(0.5))
         self.v_lmask.set(LAYER_MASKS["auto"])
         self.v_refstyle.set(REF_STYLES["simple"])
         self.v_collage.set(True)
@@ -1921,7 +1872,6 @@ class App:
             "scale": self._scale(), "ref_style": self._ref_style(),
             "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
             "turbo": bool(self.v_turbo.get()), "stage_on": bool(self.v_stage.get()), "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "stage_strengths": [round(float(v.get()), 2) for v in self.v_sstr], "loras": self._loras(), "sharpen": round(float(self.v_sharpen.get()), 2), "match": round(float(self.v_match.get()), 2), "detail": round(float(self.v_detail.get()), 2),
-            "describe": bool(self.v_describe.get()), "describe_pos": self._desc_pos(), "describe_mp": self._desc_mp(),
             "lora_strength": round(float(self.v_lora_str.get()), 2), "ref_collage": bool(self.v_collage.get()), "ref_cutout": bool(self.v_cutout.get()),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
             "feather_pct": round(float(self.v_feather.get()), 1),
@@ -1987,9 +1937,6 @@ class App:
                     pass
             self._update_stage_scales()
         put(self.v_detail, "detail", float)
-        put(self.v_describe, "describe", bool)
-        put(self.v_desc_pos, "describe_pos", lambda v: DESC_POS.get(v, DESC_POS["front"]))
-        put(self.v_desc_mp, "describe_mp", desc_mp_text)
         put(self.v_sharpen, "sharpen", float)
         put(self.v_match, "match", float)
         self._on_sharpen()
@@ -2099,8 +2046,7 @@ class App:
         m = self._model()
         spec = m.modes.get(self.v_mode.get()) if m else None
         target = p.prompt if (self.v_mode.get() == "remove" and spec is not None and spec.remove_text) else ""
-        return Request(mode=self._run_mode(), params=p, remove_target=target,
-                       describe=bool(self.v_describe.get()) and self._run_mode() in SCALE_MODES, describe_pos=self._desc_pos(), describe_mp=self._desc_mp(), workflow=wf_path, base_res=int(self.v_res.get()),
+        return Request(mode=self._run_mode(), params=p, remove_target=target, workflow=wf_path, base_res=int(self.v_res.get()),
                        context=float(self.v_context.get()), mask_grow=int(self.v_grow.get()),
                        mask_blur=int(self.v_blur.get()),
                        overlap=int(self.v_overlap.get()), variants=int(self.v_variants.get()),
@@ -2245,8 +2191,7 @@ class App:
                     self.b_stop.configure(state="disabled")
                 elif kind == "vgl":
                     self._last_vgl = str(data or "")      # not shown in the window; the copy button next to the LLM checkbox takes it
-                    for b in (self.b_copy, self.b_copy2):
-                        b.configure(state="normal" if self._last_vgl.strip() else "disabled")
+                    self.b_copy.configure(state="normal" if self._last_vgl.strip() else "disabled")
                 elif kind == "refresh":
                     self._apply_refresh(data)
         except queue.Empty:
@@ -2294,7 +2239,7 @@ class App:
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
             "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "prompt_h": self._prompt_lines(), "fooocus": req.fooocus, "enhance": bool(self.v_enhance.get()), "turbo": req.turbo, "layer_mask": req.layer_mask,
-            "stage_on": req.stage_on, "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "stage_strengths": [round(float(v.get()), 2) for v in self.v_sstr], "detail": req.detail, "describe": bool(self.v_describe.get()), "describe_pos": self._desc_pos(), "describe_mp": self._desc_mp(), "sharpen": round(float(self.v_sharpen.get()), 2), "match": req.match, "loras": [list(x) for x in req.loras], "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
+            "stage_on": req.stage_on, "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "stage_strengths": [round(float(v.get()), 2) for v in self.v_sstr], "detail": req.detail, "sharpen": round(float(self.v_sharpen.get()), 2), "match": req.match, "loras": [list(x) for x in req.loras], "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
             "ref_collage": req.ref_collage, "ref_style": req.ref_style, "ref_cutout": req.ref_cutout, "runs": dict(self.state.get("runs", {})),
         })
 
