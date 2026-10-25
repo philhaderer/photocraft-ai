@@ -181,6 +181,35 @@ def sharpen(im: Image.Image, amount: float) -> Image.Image:
     return im.filter(ImageFilter.UnsharpMask(radius=r, percent=int(min(1.0, amount) * 150), threshold=2))
 
 
+def match_saturation(gen: Image.Image, ref: Image.Image, mask: Image.Image, strength: float) -> Image.Image:
+    """Tames colours that are louder than their surroundings: the new area (`mask`, white = new) is compared with a ring of
+    the original picture (`ref`) around it, by the mean HSV saturation. If the new area is more saturated, the saturation
+    of `gen` is scaled down towards the ring's (never below half, and never up). `strength` 0 = off, 1 = all the way.
+    Returns `gen` unchanged when there is no usable ring."""
+    if strength <= 0:
+        return gen
+    size = gen.size
+    ref = ref.convert("RGB").resize(size, Image.BILINEAR)
+    m = np.asarray(mask.convert("L").resize(size, Image.BILINEAR)) > 128
+    if m.sum() < 64:
+        return gen
+    from PIL import ImageFilter
+    r = max(6.0, 0.06 * min(size))
+    near = np.asarray(mask.convert("L").resize(size, Image.BILINEAR).filter(ImageFilter.GaussianBlur(r))) > 6
+    ring = near & ~m
+    if ring.sum() < 64:
+        return gen
+    g_s = np.asarray(gen.convert("RGB").convert("HSV"))[..., 1].astype(float)
+    r_s = np.asarray(ref.convert("HSV"))[..., 1].astype(float)
+    inside, around = float(g_s[m].mean()), float(r_s[ring].mean())
+    if inside <= around or inside < 1:
+        return gen
+    f = max(0.5, around / inside)
+    k = 1.0 - min(1.0, strength) * (1.0 - f)
+    h, sat, v = gen.convert("RGB").convert("HSV").split()
+    return Image.merge("HSV", (h, sat.point(lambda x: min(255, int(x * k + 0.5))), v)).convert("RGB")
+
+
 def layer_box(layer: Image.Image) -> "Box | None":
     """Where a layer's visible pixels lie on the canvas (the layer exported at canvas size), or None when it is empty."""
     box = layer.convert("RGBA").getchannel("A").point(lambda a: 255 if a > 8 else 0).getbbox()

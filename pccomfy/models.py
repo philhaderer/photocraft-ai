@@ -77,8 +77,8 @@ MOSS = Model(
     "Expand is a test. It has no instruction-edit functions (yet). Likes 1.5 to 2 MP. The DMD2 LoRA makes it fast (8 steps, CFG 1.5).",
     {
         "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "base_res": 1280, "layer_mask": "none", "enhance": True}),
-        "inpaint": Mode("moss-image-inpaint.json", {**_SOFT, **_MOSS, "base_res": 1216, "context": 0.4}),
-        "outpaint": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "auto"}),
+        "inpaint": Mode("moss-image-inpaint.json", {**_SOFT, **_MOSS, "base_res": 1216, "context": 0.4, "match": 0.5}),
+        "outpaint": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "auto", "match": 0.5}),
     })
 
 FIBO = Model(

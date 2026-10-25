@@ -76,6 +76,7 @@ class Request:
     detail: float = 1.0                  # Upscale/Refine: share of the new result mixed with the plainly scaled original (1 = all new)
     ref_cutout: bool = True              # reference mode, simple style: the sentence also asks to remove the reference's background
     loras: list = field(default_factory=list)   # extra LoRAs [(file name, strength), ...] chained in front of the samplers
+    match: float = 0.0                   # 0..1: pull colours that are louder than the surroundings back towards them (Fill / Expand / Reference)
     sharpen: float = 0.0                 # 0..1: a light sharpening of the result (high-pass style, like KJNodes' Image Sharpen)
     sampler_override: dict = field(default_factory=dict)   # {"steps": .., "cfg": .., "denoise": ..} typed over the workflow's sampler
     doc_tag: str = ""                    # Upscale: model and options in the new document's name ("Flux3Klein x1.5 SeedVR2")
@@ -601,12 +602,18 @@ class Bridge:
                 # the same soft mask the model got: the result blends exactly where the model blended it
                 layer_mask = imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
         mode = lm_mode
+        sel_small = None   # the new area in the size the model drew it, for "match colours"
+        if req.match > 0 and req.mode in ("inpaint", "outpaint", "reference") and mask is not None and results and results[0][1]:
+            sel_small = mask.crop(region.pil()).resize(results[0][1][0].size, Image.NEAREST)
         items = [(label, i, im, len(ims)) for label, ims in results for i, im in enumerate(ims)]
         layers = []
         # last item first: #1 ends up on top, visible and active, the others hidden below it
         for n, g in enumerate(reversed(range(len(items)))):
             label, i, raw, count = items[g]
-            im = raw.convert("RGB").resize((region.w, region.h), Image.LANCZOS)
+            rgb = raw.convert("RGB")
+            if req.match > 0 and sel_small is not None:
+                rgb = imaging.match_saturation(rgb, crop_plain, sel_small, req.match)
+            im = rgb.resize((region.w, region.h), Image.LANCZOS)
             im = imaging.sharpen(im, req.sharpen)
             label = " ".join(x for x in (label, req.label) if x)
             if req.preset:

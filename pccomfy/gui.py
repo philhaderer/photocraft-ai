@@ -338,6 +338,7 @@ class App:
         self.v_lora_str = tk.DoubleVar(value=g("lora_strength", 1.0))
         self.v_model = tk.StringVar(value=g("model", ""))   # the tab; "" = a workflow of your own (everything enabled)
         self.v_sharpen = tk.DoubleVar(value=g("sharpen", 0.0))
+        self.v_match = tk.DoubleVar(value=g("match", 0.0))
         self.v_llm = tk.StringVar(value="")
         self.v_cmp_res = tk.StringVar(value="")
         self.v_cmp_ctx = tk.StringVar(value="")
@@ -653,6 +654,15 @@ class App:
                                 "radius follows the picture's size). 0 = off, 100 % = clearly crisper.\n"
                                 "Helps models that come out slightly soft, e.g. MOSS (tip: about 50 %).")
         self._on_sharpen()
+        ttk.Label(self.f_sharp, text="Match colours", style="Muted.TLabel").grid(row=1, column=0, sticky="w", pady=(2, 0))
+        self.w_match = ttk.Scale(self.f_sharp, from_=0.0, to=1.0, variable=self.v_match, command=self._on_match)
+        self.w_match.grid(row=1, column=1, sticky="ew", padx=8, pady=(2, 0))
+        self.lbl_match = ttk.Label(self.f_sharp, width=6, style="Muted.TLabel")
+        self.lbl_match.grid(row=1, column=2, pady=(2, 0))
+        Tooltip(self.w_match, "Fill, Expand and Reference: when the new area is more colourful than its surroundings (a common look of "
+                              "text-to-image models, e.g. MOSS), its saturation is pulled back towards the picture's. 0 = off, 100 % = "
+                              "as far as the surroundings (never more than halved, never raised).")
+        self._on_match()
         self.f_neg = ttk.Frame(r)
         self.f_neg.pack(fill="x", padx=10, pady=(6, 0))
         self.v_neg_open = tk.BooleanVar(value=bool(self.state.get("neg_open", False)))
@@ -1124,7 +1134,7 @@ class App:
         spec = m.modes[mode]
         wf = self.v_workflow.get()
         keep = wf in m.workflows() and (wf == spec.workflow or wf in m.alt_workflows)
-        s = dict(spec.settings)
+        s = {"match": 0.0, **spec.settings}      # the colour pull-back belongs to the model's mode, it does not travel to the next tab
         if not keep:
             s["workflow"] = spec.workflow
         elif wf in m.alt_workflows:
@@ -1238,6 +1248,9 @@ class App:
 
     def _on_lora_str(self, _value=None):
         self.lbl_lora_str.configure(text=f"strength {float(self.v_lora_str.get()):.2f}")
+
+    def _on_match(self, _value=None):
+        self.lbl_match.configure(text=f"{round(float(self.v_match.get()) * 100)} %")
 
     def _on_sharpen(self, _value=None):
         self.lbl_sharpen.configure(text=f"{round(float(self.v_sharpen.get()) * 100)} %")
@@ -1593,7 +1606,7 @@ class App:
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
             "scale": self._scale(), "ref_style": self._ref_style(),
             "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
-            "turbo": bool(self.v_turbo.get()), "stage_on": bool(self.v_stage.get()), "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "loras": self._loras(), "sharpen": round(float(self.v_sharpen.get()), 2), "detail": round(float(self.v_detail.get()), 2),
+            "turbo": bool(self.v_turbo.get()), "stage_on": bool(self.v_stage.get()), "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "loras": self._loras(), "sharpen": round(float(self.v_sharpen.get()), 2), "match": round(float(self.v_match.get()), 2), "detail": round(float(self.v_detail.get()), 2),
             "lora_strength": round(float(self.v_lora_str.get()), 2), "ref_collage": bool(self.v_collage.get()), "ref_cutout": bool(self.v_cutout.get()),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
             "feather_pct": round(float(self.v_feather.get()), 1),
@@ -1653,7 +1666,9 @@ class App:
             self._stage_wf = self.v_workflow.get()
         put(self.v_detail, "detail", float)
         put(self.v_sharpen, "sharpen", float)
+        put(self.v_match, "match", float)
         self._on_sharpen()
+        self._on_match()
         if "lora_strength" in s:
             self._lora_wf = self.v_workflow.get()
             put(self.v_lora_str, "lora_strength", float)
@@ -1763,7 +1778,7 @@ class App:
                        fooocus=bool(self.v_fooocus.get()), enhance=bool(self.v_enhance.get()),
                        turbo=bool(self.v_turbo.get()), scale=self._scale(),
                        lora_strength=(round(float(self.v_lora_str.get()), 2) if self._has_lora_switch() else None),
-                       stage_on=bool(self.v_stage.get()) or not self._stage_label(), stages_off=self._stages_off(), sampler_override=self._sampler_override(), doc_tag=self._doc_tag(), loras=[tuple(x) for x in self._loras()], sharpen=round(float(self.v_sharpen.get()), 2), detail=round(float(self.v_detail.get()), 2), ref_style=self._ref_style(), ref_collage=bool(self.v_collage.get()), ref_cutout=bool(self.v_cutout.get()),
+                       stage_on=bool(self.v_stage.get()) or not self._stage_label(), stages_off=self._stages_off(), sampler_override=self._sampler_override(), doc_tag=self._doc_tag(), loras=[tuple(x) for x in self._loras()], sharpen=round(float(self.v_sharpen.get()), 2), match=round(float(self.v_match.get()), 2), detail=round(float(self.v_detail.get()), 2), ref_style=self._ref_style(), ref_collage=bool(self.v_collage.get()), ref_cutout=bool(self.v_cutout.get()),
                        layer_mask={v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2)
 
@@ -1938,7 +1953,7 @@ class App:
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
             "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "fooocus": req.fooocus, "enhance": req.enhance, "turbo": req.turbo, "layer_mask": req.layer_mask,
-            "stage_on": req.stage_on, "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "detail": req.detail, "sharpen": req.sharpen, "loras": [list(x) for x in req.loras], "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
+            "stage_on": req.stage_on, "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "detail": req.detail, "sharpen": req.sharpen, "match": req.match, "loras": [list(x) for x in req.loras], "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
             "ref_collage": req.ref_collage, "ref_style": req.ref_style, "ref_cutout": req.ref_cutout, "runs": dict(self.state.get("runs", {})),
         })
 

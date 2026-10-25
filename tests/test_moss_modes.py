@@ -86,6 +86,9 @@ def main():
     _, b, _ = run(sampler_override={"steps": 12, "cfg": 2.0})
     ks = b.comfy.graphs[0]["40"]["inputs"]
     assert (ks["steps"], ks["cfg"]) == (12, 2.0)
+    # colour pull-back runs through a Fill without trouble (the fake model draws a loud green picture)
+    _, b, res = run(wf=FILL, mode="inpaint", match=0.5, stage_on=True)
+    assert res["layers"]
     print("ALL OK (MOSS modes)")
 
 
