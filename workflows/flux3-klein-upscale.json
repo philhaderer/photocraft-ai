@@ -421,7 +421,7 @@
     "162",
     1
    ],
-   "steps": 8,
+   "steps": 15,
    "cfg": 1,
    "sampler_name": "euler",
    "scheduler": "simple",
@@ -444,7 +444,7 @@
    ]
   },
   "_meta": {
-   "title": "KSampler - 8 steps, each tile drawn again"
+   "title": "KSampler - 15 steps, each tile drawn again"
   }
  },
  "164": {

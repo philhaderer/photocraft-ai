@@ -176,7 +176,7 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
     """Fill parameters into `pc:*` nodes. Returns (graph, output node id or None).
 
     A title may carry several tags (e.g. "pc:prompt pc:size" for one node that takes the prompt and the size).
-    `pc:prompt` fills the node's `text` field, else its `instruction` field, else its `prompt` field
+    `pc:prompt` fills the node's `text` field, else its `prompt` field
     (TextGenerate, TextEncodeFibo2, ...).
     `pc:ref` is the slot for a reference image (a LoadImage feeding TextEncodeFibo2's `images.image_2`). The slot is
     always in the workflow; with no reference (`ref_name` None) the node and the links to it are dropped, so the run
@@ -200,7 +200,7 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
                 if mask_name is not None:
                     inp["image"] = mask_name
             elif tag == "prompt":
-                key = next((k for k in ("text", "instruction", "prompt") if k in inp), "prompt")
+                key = next((k for k in ("text", "prompt") if k in inp), "prompt")
                 inp[key] = with_image_tag(p.prompt.strip() and p.prompt or default_prompt(node) or p.prompt, node)
             elif tag == "negative":
                 key = "text" if "text" in inp else "negative_prompt"

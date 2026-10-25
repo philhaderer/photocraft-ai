@@ -226,6 +226,14 @@ def _dpi_aware() -> None:
             pass
 
 
+def scale_text(v) -> str:
+    """The upscale factor as the drop-down shows it: "x 1.5", "x 2"."""
+    try:
+        return "x " + f"{float(v):g}"
+    except (TypeError, ValueError):
+        return "x 2"
+
+
 def parse_list(text: str, cast) -> list:
     """"1024, 1224 1536" -> [1024, 1224, 1536]; whatever is not a number is skipped."""
     out = []
@@ -309,7 +317,7 @@ class App:
         self.v_grow = tk.IntVar(value=g("mask_grow", d["mask_grow"]))
         self.v_blur = tk.IntVar(value=g("mask_blur", d["mask_blur"]))
         self.v_overlap = tk.IntVar(value=g("overlap", d["overlap"]))
-        self.v_scale = tk.StringVar(value=str(g("scale", 1.5)).removesuffix(".0"))
+        self.v_scale = tk.StringVar(value=scale_text(g("scale", 1.5)))
         self.v_top = tk.BooleanVar(value=True)      # the window always belongs to PhotoCraft (no switch any more)
         self.v_feather = tk.DoubleVar(value=g("feather_pct", 2.0))
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
@@ -622,6 +630,8 @@ class App:
         for w in (lbl_f, sc):
             Tooltip(w, "Softens the seam between the new area and your picture, in % of the selection's shorter side. 0 = hard edge.")
 
+        self.sep_prompt = ttk.Frame(r, style="Sep.TFrame", height=1)     # a light line above "Prompt"
+        self.sep_prompt.pack(fill="x", padx=10, pady=(6, 4))
         self.f_ptop = ttk.Frame(r)      # "Prompt" and, where a mode has ready-made prompts, radio buttons that fill the field
         self.f_ptop.pack(fill="x", padx=10)
         ttk.Label(self.f_ptop, text="Prompt").pack(side="left")
@@ -738,11 +748,10 @@ class App:
         self._spin(self.f_out, self.v_overlap, 0, 512, 8, 5).grid(row=1, column=1, padx=6, pady=(0, 6))
         self.f_out.columnconfigure(0, weight=1)
 
-        self.f_scale = ttk.LabelFrame(r, text="Upscale")
-        ttk.Label(self.f_scale, text="Factor per side (2 = four times the pixels). The result opens as a new document.",
-                  style="Muted.TLabel", justify="left", wraplength=self._px(280)).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
-        self.cb_scale = ttk.Combobox(self.f_scale, textvariable=self.v_scale, values=["1.5", "2", "3", "4"], width=5)
-        self.cb_scale.grid(row=0, column=1, padx=6, pady=(0, 6))
+        self.f_scale = ttk.Frame(r)
+        ttk.Label(self.f_scale, text="Upscale: opens new document", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
+        self.cb_scale = ttk.Combobox(self.f_scale, textvariable=self.v_scale, values=["x 1.5", "x 2", "x 3", "x 4"], width=6)
+        self.cb_scale.grid(row=0, column=1, padx=8)
         self.f_scale.columnconfigure(0, weight=1)
         self.f_detail = ttk.Frame(r)      # Upscale and Refine
         self.f_detail.columnconfigure(1, weight=1)
@@ -920,7 +929,7 @@ class App:
 
     def _scale(self) -> float:
         try:
-            return min(8.0, max(1.0, float(str(self.v_scale.get()).replace(",", "."))))
+            return min(8.0, max(1.0, float(str(self.v_scale.get()).strip().lstrip("xX×").strip().replace(",", "."))))
         except ValueError:
             return 2.0
 
@@ -1832,7 +1841,7 @@ class App:
         put(self.v_grow, "mask_grow", int)
         put(self.v_blur, "mask_blur", int)
         put(self.v_overlap, "overlap", int)
-        put(self.v_scale, "scale", lambda v: str(float(v)).removesuffix(".0"))
+        put(self.v_scale, "scale", scale_text)
         put(self.v_fooocus, "fooocus", bool)
         put(self.v_enhance, "enhance", bool)
         put(self.v_turbo, "turbo", bool)

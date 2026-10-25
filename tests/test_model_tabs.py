@@ -88,7 +88,7 @@ def main():
     app.v_model.set("flux3")
     app.v_mode.set("upscale")
     app._on_model()
-    assert app.v_workflow.get() == "flux3-klein-upscale.json" and app.v_scale.get() == "1.5"
+    assert app.v_workflow.get() == "flux3-klein-upscale.json" and app.v_scale.get() == "x 1.5"
     assert app.t_prompt.get("1.0", "end").strip() == models.FLUX3_DEFAULT            # the workflow's own prompt, to describe in front of
     assert app._hint_text == models.DESCRIBE_TIP
     app.v_mode.set("edit")
@@ -173,7 +173,7 @@ def main():
     assert app._prompt_text().startswith("A crystal-clear, high-fidelity photograph")
     app.v_mode.set("upscale")
     app._on_model()
-    assert float(app.v_scale.get()) == 1.5 and app._pchoice_key is None
+    assert app._scale() == 1.5 and app.v_scale.get() == "x 1.5" and app._pchoice_key is None
     # Expand image: the prompt field turns orange with a hint
     app.v_mode.set("outpaint")
     app._on_model()

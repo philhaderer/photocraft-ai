@@ -174,6 +174,11 @@ def main():
         assert models.BY_KEY[key].modes["remove"].remove_text, key
     assert [k for k, _ in gui.MODE_LABELS][:6] == ["txt2img", "edit", "inpaint", "remove", "outpaint", "reference"]
 
+    # Flux 3: 15 steps in every workflow (the SeedVR2 pre-stage keeps its one step); Upscale shows "x 1.5"; a line above "Prompt"
+    for wf in ("flux3-klein-edit.json", "flux3-klein-t2i.json", "flux3-klein-upscale.json"):
+        assert workflows.sampler_values(workflows.load_template(t.ROOT / "workflows" / wf))["steps"] == 15, wf
+    assert app.sep_prompt is not None and gui.scale_text(1.5) == "x 1.5" and gui.scale_text("2.0") == "x 2"
+
     # Remove Selection with the name of the object (Flux Klein): the instruction names it; runs.jsonl says what was sent
     import tempfile
     import test_reference_mode as T

@@ -107,7 +107,7 @@
   "class_type": "KSampler",
   "inputs": {
    "seed": 1,
-   "steps": 8,
+   "steps": 15,
    "cfg": 1,
    "sampler_name": "euler",
    "scheduler": "simple",
