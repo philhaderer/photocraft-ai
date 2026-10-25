@@ -116,6 +116,15 @@ class Win32Api:
     def set_owner(self, hwnd: int, owner: int) -> None:
         self.u.SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, owner)
 
+    def set_caption(self, hwnd: int, bg: tuple[int, int, int], fg: tuple[int, int, int]) -> bool:
+        """Colour the title bar (Windows 11 build 22000+): dark mode, caption colour, caption text colour."""
+        d = self.c.windll.dwmapi.DwmSetWindowAttribute
+        ok = True
+        for attr, val in ((20, 1), (35, bg[0] | bg[1] << 8 | bg[2] << 16), (36, fg[0] | fg[1] << 8 | fg[2] << 16)):
+            v = self.c.c_int(val)
+            ok = (d(self.w.HWND(hwnd), attr, self.c.byref(v), 4) == 0) and ok
+        return ok
+
     def place_below(self, hwnd: int, above: int) -> None:
         """Put `hwnd` directly below `above` in the z-order, without moving, resizing or activating it."""
         self.u.SetWindowPos(hwnd, above, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010)   # NOSIZE | NOMOVE | NOACTIVATE
@@ -212,3 +221,41 @@ def describe(api=None) -> str:
     if not mine:
         lines.append("None found. Is PhotoCraft running? Another program name: set PCC_PHOTOCRAFT_EXE=name.exe")
     return "\n".join(lines)
+
+
+def caption(root, bg: tuple[int, int, int], fg: tuple[int, int, int], api=None) -> bool:
+    """Colour the bridge window's title bar like PhotoCraft's palette. Only Windows 11 shows it; elsewhere nothing happens."""
+    if not available() and api is None:
+        return False
+    try:
+        api = api or Win32Api()
+        top = api.toplevel(root)
+        return bool(top) and api.set_caption(top, bg, fg)
+    except Exception:
+        return False
+
+
+def watch(seconds: int, api=None) -> None:
+    """Debug for "the bridge window covers PhotoCraft's menus": prints every window that appears or disappears while this
+    runs (class, owner, process, rect, z-order position), so a menu that is not a window of photocraft.exe shows up."""
+    import time
+    api = api or Win32Api()
+    seen: dict[int, str] = {}
+    end = time.time() + seconds
+    print(f"Watching {seconds} s: open a PhotoCraft menu now (File, Edit, ...), keep it open a moment, close it.")
+    while time.time() < end:
+        infos = api.windows(everything=True)
+        now = {}
+        for z, w in enumerate(infos):
+            if not w["visible"] or w.get("area", 0) < 400:
+                continue
+            now[w["hwnd"]] = (f"z={z} hwnd={w['hwnd']} class={w.get('class')!r} title={w['title'][:40]!r} owner={w['owner']} "
+                              f"exstyle={w['exstyle']:#x} exe={os.path.basename((w.get('exe') or '?').replace(chr(92), '/'))} rect={w.get('rect')}")
+        for h, line in now.items():
+            if h not in seen:
+                print("+", line)
+        for h in seen:
+            if h not in now:
+                print("-", seen[h])
+        seen = now
+        time.sleep(0.15)

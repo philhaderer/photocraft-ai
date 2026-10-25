@@ -209,6 +209,7 @@ class App:
         self.root.minsize(self._px(MIN_W), self._px(560))
         self._sized = False
         self._style()
+        self.root.after(200, lambda: winlink.caption(self.root, (0x40, 0x40, 0x40), (0xee, 0xee, 0xee)))
 
         g = lambda k, default: self.state.get(k, default)  # noqa: E731
         self.v_mode = tk.StringVar(value=g("mode", "inpaint"))

@@ -184,7 +184,9 @@ def main(argv=None) -> int:
     sub = ap.add_subparsers(dest="cmd")
     sub.add_parser("gui", help="bridge window (default)")
     sub.add_parser("check", help="check connections and list models")
-    sub.add_parser("windows", help="debug: list PhotoCraft's windows (what the bridge window is tied to)")
+    w = sub.add_parser("windows", help="debug: list PhotoCraft's windows (what the bridge window is tied to)")
+    w.add_argument("--watch", type=int, metavar="SECONDS", default=0,
+                   help="for N seconds print every window that appears (open a PhotoCraft menu meanwhile)")
     c = sub.add_parser("commands", help="debug: list PhotoCraft commands matching a pattern")
     c.add_argument("pattern", nargs="?", default="history|undo|group|transaction|step")
     sub.add_parser("viewtest", help="debug: find the call that sets zoom and position")
@@ -223,7 +225,12 @@ def main(argv=None) -> int:
         return cmd_check(cfg)
     if a.cmd == "windows":
         from . import winlink
-        print(winlink.describe() if winlink.available() else "Only on Windows.")
+        if not winlink.available():
+            print("Only on Windows.")
+        elif a.watch:
+            winlink.watch(a.watch)
+        else:
+            print(winlink.describe())
         return 0
     if a.cmd == "viewtest":
         return cmd_viewtest(cfg)
