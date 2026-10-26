@@ -24,10 +24,10 @@ for name in ("BUILTIN", "MODE_LABELS", "SHORT_MODES", "LAYER_MASKS", "CLIP_DEFAU
              "word_left", "word_right", "sweep_requests", "duration_text", "scale_text", "parse_list", "winlink", "Tooltip", "run_gui", "DONE_GREEN"):
     assert hasattr(gui, name), name
 
-# 3. models: Expand is off for Flux 3 and Krea 2, everything else is unchanged; the new fields start neutral
+# 3. models: Expand is on again for Flux 3 and Krea 2 (new test, 26.10.); the new fields start neutral
 by = models.BY_KEY
-assert list(by["flux3"].modes) == ["txt2img", "edit", "multi_edit", "remove", "upscale"]
-assert list(by["krea2"].modes) == ["txt2img"]
+assert list(by["flux3"].modes) == ["txt2img", "edit", "multi_edit", "remove", "outpaint", "upscale"]
+assert list(by["krea2"].modes) == ["txt2img", "outpaint"]
 assert list(by["flux2"].modes) == ["txt2img", "edit", "multi_edit", "remove", "outpaint", "upscale", "refine"]
 assert list(by["qwen"].modes) == ["txt2img", "edit", "multi_edit", "inpaint", "outpaint", "remove"]
 assert list(by["moss"].modes) == ["txt2img", "outpaint"]
@@ -39,8 +39,8 @@ for m in models.MODELS:
 assert {k: (m.max_refs, m.tag_style) for k, m in by.items()} == {
     "qwen": (8, "<image{n}>"), "fibo": (2, "<image_{n}>"), "flux2": (3, "image {n}"), "flux3": (3, "<ref_image_{i}>"),
     "krea2": (0, ""), "moss": (0, "")}                                                          # Multi Image Edit: slots per model
-assert "Expand" not in by["flux3"].tip and "Expand" not in by["krea2"].tip
-assert models.model_for_workflow("krea2-turbo-inpaint.json") is None      # the file stays in workflows/, but no tab uses it
+assert "Expand" in by["flux3"].tip and "Expand" in by["krea2"].tip
+assert models.model_for_workflow("krea2-turbo-inpaint.json") is models.KREA2      # Krea 2 Expand uses it again
 
 
 # 4. footer: "PhotoCraft ●   ComfyUI ●", no document count

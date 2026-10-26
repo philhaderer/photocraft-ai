@@ -130,12 +130,13 @@ FLUX2 = Model(
 
 FLUX3 = Model(
     "flux3", "Flux 3 Klein Edit",
-    "FLUX.3 Klein: text to image, whole-image edits, Remove Selection, Upscale.",
+    "FLUX.3 Klein: text to image, whole-image edits, Remove Selection, Expand, Upscale.",
     {
         "txt2img": Mode("flux3-klein-t2i.json", dict(base_res=1536, layer_mask="none", enhance=False)),
         "edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none"), prompt_tip=EDIT_TIP),
         "multi_edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none"), prompt_tip=MULTI_TIP, run_as="edit"),
         "remove": Mode("flux3-klein-edit.json", dict(_SOFT, base_res=1536, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
+        "outpaint": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="auto")),     # back on for a new test (26.10.)
         "upscale": Mode("flux3-klein-upscale.json", dict(scale=1.5, turbo=True, stage_on=False, context=0.0), FLUX3_DEFAULT, prompt_tip=DESCRIBE_TIP),
     },
     requires=(
@@ -148,6 +149,7 @@ FLUX3 = Model(
         "edit": _EDIT + " Nothing happens? Generate again or word it more fully.",
         "multi_edit": _MULTI,
         "remove": _REMOVE,
+        "outpaint": _EXPAND,
         "upscale": "Enlarges into a NEW document: SeedVR2 cleans, Flux 3 redraws in tiles. Describe the picture before the prompt text. Max 24 MP.",
     },
     max_refs=3, tag_style="<ref_image_{i}>")
@@ -173,12 +175,14 @@ MOSS = Model(
     })
 
 # Krea-2 Turbo: a fast distilled text-to-image model (8 steps, CFG 1). Text to image has the model's own prompt enhancer
-# (starts off, like the other models'). Expand is off (krea2-turbo-inpaint.json stays in workflows/ for later).
+# (starts off, like the other models'); Expand redraws the new area with the same mask recipe as MOSS (back on for a
+# new test, 26.10.).
 KREA2 = Model(
     "krea2", "Krea 2 Turbo",
-    "Krea-2 Turbo: fast text to image.",
+    "Krea-2 Turbo: fast text to image and Expand.",
     {
         "txt2img": Mode("krea2-turbo-t2i.json", dict(base_res=1024, layer_mask="none", enhance=False)),
+        "outpaint": Mode("krea2-turbo-inpaint.json", dict(base_res=1024, layer_mask="auto")),
     },
     requires=(
         "krea2_turbo_int8_convrot.safetensors",
@@ -187,6 +191,7 @@ KREA2 = Model(
     ),   # the model files this tab needs (details per mode: manifest.py)
     mode_tips={
         "txt2img": _TXT + " The checkbox lets Krea's own enhancer write the prompt.",
+        "outpaint": _EXPAND,
     })
 
 FIBO = Model(
