@@ -216,6 +216,7 @@ DISABLED = "#8e8e8e"   # text of a greyed-out control: clearly darker than MUTED
 REF_STYLES = {"classic": "Classic: subject first, long instruction", "simple": "Simple: picture first, one short sentence"}
 SCALE_MODES = ("upscale", "refine")   # these run only with an upscale workflow (a node titled pc:upscale)
 ERROR, ERROR_TEXT = "#e5484d", "#ffc2c2"
+DONE_GREEN = "#7fdc86"      # the "Done" line above the bar (readable on the PhotoCraft grey)
 def _dpi_aware() -> None:
     try:
         import ctypes
@@ -340,6 +341,7 @@ __all__ = [
     "SCALE_MODES",
     "ERROR",
     "ERROR_TEXT",
+    "DONE_GREEN",
     "_dpi_aware",
     "duration_text",
     "scale_text",

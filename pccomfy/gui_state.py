@@ -13,8 +13,8 @@ class StateMixin:
             info = {}
             try:
                 self.pc.close()
-                p = self.pc.ping()
-                info["pc"] = f"PhotoCraft ● ({p['documents']} doc.)"
+                self.pc.ping()
+                info["pc"] = "PhotoCraft ●"
             except PhotoCraftError as e:
                 info["pc"] = "PhotoCraft ○"
                 info["err"] = str(e)
