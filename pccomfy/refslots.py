@@ -260,8 +260,9 @@ class RefSlotsMixin:
         self.f_refgrid.pack(fill="x", pady=(4, 0))
         self.lbl_refnames = ttk.Label(self.f_refs, text="", style="Muted.TLabel", wraplength=self._px(380 - 24), justify="left")
         self.lbl_refnames.pack(fill="x", pady=(4, 0))
-        self.lbl_refmsg = ttk.Label(self.f_refs, text="", style="Hint.TLabel", wraplength=self._px(380 - 24), justify="left")
-        self.lbl_refmsg.pack(fill="x")
+        self.lbl_refmax = ttk.Label(self.f_refs, text="", style="Muted.TLabel", wraplength=self._px(380 - 24), justify="left")
+        self.lbl_refmax.pack(fill="x")          # always shown, right below the names line (same look)
+        self.lbl_refmsg = ttk.Label(self.f_refs, text="", style="Hint.TLabel", wraplength=self._px(380 - 24), justify="left")   # only packed while it has text
         self._refs_dnd = self._refs_setup_dnd()
         try:
             self.root.bind("<Control-v>", self._refs_ctrl_v, add="+")
@@ -340,11 +341,12 @@ class RefSlotsMixin:
                                          ("file", "Add file", "Picks a picture file. Or drop files onto a slot.", self._refs_add_file, False)], False)
                 ttk.Label(cell, text="", style="Muted.TLabel").pack(anchor="w")
         over = len(rs.overflow)
+        self.lbl_refmax.configure(text=f"Max. images: {rs.max_refs}")
         hint = rs.hint()
         self.lbl_refnames.configure(text=("Name them in your text: " + hint + "." if hint else
                                           "Add a picture, then name it in your text."))
         if over:
-            self._refs_say(f"This model takes {rs.max_refs}: the last {over} image(s) are kept but not sent.")
+            self._refs_say(f"The last {over} image(s) are kept but not sent.")
         elif not self._refs_dnd and not getattr(self, "_ref_dnd_told", False):
             self._ref_dnd_told = True
             self._refs_say("Drag and drop needs the package tkinterdnd2: run setup-windows.bat again. Ctrl+V, Paste and Add file work without it.")
@@ -399,6 +401,10 @@ class RefSlotsMixin:
 
     def _refs_say(self, text: str):
         self.lbl_refmsg.configure(text=text)
+        if text:
+            self.lbl_refmsg.pack(fill="x")
+        else:
+            self.lbl_refmsg.pack_forget()           # no empty line between the slots and the negative prompt
 
     # ---- adding ----
     def _refs_add_image(self, image, name: str = ""):
