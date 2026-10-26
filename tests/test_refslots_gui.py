@@ -128,7 +128,7 @@ def main():
     app.refslots.add(img, "r.png")
     req = app._request()
     assert req.mode == "edit" and len(req.refs) == 2
-    # slots appear gradually when a model has more than three: three at first, a new one only when the last shown is filled
+    # the filled slots and exactly one empty one, for every model; no empty placeholders ("free")
     app.refslots.set_model(8, "<image{n}>")
     assert app._refs_visible() == 3
     for _ in range(3):
@@ -136,7 +136,11 @@ def main():
     assert len(app.refslots.items) == 5 and app._refs_visible() == 6
     app.refslots.clear()
     app.refslots.set_model(3, "image {n}")
-    assert app._refs_visible() == 3                                        # up to three: all shown
+    assert app._refs_visible() == 1                                        # empty: only the drop slot
+    app.refslots.add(img, "a.png")
+    app.refslots.add(img, "b.png")
+    app.refslots.add(img, "c.png")
+    assert app._refs_visible() == 3                                        # full: no empty slot left
     app.refslots.clear()
     app.refslots.add(img, "a b.png")
     app.refslots.add(img, "r.png")
