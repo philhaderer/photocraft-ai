@@ -5,7 +5,7 @@ Stand 2026-10-26, 20:10. Der Plan ist freigegeben. **Gebaut und in `next` gemerg
 ## 1. Entscheidungen des Users (26.10.)
 
 - Fill für Flux später. Easy-Mode-Ranking Fill: Qwen, Fibo.
-- Krea 2 Expand und Flux 3 Expand werden deaktiviert. Easy-Mode-Ranking Expand: MOSS, Flux 2, Fibo, Qwen.
+- Krea 2 Expand und Flux 3 Expand werden deaktiviert (am 26.10. abends für einen neuen Test wieder eingeschaltet; nach dem Test entscheidet der User). Easy-Mode-Ranking Expand: MOSS, Flux 2, Fibo, Qwen.
 - Tutorial-PSDs: nur Testbild, ohne Referenzbilder; eigener Modus später.
 - Repo: Option c (neues Repo ohne Upstream-Verlauf, Credits bleiben Pflicht), Zeitpunkt b: erst kurz vor dem Veröffentlichen. Bis dahin Branch `windows-fibo`.
 - Release 1: nur 16 GB getestet, 8-GB-Empfehlungen als Doku. AusBoss behalten und als Abhängigkeit deklarieren.
