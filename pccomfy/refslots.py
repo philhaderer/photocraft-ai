@@ -243,6 +243,7 @@ class RefSlotsMixin:
 
     SLOT = 108         # px (before the display scaling): every slot is the same size, whatever the model
     ICON_SCALE = 1.7   # the slot icons are the 16 px pixel art times this (the ONE place to make them bigger or smaller)
+    PER_ROW = 3        # slots per row
     BAR_ICONS = 4      # the most icons one bar holds (the slot is as tall as that needs)
 
     # ---- wrapped window methods ----
@@ -355,13 +356,14 @@ class RefSlotsMixin:
         self._ref_photos = []
         rs = self.refslots
         s = self._px(self.SLOT)
-        for c in range(max(1, rs.max_refs)):
+        per_row = self.PER_ROW
+        for c in range(per_row):
             self.f_refgrid.columnconfigure(c, minsize=s + self._px(6))
         n_used = len(rs.active)
         self.lbl_refs.configure(text=f"Reference images ({n_used}/{rs.max_refs})")
-        for k in range(rs.max_refs):
+        for k in range(self._refs_visible()):
             cell = ttk.Frame(self.f_refgrid)
-            cell.grid(row=0, column=k, sticky="n", padx=(0, self._px(6)))
+            cell.grid(row=k // per_row, column=k % per_row, sticky="n", padx=(0, self._px(6)), pady=(0, self._px(4)))
             box = tk.Frame(cell, width=s, height=self._px(max(self.SLOT, self.BAR_ICONS * (self._icon_px() + 3) + 2)), bg=PANEL, highlightthickness=1, highlightbackground="#5c5c5c")
             box.pack_propagate(False)
             box.pack()
@@ -405,6 +407,14 @@ class RefSlotsMixin:
             self._on_content_size()
         except Exception:
             pass
+
+    def _refs_visible(self) -> int:
+        """How many slots are shown: a model with up to 3 shows all of them; with more, one row of 3 to start with and a
+        new slot only when the last one shown is filled (the 380 px window does not overflow)."""
+        rs = self.refslots
+        if rs.max_refs <= self.PER_ROW:
+            return rs.max_refs
+        return min(rs.max_refs, max(self.PER_ROW, len(rs.items) + 1))
 
     def _icon_px(self) -> int:
         return int(16 * round(self.ICON_SCALE * 10) / 10)

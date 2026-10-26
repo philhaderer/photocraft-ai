@@ -100,3 +100,8 @@ Nummerierung und Reihenfolge prüft `tests/test_refslots.py` am echten Graphen (
 - **Wann:** bei jeder Änderung von Tab/Modus, sobald sich die Namensregel gegenüber dem letzten Modell mit Slots ändert (Krea und MOSS haben keine und lassen den Text, wie er ist). Beim Start und beim Laden eines Presets nicht (`_booting`).
 - **Grenze:** In der Flux-2-Regel ist auch ein ganz normales „image 3“ im Text ein Tag und wird umgerechnet. Das lässt sich nicht trennen.
 - **Alternative:** Nur beim Senden umschreiben (der Text im Fenster bliebe in der alten Schreibweise; du sähest nicht, was gesendet wird).
+
+## 17. Qwen: 8 Slots
+- **Geprüft:** Der Knoten `TextEncodeQwenImage21` hat 16 Bild-Eingänge (`image_1` … `image_16`, Autogrow). Unser Workflow hatte 3 belegt (Bild + 2 Slots). Jetzt 9: Bild + 8 Slots (LoadImage 13, 14, 15 … 20), `max_refs=8` in `models.py` (eine Zahl je Modell).
+- **Fenster:** Bei mehr als 3 Slots erscheint eine Reihe zu 3, ein neuer Slot erst, wenn der letzte gezeigte belegt ist (`PER_ROW`, `_refs_visible`). Modelle mit höchstens 3 Slots zeigen alle wie bisher. Jede Reihe ist 122 Punkt hoch, bei 8 Slots wächst der Block auf 3 Reihen.
+- **Nicht getestet:** ein echter Lauf mit mehr als 2 Referenzen bei Qwen und der Speicherbedarf (siehe FRAGEN.md 8).

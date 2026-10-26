@@ -44,7 +44,7 @@ def main():
     pick("qwen", "edit")
     assert log[-1] == "off"
     pick("qwen", "multi_edit")
-    assert log[-1] == "on" and app.refslots.max_refs == 2 and app.refslots.tag_style == "<image{n}>"
+    assert log[-1] == "on" and app.refslots.max_refs == 8 and app.refslots.tag_style == "<image{n}>"
     pick("qwen", "remove")
     assert log[-1] == "off"                                  # Remove Selection takes no references
     pick("qwen", "multi_edit")
@@ -61,7 +61,12 @@ def main():
         app._refs_paste()
         assert len(app.refslots.items) == 1 and app.lbl_refnames["text"].startswith("Name them in your text: picture = <image1>")
         assert app._refs_ctrl_v() == "break" and len(app.refslots.items) == 2
-        assert app._refs_ctrl_v() == "break" and len(app.refslots.items) == 2 and "full" in app.lbl_refmsg["text"]   # the third does not fit
+        for _ in range(6):
+            app._refs_ctrl_v()
+        assert len(app.refslots.items) == 8 and app._refs_visible() == 8
+        assert app._refs_ctrl_v() == "break" and len(app.refslots.items) == 8 and "full" in app.lbl_refmsg["text"]   # the ninth does not fit
+        while len(app.refslots.items) > 2:
+            app.refslots.remove(len(app.refslots.items) - 1)
         # a text field keeps Ctrl+V
         class Focus:
             def winfo_class(self):
@@ -118,6 +123,18 @@ def main():
     app.refslots.add(img, "r.png")
     req = app._request()
     assert req.mode == "edit" and len(req.refs) == 2
+    # slots appear gradually when a model has more than three: three at first, a new one only when the last shown is filled
+    app.refslots.set_model(8, "<image{n}>")
+    assert app._refs_visible() == 3
+    for _ in range(3):
+        app.refslots.add(img, "x.png")
+    assert len(app.refslots.items) == 5 and app._refs_visible() == 6
+    app.refslots.clear()
+    app.refslots.set_model(3, "image {n}")
+    assert app._refs_visible() == 3                                        # up to three: all shown
+    app.refslots.clear()
+    app.refslots.add(img, "a b.png")
+    app.refslots.add(img, "r.png")
     pick("flux2", "multi_edit")
     assert app.refslots.max_refs == 3 and len(app._request().refs) == 2 and app.refslots.tag(0) == "image 2"
     pick("flux2", "upscale")

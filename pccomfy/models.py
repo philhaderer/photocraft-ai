@@ -98,7 +98,7 @@ QWEN = Model(
         "outpaint": _EXPAND,
         "remove": _REMOVE,
     },
-    max_refs=2, tag_style="<image{n}>")
+    max_refs=8, tag_style="<image{n}>")
 
 FLUX2 = Model(
     "flux2", "Flux 2 Klein Edit",
