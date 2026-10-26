@@ -110,7 +110,7 @@ class RunMixin:
                     res = self.bridge.run(rq, progress)
                     total += len(res["layers"])
                 self.events.put(("vgl", res.get("vgl", "")))
-                self.events.put(("done", f"Done · seed {res['seed']} · {total} layer{'s' if total != 1 else ''} · {duration_text(time.monotonic() - t_start)}"))
+                self.events.put(("done", f"Done · seed {res['seed']} · created {total} layer{'s' if total != 1 else ''} · {duration_text(time.monotonic() - t_start)}"))
             except Cancelled:
                 self.events.put(("done", "Cancelled."))
             except (BridgeError, ComfyError, PhotoCraftError, ValueError, OSError) as e:
