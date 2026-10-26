@@ -403,11 +403,11 @@ class RefSlotsMixin:
                     bar.append(("copy", "Copy text", "Puts the description on the clipboard.", lambda k=k: self._refs_copy_text(k), False))
                 self._refs_bar(box, bar, busy)
             else:
-                tk.Label(box, text="Drop a picture\nor Ctrl+V" if k == len(rs.items) else "free", fg=MUTED, bg=PANEL, bd=0,
+                tk.Label(box, text="Drop a picture\nor Ctrl+V", fg=MUTED, bg=PANEL, bd=0,
                          justify="center").pack(expand=True, side="left")
-                if k == len(rs.items):      # the next free slot takes the pictures: paste and add file sit in its bar
-                    self._refs_bar(box, [("paste", "Paste", "Takes the picture from the clipboard (Ctrl+V does the same when no text field has the focus).", self._refs_paste, False),
-                                         ("file", "Add file", "Picks a picture file. Or drop files onto a slot.", self._refs_add_file, False)], False)
+                # the one empty slot takes the pictures: paste and add file sit in its bar
+                self._refs_bar(box, [("paste", "Paste", "Takes the picture from the clipboard (Ctrl+V does the same when no text field has the focus).", self._refs_paste, False),
+                                     ("file", "Add file", "Picks a picture file. Or drop files onto a slot.", self._refs_add_file, False)], False)
                 ttk.Label(cell, text="", style="Muted.TLabel").pack(anchor="w")
         over = len(rs.overflow)
         self.lbl_refmax.configure(text=f"Max. images: {rs.max_refs}")
@@ -425,12 +425,10 @@ class RefSlotsMixin:
             pass
 
     def _refs_visible(self) -> int:
-        """How many slots are shown: a model with up to 3 shows all of them; with more, one row of 3 to start with and a
-        new slot only when the last one shown is filled (the 380 px window does not overflow)."""
+        """How many slots are shown: the filled ones and exactly one empty slot ("Drop a picture or Ctrl+V") while the model
+        takes more; no empty placeholders (the 380 px window grows a row at a time)."""
         rs = self.refslots
-        if rs.max_refs <= self.PER_ROW:
-            return rs.max_refs
-        return min(rs.max_refs, max(self.PER_ROW, len(rs.items) + 1))
+        return min(rs.max_refs, len(rs.items) + 1)
 
     def _icon_px(self) -> int:
         return self.ICON_PX
