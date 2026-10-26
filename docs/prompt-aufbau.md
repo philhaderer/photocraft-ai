@@ -6,9 +6,9 @@ Diese Datei wird von `python tests/test_prompt_aufbau.py --write` erzeugt: Die B
 
 1. Das Bild im PhotoCraft-Dokument ist immer „Bild 1“. Die Referenzbilder sind Bild 2, 3 … (Reihenfolge der Slots).
 2. Du tippst deinen Text und nennst die Bilder mit ihren Namen (unter den Slots steht, wie sie heißen).
-3. Hat ein Referenzbild eine Beschreibung, wird sie automatisch ans Ende deines Textes gehängt, eine Zeile pro Bild: `<Name>: <Beschreibung>`.
+3. „Beschreiben“ schreibt die Beschreibung sichtbar ans Ende des Prompt-Felds, eine Zeile pro Bild: `<Name>: <Beschreibung>`. Du kannst sie dort ändern oder löschen; ein zweites Beschreiben ersetzt die Zeile.
 4. Der Workflow setzt den Namen des Hauptbildes vorn davor, wenn das Modell einen braucht (`pc_image_tag`).
-5. Das Textfeld im Fenster bleibt unverändert; das Anhängen passiert erst beim Senden.
+5. Gesendet wird das Prompt-Feld so, wie es dasteht; beim Senden wird nichts mehr angehängt.
 
 Beispiel in allen vier Fällen: zwei Referenzbilder (Hund, Mütze), beide beschrieben.
 
@@ -86,4 +86,4 @@ Put the hat from <ref_image_2> on the dog from <ref_image_1>.
 
 ## Sieht man den gesendeten Prompt im Betrieb?
 
-`data/exchange/runs.jsonl` hat pro Lauf eine Zeile mit dem Prompt (Feld `prompt`). Das ist dein Text plus die angehängten Beschreibungen, aber ohne den Bildnamen, den der Workflow davorsetzt, und bei langen Texten nach 600 Zeichen abgeschnitten. Der Text, der wirklich beim Encoder ankommt, steht in `data/exchange/last-graph.json` (nur der letzte Lauf). Für den Alltag reicht `runs.jsonl`; für die Frage „was genau sah das Modell?“ nimm `last-graph.json`.
+`data/exchange/runs.jsonl` hat pro Lauf eine Zeile mit dem Prompt (Feld `prompt`). Das ist der Inhalt des Prompt-Felds samt Beschreibungszeilen, aber ohne den Bildnamen, den der Workflow davorsetzt, und bei langen Texten nach 600 Zeichen abgeschnitten. Der Text, der wirklich beim Encoder ankommt, steht in `data/exchange/last-graph.json` (nur der letzte Lauf). Für den Alltag reicht `runs.jsonl`; für die Frage „was genau sah das Modell?“ nimm `last-graph.json`.

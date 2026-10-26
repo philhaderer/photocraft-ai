@@ -187,8 +187,19 @@ def main():
         time.sleep(0.02)
     assert app.refslots.items[0].description == "A red square on blue." and not app._ref_busy
     assert app.lbl_refmsg["text"] == "<image2>: A red square on blue."
-    assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa"          # the text field itself stays as typed
-    assert app._request().params.prompt == "put it on the sofa\n<image2>: A red square on blue."   # the description goes along at the end
+    # the description is written into the prompt field as its own line, and the field is sent as it is (nothing added twice)
+    assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa\n<image2>: A red square on blue."
+    assert app._request().params.prompt == "put it on the sofa\n<image2>: A red square on blue."
+    # describing again replaces that line instead of adding a second one
+    app.bridge.describe_image = lambda im: "A red square on green."
+    app._refs_describe(0)
+    for _ in range(100):
+        while pending:
+            pending.pop(0)()
+        if app.refslots.items[0].description == "A red square on green.":
+            break
+        time.sleep(0.02)
+    assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa\n<image2>: A red square on green."
     assert not hasattr(app, "b_refuse")
     app.bridge.describe_image = lambda im: (_ for _ in ()).throw(RuntimeError("ComfyUI is not running"))
     app._refs_describe(0)
