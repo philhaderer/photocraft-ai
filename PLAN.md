@@ -94,7 +94,7 @@ Berührungspunkte nur über feste Schnittstellen: `models.py` (nur L2, danach nu
 
 - `tkinterdnd2` ist eine neue Abhängigkeit (Setup-Skript und README-Windows erweitern). Funktioniert es mit deinem Python? Vorher ausprobieren.
 - „Workflow-JSON speichern“: unsere Workflows sind API-Format. Ob dein ComfyUI-Frontend es per Drag-and-drop lädt, ist ungeprüft; sonst braucht es eine Umwandlung ins Editor-Format.
-- `undo.png` liegt ungetrackt im Repo-Wurzelordner. Vorschlag: nach `pccomfy/assets/undo.png`, zur Laufzeit mit Pillow klein skaliert und für Redo gespiegelt; `pyproject.toml` bekommt dafür package-data.
+- `undo.png` liegt in `pccomfy/assets/undo.png` (getrackt, package-data in `pyproject.toml`). Zur Laufzeit mit Pillow klein skalieren und für Redo spiegeln; das Icon ist schwarz und muss für den dunklen Hintergrund eingefärbt werden.
 - In der VM gibt es kein tkinter: das echte Fenster rendert nur bei dir. Tests laufen gegen gestubbtes Tk.
 - Krea-Style-Explorer: Lizenz des Repos und der Bilder vor dem Mitliefern klären (Klonen zum Ansehen ist okay).
 - Scribble/Sketch, Remove-Prompt, Encoder-Tausch, Steps-Prüfung: Recherche- und Testaufgaben ohne Code, getrennt von den Lanes (`docs/tests/`).

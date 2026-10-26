@@ -9,7 +9,7 @@ Zweck: Alles, was der Chat weiß, damit eine neue Claude-Code-Sitzung direkt auf
 - Nebenwirkungen (Downloads, Neustarts, Löschungen, GPU-Läufe, Installationen) nur mit Erlaubnis. ComfyUI und Plugin startet er selbst neu.
 - Git: pro Aufgabe ein beschreibender Commit, **nie pushen**. Trailer: `Co-Authored-By: Claude <Modellname> <noreply@anthropic.com>` (je nach Sitzung der dort vorgegebene Trailer).
 - Keine README-Politur. `README.pl.md` ist Upstream und bleibt. `photocraft-ai 0.15.1.bat` ist sein Starter: nie löschen (`photocraft-ai.bat` zeigt noch auf 0.14.0, offene Frage, ob angleichen).
-- `undo.png` im Repo-Wurzelordner bleibt absichtlich **ungetrackt**, bis die Fenster-Politur-Lane sie nach `pccomfy/assets/` verschiebt.
+- `undo.png` liegt seit 26.10. getrackt in `pccomfy/assets/undo.png` (package-data in `pyproject.toml`); L3 baut daraus die Undo/Redo-Buttons.
 - Checkpoint-Graph und Fooocus-Code bleiben vorerst („jetzt mal nicht“). Keine automatische Prompt-Ergänzung bei „remove …“ (nur Tipp unter dem Prompt).
 - Sein Bildton: Fenster 380 px fest breit, Titelleiste bleibt `#404040`, alles andere Hintergrund `#282828`.
 
