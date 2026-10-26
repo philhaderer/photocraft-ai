@@ -82,6 +82,7 @@ def main():
     app._refs_on_drop(type("E", (), {"data": "{%s} %s" % (tmp / "a b.png", tmp / "x.txt"), "action": "copy"})())
     assert [it.name for it in app.refslots.items] == ["a b.png"] and "not a picture" in app.lbl_refmsg["text"]
 
+    assert app.ICON_SCALE == 1.7 and app._icon_px() == 27 and app._bar_px() == 33      # icons 70 % bigger, one constant
     # the icon bars: paste and add file in the next free slot, five icons in a filled slot (copy text only with a description)
     app.refslots.clear()
     app._ref_icon_cache.clear()

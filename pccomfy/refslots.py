@@ -231,7 +231,8 @@ class RefSlotsMixin:
     ComfyUI), Describe and (with a description) Copy text."""
 
     SLOT = 108         # px (before the display scaling): every slot is the same size, whatever the model
-    BAR = 22           # width of the icon bar inside a slot (16 px icons)
+    ICON_SCALE = 1.7   # the slot icons are the 16 px pixel art times this (the ONE place to make them bigger or smaller)
+    BAR_ICONS = 5      # the most icons one bar holds (the slot is as tall as that needs)
 
     # ---- wrapped window methods ----
     def _on_mode_ui(self):
@@ -330,12 +331,12 @@ class RefSlotsMixin:
         for k in range(rs.max_refs):
             cell = ttk.Frame(self.f_refgrid)
             cell.grid(row=0, column=k, sticky="n", padx=(0, self._px(6)))
-            box = tk.Frame(cell, width=s, height=s, bg=PANEL, highlightthickness=1, highlightbackground="#5c5c5c")
+            box = tk.Frame(cell, width=s, height=self._px(max(self.SLOT, self.BAR_ICONS * (self._icon_px() + 3) + 2)), bg=PANEL, highlightthickness=1, highlightbackground="#5c5c5c")
             box.pack_propagate(False)
             box.pack()
             if k < len(rs.items):
                 it = rs.items[k]
-                photo = tk.PhotoImage(data=_b64(thumbnail_png(it.image, s - 4 - self._px(self.BAR))))
+                photo = tk.PhotoImage(data=_b64(thumbnail_png(it.image, s - 4 - self._px(self._bar_px()))))
                 self._ref_photos.append(photo)
                 lbl = tk.Label(box, image=photo, bg=PANEL, bd=0)
                 lbl.pack(expand=True, side="left")
@@ -374,11 +375,23 @@ class RefSlotsMixin:
         except Exception:
             pass
 
+    def _icon_px(self) -> int:
+        return int(16 * round(self.ICON_SCALE * 10) / 10)
+
+    def _bar_px(self) -> int:
+        """Width of the icon bar inside a slot (before the display scaling)."""
+        return self._icon_px() + 6
+
     def _refs_icon(self, kind: str, color: str):
         cache = self.__dict__.setdefault("_ref_icon_cache", {})
         if (kind, color) not in cache:
             from .gui_common import icon_image
-            cache[(kind, color)] = icon_image(self.root, kind, color)
+            img = icon_image(self.root, kind, color)
+            try:
+                img = img.zoom(round(self.ICON_SCALE * 10)).subsample(10)     # 16 px -> 27 px at 1.7
+            except Exception:
+                pass
+            cache[(kind, color)] = img
         return cache[(kind, color)]
 
     def _refs_bar(self, box, buttons, busy: bool):
@@ -386,12 +399,12 @@ class RefSlotsMixin:
         `buttons`: (icon, word, explanation, command, waits) - an action that waits is greyed out while a job runs."""
         import tkinter as tk
         from .gui_common import DISABLED, FG, PANEL, Tooltip
-        bar = tk.Frame(box, width=self._px(self.BAR), bg=PANEL, bd=0)
+        bar = tk.Frame(box, width=self._px(self._bar_px()), bg=PANEL, bd=0)
         bar.pack(side="right", fill="y")
         for kind, word, tip, cmd, waits in buttons:
             off = busy and waits
             lb = tk.Label(bar, image=self._refs_icon(kind, DISABLED if off else FG), bg=PANEL, bd=0, cursor="" if off else "hand2")
-            lb.pack(pady=self._px(2))
+            lb.pack(pady=self._px(1))
             if not off:
                 lb.bind("<Button-1>", lambda e, c=cmd: c())
             Tooltip(lb, f"{word}: {tip}")
