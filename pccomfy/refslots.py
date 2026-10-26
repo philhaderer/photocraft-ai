@@ -212,9 +212,11 @@ class RefSlotsMixin:
     """The reference slots of the window. Built the first time the window shows them (`_refs_ensure`), so the hook in gui.py
     is only the class line: `_on_mode_ui` (called on every tab / mode change) and `_request` are wrapped here.
     A slot takes a picture by drag and drop (tkinterdnd2, when installed), Ctrl+V (only when no text field has the focus),
-    the "Paste" button or "Add file". Each slot has Remove, Cut out (BiRefNet in ComfyUI) and Pen."""
+    the Paste or Add file icon of the next free slot. Each filled slot has a bar of icons: Remove, Pen, Cut out (BiRefNet in
+    ComfyUI), Describe and (with a description) Copy text."""
 
-    SLOT = 108           # px (before the display scaling): every slot is the same size, whatever the model
+    SLOT = 108         # px (before the display scaling): every slot is the same size, whatever the model
+    BAR = 22           # width of the icon bar inside a slot (16 px icons)
 
     # ---- wrapped window methods ----
     def _on_mode_ui(self):
@@ -257,12 +259,6 @@ class RefSlotsMixin:
         head.pack(fill="x")
         self.lbl_refs = ttk.Label(head, text="Reference images", style="Muted.TLabel")
         self.lbl_refs.pack(side="left")
-        self.b_refpaste = ttk.Button(head, text="Paste", style="Link.TButton", command=self._refs_paste)
-        self.b_refpaste.pack(side="left", padx=(10, 0))
-        Tooltip(self.b_refpaste, "Takes the picture from the clipboard (Ctrl+V does the same when no text field has the focus).")
-        self.b_refadd = ttk.Button(head, text="Add file", style="Link.TButton", command=self._refs_add_file)
-        self.b_refadd.pack(side="left", padx=(10, 0))
-        Tooltip(self.b_refadd, "Picks a picture file. Or drop files onto a slot.")
         self.b_refuse = ttk.Button(head, text="Descriptions to prompt", style="Link.TButton", command=self._refs_to_prompt)
         Tooltip(self.b_refuse, "Adds one line per described image to your text: \"<image2>: a brown dog ...\".")
         self.f_refgrid = ttk.Frame(self.f_refs)
@@ -324,31 +320,28 @@ class RefSlotsMixin:
             box.pack()
             if k < len(rs.items):
                 it = rs.items[k]
-                photo = tk.PhotoImage(data=_b64(thumbnail_png(it.image, s - 4)))
+                photo = tk.PhotoImage(data=_b64(thumbnail_png(it.image, s - 4 - self._px(self.BAR))))
                 self._ref_photos.append(photo)
                 lbl = tk.Label(box, image=photo, bg=PANEL, bd=0)
-                lbl.pack(expand=True)
+                lbl.pack(expand=True, side="left")
                 Tooltip(lbl, f"{it.name or 'clipboard'}" + ("  (cut out)" if it.cut_out else "") + (f"\n{it.description}" if it.description else ""))
                 tag = rs.tag(k)
                 ttk.Label(cell, text=tag or f"image {k + 2}", style="Hint.TLabel").pack(anchor="w")
                 busy = k in self._ref_busy
-                rows = (ttk.Frame(cell), ttk.Frame(cell))
-                for r in rows:
-                    r.pack(anchor="w")
-                buttons = [(0, "\u2715", "Remove this image.", lambda k=k: self._refs_remove(k)),
-                           (0, "Pen", "Draw on the image (a circle around the part that counts).", lambda k=k: self._refs_pen(k)),
-                           (1, "Undo cut" if it.cut_out else "Cut out",
-                            "Back to the original picture." if it.cut_out else "Removes the background (BiRefNet in ComfyUI).", lambda k=k: self._refs_cut(k)),
-                           (1, "Describe", "Qwen 3.5 9B writes a short description of this picture (about 5 s).", lambda k=k: self._refs_describe(k))]
-                for row, text, tip, cmd in buttons:
-                    b = ttk.Button(rows[row], text=("\u2026" if busy and text in ("Cut out", "Describe") else text), style="Link.TButton", command=cmd)
-                    b.pack(side="left", padx=(0, self._px(6)))
-                    Tooltip(b, tip)
-                    if busy and text not in ("\u2715",):
-                        b.configure(state="disabled")
+                bar = [("remove", "Remove", "Takes this image out of the slots.", lambda k=k: self._refs_remove(k), False),
+                       ("pen", "Pen", "Draw on the image (a circle around the part that counts).", lambda k=k: self._refs_pen(k), False),
+                       ("cut", "Undo cut" if it.cut_out else "Cut out",
+                        "Back to the original picture." if it.cut_out else "Removes the background (BiRefNet in ComfyUI).", lambda k=k: self._refs_cut(k), True),
+                       ("describe", "Describe", "Qwen 3.5 9B writes a short description of this picture (about 5 s).", lambda k=k: self._refs_describe(k), True)]
+                if it.description:
+                    bar.append(("copy", "Copy text", "Puts the description on the clipboard.", lambda k=k: self._refs_copy_text(k), False))
+                self._refs_bar(box, bar, busy)
             else:
                 tk.Label(box, text="Drop a picture\nor Ctrl+V" if k == len(rs.items) else "free", fg=MUTED, bg=PANEL, bd=0,
-                         justify="center").pack(expand=True)
+                         justify="center").pack(expand=True, side="left")
+                if k == len(rs.items):      # the next free slot takes the pictures: paste and add file sit in its bar
+                    self._refs_bar(box, [("paste", "Paste", "Takes the picture from the clipboard (Ctrl+V does the same when no text field has the focus).", self._refs_paste, False),
+                                         ("file", "Add file", "Picks a picture file. Or drop files onto a slot.", self._refs_add_file, False)], False)
                 ttk.Label(cell, text="", style="Muted.TLabel").pack(anchor="w")
         if any(it.description for it in rs.active):
             self.b_refuse.pack(side="left", padx=(10, 0))
@@ -367,6 +360,38 @@ class RefSlotsMixin:
             self._on_content_size()
         except Exception:
             pass
+
+    def _refs_icon(self, kind: str, color: str):
+        cache = self.__dict__.setdefault("_ref_icon_cache", {})
+        if (kind, color) not in cache:
+            from .gui_common import icon_image
+            cache[(kind, color)] = icon_image(self.root, kind, color)
+        return cache[(kind, color)]
+
+    def _refs_bar(self, box, buttons, busy: bool):
+        """The narrow icon bar at the right edge inside a slot: one 16 px icon per action, the old word as its tooltip.
+        `buttons`: (icon, word, explanation, command, waits) - an action that waits is greyed out while a job runs."""
+        import tkinter as tk
+        from .gui_common import DISABLED, FG, PANEL, Tooltip
+        bar = tk.Frame(box, width=self._px(self.BAR), bg=PANEL, bd=0)
+        bar.pack(side="right", fill="y")
+        for kind, word, tip, cmd, waits in buttons:
+            off = busy and waits
+            lb = tk.Label(bar, image=self._refs_icon(kind, DISABLED if off else FG), bg=PANEL, bd=0, cursor="" if off else "hand2")
+            lb.pack(pady=self._px(2))
+            if not off:
+                lb.bind("<Button-1>", lambda e, c=cmd: c())
+            Tooltip(lb, f"{word}: {tip}")
+
+    def _refs_copy_text(self, k: int):
+        items = self.refslots.items
+        if 0 <= k < len(items) and items[k].description:
+            try:
+                self.root.clipboard_clear()
+                self.root.clipboard_append(items[k].description)
+                self._refs_say("Description copied.")
+            except Exception:
+                self._refs_say("The clipboard is not available.")
 
     def _refs_say(self, text: str):
         self.lbl_refmsg.configure(text=text)

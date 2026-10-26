@@ -39,9 +39,20 @@ Stand: 2026-10-26, Branch `feat/l2-multi-image`.
 - **Gewählt:** Strg+V fügt ein Bild ein, außer ein Textfeld hat den Fokus (Prompt, Zahlenfelder). Dort bleibt Text-Einfügen.
 - **Alternative:** Strg+V nur, wenn der Mauszeiger über den Slots ist.
 
-## 9. Reference-Modus
-- **Gewählt:** Nur aus den Tabs (`models.py`) entfernt. Der Code in `bridge.py` und der Radio-Knopf im Fenster bleiben vorerst (das Fenster liest die Felder `ref_style`, `ref_collage`, `ref_cutout`).
-- **Alternative:** alles auf einmal löschen. Das berührt `gui_common.py`, `gui_modes.py`, `gui_state.py` (andere Lane), siehe FRAGEN.md.
+## 9. Reference-Modus (erledigt in Runde 2)
+- **Erledigt:** Der Modus „Insert reference image“ ist überall entfernt (Bridge, Fenster, Zustand, Kommandozeile, Hilfsfunktionen in `imaging.py`, Tests). Alte Presets mit dem Modus fallen auf den ersten Modus des Tabs zurück.
+- **Neu:** Modus `multi_edit` („Multi Image Edit“), im Modus-Block an der Stelle des alten. Er steht bei Qwen, Fibo, Flux 2 und Flux 3 und läuft als `run_as="edit"`: Edit-Workflow des Modells, ganzes Bild, keine Maske, Auswahl wird ignoriert. Die Slots erscheinen nur in diesem Modus (nicht bei Edit, Fill, Expand).
+- **Technisch:** `Request.mode` ist beim Lauf `edit`; das Fenster merkt sich `multi_edit` (Zustand speichert jetzt den gewählten Modus, nicht den Lauf-Modus; das behebt nebenbei, dass „Refine“ nach einem Neustart als „Edit“ zurückkam).
+- **Alternative:** Eigener Bridge-Modus `multi_edit` statt `run_as`. Mehr Code, kein Vorteil, solange er wie Edit läuft.
+- **Offen (FRAGEN.md 7):** mit Auswahl arbeiten? Ergebnis als neues Dokument?
+- **Manifest:** `manifest.py` (L1) kennt `multi_edit` noch nicht. Es braucht je Tab eine Zeile `"multi_edit": ModeSpec(requires=...)` wie bei `edit`; bis dahin ist `tests/test_detection.py` rot.
+
+## 11. Icon-Leiste in den Slots
+- **Gewählt:** Eine schmale Leiste (22 Punkt breit) am rechten Rand INNEN im Slot, 16-Punkt-Symbole untereinander, gezeichnet wie `icon_image` (Pixelbild in `gui_common.SLOT_ART` bzw. Zeichenbefehle, keine Bilddateien). Jedes Symbol hat einen Tooltip „Wort: Erklärung“ mit dem alten Wort.
+- **Gefüllter Slot (von oben nach unten):** Remove (Kreuz), Pen (Stift), Cut out / Undo cut (Schere), Describe (Textzeilen), Copy text (zwei Blätter, nur wenn es eine Beschreibung gibt). Cut out und Describe sind grau, solange ihr Auftrag läuft.
+- **Nächster freier Slot:** Paste (Klemmbrett) und Add file (Blatt mit Plus). Die Textknöpfe „Paste“ und „Add file“ in der Kopfzeile sind weg.
+- **Platz:** Slotbreite bleibt 108 Punkt (+6 Abstand). Die Leiste liegt im Slot, das Bild wird um 22 Punkt kleiner (86 Punkt). 5 Symbole à 20 Punkt = 100 Punkt, passt in 108 Höhe. Slots je Modell: Qwen 2, Fibo 2, Flux 2 3, Flux 3 3 (`max_refs`). Drei Slots brauchen 3 × 114 = 342 Punkt, das Fenster hat 380 − 24 = 356 nutzbar; also passt es bei 100 %. Bei 150 % Skalierung rechnet alles mit `_px` mit und bleibt im gleichen Verhältnis.
+- **Alternative:** Leiste unter dem Bild (nimmt Höhe statt Breite, aber du wolltest rechts) oder Symbole nur beim Daraufzeigen (schwerer zu entdecken).
 
 ## 10. Kleinkram
 - Commit-Titel beginnen mit `L2:` (statt "Window round N"), weil es keine Fenster-Runde ist.

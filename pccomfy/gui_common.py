@@ -102,6 +102,58 @@ def _arrow_icon(root, kind: str, color: str):
     return tk.PhotoImage(master=root, data=base64.b64encode(buf.getvalue()).decode("ascii"))
 
 
+SLOT_ART = {      # 16x16 pixel art ("#" = drawn) for the icons in the reference slots; "paste", "file" and "describe" are drawn in icon_image
+    "remove": ["................",
+               "................",
+               "..##........##..",
+               "...##......##...",
+               "....##....##....",
+               ".....##..##.....",
+               "......####......",
+               ".......##.......",
+               "......####......",
+               ".....##..##.....",
+               "....##....##....",
+               "...##......##...",
+               "..##........##..",
+               "................",
+               "................",
+               "................"],
+    "pen": ["................",
+            "..............##",
+            ".............###",
+            "............###.",
+            "...........###..",
+            "..........###...",
+            ".........###....",
+            "........###.....",
+            ".......###......",
+            "......###.......",
+            ".....###........",
+            "....###.........",
+            "...####.........",
+            "..#####.........",
+            "................",
+            "................"],
+    "cut": ["................",
+           ".#..........#...",
+           ".##........##...",
+           "..##......##....",
+           "...##....##.....",
+           "....##..##......",
+           ".....####.......",
+           "......##........",
+           ".....####.......",
+           "....##..##......",
+           "..###....###....",
+           ".#..#....#..#...",
+           ".#..#....#..#...",
+           "..##......##....",
+           "................",
+           "................"],
+}
+
+
 def icon_image(root, kind: str, color: str):
     """A 16x16 icon for a button, drawn pixel by pixel: "save" (floppy disk), "saveas" (floppy with a plus), "trash"."""
     if kind in ("undo", "redo"):
@@ -140,6 +192,28 @@ def icon_image(root, kind: str, color: str):
             for x, ch in enumerate(row):
                 if ch == "#":
                     px[y][x] = color
+    elif kind in SLOT_ART:                        # the small icons of the reference slots (see SLOT_ART)
+        for y, row in enumerate(SLOT_ART[kind]):
+            for x, ch in enumerate(row):
+                if ch == "#":
+                    px[y][x] = color
+    elif kind == "paste":                         # clipboard with a clip and two lines of text
+        rect(2, 2, 13, 15, fill=False)
+        rect(5, 0, 10, 3)
+        rect(5, 7, 10, 7)
+        rect(5, 10, 10, 10)
+    elif kind == "file":                          # a sheet with a plus: add a file
+        rect(1, 0, 10, 15, fill=False)
+        rect(3, 8, 8, 8)
+        rect(5, 6, 5, 10)
+        rect(11, 11, 15, 11)
+        rect(13, 9, 13, 13)
+    elif kind == "describe":                      # lines of text
+        rect(1, 2, 14, 2)
+        rect(1, 5, 11, 5)
+        rect(1, 8, 14, 8)
+        rect(1, 11, 8, 11)
+        rect(1, 14, 12, 14)
     elif kind == "copy":                          # two sheets
         rect(0, 0, 9, 11, fill=False)
         rect(5, 4, 14, 15, c=BG)
@@ -323,6 +397,7 @@ __all__ = [
     "word_right",
     "_arrow_icon",
     "icon_image",
+    "SLOT_ART",
     "Tooltip",
     "ENHANCE_TIP",
     "LORA_TIP",

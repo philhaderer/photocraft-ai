@@ -82,6 +82,28 @@ def main():
     app._refs_on_drop(type("E", (), {"data": "{%s} %s" % (tmp / "a b.png", tmp / "x.txt"), "action": "copy"})())
     assert [it.name for it in app.refslots.items] == ["a b.png"] and "not a picture" in app.lbl_refmsg["text"]
 
+    # the icon bars: paste and add file in the next free slot, five icons in a filled slot (copy text only with a description)
+    app.refslots.clear()
+    app._ref_icon_cache.clear()
+    app._refs_redraw()
+    kinds = {k for k, _c in app._ref_icon_cache}
+    assert {"paste", "file"} <= kinds and "remove" not in kinds
+    app.refslots.add(img, "q.png")
+    app._ref_icon_cache.clear()
+    app._refs_redraw()
+    kinds = {k for k, _c in app._ref_icon_cache}
+    assert {"remove", "pen", "cut", "describe"} <= kinds and "copy" not in kinds
+    app.refslots.items[0].description = "A red square."
+    app._refs_redraw()
+    assert "copy" in {k for k, _c in app._ref_icon_cache}
+    copied = []
+    app.root.clipboard_clear = lambda: copied.clear()
+    app.root.clipboard_append = lambda t: copied.append(t)
+    app._refs_copy_text(0)
+    assert copied == ["A red square."]
+    app.refslots.clear()
+    app.refslots.add(img, "a b.png")
+
     # the request: the images go along in Edit / Fill / Expand, never in other modes or for a model without slots
     app.refslots.add(img, "r.png")
     req = app._request()
