@@ -83,7 +83,7 @@ Berührungspunkte nur über feste Schnittstellen: `models.py` (nur L2, danach nu
 - Arbeitsweise seit dem Umstieg auf Claude Code (Entscheidung 2026-10-26): eine Claude-Code-Sitzung arbeitet Branch für Branch direkt im Repo und mergt nach grünen Tests in `next`. Keine Lane-Chats und kein FRAGEN/ANTWORTEN-Ablauf mehr; Fragen stellt die Sitzung direkt im Chat. Sollen zwei Aufgaben wirklich parallel laufen, dann per `git worktree` statt eigener Klone.
 - Altlast: `lanes/L1`, `lanes/L2` sind eigenständige Klone (per `.git/info/exclude` ignoriert), vollständig in `next` gemergt und werden nicht mehr benutzt. Archiv der Fragen und Antworten: `docs/archiv-lanes/`.
 - Wenn du ein Ergebnis abgenommen hast, wird `windows-fibo` auf `next` vorgezogen. Das neue Repo entsteht erst vor dem Veröffentlichen.
-- Commits wie bisher: beschreibend, Trailer `Co-Authored-By: Claude <Modell der laufenden Sitzung> <noreply@anthropic.com>` (z. B. `Claude Opus 5.5`).
+- Commits nach Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`, Details in `CLAUDE.md`), Trailer `Co-Authored-By: Claude <Modell der laufenden Sitzung> <noreply@anthropic.com>` (z. B. `Claude Opus 5.5`).
 
 ## 6. Wann ein neuer Chat sinnvoll ist
 
