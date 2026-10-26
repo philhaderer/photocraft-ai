@@ -30,7 +30,7 @@ assert list(by["qwen"].modes) == ["txt2img", "edit", "inpaint", "outpaint", "ref
 assert list(by["moss"].modes) == ["txt2img", "outpaint"]
 assert [m.key for m in models.MODELS] == ["flux3", "flux2", "qwen", "fibo", "krea2", "moss"]
 for m in models.MODELS:
-    assert m.max_refs == 0 and m.tag_style == "", m.key
+    assert m.max_refs == 0 and m.tag_style == "" and m.requires == (), m.key
     assert set(m.mode_tips) <= set(m.modes), (m.key, set(m.mode_tips) - set(m.modes))      # no tooltip for a mode the model does not have
 assert "Expand" not in by["flux3"].tip and "Expand" not in by["krea2"].tip
 assert models.model_for_workflow("krea2-turbo-inpaint.json") is None      # the file stays in workflows/, but no tab uses it

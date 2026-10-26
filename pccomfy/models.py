@@ -31,6 +31,7 @@ class Model:
     mode_tips: dict = field(default_factory=dict)   # mode key -> the tooltip of that mode's radio button (this model only)
     max_refs: int = 0               # Multi Image Edit: how many reference-image slots this model takes (0 = none yet)
     tag_style: str = ""             # Multi Image Edit: how this model names the images in the prompt ("" = not set yet)
+    requires: tuple = ()            # model detection: the model files this tab needs (file names, as ComfyUI lists them); () = not set yet
 
     def workflows(self) -> list[str]:
         out = []
