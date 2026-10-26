@@ -83,6 +83,10 @@ QWEN = Model(
         "reference": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, ref_style="simple", ref_cutout=True, layer_mask="auto")),
         "remove": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
     },
+    requires=(
+        "qwen_image_2.1_int8_convrot.safetensors",
+        "qwen_image_2.1_vae_bf16.safetensors",
+    ),   # the model files this tab needs (details per mode: manifest.py)
     mode_tips={
         "txt2img": _TXT,
         "edit": _EDIT,
@@ -103,6 +107,11 @@ FLUX2 = Model(
         "upscale": Mode("flux2-klein-upscale.json", dict(scale=1.5, turbo=True, context=0.0), FLUX2_DEFAULT, prompt_tip=DESCRIBE_TIP),
         "refine": Mode("flux2-klein-upscale.json", dict(turbo=True, context=0.0), FLUX2_DEFAULT, FLUX2_REFINE_PROMPTS, DESCRIBE_TIP),
     },
+    requires=(
+        "flux-2-klein-9b-int8-ConvRot-comfyui.safetensors",
+        "qwen_3_8b_fp8mixed.safetensors",
+        "flux2-vae.safetensors",
+    ),   # the model files this tab needs (details per mode: manifest.py)
     mode_tips={
         "txt2img": _TXT + " The checkbox lets the prompt upsampler write the long prompt.",
         "edit": _EDIT + " Nothing happens? Generate again or word it more fully.",
@@ -121,6 +130,11 @@ FLUX3 = Model(
         "remove": Mode("flux3-klein-edit.json", dict(_SOFT, base_res=1536, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
         "upscale": Mode("flux3-klein-upscale.json", dict(scale=1.5, turbo=True, stage_on=False, context=0.0), FLUX3_DEFAULT, prompt_tip=DESCRIBE_TIP),
     },
+    requires=(
+        "flux3-image-klein-int8-convrot.safetensors",
+        "qwen3vl_4b_int8_convrot.safetensors",
+        "flux2-vae.safetensors",
+    ),   # the model files this tab needs (details per mode: manifest.py)
     mode_tips={
         "txt2img": _TXT + " The checkbox lets the prompt upsampler write the long prompt.",
         "edit": _EDIT + " Nothing happens? Generate again or word it more fully.",
@@ -138,6 +152,11 @@ MOSS = Model(
         "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "base_res": 1280, "layer_mask": "none", "enhance": False}),
         "outpaint": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "auto", "match": 0.5}),
     },
+    requires=(
+        "moss_image_sft_int8_convrot.safetensors",
+        "qwen3.5_9b_w4a8_gptq.safetensors",
+        "flux2-vae_small.safetensors",
+    ),   # the model files this tab needs (details per mode: manifest.py)
     mode_tips={
         "txt2img": _TXT + " The checkbox lets MOSS's own enhancer write the prompt.",
         "outpaint": _EXPAND,
@@ -151,6 +170,11 @@ KREA2 = Model(
     {
         "txt2img": Mode("krea2-turbo-t2i.json", dict(base_res=1024, layer_mask="none", enhance=False)),
     },
+    requires=(
+        "krea2_turbo_int8_convrot.safetensors",
+        "qwen3vl_4b_fp8_scaled.safetensors",
+        "qwen_image_vae.safetensors",
+    ),   # the model files this tab needs (details per mode: manifest.py)
     mode_tips={
         "txt2img": _TXT + " The checkbox lets Krea's own enhancer write the prompt.",
     })
@@ -167,6 +191,11 @@ FIBO = Model(
         "reference": Mode("fibo2-edit.json", dict(base_res=1024, ref_style="simple", ref_cutout=True, layer_mask="auto", enhance=False)),
         "remove": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
     },
+    requires=(
+        "fibo2_edit_turbo_int8_convrot.safetensors",
+        "qwen3vl_4b_int8_convrot.safetensors",
+        "flux2-vae.safetensors",
+    ),   # the model files this tab needs (details per mode: manifest.py)
     mode_tips={
         "txt2img": _TXT,
         "edit": _EDIT,
