@@ -71,3 +71,21 @@ Stand: 2026-10-26, Branch `feat/l2-multi-image`.
 - **Alternative:** Die Zeilen sofort ins Textfeld schreiben (du siehst sie, aber sie stehen doppelt, wenn du neu beschreibst).
 - **Beispiele je Modell:** `docs/prompt-aufbau.md`, erzeugt von `tests/test_prompt_aufbau.py --write`.
 - **tkinterdnd2:** fest in `setup-windows.bat` (pip) und `pyproject.toml` (Extra `dnd`). Fehlt es, steht unter den Slots ein Hinweis, alles andere geht.
+
+## 14. Prüfung: Eingänge und Nummerierung (Antwort auf ANTWORTEN.md, Runde 2)
+Es stimmt alles wie besprochen: Bild in PhotoCraft = Bild 1, Slot 1 = Bild 2, Slot 2 = Bild 3. Eine Auswahl wird ignoriert (Modus läuft als Edit).
+
+| Modell | offene Bild-Eingänge | Knoten je Slot | Tag im Prompt (Bild / Slot 1 / Slot 2 / Slot 3) | leerer Slot |
+|---|---|---|---|---|
+| Qwen 2.1 | 2 | LoadImage 13, 14 → `images.image_2`, `image_3` des Encoders | `<image1>` / `<image2>` / `<image3>` | Knoten und Verbindung werden entfernt |
+| Fibo 2 | 2 | LoadImage 90, 91 → `images.image_2`, `image_3` | `<image_1>` / `<image_2>` / `<image_3>` | wie oben |
+| Flux 2 Klein | 3 | je Slot LoadImage 301–303, VAEEncode 311–313, 2× ReferenceLatent (positiv, negativ) in der Kette | `image 1` / `image 2` / `image 3` / `image 4` | die ganze Kette des Slots wird entfernt, die Kette bleibt geschlossen |
+| Flux 3 Klein | 3 | LoadImage 301–303 → `images.image1` … `image3` von ReferenceMultiLatent (Bild = `image0`) | `<ref_image_0>` / `_1` / `_2` / `_3` | Knoten und Eingang werden entfernt |
+
+Nummerierung und Reihenfolge prüft `tests/test_refslots.py` am echten Graphen (Bild zuerst, Referenzen dahinter, Ketten geschlossen, ohne Zyklus).
+
+**Ungetestet, bitte so lesen:** Das Tag-Muster `<ref_image_{i}>` für das lokale Flux 3 Klein ist meine Annahme. Die Doku nennt für den Cloud-Knoten „FLUX 3 Image“ `image 1`, `image 2`. Qwen und Fibo sind live bestätigt (frühere Runde), Flux 2 ebenso strukturell; ein echter Mehrbild-Lauf je Modell steht aus.
+
+## Offen (nichts gebaut)
+- **Flux 3 Layout-Prompt / BBox:** „FLUX 3 Image Layout Prompt“ (Kernknoten, `<obj_N>`) und die Zeichenfläche f3k-bbox-nodes gehören laut Doku zum Cloud-Knoten. Ob das lokale Flux 3 Klein sie versteht und ob man damit Referenzbilder platzieren kann, ist nicht belegt. Du testest von Hand; später evtl. PhotoCraft-Auswahl als Box.
+- **Idealer Prompt für Multi Image Edit:** wird von Hand getestet; keine automatische Verfeinerung. `docs/prompt-aufbau.md` beschreibt nur den heutigen Stand.
