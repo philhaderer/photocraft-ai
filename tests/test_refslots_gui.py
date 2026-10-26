@@ -44,7 +44,7 @@ def main():
     pick("qwen", "edit")
     assert log[-1] == "off"
     pick("qwen", "multi_edit")
-    assert log[-1] == "on" and app.refslots.max_refs == 2 and app.refslots.tag_style == "<image{n}>"
+    assert log[-1] == "on" and app.refslots.max_refs == 8 and app.refslots.tag_style == "<image{n}>"
     pick("qwen", "remove")
     assert log[-1] == "off"                                  # Remove Selection takes no references
     pick("qwen", "multi_edit")
@@ -61,7 +61,12 @@ def main():
         app._refs_paste()
         assert len(app.refslots.items) == 1 and app.lbl_refnames["text"].startswith("Name them in your text: picture = <image1>")
         assert app._refs_ctrl_v() == "break" and len(app.refslots.items) == 2
-        assert app._refs_ctrl_v() == "break" and len(app.refslots.items) == 2 and "full" in app.lbl_refmsg["text"]   # the third does not fit
+        for _ in range(6):
+            app._refs_ctrl_v()
+        assert len(app.refslots.items) == 8 and app._refs_visible() == 8
+        assert app._refs_ctrl_v() == "break" and len(app.refslots.items) == 8 and "full" in app.lbl_refmsg["text"]   # the ninth does not fit
+        while len(app.refslots.items) > 2:
+            app.refslots.remove(len(app.refslots.items) - 1)
         # a text field keeps Ctrl+V
         class Focus:
             def winfo_class(self):
@@ -82,6 +87,16 @@ def main():
     app._refs_on_drop(type("E", (), {"data": "{%s} %s" % (tmp / "a b.png", tmp / "x.txt"), "action": "copy"})())
     assert [it.name for it in app.refslots.items] == ["a b.png"] and "not a picture" in app.lbl_refmsg["text"]
 
+    assert app.ICON_SCALE == 1.7 and app._icon_px() == 27 and app._bar_px() == 33      # icons 70 % bigger, one constant
+    # the line "Max. images: x" is always there; the message line only takes room while it has text
+    packs = []
+    app.lbl_refmsg.pack = lambda *a, **k: packs.append("on")
+    app.lbl_refmsg.pack_forget = lambda: packs.append("off")
+    app._refs_redraw()
+    assert app.lbl_refmax["text"] == f"Max. images: {app.refslots.max_refs}"
+    app._refs_say("x")
+    app._refs_say("")
+    assert packs[-2:] == ["on", "off"]
     # the icon bars: paste and add file in the next free slot, five icons in a filled slot (copy text only with a description)
     app.refslots.clear()
     app._ref_icon_cache.clear()
@@ -92,7 +107,7 @@ def main():
     app._ref_icon_cache.clear()
     app._refs_redraw()
     kinds = {k for k, _c in app._ref_icon_cache}
-    assert {"remove", "pen", "cut", "describe"} <= kinds and "copy" not in kinds
+    assert {"remove", "cut", "describe"} <= kinds and "pen" not in kinds and "copy" not in kinds
     app.refslots.items[0].description = "A red square."
     app._refs_redraw()
     assert "copy" in {k for k, _c in app._ref_icon_cache}
@@ -108,6 +123,18 @@ def main():
     app.refslots.add(img, "r.png")
     req = app._request()
     assert req.mode == "edit" and len(req.refs) == 2
+    # slots appear gradually when a model has more than three: three at first, a new one only when the last shown is filled
+    app.refslots.set_model(8, "<image{n}>")
+    assert app._refs_visible() == 3
+    for _ in range(3):
+        app.refslots.add(img, "x.png")
+    assert len(app.refslots.items) == 5 and app._refs_visible() == 6
+    app.refslots.clear()
+    app.refslots.set_model(3, "image {n}")
+    assert app._refs_visible() == 3                                        # up to three: all shown
+    app.refslots.clear()
+    app.refslots.add(img, "a b.png")
+    app.refslots.add(img, "r.png")
     pick("flux2", "multi_edit")
     assert app.refslots.max_refs == 3 and len(app._request().refs) == 2 and app.refslots.tag(0) == "image 2"
     pick("flux2", "upscale")
@@ -118,6 +145,17 @@ def main():
     pick("qwen", "multi_edit")
     assert len(app._request().refs) == min(2, len(app.refslots.items))      # nothing was lost by the tab switch
 
+    # a model change rewrites the image names typed in the prompt, and back
+    pick("qwen", "multi_edit")
+    app.t_prompt.delete("1.0", "end")
+    app.t_prompt.insert("1.0", "Put the hat from <image3> on <image2>, image 7 stays.")
+    pick("flux2", "multi_edit")
+    assert app.t_prompt.get("1.0", "end").strip() == "Put the hat from image 3 on image 2, image 7 stays."
+    pick("flux3", "multi_edit")
+    assert app.t_prompt.get("1.0", "end").strip() == "Put the hat from <ref_image_2> on <ref_image_1>, <ref_image_6> stays."
+    pick("qwen", "multi_edit")
+    assert app.t_prompt.get("1.0", "end").strip() == "Put the hat from <image3> on <image2>, <image7> stays."
+    app.t_prompt.delete("1.0", "end")
     # the cut-out button: ComfyUI's answer replaces the picture, "Undo cut" brings the original back
     app.bridge.remove_background = lambda im: Image.new("RGBA", im.size, (0, 0, 0, 0))
     pending = []
@@ -162,11 +200,7 @@ def main():
         time.sleep(0.02)
     assert app.lbl_refmsg["text"] == "Describe failed: ComfyUI is not running" and not app._ref_busy
 
-    # the pen draws
-    out = refslots.apply_strokes(Image.new("RGB", (100, 100), "white"), [("#ff0000", 10, [(10, 10), (90, 10)]), ("#00ff00", 8, [(50, 50)])], 1.0)
-    assert out.getpixel((50, 10))[:3] == (255, 0, 0) and out.getpixel((50, 50))[:3] == (0, 255, 0) and out.getpixel((50, 80))[:3] == (255, 255, 255)
-    out2 = refslots.apply_strokes(Image.new("RGB", (200, 200), "white"), [("#ff0000", 10, [(10, 10), (90, 10)])], 2.0)   # a preview at half size
-    assert out2.getpixel((100, 20))[:3] == (255, 0, 0) and out2.getpixel((100, 24))[:3] == (255, 0, 0)
+    assert not hasattr(refslots, "apply_strokes") and not hasattr(app, "_refs_pen")      # the pen is gone
     assert refslots.thumbnail_png(Image.new("RGBA", (300, 100), (0, 0, 0, 0)), 64)[:4] == b"\x89PNG"
     print("ALL OK (refslots gui)")
 

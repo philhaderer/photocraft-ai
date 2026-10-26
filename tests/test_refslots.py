@@ -55,12 +55,16 @@ def main():
     rs.set_model(q.max_refs, q.tag_style)
     rs.add(Image.new("RGB", (4, 4), "red"), "a.png")
     rs.add(Image.new("RGBA", (4, 4), (0, 0, 255, 0)), "b.png")
+    for _ in range(q.max_refs - 2):
+        rs.add(Image.new("RGB", (4, 4)))
     try:
         rs.add(Image.new("RGB", (4, 4)))
-        raise SystemExit("the third image does not fit")
+        raise SystemExit("one image more than the slots does not fit")
     except RefError as e:
         assert "full" in str(e)
-    assert rs.free == 0 and rs.tag(0) == "<image2>" and rs.tag(1) == "<image3>" and rs.picture_tag() == "<image1>"
+    for _ in range(q.max_refs - 2):
+        rs.remove(len(rs.items) - 1)
+    assert rs.free == q.max_refs - 2 and rs.tag(0) == "<image2>" and rs.tag(1) == "<image3>" and rs.picture_tag() == "<image1>"
     assert rs.hint() == "picture = <image1>, reference 1 = <image2>, reference 2 = <image3>"
     f3 = models.BY_KEY["flux3"]
     rs.set_model(f3.max_refs, f3.tag_style)           # {i} counts from 0: the picture is ref_image_0
@@ -161,13 +165,13 @@ def main():
     # errors: too many images, a mode that takes none
     pc, _, b = T.make(tempfile.mkdtemp(), with_sel=False)
     b.comfy = T.FakeComfy()
-    req = Request(mode="edit", workflow=str(ROOT / "workflows" / WF["qwen"]), enhance=False, refs=[Image.new("RGB", (64, 64))] * 3)
+    req = Request(mode="edit", workflow=str(ROOT / "workflows" / WF["qwen"]), enhance=False, refs=[Image.new("RGB", (64, 64))] * 9)
     req.params = workflows.GenParams(prompt="x", seed=1)
     try:
         b.run(req)
-        raise SystemExit("three images do not fit into Qwen")
+        raise SystemExit("nine images do not fit into Qwen")
     except BridgeError as e:
-        assert "room for 2" in str(e), e
+        assert "room for 8" in str(e), e
     req = Request(mode="upscale", workflow=str(ROOT / "workflows" / "flux3-klein-upscale.json"), refs=[Image.new("RGB", (64, 64))])
     req.params = workflows.GenParams(prompt="x", seed=1)
     try:
@@ -175,6 +179,21 @@ def main():
         raise SystemExit("Upscale takes no reference images")
     except BridgeError as e:
         assert "Multi Image Edit" in str(e), e
+    # changing the model rewrites the image names of the prompt: all 4 x 4 combinations, there and back, only real tags
+    styles = {k: models.BY_KEY[k].tag_style for k in WF}
+    def text_in(style):
+        t = lambda n: style.format(n=n, i=n - 1)
+        return f"Put the hat from {t(3)} on the dog in {t(2)} into {t(1)}, not a plain picture 7 or imagery 3 or a {{image}}."
+    for a, sa in styles.items():
+        for b, sb in styles.items():
+            conv = refslots.retag(text_in(sa), sa, sb)
+            if a == b:
+                assert conv == text_in(sa)
+                continue
+            assert conv == text_in(sb), (a, b, conv)
+            assert refslots.retag(conv, sb, sa) == text_in(sa), (a, b, conv)          # there and back: the same text
+    assert refslots.retag("<ref_image_0> and <ref_image_2>", "<ref_image_{i}>", "<image{n}>") == "<image1> and <image3>"   # 0 = the picture
+    assert refslots.retag("image 2, myimage 2, image 22", "image {n}", "<image{n}>") == "<image2>, myimage 2, image 22"
     print("ALL OK (refslots)")
 
 

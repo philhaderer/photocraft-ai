@@ -20,6 +20,38 @@ MAX_SIDE = 1024                      # the longest side of a reference image sen
 DEFAULT_BACKGROUND = (128, 128, 128)
 
 
+# ---- rewriting the image names in the prompt when the model changes ----
+
+MAX_TAG = 9      # image numbers that count as a tag (1 = the picture ... 9); at least the most slots of any model + 1
+
+
+def _tag_regex(style: str) -> "re.Pattern[str]":
+    """A pattern for the tags of one naming rule ("<image{n}>", "image {n}", "<ref_image_{i}>"); the number is group 1."""
+    parts = re.split(r"(\{n\}|\{i\})", style)
+    pat = "".join(r"(\d{1,2})" if x in ("{n}", "{i}") else re.escape(x) for x in parts)
+    if style[0].isalnum():
+        pat = r"(?<![\w<])" + pat          # "image 2" is a tag, "myimage 2" is not
+    if style[-1].isalnum() or style.rstrip().endswith("}"):
+        pat += r"(?!\d)"
+    return re.compile(pat)
+
+
+def retag(text: str, old_style: str, new_style: str) -> str:
+    """The prompt with every image name of the rule `old_style` written by the rule `new_style`. Only real tags change (the
+    exact pattern of the old rule, number 1..MAX_TAG); the numbering is converted (image 1 is the picture: "<image2>" = "image 2" =
+    "<ref_image_1>"), so going there and back gives the same text."""
+    if not text or not old_style or not new_style or old_style == new_style:
+        return text
+    old_zero = "{i}" in old_style
+
+    def conv(m):
+        number = int(m.group(1)) + (1 if old_zero else 0)          # 1 = the picture
+        if not 1 <= number <= MAX_TAG:
+            return m.group(0)
+        return new_style.format(n=number, i=number - 1)
+    return _tag_regex(old_style).sub(conv, text)
+
+
 class RefError(ValueError):
     pass
 
@@ -132,7 +164,7 @@ class RefSlots:
         self.items.clear()
 
     def replace(self, i: int, image: Image.Image) -> None:
-        """A changed picture (pen, cut-out); the first version is kept for `revert`."""
+        """A changed picture (cut-out); the first version is kept for `revert`."""
         it = self.items[i]
         if it.original is None:
             it.original = it.image
@@ -184,25 +216,6 @@ class RefSlots:
 # Pure helpers for the widget (tested without Tk)
 # ======================================================================================================================
 
-def apply_strokes(image: Image.Image, strokes: list, scale: float = 1.0) -> Image.Image:
-    """The pen: draws `strokes` ([(colour, width, [(x, y), ...]), ...], in the preview's pixels) onto a copy of the image;
-    `scale` = image pixels per preview pixel. Round line ends, one dot for a click."""
-    from PIL import ImageDraw
-    out = image.convert("RGBA")
-    d = ImageDraw.Draw(out)
-    for colour, width, pts in strokes:
-        w = max(1, round(width * scale))
-        pts = [(x * scale, y * scale) for x, y in pts]
-        if len(pts) == 1:
-            x, y = pts[0]
-            d.ellipse((x - w / 2, y - w / 2, x + w / 2, y + w / 2), fill=colour)
-            continue
-        d.line(pts, fill=colour, width=w, joint="curve")
-        for x, y in (pts[0], pts[-1]):
-            d.ellipse((x - w / 2, y - w / 2, x + w / 2, y + w / 2), fill=colour)
-    return out
-
-
 def thumbnail_png(image: Image.Image, size: int, background=(0x28, 0x28, 0x28)) -> bytes:   # the colour of gui_common.PANEL (the slot box behind the thumbnail)
     """A PNG of the picture that fits into a size x size square (kept proportional), transparency shown on `background`."""
     import io
@@ -212,8 +225,6 @@ def thumbnail_png(image: Image.Image, size: int, background=(0x28, 0x28, 0x28)) 
     t.save(buf, "PNG")
     return buf.getvalue()
 
-
-PEN_COLOURS = ("#ff2a2a", "#2ad14b", "#2a7bff", "#ffd400", "#000000", "#ffffff")
 
 
 # ======================================================================================================================
@@ -227,11 +238,13 @@ class RefSlotsMixin:
     """The reference slots of the window. Built the first time the window shows them (`_refs_ensure`), so the hook in gui.py
     is only the class line: `_on_mode_ui` (called on every tab / mode change) and `_request` are wrapped here.
     A slot takes a picture by drag and drop (tkinterdnd2, when installed), Ctrl+V (only when no text field has the focus),
-    the Paste or Add file icon of the next free slot. Each filled slot has a bar of icons: Remove, Pen, Cut out (BiRefNet in
+    the Paste or Add file icon of the next free slot. Each filled slot has a bar of icons: Remove, Cut out (BiRefNet in
     ComfyUI), Describe and (with a description) Copy text."""
 
     SLOT = 108         # px (before the display scaling): every slot is the same size, whatever the model
-    BAR = 22           # width of the icon bar inside a slot (16 px icons)
+    ICON_SCALE = 1.7   # the slot icons are the 16 px pixel art times this (the ONE place to make them bigger or smaller)
+    PER_ROW = 3        # slots per row
+    BAR_ICONS = 4      # the most icons one bar holds (the slot is as tall as that needs)
 
     # ---- wrapped window methods ----
     def _on_mode_ui(self):
@@ -280,8 +293,9 @@ class RefSlotsMixin:
         self.f_refgrid.pack(fill="x", pady=(4, 0))
         self.lbl_refnames = ttk.Label(self.f_refs, text="", style="Muted.TLabel", wraplength=self._px(380 - 24), justify="left")
         self.lbl_refnames.pack(fill="x", pady=(4, 0))
-        self.lbl_refmsg = ttk.Label(self.f_refs, text="", style="Hint.TLabel", wraplength=self._px(380 - 24), justify="left")
-        self.lbl_refmsg.pack(fill="x")
+        self.lbl_refmax = ttk.Label(self.f_refs, text="", style="Muted.TLabel", wraplength=self._px(380 - 24), justify="left")
+        self.lbl_refmax.pack(fill="x")          # always shown, right below the names line (same look)
+        self.lbl_refmsg = ttk.Label(self.f_refs, text="", style="Hint.TLabel", wraplength=self._px(380 - 24), justify="left")   # only packed while it has text
         self._refs_dnd = self._refs_setup_dnd()
         try:
             self.root.bind("<Control-v>", self._refs_ctrl_v, add="+")
@@ -301,7 +315,26 @@ class RefSlotsMixin:
             return False
 
     # ---- show / hide / redraw ----
+    def _refs_retag(self):
+        """The model changed: the image names typed in the prompt get the new model's naming rule."""
+        m = self._refs_model()
+        if m is None or getattr(self, "_booting", False):
+            return
+        old = getattr(self, "_tag_style_seen", None)
+        self._tag_style_seen = m.tag_style
+        if not old or old == m.tag_style:
+            return
+        t = getattr(self, "t_prompt", None)
+        if t is None or str(t.cget("state")) == "disabled":
+            return
+        cur = t.get("1.0", "end").rstrip("\n")
+        new = retag(cur, old, m.tag_style)
+        if new != cur:
+            t.delete("1.0", "end")
+            t.insert("1.0", new)
+
     def _refs_update(self):
+        self._refs_retag()
         want = self._refs_wanted()
         if not want and getattr(self, "f_refs", None) is None:
             return
@@ -323,30 +356,30 @@ class RefSlotsMixin:
         self._ref_photos = []
         rs = self.refslots
         s = self._px(self.SLOT)
-        for c in range(max(1, rs.max_refs)):
+        per_row = self.PER_ROW
+        for c in range(per_row):
             self.f_refgrid.columnconfigure(c, minsize=s + self._px(6))
         n_used = len(rs.active)
         self.lbl_refs.configure(text=f"Reference images ({n_used}/{rs.max_refs})")
-        for k in range(rs.max_refs):
+        for k in range(self._refs_visible()):
             cell = ttk.Frame(self.f_refgrid)
-            cell.grid(row=0, column=k, sticky="n", padx=(0, self._px(6)))
-            box = tk.Frame(cell, width=s, height=s, bg=PANEL, highlightthickness=1, highlightbackground="#5c5c5c")
+            cell.grid(row=k // per_row, column=k % per_row, sticky="n", padx=(0, self._px(6)), pady=(0, self._px(4)))
+            box = tk.Frame(cell, width=s, height=self._px(max(self.SLOT, self.BAR_ICONS * (self._icon_px() + 3) + 2)), bg=PANEL, highlightthickness=1, highlightbackground="#5c5c5c")
             box.pack_propagate(False)
             box.pack()
             if k < len(rs.items):
                 it = rs.items[k]
-                photo = tk.PhotoImage(data=_b64(thumbnail_png(it.image, s - 4 - self._px(self.BAR))))
+                photo = tk.PhotoImage(data=_b64(thumbnail_png(it.image, s - 4 - self._px(self._bar_px()))))
                 self._ref_photos.append(photo)
                 lbl = tk.Label(box, image=photo, bg=PANEL, bd=0)
                 lbl.pack(expand=True, side="left")
                 Tooltip(lbl, f"{it.name or 'clipboard'}" + ("  (cut out)" if it.cut_out else "") + (f"\n{it.description}" if it.description else ""))
                 tag = rs.tag(k)
-                ttk.Label(cell, text=tag or f"image {k + 2}", style="Hint.TLabel").pack(anchor="w")
+                ttk.Label(cell, text=tag or f"image {k + 2}", style="Hint.TLabel", anchor="center").pack(fill="x")      # centred under the slot
                 if it.description:      # shown under the image; it is also added to the end of the prompt
                     ttk.Label(cell, text=it.description, style="Muted.TLabel", wraplength=s, justify="left").pack(anchor="w")
                 busy = k in self._ref_busy
                 bar = [("remove", "Remove", "Takes this image out of the slots.", lambda k=k: self._refs_remove(k), False),
-                       ("pen", "Pen", "Draw on the image (a circle around the part that counts).", lambda k=k: self._refs_pen(k), False),
                        ("cut", "Undo cut" if it.cut_out else "Cut out",
                         "Back to the original picture." if it.cut_out else "Removes the background (BiRefNet in ComfyUI).", lambda k=k: self._refs_cut(k), True),
                        ("describe", "Describe", "Qwen 3.5 9B writes a short description of this picture (about 5 s).", lambda k=k: self._refs_describe(k), True)]
@@ -361,11 +394,12 @@ class RefSlotsMixin:
                                          ("file", "Add file", "Picks a picture file. Or drop files onto a slot.", self._refs_add_file, False)], False)
                 ttk.Label(cell, text="", style="Muted.TLabel").pack(anchor="w")
         over = len(rs.overflow)
+        self.lbl_refmax.configure(text=f"Max. images: {rs.max_refs}")
         hint = rs.hint()
         self.lbl_refnames.configure(text=("Name them in your text: " + hint + "." if hint else
                                           "Add a picture, then name it in your text."))
         if over:
-            self._refs_say(f"This model takes {rs.max_refs}: the last {over} image(s) are kept but not sent.")
+            self._refs_say(f"The last {over} image(s) are kept but not sent.")
         elif not self._refs_dnd and not getattr(self, "_ref_dnd_told", False):
             self._ref_dnd_told = True
             self._refs_say("Drag and drop needs the package tkinterdnd2: run setup-windows.bat again. Ctrl+V, Paste and Add file work without it.")
@@ -374,11 +408,31 @@ class RefSlotsMixin:
         except Exception:
             pass
 
+    def _refs_visible(self) -> int:
+        """How many slots are shown: a model with up to 3 shows all of them; with more, one row of 3 to start with and a
+        new slot only when the last one shown is filled (the 380 px window does not overflow)."""
+        rs = self.refslots
+        if rs.max_refs <= self.PER_ROW:
+            return rs.max_refs
+        return min(rs.max_refs, max(self.PER_ROW, len(rs.items) + 1))
+
+    def _icon_px(self) -> int:
+        return int(16 * round(self.ICON_SCALE * 10) / 10)
+
+    def _bar_px(self) -> int:
+        """Width of the icon bar inside a slot (before the display scaling)."""
+        return self._icon_px() + 6
+
     def _refs_icon(self, kind: str, color: str):
         cache = self.__dict__.setdefault("_ref_icon_cache", {})
         if (kind, color) not in cache:
             from .gui_common import icon_image
-            cache[(kind, color)] = icon_image(self.root, kind, color)
+            img = icon_image(self.root, kind, color)
+            try:
+                img = img.zoom(round(self.ICON_SCALE * 10)).subsample(10)     # 16 px -> 27 px at 1.7
+            except Exception:
+                pass
+            cache[(kind, color)] = img
         return cache[(kind, color)]
 
     def _refs_bar(self, box, buttons, busy: bool):
@@ -386,12 +440,12 @@ class RefSlotsMixin:
         `buttons`: (icon, word, explanation, command, waits) - an action that waits is greyed out while a job runs."""
         import tkinter as tk
         from .gui_common import DISABLED, FG, PANEL, Tooltip
-        bar = tk.Frame(box, width=self._px(self.BAR), bg=PANEL, bd=0)
+        bar = tk.Frame(box, width=self._px(self._bar_px()), bg=PANEL, bd=0)
         bar.pack(side="right", fill="y")
         for kind, word, tip, cmd, waits in buttons:
             off = busy and waits
             lb = tk.Label(bar, image=self._refs_icon(kind, DISABLED if off else FG), bg=PANEL, bd=0, cursor="" if off else "hand2")
-            lb.pack(pady=self._px(2))
+            lb.pack(pady=self._px(1))
             if not off:
                 lb.bind("<Button-1>", lambda e, c=cmd: c())
             Tooltip(lb, f"{word}: {tip}")
@@ -408,6 +462,10 @@ class RefSlotsMixin:
 
     def _refs_say(self, text: str):
         self.lbl_refmsg.configure(text=text)
+        if text:
+            self.lbl_refmsg.pack(fill="x")
+        else:
+            self.lbl_refmsg.pack_forget()           # no empty line between the slots and the negative prompt
 
     # ---- adding ----
     def _refs_add_image(self, image, name: str = ""):
@@ -532,77 +590,6 @@ class RefSlotsMixin:
                 self._refs_say(f"{self.refslots.tag(i) or 'image'}: {box['text']}")
             self._refs_redraw()
         self.root.after(200, check)
-
-    def _refs_pen(self, k: int):
-        import tkinter as tk
-        from tkinter import ttk
-        from .gui_common import ACCENT, BG, PANEL
-        it = self.refslots.items[k]
-        base = it.image.convert("RGBA")
-        view = min(1.0, 520 / max(base.size))
-        vw, vh = max(1, round(base.width * view)), max(1, round(base.height * view))
-        top = tk.Toplevel(self.root)
-        top.title("Pen")
-        top.configure(bg=BG)
-        top.transient(self.root)
-        cv = tk.Canvas(top, width=vw, height=vh, bg=PANEL, highlightthickness=0, cursor="crosshair")
-        cv.pack(padx=8, pady=8)
-        bg_photo = tk.PhotoImage(data=_b64(thumbnail_png(base, max(vw, vh))))
-        cv.create_image(0, 0, image=bg_photo, anchor="nw")
-        state = {"colour": PEN_COLOURS[0], "strokes": [], "cur": None}
-        v_w = tk.IntVar(value=6)
-
-        def down(e):
-            state["cur"] = [state["colour"], int(v_w.get()), [(e.x, e.y)]]
-            state["strokes"].append(state["cur"])
-            cv.create_oval(e.x - v_w.get() / 2, e.y - v_w.get() / 2, e.x + v_w.get() / 2, e.y + v_w.get() / 2,
-                           fill=state["colour"], outline="", tags="pen")
-
-        def move(e):
-            c = state["cur"]
-            if c is None:
-                return
-            x0, y0 = c[2][-1]
-            c[2].append((e.x, e.y))
-            cv.create_line(x0, y0, e.x, e.y, fill=c[0], width=c[1], capstyle="round", tags="pen")
-
-        def up(_e):
-            state["cur"] = None
-
-        def undo():
-            if state["strokes"]:
-                state["strokes"].pop()
-                cv.delete("pen")
-                for colour, w, pts in state["strokes"]:
-                    if len(pts) == 1:
-                        x, y = pts[0]
-                        cv.create_oval(x - w / 2, y - w / 2, x + w / 2, y + w / 2, fill=colour, outline="", tags="pen")
-                    for (xa, ya), (xb, yb) in zip(pts, pts[1:]):
-                        cv.create_line(xa, ya, xb, yb, fill=colour, width=w, capstyle="round", tags="pen")
-
-        def apply():
-            if state["strokes"]:
-                done = apply_strokes(base, [(c, w, p) for c, w, p in state["strokes"]], 1.0 / view)
-                self.refslots.replace(k, done)
-            top.destroy()
-            self._refs_redraw()
-
-        cv.bind("<ButtonPress-1>", down)
-        cv.bind("<B1-Motion>", move)
-        cv.bind("<ButtonRelease-1>", up)
-        bar = ttk.Frame(top)
-        bar.pack(fill="x", padx=8, pady=(0, 8))
-        for c in PEN_COLOURS:
-            sw = tk.Label(bar, width=2, bg=c, bd=1, relief="solid", cursor="hand2")
-            sw.pack(side="left", padx=2)
-            sw.bind("<Button-1>", lambda e, c=c: state.update(colour=c))
-        ttk.Label(bar, text="Size", style="Muted.TLabel").pack(side="left", padx=(10, 2))
-        ttk.Spinbox(bar, textvariable=v_w, from_=1, to=60, width=4).pack(side="left")
-        ttk.Button(bar, text="Undo", style="Link.TButton", command=undo).pack(side="left", padx=10)
-        ttk.Button(bar, text="Cancel", command=top.destroy).pack(side="right")
-        ttk.Button(bar, text="Apply", command=apply).pack(side="right", padx=6)
-        top._keep = bg_photo   # (Tk drops a picture nobody refers to)
-
 
 def _b64(data: bytes) -> str:
     import base64

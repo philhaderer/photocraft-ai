@@ -99,6 +99,30 @@
    "images.image_3": [
     "14",
     0
+   ],
+   "images.image_4": [
+    "15",
+    0
+   ],
+   "images.image_5": [
+    "16",
+    0
+   ],
+   "images.image_6": [
+    "17",
+    0
+   ],
+   "images.image_7": [
+    "18",
+    0
+   ],
+   "images.image_8": [
+    "19",
+    0
+   ],
+   "images.image_9": [
+    "20",
+    0
    ]
   },
   "_meta": {
@@ -196,6 +220,66 @@
   "_meta": {
    "title": "pc:ref Reference 2",
    "pc_slot": 2
+  }
+ },
+ "15": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 3",
+   "pc_slot": 3
+  }
+ },
+ "16": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 4",
+   "pc_slot": 4
+  }
+ },
+ "17": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 5",
+   "pc_slot": 5
+  }
+ },
+ "18": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 6",
+   "pc_slot": 6
+  }
+ },
+ "19": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 7",
+   "pc_slot": 7
+  }
+ },
+ "20": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 8",
+   "pc_slot": 8
   }
  }
 }

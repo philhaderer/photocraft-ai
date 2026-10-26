@@ -59,6 +59,7 @@ FLUX2_REFINE_PROMPTS = (
 )
 FIBO_REFINE = "relight the scene to natural lighting"
 REMOVE_NAME_TIP = "Optional: name what to remove (\"the dog\")."
+MULTI_TIP = "You can start with a white image and use the reference images below to place them on the canvas."
 EDIT_TIP = "To remove something, say what replaces it: \u201cRemove the dog and paint the wall behind him\u201d"
 DESCRIBE_TIP = "Describe the image before this text."
 FLUX3_DEFAULT_OLD = "Restore the photo: remove blur, noise and compression artifacts and recover sharp, natural detail, keeping the same composition, people and colors."
@@ -80,7 +81,7 @@ QWEN = Model(
     {
         "txt2img": Mode("qwen-image-21-t2i.json", dict(base_res=1024, turbo=False, layer_mask="none", enhance=True)),
         "edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="none"), prompt_tip=EDIT_TIP),
-        "multi_edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="none"), prompt_tip=EDIT_TIP, run_as="edit"),
+        "multi_edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="none"), prompt_tip=MULTI_TIP, run_as="edit"),
         "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=4.0)),
         "outpaint": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="auto")),
         "remove": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
@@ -97,7 +98,7 @@ QWEN = Model(
         "outpaint": _EXPAND,
         "remove": _REMOVE,
     },
-    max_refs=2, tag_style="<image{n}>")
+    max_refs=8, tag_style="<image{n}>")
 
 FLUX2 = Model(
     "flux2", "Flux 2 Klein Edit",
@@ -105,7 +106,7 @@ FLUX2 = Model(
     {
         "txt2img": Mode("flux2-klein-t2i.json", dict(base_res=1024, layer_mask="none", enhance=False)),
         "edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none"), prompt_tip=EDIT_TIP),
-        "multi_edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none"), prompt_tip=EDIT_TIP, run_as="edit"),
+        "multi_edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none"), prompt_tip=MULTI_TIP, run_as="edit"),
         "remove": Mode("flux2-klein-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
         "outpaint": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="auto")),
         "upscale": Mode("flux2-klein-upscale.json", dict(scale=1.5, turbo=True, context=0.0), FLUX2_DEFAULT, prompt_tip=DESCRIBE_TIP),
@@ -133,7 +134,7 @@ FLUX3 = Model(
     {
         "txt2img": Mode("flux3-klein-t2i.json", dict(base_res=1536, layer_mask="none", enhance=False)),
         "edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none"), prompt_tip=EDIT_TIP),
-        "multi_edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none"), prompt_tip=EDIT_TIP, run_as="edit"),
+        "multi_edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none"), prompt_tip=MULTI_TIP, run_as="edit"),
         "remove": Mode("flux3-klein-edit.json", dict(_SOFT, base_res=1536, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
         "upscale": Mode("flux3-klein-upscale.json", dict(scale=1.5, turbo=True, stage_on=False, context=0.0), FLUX3_DEFAULT, prompt_tip=DESCRIBE_TIP),
     },
@@ -194,7 +195,7 @@ FIBO = Model(
     {
         "txt2img": Mode("fibo2-t2i.json", dict(base_res=1224, layer_mask="none", enhance=False)),
         "edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=EDIT_TIP),
-        "multi_edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=EDIT_TIP, run_as="edit"),
+        "multi_edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=MULTI_TIP, run_as="edit"),
         "refine": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), FIBO_REFINE, run_as="edit"),
         "inpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False)),
         "outpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
