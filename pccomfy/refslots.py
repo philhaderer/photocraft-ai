@@ -188,7 +188,7 @@ def apply_strokes(image: Image.Image, strokes: list, scale: float = 1.0) -> Imag
     return out
 
 
-def thumbnail_png(image: Image.Image, size: int, background=(0x40, 0x40, 0x40)) -> bytes:
+def thumbnail_png(image: Image.Image, size: int, background=(0x28, 0x28, 0x28)) -> bytes:   # the colour of gui_common.PANEL (the slot box behind the thumbnail)
     """A PNG of the picture that fits into a size x size square (kept proportional), transparency shown on `background`."""
     import io
     t = flatten(image, background)
@@ -250,7 +250,7 @@ class RefSlotsMixin:
         self._ref_photos: list = []
         self._ref_busy: set[int] = set()
         self._ref_job = None
-        self.f_refs = ttk.Frame(self.root)
+        self.f_refs = ttk.Frame(self.f_body)      # inside the body frame (gui.py _build): it is packed before f_neg, which lives there
         head = ttk.Frame(self.f_refs)
         head.pack(fill="x")
         self.lbl_refs = ttk.Label(head, text="Reference images", style="Muted.TLabel")

@@ -54,7 +54,126 @@ def lists_without(**drop):
 NODES = {n for tab in manifest.TABS.values() for s in tab.modes.values() for n in s.nodes}
 
 
+def test_start_state():
+    refresh = {"pc": "PhotoCraft \u25CF", "comfy": "ComfyUI \u25CF"}
+    full = lambda: inventory.Inventory(td.full_lists(), NODES)       # noqa: E731
+    det = lambda inv: {"_detect": True, "_inv": inv, "_yaml": [], "_disk": {}}      # noqa: E731
+
+    # the very first start: no model is chosen, the old "open on the first model" step does not run
+    cfgmod.save_state({})
+    app = make_app()
+    assert app.v_model.get() == "" and app.start_state() == "choose"
+    app._apply_refresh(refresh)
+    assert app.v_model.get() == "" and app._last_model == "", app.v_model.get()
+    app._apply_refresh(det(full()))
+    assert app.v_model.get() == "" and app.start_state() == "choose"
+    app._apply_refresh(det(inventory.Inventory({})))
+    assert app.start_state() == "none_linked" and app.v_model.get() == ""
+    # a tab that is not available does not open from the empty state either: its settings do
+    app.v_model.set("krea2")
+    app._on_model()
+    assert app.v_model.get() == "" and app._settings_win is not None and app._settings_focus == "krea2"
+    app._settings_close()
+    # the first click on a model shows it and remembers it for the next start (state.json)
+    app._apply_refresh(det(full()))
+    app.v_model.set("flux3")
+    app._on_model()
+    assert app.v_model.get() == "flux3" and app.start_state() == "" and cfgmod.load_state()["model"] == "flux3"
+
+    # next start: the last model is chosen again (and its mode comes with the saved state)
+    cfgmod.save_state({"model": "krea2", "mode": "txt2img", "workflow": "krea2-turbo-t2i.json"})
+    app = make_app()
+    assert app.v_model.get() == "krea2" and app.v_mode.get() == "txt2img" and app._last_model == "krea2"
+    app._apply_refresh(det(full()))
+    assert app.v_model.get() == "krea2" and app.start_state() == ""
+
+    # next start, but the last model has lost its files: no tab is chosen, not a broken one; it stays that way
+    app = make_app()
+    broken = inventory.Inventory(lists_without(vae="qwen_image_vae.safetensors"), NODES)
+    app._apply_refresh(det(broken))
+    assert app.v_model.get() == "" and app.v_workflow.get() == gui.BUILTIN and app._last_model == ""
+    assert "Krea 2 Turbo is not available" in app.v_status.get() and app.start_state() == "choose"
+    app._apply_refresh(refresh)                         # the workflow list is read again: nothing picks the model up again
+    assert app.v_model.get() == ""
+    app._apply_refresh(det(full()))
+    assert app.v_model.get() == ""
+
+    # later in the session a reading that misses a file does not take the tab away from the user
+    app.v_model.set("flux3")
+    app._on_model()
+    app._apply_refresh(det(inventory.Inventory(lists_without(unet="flux3-image-klein-int8-convrot.safetensors"), NODES)))
+    assert app.v_model.get() == "flux3"
+
+
+class Seen:
+    """Stands in for a widget and only remembers whether it is packed (the Tk stub does not lay anything out)."""
+
+    def __init__(self):
+        self.on = False
+        self.fit = 0
+
+    def pack(self, *a, **k):
+        self.on = True
+
+    def pack_forget(self):
+        self.on = False
+
+
+def test_empty_view():
+    det = lambda inv: {"_detect": True, "_inv": inv, "_yaml": [], "_disk": {}}      # noqa: E731
+    cfgmod.save_state({})
+    app = make_app()
+    shown = {n: Seen() for n in ("f_tabs", "lbl_empty", "f_body", "lbl_conn", "b_refresh", "b_reset")}
+    for n, w in shown.items():
+        setattr(app, n, w)
+    for n in ("lbl_conn", "b_refresh", "b_reset"):
+        shown[n].on = True                                    # the footer starts packed (gui.py)
+    on = lambda: {n for n, w in shown.items() if w.on}      # noqa: E731
+    all_foot = {"lbl_conn", "b_refresh", "b_reset"}
+
+    app._apply_start_state()
+    assert on() == {"f_tabs", "lbl_empty"} | all_foot and app.v_empty.get() == "Choose a model"       # tabs + one sentence + footer, no body
+    app._apply_refresh(det(inventory.Inventory({})))
+    assert on() == {"lbl_empty"} and app.v_empty.get() == "Link your model in the settings"          # nothing linked: sentence + gear only
+    app._apply_refresh(det(inventory.Inventory(td.full_lists(), NODES)))
+    assert on() == {"f_tabs", "lbl_empty"} | all_foot
+    app.v_model.set("flux3")
+    app._on_model()
+    assert on() == {"f_tabs", "f_body"} | all_foot and app.v_empty.get() == ""
+    app.v_model.set("")
+    app.v_workflow.set("some-own-workflow.json")                  # a workflow of your own is not an empty state
+    assert app.start_state() == ""
+
+    # Generate in an empty state does nothing but say so
+    called = []
+    gui.RunMixin.generate = lambda self: called.append(1)
+    app.v_workflow.set(gui.BUILTIN)
+    assert app.start_state() == "choose"
+    app.generate()
+    assert called == [] and app.v_status.get() == "Choose a model first."
+    print("ok empty view")
+
+
 def main():
+    # the gear sits in the footer row, in the same frame as the Refresh and Reset buttons (not next to the tabs)
+    made = []
+
+    class RecBtn(t.Widget):
+        def __init__(self, master=None, **k):
+            super().__init__(master, **k)
+            self.master = master
+            self.text = k.get("text")
+            made.append(self)
+
+    plain = t.ttk.Button
+    t.ttk.Button = RecBtn
+    probe = gui.App(cfgmod.load())
+    t.ttk.Button = plain
+    assert probe.b_gear.master is not probe.f_tabs and probe.b_gear.text == "\u2699" and probe.b_gear.master is not None
+    foot = [b.master for b in made if b.text in ("Refresh", "Reset")]
+    assert len(foot) == 2 and foot[0] is foot[1] and probe.b_gear.master is foot[0]
+    del probe
+
     app = make_app()
 
     # the hooks: SettingsMixin first, a gear button, a tooltip object per tab
@@ -190,9 +309,58 @@ def main():
     app._apply_refresh(data)
     assert cfgmod.extra_paths_file() == "" and app._yaml_sections == [] and "No file chosen" in "".join(s for s, _st, _u in app._settings_segments())
 
+    # the settings window is an owned window of the bridge window (hidden / minimised / closed with it), never "always on top"
+    class RecWin(t.Widget):
+        calls = []
+
+        def attributes(self, *a, **k):
+            RecWin.calls.append(a)
+
+    class FakeApi:
+        owners = {}
+
+        def toplevel(self, w):
+            return id(w) % 100000 + 1
+
+        def owner_of(self, hwnd):
+            return FakeApi.owners.get(hwnd, 0)
+
+        def set_owner(self, hwnd, owner):
+            FakeApi.owners[hwnd] = owner
+
+    saved = (t.tk.Toplevel, gui.winlink.available, gui.winlink.Win32Api)
+    t.tk.Toplevel, gui.winlink.available, gui.winlink.Win32Api = RecWin, (lambda: True), FakeApi
+    try:
+        app._settings_win = None
+        app.open_settings()
+        assert not any("-topmost" in c for c in RecWin.calls), RecWin.calls
+        assert FakeApi.owners == {FakeApi().toplevel(app._settings_win): FakeApi().toplevel(app.root)}, FakeApi.owners
+        app._settings_close()
+        gui.winlink.available = lambda: False          # not Windows: nothing is owned, nothing breaks
+        FakeApi.owners.clear()
+        app.open_settings()
+        assert FakeApi.owners == {}
+        app._settings_close()
+    finally:
+        t.tk.Toplevel, gui.winlink.available, gui.winlink.Win32Api = saved
+
+    # a preset that needs a model with missing files says so (the loader uses this; see docs/entscheidungen-L1.md)
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(vae="qwen_image_vae.safetensors"), NODES), "_yaml": [], "_disk": {}})
+    note = app.preset_blocked({"workflow": "krea2-turbo-t2i.json", "mode": "txt2img"})
+    assert note == "Krea 2 Turbo is missing files: qwen_image_vae.safetensors (see settings)", note
+    assert app.preset_blocked({"workflow": "flux3-klein-edit.json", "mode": "edit"}) == ""
+    assert app.preset_blocked({"workflow": gui.BUILTIN}) == "" and app.preset_blocked({}) == "" and app.preset_blocked({"workflow": "my own.json"}) == ""
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(unet="seedvr2_3b_int8_convrot.safetensors"), NODES), "_yaml": [], "_disk": {}})
+    assert app.preset_blocked({"workflow": "flux3-klein-upscale.json", "mode": "upscale"}).startswith("Flux 3 Klein Edit is missing files: seedvr2_3b")
+    assert app.preset_blocked({"workflow": "flux3-klein-edit.json", "mode": "edit"}) == ""      # the same tab, another mode: fine
+    app._apply_refresh({"_detect": True, "_inv": None, "_inv_error": "x", "_yaml": [], "_disk": {}})
+    assert app.preset_blocked({"workflow": "krea2-turbo-t2i.json", "mode": "txt2img"}) == ""
+
     # a normal PhotoCraft/ComfyUI refresh still goes through the old path
     app._apply_refresh({"pc": "PhotoCraft \u25CF", "comfy": "ComfyUI \u25CF"})
     assert app.v_conn.get() == "PhotoCraft \u25CF   ComfyUI \u25CF"
+    test_start_state()
+    test_empty_view()
     print("ok")
 
 

@@ -211,7 +211,8 @@ def preset_stem(name: str) -> str:
     """File-name-safe preset name."""
     return re.sub(r"[^\w .\-]", "_", name.strip(), flags=re.UNICODE).strip(". ") or "preset"
 
-BG, PANEL, FG, MUTED, ACCENT = "#535353", "#404040", "#eeeeee", "#cfcfcf", "#f28c28"   # PhotoCraft grey (measured from a screenshot), orange accent
+BG, PANEL, FG, MUTED, ACCENT = "#535353", "#282828", "#eeeeee", "#cfcfcf", "#f28c28"   # PhotoCraft grey (measured from a screenshot), orange accent; PANEL = inactive tab, fields, buttons, slots
+NA_RED = "#ff6b6b"      # text of a tab that is not available (model files missing); 5.3 : 1 on PANEL
 DISABLED = "#8e8e8e"   # text of a greyed-out control: clearly darker than MUTED, so it reads as "not available here"
 REF_STYLES = {"classic": "Classic: subject first, long instruction", "simple": "Simple: picture first, one short sentence"}
 SCALE_MODES = ("upscale", "refine")   # these run only with an upscale workflow (a node titled pc:upscale)
@@ -333,6 +334,7 @@ __all__ = [
     "preset_stem",
     "BG",
     "PANEL",
+    "NA_RED",
     "FG",
     "MUTED",
     "ACCENT",

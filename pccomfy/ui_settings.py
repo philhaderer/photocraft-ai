@@ -19,6 +19,7 @@ from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
 
 _LABELS = dict(MODE_LABELS)      # noqa: F405
+EMPTY_TEXT = {"choose": "Choose a model", "none_linked": "Link your model in the settings"}
 STATE_TEXT = {"ready": "ready", "partial": "some functions need files", "missing": "files missing"}
 
 
@@ -30,17 +31,25 @@ class SettingsMixin:
     _settings_win = None
     _settings_focus = None
     _last_model = ""
+    _refreshing = False         # inside StateMixin._apply_refresh (its "open on the first model" step is not wanted here)
+    _startup_checked = False    # the first reading after start has been looked at (a last model that is gone is let go once)
 
     # ---------- build (one call at the end of App._build) ----------
 
-    def _build_settings(self):
+    def _build_settings(self, foot):
+        """The gear button at the right end of the footer row (the one with the connection dots, Refresh and Reset)."""
         self._last_model = self.v_model.get()
         style = ttk.Style()
-        style.configure("Missing.Tab.Toolbutton", foreground=DISABLED)      # inherits everything else from Tab.Toolbutton
-        self.b_gear = ttk.Button(self.f_tabs, text="⚙", width=3, style="Icon.TButton", command=self.open_settings)
-        self.b_gear.grid(row=0, column=2, sticky="nsew", padx=(4, 0), pady=2)
-        self.f_tabs.columnconfigure(2, weight=0)
+        style.configure("Missing.Tab.Toolbutton", foreground=NA_RED)      # a tab that is not available: red text, the background of an inactive tab
+        self.b_gear = ttk.Button(foot, text="⚙", width=3, style="Icon.TButton", command=self.open_settings)
+        self.b_gear.pack(side="right")
         Tooltip(self.b_gear, "Settings: which model files ComfyUI has, links to get the missing ones, ComfyUI folders, credits.")
+        style.configure("Empty.TLabel", foreground=MUTED, font=(FONT, 11))
+        self.v_empty = tk.StringVar(value="")
+        self.lbl_empty = ttk.Label(self.root, textvariable=self.v_empty, style="Empty.TLabel", anchor="center", justify="center",
+                                   wraplength=self._px(MIN_W - 40))
+        self._foot_hidden = False
+        self._apply_start_state(fit=False)
 
     # ---------- reading ComfyUI ----------
 
@@ -64,19 +73,25 @@ class SettingsMixin:
         threading.Thread(target=work, daemon=True).start()
 
     def _apply_refresh(self, info):
-        if info.get("_detect"):
-            self._yaml_sections, self._disk = info.get("_yaml", []), info.get("_disk", {})
-            if "_inv" in info:
-                self._set_inventory(info["_inv"], info.get("_inv_error", ""))
-            elif self._settings_win is not None:
-                self._settings_fill()
+        if not info.get("_detect"):
+            self._refreshing = True
+            try:
+                super()._apply_refresh(info)
+            finally:
+                self._refreshing = False
             return
-        super()._apply_refresh(info)
+        self._yaml_sections, self._disk = info.get("_yaml", []), info.get("_disk", {})
+        if "_inv" in info:
+            self._set_inventory(info["_inv"], info.get("_inv_error", ""))
+        elif self._settings_win is not None:
+            self._settings_fill()
 
     def _set_inventory(self, inv, err: str = ""):
         self.inv, self._inv_error = inv, err
+        self._let_go_unavailable_model()
         self.comfy.name_fixer = inv.apply_names if inv is not None else None    # a linked or differently written file name is renamed when a graph is queued
         self._update_tabs()
+        self._apply_start_state()
         try:
             self._update_mode_radios()
         except (AttributeError, tk.TclError):      # the window is still being built
@@ -119,14 +134,88 @@ class SettingsMixin:
                 self.rb_modes[key].configure(state="disabled")
                 self.tt_modes[key].text += "\n\n" + inventory.tooltip_text(s, _LABELS.get(key, key))
 
-    def _on_model(self):
+    # ---------- no model chosen ----------
+
+    def start_state(self) -> str:
+        """"none_linked": ComfyUI was read and not one tab can run; "choose": no tab is chosen; "": a model is chosen. The window
+        shows no parameters in the first two (the look of those states is decided in FRAGEN.md / docs, see entscheidungen)."""
+        if self.inv is not None and all(self.inv.tab_status(m.key).state == "missing" for m in models.MODELS):
+            return "none_linked"
+        return "choose" if (not self.v_model.get() and self.v_workflow.get() in ("", BUILTIN)) else ""      # (a workflow of your own is no "no model")
+
+    def _apply_start_state(self, fit: bool = True):
+        """Show what belongs to the state: a model is chosen = everything; none chosen = the tabs, one sentence, the footer; no model
+        linked = only the sentence and the gear (the footer's connection dots, Refresh and Reset go too). Stacking order stays
+        tabs, sentence, body, status line (the footer is packed at the bottom)."""
+        state = self.start_state()
+        self.v_empty.set(EMPTY_TEXT.get(state, ""))
+        for w in (self.f_tabs, self.lbl_empty, self.f_body):
+            w.pack_forget()
+        if state != "none_linked":
+            self.f_tabs.pack(fill="x", padx=10, pady=(8, 2), before=self.f_status)
+        if state:
+            self.lbl_empty.pack(fill="x", padx=10, pady=(26, 22), before=self.f_status)
+        else:
+            self.f_body.pack(fill="x", before=self.f_status)
+        hide_foot = state == "none_linked"
+        if hide_foot != self._foot_hidden:
+            self._foot_hidden = hide_foot
+            for w in (self.lbl_conn, self.b_refresh, self.b_reset):
+                w.pack_forget()
+            if not hide_foot:
+                self.lbl_conn.pack(side="left")
+                self.b_refresh.pack(side="left", padx=(8, 0))
+                self.b_reset.pack(side="left", padx=(6, 0))
+        if fit and getattr(self, "_sized", False):
+            self._fit_height()
+
+    def _let_go_unavailable_model(self):
+        """At start only: the model of the last session may have lost its files meanwhile. Then no tab is chosen (instead of a
+        broken one). Later readings never take the tab away under the user's hands: the preflight explains a missing file."""
+        if self._startup_checked or self.inv is None:
+            return
+        self._startup_checked = True
+        m = self._model()
+        if m is not None and self.inv.tab_status(m.key).state == "missing":
+            self.v_model.set("")
+            self.v_workflow.set(BUILTIN)        # _sync_model would pick the model of the workflow again
+            self._last_model = ""
+            self._status(f"{m.label} is not available (model files missing). Choose a model.")
+
+    def _on_model_core(self):
+        if self._refreshing and not self._last_model:
+            self.v_model.set("")                # first start: StateMixin would open on the first model; the user chooses
+            return
         key, prev = self.v_model.get(), self._last_model
-        if key and self.inv is not None and prev not in ("", key) and self.inv.tab_status(key).state == "missing":
-            self.v_model.set(prev)              # a greyed tab does not open: its settings do
+        if key and self.inv is not None and key != prev and self.inv.tab_status(key).state == "missing":
+            self.v_model.set(prev)              # a tab that is not available does not open: its settings do
             self.open_settings(focus=key)
             return
         self._last_model = self.v_model.get()
+        if key:                                  # the last model comes back at the next start (state.json, like the other settings)
+            self.state["model"] = key
+            cfgmod.save_state(self.state)
         super()._on_model()
+
+    def _on_model(self):
+        self._on_model_core()
+        self._apply_start_state()
+
+    # ---------- presets ----------
+
+    def preset_blocked(self, settings: dict) -> str:
+        """For a preset: "" when its model and mode can run, else a short note ("Flux 3 Klein Edit is missing files ..."). The preset
+        loader (gui_state.py, see docs/entscheidungen-L1.md) uses it to leave the model out and say why."""
+        wf = settings.get("workflow") if isinstance(settings, dict) else None
+        m = models.model_for_workflow(wf) if wf and wf != BUILTIN else None
+        if m is None or self.inv is None:
+            return ""
+        mode = settings.get("mode")
+        st = self.inv.mode_status(m.key, mode) if mode in m.modes else self.inv.tab_status(m.key)
+        if st.state != "missing":
+            return ""
+        names = [f.name for f in st.missing] + list(st.nodes)
+        return f"{m.label} is missing files: {', '.join(names[:2])}{' ...' if len(names) > 2 else ''} (see settings)"
 
     # ---------- preflight ----------
 
@@ -151,6 +240,9 @@ class SettingsMixin:
         return lines
 
     def generate(self):
+        if self.start_state():
+            self._status("Choose a model first.")      # Ctrl+Enter must not run with nothing chosen
+            return
         lines = self._preflight()
         if lines:
             self._status(inventory.short_message(lines, self._model().label), error=True)
@@ -259,13 +351,13 @@ class SettingsMixin:
         win.configure(bg=BG)
         try:
             win.transient(self.root)
-            win.attributes("-topmost", True)        # the bridge window always belongs to PhotoCraft; its settings stay with it
             x = self.root.winfo_rootx() + self.root.winfo_width() + 8
             win.geometry(f"{self._px(560)}x{self._px(700)}+{x}+{self.root.winfo_rooty()}")
         except (tk.TclError, TypeError):
             pass
         win.protocol("WM_DELETE_WINDOW", self._settings_close)
         self._settings_win = win
+        self._own_settings(win)
 
         top = ttk.Frame(win)
         top.pack(fill="x", padx=10, pady=(8, 4))
@@ -305,6 +397,20 @@ class SettingsMixin:
         self.t_settings.pack(side="left", fill="both", expand=True)
         sb.configure(command=self.t_settings.yview)
         self._settings_fill()
+
+    def _own_settings(self, win):
+        """The settings window behaves like the bridge window: an owned window of it (and so, through it, of PhotoCraft). It lies
+        above them, never above other programs, and is hidden, minimised and closed together with them. Never "always on top":
+        that would keep it on screen when PhotoCraft is closed or minimised."""
+        if not winlink.available():
+            return
+        try:
+            api = winlink.Win32Api()
+            top, owner = api.toplevel(win), api.toplevel(self.root)
+            if top and owner and api.owner_of(top) != owner:
+                api.set_owner(top, owner)
+        except Exception:
+            pass
 
     def _settings_close(self):
         win, self._settings_win = self._settings_win, None

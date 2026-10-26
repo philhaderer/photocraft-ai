@@ -44,6 +44,7 @@ Zum Umdrehen: Nummer nennen. Stand 2026-10-26, Branch `feat/l1-detection`.
 - Gewählt: `SettingsMixin` steht in `App` vorn und ruft `super()` (refresh, `_apply_refresh`, `_update_mode_radios`, `_on_model`, generate); Ergebnis kommt als „refresh"-Ereignis; Tab-Tooltips über `tt_tabs`.
 - Alternative: Änderungen in `gui_state.py`, `gui_modes.py`, `gui_run.py` (gehören nicht L1, mehr Konflikte).
 - Folge: `tests/test_phase0.py` erwartet jetzt `SettingsMixin` vor den sechs Mixins und ein befülltes `requires`.
+- Richtigstellung zu FRAGEN 3: Ein Preset ruft `_on_model` gar nicht auf (`gui_state._apply_settings` setzt nur den Workflow, `_sync_model` wählt daraus den Tab). Ein Preset mit fehlendem Modell wird also heute ganz geladen und der Tab erscheint als „nicht verfügbar"; Generate wird vom Preflight gestoppt. Das Öffnen der Einstellungen gibt es nur beim Klick auf den Tab.
 
 ## 11. Download-Links
 - Gewählt: nur Links aus den Projekt-Notizen; unbekannte Quellen bleiben leer, unsichere sind als „wahrscheinlich" markiert.
@@ -51,3 +52,67 @@ Zum Umdrehen: Nummer nennen. Stand 2026-10-26, Branch `feat/l1-detection`.
 
 ## 12. Git
 - Zwei Commits (Aufgabe 6; Aufgaben 7 und 8 zusammen, weil sie in `ui_settings.py` verbunden sind). Reste von Git (.lock, tmp_obj) liegen als `.git/stale-*`, weil Löschen nicht erlaubt ist.
+
+## 13. Einstellungs-Fenster hängt an PhotoCraft (Antwort 1 A + Ergänzung)
+- Gewählt: das Fenster gehört dem Hauptfenster der Brücke (Tk `transient` plus `winlink` set_owner), das wiederum PhotoCraft gehört. Es liegt über beiden, nie über anderen Programmen, und wird mit ihnen versteckt, minimiert und geschlossen. „Immer im Vordergrund" (topmost) ist weg, das war die Ursache, dass es nach dem Schließen von PhotoCraft sichtbar blieb.
+- Alternative: das Fenster direkt an PhotoCraft hängen (wäre bei PhotoCraft-Menüs im Weg, weil nur das Hauptfenster dafür versteckt wird).
+
+## 14. Preset mit fehlendem Modell: Änderung für den Haupt-Chat (Antwort 3 A, nicht von mir gemacht)
+Gewünscht: das Preset lädt nur, was geht; das Modell mit fehlenden Dateien wird nicht gewählt, und die Meldung sagt, was fehlt.
+- Datei: `pccomfy/gui_state.py`, Methode `_apply_settings` (ab Zeile 91).
+- Hilfsfunktion von mir (fertig, getestet): `self.preset_blocked(s)` in `ui_settings.py`. Sie gibt `""` zurück, wenn Modell und Modus laufen können, sonst einen Satz wie „Krea 2 Turbo is missing files: qwen_image_vae.safetensors (see settings)".
+- Änderung: direkt nach `notes: list[str] = []` (Zeile 94) einfügen:
+  ```python
+  blocked = self.preset_blocked(s)
+  if blocked:
+      notes.append(blocked)
+      s = {k: v for k, v in s.items() if k not in ("mode", "workflow", "model")}
+  ```
+  Damit werden Zeile 102 (`put(self.v_mode, "mode", str)`) und Zeilen 103 bis 109 (Workflow) für dieses Preset übersprungen. Der Rest des Presets (Text usw.) wird wie bisher gesetzt; `_sync_model` (Zeile 174) lässt dann den bisherigen Tab stehen. Die Meldung erscheint durch `load_preset` (Zeile 229) als „Not applied: ...".
+- Offen für den Haupt-Chat: ob Regler, die zu diesem Modell gehören (Auflösung, Stärke), mit ausgenommen werden sollen. Ich würde sie mitnehmen (sie sind harmlos), damit nichts halb zum falschen Modell passt, bräuchte es eine Liste der Schlüssel.
+
+## 15. Aufgabe A: Zahnrad in der Fußzeile
+- Eingriff in `gui.py` (nur `_build`): der Aufruf `self._build_settings()` ist von der Tab-Zeile in den Fußbereich gewandert und bekommt dessen Rahmen mit (`self._build_settings(foot)`, eine Zeile nach dem Reset-Knopf). Der Knopf steht mit `pack(side="right")` ganz rechts, die Tab-Zeile ist wieder wie vorher.
+- Alternative: Zahnrad in einer eigenen Zeile unter dem Fußbereich (kostet Höhe).
+- Live prüfen: ob links Platz bleibt, wenn „PhotoCraft ● ComfyUI ● Refresh Reset" und das Zahnrad zusammen in die feste Breite 380 passen.
+
+## 16. Aufgabe C: Farben
+Gewählt: die Konstante `PANEL` in `gui_common.py` (die Farbe eines inaktiven Tabs) von `#404040` auf `#282828`, zentral. Alles, was `PANEL` benutzt, folgt automatisch. Neu: `NA_RED = #ff6b6b` für die Schrift eines nicht verfügbaren Tabs (Hintergrund wie inaktiv, also `#282828`; das bisherige graue Aussehen ist weg). „Aktiv" ist unverändert (orange Hintergrund, dunkle Schrift). Der Klick auf einen nicht verfügbaren Tab öffnet die Einstellungen bei diesem Modell, der Tooltip bleibt.
+- Alternative Rottöne: `#ff5f5f` (4,95 : 1, kräftiger), `#ff7a7a` (5,84 : 1, heller). Gewählt `#ff6b6b` mit 5,3 : 1 (Mindestwert für gut lesbaren Text: 4,5).
+
+Wo `PANEL` (also die neue Farbe) im Plugin wirkt:
+- inaktive Tabs und alle normalen Knöpfe (Refresh, Reset, Zahnrad usw. über den Stil `TButton`)
+- Eingabefelder, Zahlenfelder (Spinbox), Dropdown-Felder samt aufklappbarer Liste, Seed-Feld
+- Prompt-Textfeld, LoRA-Auswahlliste
+- Schiebe-Regler-Schiene, Fortschrittsbalken-Schiene
+- Kästchen der Haken und Radioknöpfe, Rand-Schattierung der Bedienelemente (`lightcolor`/`darkcolor`)
+- Bild-Slots (Drop-Picture) und das Vorschau-Fenster der Referenzbilder, das Textfeld im Einstellungs-Fenster
+
+Mitgezogen als Text im Code: nur die Thumbnail-Füllfarbe in `refslots.py` (Zeile 191, `(0x40,0x40,0x40)` -> `(0x28,0x28,0x28)`), sonst hätte jedes Vorschaubild einen helleren Rand im Slot. Das ist eine Datei von L2: ein Einzeiler.
+- Nicht geändert: die Farbe der Titelleiste (`gui.py` Zeile 42, `winlink.caption(... 0x40 ...)`), weil sie nicht im erlaubten Bereich von `gui.py` liegt, und `tests/live_dnd.py` (manuelles Prüfskript). Frage dazu in FRAGEN.md.
+
+Kontrast (Verhältnis zu `PANEL`, vorher auf `#404040` -> jetzt auf `#282828`): Schrift `#eeeeee` 8,9 -> 12,7; Grau `#cfcfcf` 6,7 -> 9,5; DISABLED `#8e8e8e` 3,2 -> 4,5 (besser); Orange 4,2 -> 6,0; Done-Grün 3,5 -> 4,9; Rot 3,7 -> 5,3. Nichts wird schlechter. Zwei Auffälligkeiten:
+- Der Rand der Bedienelemente (`bordercolor #454545`, unverändert) ist jetzt heller als die Füllung: um Felder und Knöpfe erscheint eine feine helle Linie, vorher kaum sichtbar. Wirkt eher wie ein Rahmen. Wenn es stört: Randfarbe in `gui_theme.py` Zeile 14 auf `#282828` oder `#3a3a3a`.
+- Der Fehler-Knopf/-Marker `ERROR #e5484d` hat auf `#282828` nur 3,8 : 1, wird aber nur als Fläche mit heller Schrift benutzt (nicht als Text).
+- Live prüfen: ob die Regler-Griffe und Haken auf der dunkleren Schiene gut sichtbar sind (Griff-Farbe ist die Standardfarbe des Themes).
+
+## 17. Aufgabe B, erster Teil: Startzustand (Logik fertig, Aussehen wartet auf Antworten)
+- „Kein Modell gewählt" heißt in der Fensterlogik `v_model == ""`. `SettingsMixin.start_state()` gibt `"choose"` (kein Tab gewählt), `"none_linked"` (ComfyUI gelesen und kein einziger Tab lauffähig) oder `""` (ein Modell ist gewählt) zurück. Das Aussehen baue ich nach deinen Antworten in FRAGEN.md (dann hängt es an diesem Wert).
+- Erster Start: Der bisherige Schritt „öffne auf dem ersten Modell, dessen Workflow installiert ist" (`gui_state.py` Zeilen 59 bis 65) läuft nicht mehr. Ich verhindere ihn aus `ui_settings.py` (Merker `_refreshing`, `_on_model` bricht in diesem Moment ab), damit ich die Datei nicht anfassen muss. Alternative (sauberer): die Zeilen 59 bis 65 in `gui_state.py` löschen (Haupt-Chat).
+- Letztes Modell: Es steht schon in `state.json` unter `"model"` (zusammen mit `"mode"`, wie alle Fenster-Einstellungen). Neu: es wird beim Klick auf den Tab gespeichert, nicht erst beim Generieren oder Schließen. Beim nächsten Start ist es wieder gewählt, mit dem zuletzt gewählten Modus.
+- Modell nicht mehr verfügbar: Beim ersten Lesen von ComfyUI nach dem Start wird ein gewähltes Modell mit fehlenden Pflichtdateien abgewählt (`v_model` und `v_workflow` zurückgesetzt, sonst wählt `_sync_model` es über den Workflow wieder), mit der Meldung „<Modell> is not available (model files missing). Choose a model.". Nur beim Start: später im Betrieb nimmt ein Lesen dir nie den Tab weg, der Preflight erklärt dann, was fehlt.
+- Klick auf einen nicht verfügbaren Tab öffnet die Einstellungen auch aus dem Zustand „kein Modell gewählt" (vorher war dieser Fall ausgenommen).
+- Aufbau für das Verstecken der Parameter (kommt mit dem Aussehen): alle Bereiche unter den Tabs in einen gemeinsamen Rahmen in `_build` setzen und den Rahmen ein-/ausblenden. Einzelne Bereiche (Prompt, Regler, Modi) blenden sich selbst per `pack`/`pack_forget` ein und aus; ein gemeinsamer Rahmen verhindert, dass sie im leeren Zustand wieder auftauchen. Alternative: jeden Bereich einzeln verstecken (fehleranfälliger).
+
+## 18. Aufgabe B, zweiter Teil: das Aussehen des leeren Startzustands (Antworten 1 A bis 4 A)
+- **Kein Modell gewählt** (`"choose"`): sichtbar sind nur die Tabs, ein Satz „Choose a model" (grau, Größe 11, mittig) und die Fußzeile mit Zahnrad. Parameter, Generate und Fortschritt sind weg.
+- **Kein Modell verknüpft** (`"none_linked"`): nur der Satz „Link your model in the settings" und in der Fußzeile das Zahnrad. Tabs, Parameter, Generate, die Verbindungspunkte, Refresh und Reset sind ausgeblendet. Die Titelleiste bleibt `#404040`, die Startmeldung ist unverändert.
+- **Ein Workflow ohne Modell** (eigener Workflow, kein Tab) zählt nicht als leer: das ist der alte Zustand „eigener Workflow", er bleibt bedienbar. Dafür hat `start_state()` jetzt die Bedingung `kein Modell UND Workflow ist leer oder BUILTIN`.
+- **Umsetzung**: ein gemeinsamer Rahmen `f_body` unter den Tabs (`gui.py::_build`), in dem alle Parameter-Bereiche liegen. `_apply_start_state()` in `ui_settings.py` setzt Tabs, Satz und Rahmen in der Reihenfolge neu ein (`pack_forget`, dann `pack(before=status)`). Aufgerufen nach dem Bauen, nach jedem Lesen von ComfyUI und nach jedem Klick auf einen Tab.
+- **Eingriffe in fremde Dateien (klein)**:
+  - `gui.py::_build`: Rahmen `f_body`; Status und Fußzeile hängen jetzt direkt am Fenster, nicht mehr am Rahmen; Fußzeilen-Knöpfe als Attribute (`lbl_conn`, `b_refresh`, `b_reset`); `<Configure>` am Fenster statt am (früheren) Fenster-Frame, gleiche Wirkung.
+  - `refslots.py` (L2): `f_refs` hängt an `f_body` statt `root`, weil es mit `before=f_neg` eingefügt wird und `f_neg` im Rahmen liegt (eine Zeile).
+  - `gui_theme.py::_fit_height`: Mindesthöhe im leeren Zustand 80 statt 320 Pixel, damit das Fenster klein wird.
+- **Generate im leeren Zustand** (z. B. Ctrl+Enter): tut nichts, Statuszeile „Choose a model first." (sonst würde der eingebaute Graph ohne Modell laufen).
+- Alternative zum gemeinsamen Rahmen: jeden Bereich einzeln verstecken. Verworfen, weil sich Bereiche selbst wieder einblenden.
+- **Live prüfen**: Aussehen und Höhe des kleinen Fensters in beiden leeren Zuständen, dass beim Wechsel zu einem Tab alles wieder an der alten Stelle sitzt (Reihenfolge Tabs, Modi, Prompt, Regler, Status, Fußzeile), Fensterhöhe nach dem Wechsel.
