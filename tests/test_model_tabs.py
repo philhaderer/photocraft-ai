@@ -156,9 +156,11 @@ def main():
     assert app._loras() == []
     app._set_loras([["qwen\\style_a.safetensors", 0.6]])
 
-    # text to image for Qwen, Expand for the Flux Kleins, Fibo Remove starts with a soft mask and 10 % feather
-    for key, mode in (("qwen", "txt2img"), ("flux2", "outpaint"), ("flux3", "outpaint")):
+    # text to image for Qwen, Expand for Flux 2; Expand is off for Flux 3 and Krea 2 (decision 2026-10-26); Fibo Remove starts with a soft mask and 10 % feather
+    for key, mode in (("qwen", "txt2img"), ("flux2", "outpaint")):
         assert mode in models.BY_KEY[key].modes, (key, mode)
+    for key in ("flux3", "krea2"):
+        assert "outpaint" not in models.BY_KEY[key].modes, (key, "Expand must be greyed out")
     app.v_model.set("fibo")
     app.v_mode.set("remove")
     app._on_model()
