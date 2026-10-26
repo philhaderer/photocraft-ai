@@ -128,6 +128,22 @@ class SettingsMixin:
         self._last_model = self.v_model.get()
         super()._on_model()
 
+    # ---------- presets ----------
+
+    def preset_blocked(self, settings: dict) -> str:
+        """For a preset: "" when its model and mode can run, else a short note ("Flux 3 Klein Edit is missing files ..."). The preset
+        loader (gui_state.py, see docs/entscheidungen-L1.md) uses it to leave the model out and say why."""
+        wf = settings.get("workflow") if isinstance(settings, dict) else None
+        m = models.model_for_workflow(wf) if wf and wf != BUILTIN else None
+        if m is None or self.inv is None:
+            return ""
+        mode = settings.get("mode")
+        st = self.inv.mode_status(m.key, mode) if mode in m.modes else self.inv.tab_status(m.key)
+        if st.state != "missing":
+            return ""
+        names = [f.name for f in st.missing] + list(st.nodes)
+        return f"{m.label} is missing files: {', '.join(names[:2])}{' ...' if len(names) > 2 else ''} (see settings)"
+
     # ---------- preflight ----------
 
     def _reread_inventory(self):
@@ -259,13 +275,13 @@ class SettingsMixin:
         win.configure(bg=BG)
         try:
             win.transient(self.root)
-            win.attributes("-topmost", True)        # the bridge window always belongs to PhotoCraft; its settings stay with it
             x = self.root.winfo_rootx() + self.root.winfo_width() + 8
             win.geometry(f"{self._px(560)}x{self._px(700)}+{x}+{self.root.winfo_rooty()}")
         except (tk.TclError, TypeError):
             pass
         win.protocol("WM_DELETE_WINDOW", self._settings_close)
         self._settings_win = win
+        self._own_settings(win)
 
         top = ttk.Frame(win)
         top.pack(fill="x", padx=10, pady=(8, 4))
@@ -305,6 +321,20 @@ class SettingsMixin:
         self.t_settings.pack(side="left", fill="both", expand=True)
         sb.configure(command=self.t_settings.yview)
         self._settings_fill()
+
+    def _own_settings(self, win):
+        """The settings window behaves like the bridge window: an owned window of it (and so, through it, of PhotoCraft). It lies
+        above them, never above other programs, and is hidden, minimised and closed together with them. Never "always on top":
+        that would keep it on screen when PhotoCraft is closed or minimised."""
+        if not winlink.available():
+            return
+        try:
+            api = winlink.Win32Api()
+            top, owner = api.toplevel(win), api.toplevel(self.root)
+            if top and owner and api.owner_of(top) != owner:
+                api.set_owner(top, owner)
+        except Exception:
+            pass
 
     def _settings_close(self):
         win, self._settings_win = self._settings_win, None

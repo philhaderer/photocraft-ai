@@ -190,6 +190,53 @@ def main():
     app._apply_refresh(data)
     assert cfgmod.extra_paths_file() == "" and app._yaml_sections == [] and "No file chosen" in "".join(s for s, _st, _u in app._settings_segments())
 
+    # the settings window is an owned window of the bridge window (hidden / minimised / closed with it), never "always on top"
+    class RecWin(t.Widget):
+        calls = []
+
+        def attributes(self, *a, **k):
+            RecWin.calls.append(a)
+
+    class FakeApi:
+        owners = {}
+
+        def toplevel(self, w):
+            return id(w) % 100000 + 1
+
+        def owner_of(self, hwnd):
+            return FakeApi.owners.get(hwnd, 0)
+
+        def set_owner(self, hwnd, owner):
+            FakeApi.owners[hwnd] = owner
+
+    saved = (t.tk.Toplevel, gui.winlink.available, gui.winlink.Win32Api)
+    t.tk.Toplevel, gui.winlink.available, gui.winlink.Win32Api = RecWin, (lambda: True), FakeApi
+    try:
+        app._settings_win = None
+        app.open_settings()
+        assert not any("-topmost" in c for c in RecWin.calls), RecWin.calls
+        assert FakeApi.owners == {FakeApi().toplevel(app._settings_win): FakeApi().toplevel(app.root)}, FakeApi.owners
+        app._settings_close()
+        gui.winlink.available = lambda: False          # not Windows: nothing is owned, nothing breaks
+        FakeApi.owners.clear()
+        app.open_settings()
+        assert FakeApi.owners == {}
+        app._settings_close()
+    finally:
+        t.tk.Toplevel, gui.winlink.available, gui.winlink.Win32Api = saved
+
+    # a preset that needs a model with missing files says so (the loader uses this; see docs/entscheidungen-L1.md)
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(vae="qwen_image_vae.safetensors"), NODES), "_yaml": [], "_disk": {}})
+    note = app.preset_blocked({"workflow": "krea2-turbo-t2i.json", "mode": "txt2img"})
+    assert note == "Krea 2 Turbo is missing files: qwen_image_vae.safetensors (see settings)", note
+    assert app.preset_blocked({"workflow": "flux3-klein-edit.json", "mode": "edit"}) == ""
+    assert app.preset_blocked({"workflow": gui.BUILTIN}) == "" and app.preset_blocked({}) == "" and app.preset_blocked({"workflow": "my own.json"}) == ""
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(unet="seedvr2_3b_int8_convrot.safetensors"), NODES), "_yaml": [], "_disk": {}})
+    assert app.preset_blocked({"workflow": "flux3-klein-upscale.json", "mode": "upscale"}).startswith("Flux 3 Klein Edit is missing files: seedvr2_3b")
+    assert app.preset_blocked({"workflow": "flux3-klein-edit.json", "mode": "edit"}) == ""      # the same tab, another mode: fine
+    app._apply_refresh({"_detect": True, "_inv": None, "_inv_error": "x", "_yaml": [], "_disk": {}})
+    assert app.preset_blocked({"workflow": "krea2-turbo-t2i.json", "mode": "txt2img"}) == ""
+
     # a normal PhotoCraft/ComfyUI refresh still goes through the old path
     app._apply_refresh({"pc": "PhotoCraft \u25CF", "comfy": "ComfyUI \u25CF"})
     assert app.v_conn.get() == "PhotoCraft \u25CF   ComfyUI \u25CF"
