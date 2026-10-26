@@ -208,8 +208,9 @@ class RefSlots:
         return (text.rstrip() + "\n" if text.strip() else "") + "\n".join(lines)
 
     def put_description(self, text: str, k: int, old: str = "") -> str:
-        """The prompt field's text with the description line of image k ("<image2>: a brown dog") written into it: the line
-        of its old description is replaced when it is still there, else the line goes at the end. The field is what is sent."""
+        """The prompt field's text with the description line of image k ("<image2>: a brown dog") written into it. The first
+        description goes at the end; a new one replaces the line of the `old` one. When that line was edited or deleted by
+        hand, the text stays as it is (the user's words win). The field is what is sent."""
         if not 0 <= k < len(self.items) or not self.items[k].description:
             return text
         name = self.tag(k) or f"image {k + 2}"
@@ -220,6 +221,7 @@ class RefSlots:
                 if ln.strip() == f"{name}: {old}":
                     lines[j] = line
                     return "\n".join(lines)
+            return text
         return (text.rstrip() + "\n" if text.strip() else "") + line
 
     # ---- what the bridge sends ----
@@ -609,6 +611,8 @@ class RefSlotsMixin:
                     if new != cur:
                         t.delete("1.0", "end")
                         t.insert("1.0", new)
+                    elif old:      # the old line was changed by hand: the prompt stays, the new text is under the image
+                        self._refs_say("You changed the description line in the prompt, so it was kept. The new text is under the image (copy icon).")
             self._refs_redraw()
         self.root.after(200, check)
 
