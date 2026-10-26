@@ -200,11 +200,27 @@ class RefSlots:
         return [f"{self.tag(k) or f'image {k + 2}'}: {it.description}" for k, it in enumerate(self.active) if it.description]
 
     def prompt_with_descriptions(self, text: str) -> str:
-        """The typed text plus the descriptions at its end, one per line. This is the prompt that is sent (see docs/prompt-aufbau.md)."""
+        """The typed text plus the descriptions at its end, one per line: what the prompt field holds after describing every
+        image once (see docs/prompt-aufbau.md)."""
         lines = self.description_lines()
         if not lines:
             return text
         return (text.rstrip() + "\n" if text.strip() else "") + "\n".join(lines)
+
+    def put_description(self, text: str, k: int, old: str = "") -> str:
+        """The prompt field's text with the description line of image k ("<image2>: a brown dog") written into it: the line
+        of its old description is replaced when it is still there, else the line goes at the end. The field is what is sent."""
+        if not 0 <= k < len(self.items) or not self.items[k].description:
+            return text
+        name = self.tag(k) or f"image {k + 2}"
+        line = f"{name}: {self.items[k].description}"
+        if old:
+            lines = text.split("\n")
+            for j, ln in enumerate(lines):
+                if ln.strip() == f"{name}: {old}":
+                    lines[j] = line
+                    return "\n".join(lines)
+        return (text.rstrip() + "\n" if text.strip() else "") + line
 
     # ---- what the bridge sends ----
 
@@ -253,9 +269,7 @@ class RefSlotsMixin:
 
     def _request(self):
         req = super()._request()
-        req.refs = self._refs_for(req.mode)
-        if req.refs:        # the descriptions of the images that go along are added at the end of the prompt
-            req.params.prompt = self.refslots.prompt_with_descriptions(req.params.prompt)
+        req.refs = self._refs_for(req.mode)     # the descriptions are already in the prompt field (Describe writes them there)
         return req
 
     # ---- state ----
@@ -378,7 +392,7 @@ class RefSlotsMixin:
                 Tooltip(lbl, f"{it.name or 'clipboard'}" + ("  (cut out)" if it.cut_out else "") + (f"\n{it.description}" if it.description else ""))
                 tag = rs.tag(k)
                 ttk.Label(cell, text=tag or f"image {k + 2}", style="Hint.TLabel", anchor="center").pack(fill="x")      # centred under the slot
-                if it.description:      # shown under the image; it is also added to the end of the prompt
+                if it.description:      # shown under the image; Describe also wrote it into the prompt field
                     ttk.Label(cell, text=it.description, style="Muted.TLabel", wraplength=s, justify="left").pack(anchor="w")
                 busy = k in self._ref_busy
                 bar = [("remove", "Remove", "Takes this image out of the slots.", lambda k=k: self._refs_remove(k), False),
@@ -560,8 +574,8 @@ class RefSlotsMixin:
         self.root.after(200, check)
 
     def _refs_describe(self, k: int):
-        """Qwen 3.5 9B describes the picture in the slot (ComfyUI, describe-image.json); the text is shown under the image and added to
-        the end of the prompt automatically."""
+        """Qwen 3.5 9B describes the picture in the slot (ComfyUI, describe-image.json); the text is shown under the image and written
+        into the prompt field as its own line ("<image2>: ..."), where it can be edited or deleted."""
         import threading
         src = self.refslots.items[k]
         if k in self._ref_busy:
@@ -587,9 +601,16 @@ class RefSlotsMixin:
             if "error" in box:
                 self._refs_say("Describe failed: " + box["error"])
             else:
-                src.description = box["text"]
+                old, src.description = src.description, box["text"]
                 i = self.refslots.items.index(src) if src in self.refslots.items else 0
                 self._refs_say(f"{self.refslots.tag(i) or 'image'}: {box['text']}")
+                t = getattr(self, "t_prompt", None)
+                if t is not None and src in self.refslots.items and str(t.cget("state")) != "disabled":
+                    cur = t.get("1.0", "end").rstrip("\n")
+                    new = self.refslots.put_description(cur, i, old)
+                    if new != cur:
+                        t.delete("1.0", "end")
+                        t.insert("1.0", new)
             self._refs_redraw()
         self.root.after(200, check)
 

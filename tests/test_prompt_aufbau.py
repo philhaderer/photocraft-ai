@@ -28,7 +28,7 @@ def example(key: str) -> dict:
         rs.add(Image.new("RGB", (64, 64), "red"), f"r{i}.png")
         rs.items[-1].description = d
     typed = f"Put the hat from {rs.tag(1)} on the dog from {rs.tag(0)}."
-    window_prompt = rs.prompt_with_descriptions(typed)          # what the window puts into the request
+    window_prompt = rs.prompt_with_descriptions(typed)          # the prompt field after Describe on both images (sent as it is)
     pc, _, b = T.make(tempfile.mkdtemp(), with_sel=False)
     b.comfy = T.FakeComfy()
     req = Request(mode="edit", workflow=str(ROOT / "workflows" / WF[key]), enhance=False, preset="X", run_no=1, refs=rs.images())
@@ -53,17 +53,18 @@ def main():
                  "## Aufbau\n",
                  "1. Das Bild im PhotoCraft-Dokument ist immer „Bild 1“. Die Referenzbilder sind Bild 2, 3 … (Reihenfolge der Slots).",
                  "2. Du tippst deinen Text und nennst die Bilder mit ihren Namen (unter den Slots steht, wie sie heißen).",
-                 "3. Hat ein Referenzbild eine Beschreibung, wird sie automatisch ans Ende deines Textes gehängt, eine Zeile pro Bild: `<Name>: <Beschreibung>`.",
+                 "3. „Beschreiben“ schreibt die Beschreibung sichtbar ans Ende des Prompt-Felds, eine Zeile pro Bild: `<Name>: <Beschreibung>`. "
+                 "Du kannst sie dort ändern oder löschen; ein zweites Beschreiben ersetzt die Zeile.",
                  "4. Der Workflow setzt den Namen des Hauptbildes vorn davor, wenn das Modell einen braucht (`pc_image_tag`).",
-                 "5. Das Textfeld im Fenster bleibt unverändert; das Anhängen passiert erst beim Senden.\n",
+                 "5. Gesendet wird das Prompt-Feld so, wie es dasteht; beim Senden wird nichts mehr angehängt.\n",
                  "Beispiel in allen vier Fällen: zwei Referenzbilder (Hund, Mütze), beide beschrieben.\n"]
         for e in out:
             parts += [f"## {e['model']}\n",
                       f"Namen: Bild = `{e['tags'][0]}`, Referenzen = " + ", ".join(f"`{t}`" for t in e["tags"][1:]) + "\n",
                       "Dein Text:\n", "```", e["typed"], "```\n", "Gesendet an den Text-Encoder:\n", "```", e["sent"], "```\n"]
         parts += ["## Sieht man den gesendeten Prompt im Betrieb?\n",
-                  "`data/exchange/runs.jsonl` hat pro Lauf eine Zeile mit dem Prompt (Feld `prompt`). Das ist dein Text plus die angehängten "
-                  "Beschreibungen, aber ohne den Bildnamen, den der Workflow davorsetzt, und bei langen Texten nach 600 Zeichen abgeschnitten. "
+                  "`data/exchange/runs.jsonl` hat pro Lauf eine Zeile mit dem Prompt (Feld `prompt`). Das ist der Inhalt des Prompt-Felds samt "
+                  "Beschreibungszeilen, aber ohne den Bildnamen, den der Workflow davorsetzt, und bei langen Texten nach 600 Zeichen abgeschnitten. "
                   "Der Text, der wirklich beim Encoder ankommt, steht in `data/exchange/last-graph.json` (nur der letzte Lauf). "
                   "Für den Alltag reicht `runs.jsonl`; für die Frage „was genau sah das Modell?“ nimm `last-graph.json`.\n"]
         (ROOT / "docs" / "prompt-aufbau.md").write_text("\n".join(parts), encoding="utf-8")

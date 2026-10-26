@@ -194,6 +194,19 @@ def main():
             assert refslots.retag(conv, sb, sa) == text_in(sa), (a, b, conv)          # there and back: the same text
     assert refslots.retag("<ref_image_0> and <ref_image_2>", "<ref_image_{i}>", "<image{n}>") == "<image1> and <image3>"   # 0 = the picture
     assert refslots.retag("image 2, myimage 2, image 22", "image {n}", "<image{n}>") == "<image2>, myimage 2, image 22"
+
+    # Describe writes a visible line into the prompt field; a second Describe replaces it, an edited line is left alone
+    rs = refslots.RefSlots()
+    rs.set_model(3, "<image{n}>")
+    rs.add(Image.new("RGB", (8, 8)), "a.png")
+    rs.add(Image.new("RGB", (8, 8)), "b.png")
+    assert rs.put_description("hat on dog", 0) == "hat on dog"                     # no description yet: nothing changes
+    rs.items[1].description = "a dog"
+    assert rs.put_description("hat on dog\n", 1) == "hat on dog\n<image3>: a dog"
+    assert rs.put_description("", 1) == "<image3>: a dog"
+    rs.items[1].description = "a brown dog"
+    assert rs.put_description("hat on dog\n<image3>: a dog\nmore", 1, old="a dog") == "hat on dog\n<image3>: a brown dog\nmore"
+    assert rs.put_description("hat on dog\n<image3>: my own words", 1, old="a dog") == "hat on dog\n<image3>: my own words\n<image3>: a brown dog"
     print("ALL OK (refslots)")
 
 
