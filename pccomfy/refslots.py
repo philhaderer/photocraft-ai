@@ -511,7 +511,7 @@ class RefSlotsMixin:
 
     def _refs_add_file(self):
         from tkinter import filedialog
-        paths = filedialog.askopenfilenames(title="Reference images", filetypes=[("Pictures", " ".join("*" + e for e in clipboard.IMAGE_SUFFIXES)), ("All files", "*.*")])
+        paths = self._dialog(filedialog.askopenfilenames, title="Reference images", filetypes=[("Pictures", " ".join("*" + e for e in clipboard.IMAGE_SUFFIXES)), ("All files", "*.*")])
         self._refs_add_paths(self.root.tk.splitlist(paths) if isinstance(paths, str) else paths)
 
     def _refs_on_drop(self, event):
