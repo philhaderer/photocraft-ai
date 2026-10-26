@@ -41,6 +41,7 @@ class ComfyUI:
         self.url = url.rstrip("/")
         self.timeout = timeout
         self.client_id = uuid.uuid4().hex
+        self.name_fixer: Callable[[dict], object] | None = None   # called with every graph before it is queued (see inventory.apply_names)
 
     # ---------- HTTP ----------
 
@@ -123,6 +124,23 @@ class ComfyUI:
             return heads[0], patches[0]  # sorted descending: newest patch (v26 > v25) first
         return None
 
+    def inventory_raw(self) -> dict:
+        """Model files per loader kind (unet, clip, vae, lora) and, when readable, the names of all node classes
+        ("nodes", one /object_info call; None when that failed). Raises ComfyError when the server cannot be reached,
+        because the empty lists _choices gives then would look like "nothing is installed"."""
+        self.system_stats()
+        out = {
+            "unet": self._choices("UNETLoader", "unet_name"),
+            "clip": self._choices("CLIPLoader", "clip_name"),
+            "vae": self._choices("VAELoader", "vae_name"),
+            "lora": self._choices("LoraLoaderModelOnly", "lora_name"),
+        }
+        try:
+            out["nodes"] = set((self._json("/object_info") or {}).keys())
+        except (ComfyError, ValueError):
+            out["nodes"] = None
+        return out
+
     # ---------- image I/O ----------
 
     def upload_image(self, image: Image.Image, name: str) -> str:
@@ -147,6 +165,8 @@ class ComfyUI:
     # ---------- execution ----------
 
     def queue(self, graph: dict) -> str:
+        if self.name_fixer is not None:
+            self.name_fixer(graph)
         j = self._json("/prompt", {"prompt": graph, "client_id": self.client_id})
         if j.get("node_errors"):
             raise ComfyError(self._explain(400, json.dumps(j)))

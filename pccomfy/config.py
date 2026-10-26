@@ -29,6 +29,7 @@ PRESETS_DIR = _ROOT / "presets" if os.name == "nt" else CONFIG_DIR / "presets"
 EXCHANGE_DIR = CONFIG_DIR / "exchange" if os.name == "nt" else Path("~/.cache/pccomfy/exchange")
 CONFIG_FILE = CONFIG_DIR / "config.toml"
 STATE_FILE = CONFIG_DIR / "state.json"
+SETTINGS_FILE = CONFIG_DIR / "settings.json"     # what the settings overlay and the tab menu save (model map, favourites ...)
 
 DEFAULTS = {
     "photocraft": {
@@ -89,3 +90,87 @@ def save_state(state: dict) -> None:
         STATE_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
     except OSError:
         pass
+
+
+# ---------- settings of the settings overlay (data/settings.json, separate from the window state) ----------
+
+def load_settings() -> dict:
+    try:
+        d = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_settings(settings: dict) -> None:
+    try:
+        SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SETTINGS_FILE.write_text(json.dumps(settings, indent=2, ensure_ascii=False), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def get_setting(key: str, default=None):
+    return load_settings().get(key, default)
+
+
+def set_setting(key: str, value) -> None:
+    s = load_settings()
+    if value is None:
+        s.pop(key, None)
+    else:
+        s[key] = value
+    save_settings(s)
+
+
+def model_map() -> dict:
+    """The user's own file links: the file name the plugin expects -> the file name ComfyUI lists for it."""
+    m = get_setting("model_map", {})
+    return {str(k): str(v) for k, v in m.items()} if isinstance(m, dict) else {}
+
+
+def set_model_link(expected: str, local: str | None) -> None:
+    """Link ``expected`` to ``local``; an empty ``local`` removes the link."""
+    m = model_map()
+    if local:
+        m[expected] = local
+    else:
+        m.pop(expected, None)
+    set_setting("model_map", m or None)
+
+
+def extra_paths_file() -> str:
+    """The extra_model_paths.yaml the user pointed the overlay at ("" = none)."""
+    return str(get_setting("extra_paths_file", "") or "")
+
+
+def set_extra_paths_file(path: str) -> None:
+    set_setting("extra_paths_file", path or None)
+
+
+# Favourites and hidden tabs: the right-click menu (lane L3) and Easy Mode read and write them only through these.
+
+def favorites() -> dict:
+    """Function (mode key) -> the tab key the user prefers for it."""
+    f = get_setting("favorites", {})
+    return {str(k): str(v) for k, v in f.items()} if isinstance(f, dict) else {}
+
+
+def set_favorite(mode: str, tab: str | None) -> None:
+    f = favorites()
+    if tab:
+        f[mode] = tab
+    else:
+        f.pop(mode, None)
+    set_setting("favorites", f or None)
+
+
+def hidden_tabs() -> set:
+    h = get_setting("hidden_tabs", [])
+    return {str(x) for x in h} if isinstance(h, list) else set()
+
+
+def set_tab_hidden(tab: str, hidden: bool) -> None:
+    h = hidden_tabs()
+    (h.add if hidden else h.discard)(tab)
+    set_setting("hidden_tabs", sorted(h) or None)

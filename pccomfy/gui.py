@@ -9,9 +9,10 @@ from .gui_lora import LoraMixin
 from .gui_modes import ModeMixin
 from .gui_state import StateMixin
 from .gui_run import RunMixin
+from .ui_settings import SettingsMixin
 
 
-class App(ThemeMixin, PromptMixin, LoraMixin, ModeMixin, StateMixin, RunMixin):
+class App(SettingsMixin, ThemeMixin, PromptMixin, LoraMixin, ModeMixin, StateMixin, RunMixin):
     def __init__(self, cfg: dict):
         self.cfg = cfg
         self.state = cfgmod.load_state()
@@ -123,12 +124,14 @@ class App(ThemeMixin, PromptMixin, LoraMixin, ModeMixin, StateMixin, RunMixin):
         for c in range(cols):
             self.f_tabs.columnconfigure(c, weight=1, uniform="tab")
         self.rb_tabs = {}
+        self.tt_tabs = {}               # the tooltip of each tab (the settings add what is missing, see ui_settings.py)
         for i, m in enumerate(models.MODELS):
             rb = ttk.Radiobutton(self.f_tabs, text=m.label, value=m.key, variable=self.v_model, style="Tab.Toolbutton",
                                  command=self._on_model)
             rb.grid(row=i // cols, column=i % cols, sticky="ew", padx=2, pady=2)
-            Tooltip(rb, m.tip)
+            self.tt_tabs[m.key] = Tooltip(rb, m.tip)
             self.rb_tabs[m.key] = rb
+        self._build_settings()          # the gear next to the tabs (ui_settings.py)
 
         mf = ttk.Frame(r)
         mf.columnconfigure(1, weight=1)
