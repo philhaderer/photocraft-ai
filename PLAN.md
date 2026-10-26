@@ -80,6 +80,7 @@ Berührungspunkte nur über feste Schnittstellen: `models.py` (nur L2, danach nu
 
 - `windows-fibo` bleibt der Stand, den du abgenommen hast. Neuer Branch `next` ist der Integrationsstand, **den du testest**.
 - Je Aufgabe ein Branch (`feat/...`, `fix/...`) aus `next`. Vor dem Zusammenführen laufen alle Tests (`python tests/run_all.py`). Danach Merge in `next`, nie zwei Merges gleichzeitig, nie Push.
+- Lane-Ordner: `lanes/L1`, `lanes/L2` im Repo-Ordner sind eigenständige Klone (eigenes `.git`, vom Haupt-Repo per `.git/info/exclude` ignoriert), damit ein Lane-Chat nur seinen Ordner braucht. Die Lane committet auf ihrem Branch; der Haupt-Chat holt ihn mit `git fetch lanes/L1 feat/l1-detection:refs/lanes/l1` und führt ihn nach Tests in `next` zusammen.
 - Wenn du ein Ergebnis abgenommen hast, wird `windows-fibo` auf `next` vorgezogen. Das neue Repo entsteht erst vor dem Veröffentlichen.
 - Commits wie bisher: beschreibend, Trailer `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
 
