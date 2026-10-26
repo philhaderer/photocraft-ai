@@ -17,14 +17,14 @@ Fork of Peszemeszek/photocraft-comfyui-bridge (MIT OR Apache-2.0): a PhotoCraft 
 
 ## Architecture
 
-- `pccomfy/gui.py`: Tk window (one `App` class). `bridge.py`: runs a request (export layers, build graph, queue, import, undo). `workflows.py`: edits a workflow graph. `models.py`: tabs (models) and their modes, with each mode's workflow and start settings. `comfy.py`: ComfyUI HTTP/WebSocket client. `photocraft.py`: PhotoCraft control port. `winlink.py`: Windows window linking (ctypes). `imaging.py`: masks, boxes, colour match. `config.py`: config and state.
+- `pccomfy/gui.py`: Tk window: the `App` class with start-up, `_build` (the layout) and the window handling; the rest of `App` lives in mixins: `gui_theme.py` (style, sizes), `gui_prompt.py`, `gui_lora.py`, `gui_modes.py` (tabs, modes, workflow, stages), `gui_state.py` (settings, presets, refresh), `gui_run.py` (generate, undo/redo, progress). `gui_common.py` holds the constants and helpers; `gui.py` re-exports them (`gui.BUILTIN` etc. must keep working). A new method goes into the mixin of its topic. `clipboard.py`: images on the Windows clipboard (read and write). `bridge.py`: runs a request (export layers, build graph, queue, import, undo). `workflows.py`: edits a workflow graph. `models.py`: tabs (models) and their modes, with each mode's workflow and start settings. `comfy.py`: ComfyUI HTTP/WebSocket client. `photocraft.py`: PhotoCraft control port. `winlink.py`: Windows window linking (ctypes). `imaging.py`: masks, boxes, colour match. `config.py`: config and state.
 - `workflows/*.json` are ComfyUI API-format graphs. Nodes the bridge touches carry a title: `pc:image`, `pc:mask`, `pc:prompt`, `pc:sampler`, `pc:size`, `pc:clip`, `pc:output`, `pc:ref`, `pc:latent`, `pc:lora`, `pc:upscale`.
 - LoRA names carry the Windows sub-folder (`Moss\lora_dmd2.safetensors`); `fix_lora_names` matches them against ComfyUI's list. ComfyUI reads model folders only at start.
 - Diagnostics: `data/exchange/last-graph.json` (last graph sent), `data/exchange/runs.jsonl` (one line per run). `data/` is git-ignored.
 
 ## Testing
 
-- `python tests/<name>.py` (31 files; `test_round5.py` collects the latest rounds). They run against a stubbed Tk and a fake PhotoCraft (`FakePC`, new layer IDs on duplicate, unknown IDs rejected like the real one).
+- `python tests/run_all.py` runs all 32 files (optional name filter: `python tests/run_all.py bars`); a single file: `python tests/<name>.py` (`test_round5.py` collects the latest rounds). `tests/live_clipboard.py` is a manual check for the real Windows clipboard, not part of the runner. They run against a stubbed Tk and a fake PhotoCraft (`FakePC`, new layer IDs on duplicate, unknown IDs rejected like the real one).
 - The VM has no tkinter and cannot reach ComfyUI's HTTP API: the real window and real generations can only be checked by the user. The comfyui tools (queue, history, logs) work.
 - All tests must pass before a merge. Say plainly what was not tested live.
 
