@@ -132,7 +132,7 @@ class RefSlots:
         self.items.clear()
 
     def replace(self, i: int, image: Image.Image) -> None:
-        """A changed picture (pen, cut-out); the first version is kept for `revert`."""
+        """A changed picture (cut-out); the first version is kept for `revert`."""
         it = self.items[i]
         if it.original is None:
             it.original = it.image
@@ -184,25 +184,6 @@ class RefSlots:
 # Pure helpers for the widget (tested without Tk)
 # ======================================================================================================================
 
-def apply_strokes(image: Image.Image, strokes: list, scale: float = 1.0) -> Image.Image:
-    """The pen: draws `strokes` ([(colour, width, [(x, y), ...]), ...], in the preview's pixels) onto a copy of the image;
-    `scale` = image pixels per preview pixel. Round line ends, one dot for a click."""
-    from PIL import ImageDraw
-    out = image.convert("RGBA")
-    d = ImageDraw.Draw(out)
-    for colour, width, pts in strokes:
-        w = max(1, round(width * scale))
-        pts = [(x * scale, y * scale) for x, y in pts]
-        if len(pts) == 1:
-            x, y = pts[0]
-            d.ellipse((x - w / 2, y - w / 2, x + w / 2, y + w / 2), fill=colour)
-            continue
-        d.line(pts, fill=colour, width=w, joint="curve")
-        for x, y in (pts[0], pts[-1]):
-            d.ellipse((x - w / 2, y - w / 2, x + w / 2, y + w / 2), fill=colour)
-    return out
-
-
 def thumbnail_png(image: Image.Image, size: int, background=(0x40, 0x40, 0x40)) -> bytes:
     """A PNG of the picture that fits into a size x size square (kept proportional), transparency shown on `background`."""
     import io
@@ -212,8 +193,6 @@ def thumbnail_png(image: Image.Image, size: int, background=(0x40, 0x40, 0x40)) 
     t.save(buf, "PNG")
     return buf.getvalue()
 
-
-PEN_COLOURS = ("#ff2a2a", "#2ad14b", "#2a7bff", "#ffd400", "#000000", "#ffffff")
 
 
 # ======================================================================================================================
@@ -227,12 +206,12 @@ class RefSlotsMixin:
     """The reference slots of the window. Built the first time the window shows them (`_refs_ensure`), so the hook in gui.py
     is only the class line: `_on_mode_ui` (called on every tab / mode change) and `_request` are wrapped here.
     A slot takes a picture by drag and drop (tkinterdnd2, when installed), Ctrl+V (only when no text field has the focus),
-    the Paste or Add file icon of the next free slot. Each filled slot has a bar of icons: Remove, Pen, Cut out (BiRefNet in
+    the Paste or Add file icon of the next free slot. Each filled slot has a bar of icons: Remove, Cut out (BiRefNet in
     ComfyUI), Describe and (with a description) Copy text."""
 
     SLOT = 108         # px (before the display scaling): every slot is the same size, whatever the model
     ICON_SCALE = 1.7   # the slot icons are the 16 px pixel art times this (the ONE place to make them bigger or smaller)
-    BAR_ICONS = 5      # the most icons one bar holds (the slot is as tall as that needs)
+    BAR_ICONS = 4      # the most icons one bar holds (the slot is as tall as that needs)
 
     # ---- wrapped window methods ----
     def _on_mode_ui(self):
@@ -347,7 +326,6 @@ class RefSlotsMixin:
                     ttk.Label(cell, text=it.description, style="Muted.TLabel", wraplength=s, justify="left").pack(anchor="w")
                 busy = k in self._ref_busy
                 bar = [("remove", "Remove", "Takes this image out of the slots.", lambda k=k: self._refs_remove(k), False),
-                       ("pen", "Pen", "Draw on the image (a circle around the part that counts).", lambda k=k: self._refs_pen(k), False),
                        ("cut", "Undo cut" if it.cut_out else "Cut out",
                         "Back to the original picture." if it.cut_out else "Removes the background (BiRefNet in ComfyUI).", lambda k=k: self._refs_cut(k), True),
                        ("describe", "Describe", "Qwen 3.5 9B writes a short description of this picture (about 5 s).", lambda k=k: self._refs_describe(k), True)]
@@ -545,77 +523,6 @@ class RefSlotsMixin:
                 self._refs_say(f"{self.refslots.tag(i) or 'image'}: {box['text']}")
             self._refs_redraw()
         self.root.after(200, check)
-
-    def _refs_pen(self, k: int):
-        import tkinter as tk
-        from tkinter import ttk
-        from .gui_common import ACCENT, BG, PANEL
-        it = self.refslots.items[k]
-        base = it.image.convert("RGBA")
-        view = min(1.0, 520 / max(base.size))
-        vw, vh = max(1, round(base.width * view)), max(1, round(base.height * view))
-        top = tk.Toplevel(self.root)
-        top.title("Pen")
-        top.configure(bg=BG)
-        top.transient(self.root)
-        cv = tk.Canvas(top, width=vw, height=vh, bg=PANEL, highlightthickness=0, cursor="crosshair")
-        cv.pack(padx=8, pady=8)
-        bg_photo = tk.PhotoImage(data=_b64(thumbnail_png(base, max(vw, vh))))
-        cv.create_image(0, 0, image=bg_photo, anchor="nw")
-        state = {"colour": PEN_COLOURS[0], "strokes": [], "cur": None}
-        v_w = tk.IntVar(value=6)
-
-        def down(e):
-            state["cur"] = [state["colour"], int(v_w.get()), [(e.x, e.y)]]
-            state["strokes"].append(state["cur"])
-            cv.create_oval(e.x - v_w.get() / 2, e.y - v_w.get() / 2, e.x + v_w.get() / 2, e.y + v_w.get() / 2,
-                           fill=state["colour"], outline="", tags="pen")
-
-        def move(e):
-            c = state["cur"]
-            if c is None:
-                return
-            x0, y0 = c[2][-1]
-            c[2].append((e.x, e.y))
-            cv.create_line(x0, y0, e.x, e.y, fill=c[0], width=c[1], capstyle="round", tags="pen")
-
-        def up(_e):
-            state["cur"] = None
-
-        def undo():
-            if state["strokes"]:
-                state["strokes"].pop()
-                cv.delete("pen")
-                for colour, w, pts in state["strokes"]:
-                    if len(pts) == 1:
-                        x, y = pts[0]
-                        cv.create_oval(x - w / 2, y - w / 2, x + w / 2, y + w / 2, fill=colour, outline="", tags="pen")
-                    for (xa, ya), (xb, yb) in zip(pts, pts[1:]):
-                        cv.create_line(xa, ya, xb, yb, fill=colour, width=w, capstyle="round", tags="pen")
-
-        def apply():
-            if state["strokes"]:
-                done = apply_strokes(base, [(c, w, p) for c, w, p in state["strokes"]], 1.0 / view)
-                self.refslots.replace(k, done)
-            top.destroy()
-            self._refs_redraw()
-
-        cv.bind("<ButtonPress-1>", down)
-        cv.bind("<B1-Motion>", move)
-        cv.bind("<ButtonRelease-1>", up)
-        bar = ttk.Frame(top)
-        bar.pack(fill="x", padx=8, pady=(0, 8))
-        for c in PEN_COLOURS:
-            sw = tk.Label(bar, width=2, bg=c, bd=1, relief="solid", cursor="hand2")
-            sw.pack(side="left", padx=2)
-            sw.bind("<Button-1>", lambda e, c=c: state.update(colour=c))
-        ttk.Label(bar, text="Size", style="Muted.TLabel").pack(side="left", padx=(10, 2))
-        ttk.Spinbox(bar, textvariable=v_w, from_=1, to=60, width=4).pack(side="left")
-        ttk.Button(bar, text="Undo", style="Link.TButton", command=undo).pack(side="left", padx=10)
-        ttk.Button(bar, text="Cancel", command=top.destroy).pack(side="right")
-        ttk.Button(bar, text="Apply", command=apply).pack(side="right", padx=6)
-        top._keep = bg_photo   # (Tk drops a picture nobody refers to)
-
 
 def _b64(data: bytes) -> str:
     import base64

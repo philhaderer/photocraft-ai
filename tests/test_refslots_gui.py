@@ -93,7 +93,7 @@ def main():
     app._ref_icon_cache.clear()
     app._refs_redraw()
     kinds = {k for k, _c in app._ref_icon_cache}
-    assert {"remove", "pen", "cut", "describe"} <= kinds and "copy" not in kinds
+    assert {"remove", "cut", "describe"} <= kinds and "pen" not in kinds and "copy" not in kinds
     app.refslots.items[0].description = "A red square."
     app._refs_redraw()
     assert "copy" in {k for k, _c in app._ref_icon_cache}
@@ -163,11 +163,7 @@ def main():
         time.sleep(0.02)
     assert app.lbl_refmsg["text"] == "Describe failed: ComfyUI is not running" and not app._ref_busy
 
-    # the pen draws
-    out = refslots.apply_strokes(Image.new("RGB", (100, 100), "white"), [("#ff0000", 10, [(10, 10), (90, 10)]), ("#00ff00", 8, [(50, 50)])], 1.0)
-    assert out.getpixel((50, 10))[:3] == (255, 0, 0) and out.getpixel((50, 50))[:3] == (0, 255, 0) and out.getpixel((50, 80))[:3] == (255, 255, 255)
-    out2 = refslots.apply_strokes(Image.new("RGB", (200, 200), "white"), [("#ff0000", 10, [(10, 10), (90, 10)])], 2.0)   # a preview at half size
-    assert out2.getpixel((100, 20))[:3] == (255, 0, 0) and out2.getpixel((100, 24))[:3] == (255, 0, 0)
+    assert not hasattr(refslots, "apply_strokes") and not hasattr(app, "_refs_pen")      # the pen is gone
     assert refslots.thumbnail_png(Image.new("RGBA", (300, 100), (0, 0, 0, 0)), 64)[:4] == b"\x89PNG"
     print("ALL OK (refslots gui)")
 
