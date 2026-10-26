@@ -15,7 +15,9 @@ from PIL import Image
 from . import clipboard
 
 MAX_SIDE = 1024                      # the longest side of a reference image sent to the model
-DEFAULT_BACKGROUND = (255, 255, 255)
+# What shows where a reference image is transparent (a cut-out, a PNG with alpha): neutral mid grey. The ONE place to change it;
+# the model gets a flat picture, and white behind a cut-out subject disturbed it.
+DEFAULT_BACKGROUND = (128, 128, 128)
 
 
 class RefError(ValueError):
@@ -159,6 +161,19 @@ class RefSlots:
         parts = [f"picture = {self.picture_tag()}"] + [f"reference {k + 1} = {self.tag(k)}" for k in range(len(self.active))]
         return ", ".join(parts)
 
+    # ---- the descriptions in the prompt ----
+
+    def description_lines(self) -> list[str]:
+        """One line per described image that is sent: "<image2>: a brown dog on grass"."""
+        return [f"{self.tag(k) or f'image {k + 2}'}: {it.description}" for k, it in enumerate(self.active) if it.description]
+
+    def prompt_with_descriptions(self, text: str) -> str:
+        """The typed text plus the descriptions at its end, one per line. This is the prompt that is sent (see docs/prompt-aufbau.md)."""
+        lines = self.description_lines()
+        if not lines:
+            return text
+        return (text.rstrip() + "\n" if text.strip() else "") + "\n".join(lines)
+
     # ---- what the bridge sends ----
 
     def images(self) -> list[Image.Image]:
@@ -205,13 +220,18 @@ PEN_COLOURS = ("#ff2a2a", "#2ad14b", "#2a7bff", "#ffd400", "#000000", "#ffffff")
 # The window part (Tk): one hook in gui.py puts RefSlotsMixin in front of the window's other mixins
 # ======================================================================================================================
 
+MULTI_MODE = "multi_edit"     # the window mode that shows the slots (it runs as a whole-image edit)
+
+
 class RefSlotsMixin:
     """The reference slots of the window. Built the first time the window shows them (`_refs_ensure`), so the hook in gui.py
     is only the class line: `_on_mode_ui` (called on every tab / mode change) and `_request` are wrapped here.
     A slot takes a picture by drag and drop (tkinterdnd2, when installed), Ctrl+V (only when no text field has the focus),
-    the "Paste" button or "Add file". Each slot has Remove, Cut out (BiRefNet in ComfyUI) and Pen."""
+    the Paste or Add file icon of the next free slot. Each filled slot has a bar of icons: Remove, Pen, Cut out (BiRefNet in
+    ComfyUI), Describe and (with a description) Copy text."""
 
-    SLOT = 108           # px (before the display scaling): every slot is the same size, whatever the model
+    SLOT = 108         # px (before the display scaling): every slot is the same size, whatever the model
+    BAR = 22           # width of the icon bar inside a slot (16 px icons)
 
     # ---- wrapped window methods ----
     def _on_mode_ui(self):
@@ -221,6 +241,8 @@ class RefSlotsMixin:
     def _request(self):
         req = super()._request()
         req.refs = self._refs_for(req.mode)
+        if req.refs:        # the descriptions of the images that go along are added at the end of the prompt
+            req.params.prompt = self.refslots.prompt_with_descriptions(req.params.prompt)
         return req
 
     # ---- state ----
@@ -229,13 +251,12 @@ class RefSlotsMixin:
         return m if (m is not None and m.max_refs > 0) else None
 
     def _refs_wanted(self) -> bool:
-        from .bridge import REF_MODES
-        return self._refs_model() is not None and self.v_mode.get() in REF_MODES
+        return self._refs_model() is not None and self.v_mode.get() == MULTI_MODE
 
     def _refs_for(self, run_mode: str) -> list:
         from .bridge import REF_MODES
         slots = getattr(self, "refslots", None)
-        if slots is None or run_mode not in REF_MODES or self._refs_model() is None:
+        if slots is None or run_mode not in REF_MODES or not self._refs_wanted():
             return []
         return slots.images()
 
@@ -255,14 +276,6 @@ class RefSlotsMixin:
         head.pack(fill="x")
         self.lbl_refs = ttk.Label(head, text="Reference images", style="Muted.TLabel")
         self.lbl_refs.pack(side="left")
-        self.b_refpaste = ttk.Button(head, text="Paste", style="Link.TButton", command=self._refs_paste)
-        self.b_refpaste.pack(side="left", padx=(10, 0))
-        Tooltip(self.b_refpaste, "Takes the picture from the clipboard (Ctrl+V does the same when no text field has the focus).")
-        self.b_refadd = ttk.Button(head, text="Add file", style="Link.TButton", command=self._refs_add_file)
-        self.b_refadd.pack(side="left", padx=(10, 0))
-        Tooltip(self.b_refadd, "Picks a picture file. Or drop files onto a slot.")
-        self.b_refuse = ttk.Button(head, text="Descriptions to prompt", style="Link.TButton", command=self._refs_to_prompt)
-        Tooltip(self.b_refuse, "Adds one line per described image to your text: \"<image2>: a brown dog ...\".")
         self.f_refgrid = ttk.Frame(self.f_refs)
         self.f_refgrid.pack(fill="x", pady=(4, 0))
         self.lbl_refnames = ttk.Label(self.f_refs, text="", style="Muted.TLabel", wraplength=self._px(380 - 24), justify="left")
@@ -322,36 +335,31 @@ class RefSlotsMixin:
             box.pack()
             if k < len(rs.items):
                 it = rs.items[k]
-                photo = tk.PhotoImage(data=_b64(thumbnail_png(it.image, s - 4)))
+                photo = tk.PhotoImage(data=_b64(thumbnail_png(it.image, s - 4 - self._px(self.BAR))))
                 self._ref_photos.append(photo)
                 lbl = tk.Label(box, image=photo, bg=PANEL, bd=0)
-                lbl.pack(expand=True)
+                lbl.pack(expand=True, side="left")
                 Tooltip(lbl, f"{it.name or 'clipboard'}" + ("  (cut out)" if it.cut_out else "") + (f"\n{it.description}" if it.description else ""))
                 tag = rs.tag(k)
                 ttk.Label(cell, text=tag or f"image {k + 2}", style="Hint.TLabel").pack(anchor="w")
+                if it.description:      # shown under the image; it is also added to the end of the prompt
+                    ttk.Label(cell, text=it.description, style="Muted.TLabel", wraplength=s, justify="left").pack(anchor="w")
                 busy = k in self._ref_busy
-                rows = (ttk.Frame(cell), ttk.Frame(cell))
-                for r in rows:
-                    r.pack(anchor="w")
-                buttons = [(0, "\u2715", "Remove this image.", lambda k=k: self._refs_remove(k)),
-                           (0, "Pen", "Draw on the image (a circle around the part that counts).", lambda k=k: self._refs_pen(k)),
-                           (1, "Undo cut" if it.cut_out else "Cut out",
-                            "Back to the original picture." if it.cut_out else "Removes the background (BiRefNet in ComfyUI).", lambda k=k: self._refs_cut(k)),
-                           (1, "Describe", "Qwen 3.5 9B writes a short description of this picture (about 5 s).", lambda k=k: self._refs_describe(k))]
-                for row, text, tip, cmd in buttons:
-                    b = ttk.Button(rows[row], text=("\u2026" if busy and text in ("Cut out", "Describe") else text), style="Link.TButton", command=cmd)
-                    b.pack(side="left", padx=(0, self._px(6)))
-                    Tooltip(b, tip)
-                    if busy and text not in ("\u2715",):
-                        b.configure(state="disabled")
+                bar = [("remove", "Remove", "Takes this image out of the slots.", lambda k=k: self._refs_remove(k), False),
+                       ("pen", "Pen", "Draw on the image (a circle around the part that counts).", lambda k=k: self._refs_pen(k), False),
+                       ("cut", "Undo cut" if it.cut_out else "Cut out",
+                        "Back to the original picture." if it.cut_out else "Removes the background (BiRefNet in ComfyUI).", lambda k=k: self._refs_cut(k), True),
+                       ("describe", "Describe", "Qwen 3.5 9B writes a short description of this picture (about 5 s).", lambda k=k: self._refs_describe(k), True)]
+                if it.description:
+                    bar.append(("copy", "Copy text", "Puts the description on the clipboard.", lambda k=k: self._refs_copy_text(k), False))
+                self._refs_bar(box, bar, busy)
             else:
                 tk.Label(box, text="Drop a picture\nor Ctrl+V" if k == len(rs.items) else "free", fg=MUTED, bg=PANEL, bd=0,
-                         justify="center").pack(expand=True)
+                         justify="center").pack(expand=True, side="left")
+                if k == len(rs.items):      # the next free slot takes the pictures: paste and add file sit in its bar
+                    self._refs_bar(box, [("paste", "Paste", "Takes the picture from the clipboard (Ctrl+V does the same when no text field has the focus).", self._refs_paste, False),
+                                         ("file", "Add file", "Picks a picture file. Or drop files onto a slot.", self._refs_add_file, False)], False)
                 ttk.Label(cell, text="", style="Muted.TLabel").pack(anchor="w")
-        if any(it.description for it in rs.active):
-            self.b_refuse.pack(side="left", padx=(10, 0))
-        else:
-            self.b_refuse.pack_forget()
         over = len(rs.overflow)
         hint = rs.hint()
         self.lbl_refnames.configure(text=("Name them in your text: " + hint + "." if hint else
@@ -360,11 +368,43 @@ class RefSlotsMixin:
             self._refs_say(f"This model takes {rs.max_refs}: the last {over} image(s) are kept but not sent.")
         elif not self._refs_dnd and not getattr(self, "_ref_dnd_told", False):
             self._ref_dnd_told = True
-            self._refs_say("Drag and drop needs the package tkinterdnd2. Ctrl+V, Paste and Add file work without it.")
+            self._refs_say("Drag and drop needs the package tkinterdnd2: run setup-windows.bat again. Ctrl+V, Paste and Add file work without it.")
         try:
             self._on_content_size()
         except Exception:
             pass
+
+    def _refs_icon(self, kind: str, color: str):
+        cache = self.__dict__.setdefault("_ref_icon_cache", {})
+        if (kind, color) not in cache:
+            from .gui_common import icon_image
+            cache[(kind, color)] = icon_image(self.root, kind, color)
+        return cache[(kind, color)]
+
+    def _refs_bar(self, box, buttons, busy: bool):
+        """The narrow icon bar at the right edge inside a slot: one 16 px icon per action, the old word as its tooltip.
+        `buttons`: (icon, word, explanation, command, waits) - an action that waits is greyed out while a job runs."""
+        import tkinter as tk
+        from .gui_common import DISABLED, FG, PANEL, Tooltip
+        bar = tk.Frame(box, width=self._px(self.BAR), bg=PANEL, bd=0)
+        bar.pack(side="right", fill="y")
+        for kind, word, tip, cmd, waits in buttons:
+            off = busy and waits
+            lb = tk.Label(bar, image=self._refs_icon(kind, DISABLED if off else FG), bg=PANEL, bd=0, cursor="" if off else "hand2")
+            lb.pack(pady=self._px(2))
+            if not off:
+                lb.bind("<Button-1>", lambda e, c=cmd: c())
+            Tooltip(lb, f"{word}: {tip}")
+
+    def _refs_copy_text(self, k: int):
+        items = self.refslots.items
+        if 0 <= k < len(items) and items[k].description:
+            try:
+                self.root.clipboard_clear()
+                self.root.clipboard_append(items[k].description)
+                self._refs_say("Description copied.")
+            except Exception:
+                self._refs_say("The clipboard is not available.")
 
     def _refs_say(self, text: str):
         self.lbl_refmsg.configure(text=text)
@@ -460,8 +500,8 @@ class RefSlotsMixin:
         self.root.after(200, check)
 
     def _refs_describe(self, k: int):
-        """Qwen 3.5 9B describes the picture in the slot (ComfyUI, describe-image.json); the text goes into the slot's tooltip and
-        under the slots, and "Descriptions to prompt" can add it to your text."""
+        """Qwen 3.5 9B describes the picture in the slot (ComfyUI, describe-image.json); the text is shown under the image and added to
+        the end of the prompt automatically."""
         import threading
         src = self.refslots.items[k]
         if k in self._ref_busy:
@@ -492,15 +532,6 @@ class RefSlotsMixin:
                 self._refs_say(f"{self.refslots.tag(i) or 'image'}: {box['text']}")
             self._refs_redraw()
         self.root.after(200, check)
-
-    def _refs_to_prompt(self):
-        lines = [f"{self.refslots.tag(i)}: {it.description}" for i, it in enumerate(self.refslots.active) if it.description]
-        if not lines:
-            return
-        t = self.t_prompt
-        cur = t.get("1.0", "end").strip()
-        t.insert("end", ("\n" if cur else "") + "\n".join(lines))
-        self._refs_say("Added to your text.")
 
     def _refs_pen(self, k: int):
         import tkinter as tk

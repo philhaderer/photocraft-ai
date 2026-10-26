@@ -35,15 +35,19 @@ def main():
     assert getattr(app, "f_refs", None) is None, "a model without slots builds nothing"
     assert app._request().refs == []
 
-    pick("qwen", "edit")
+    pick("qwen", "multi_edit")
     assert app.f_refs is not None
     app.f_refs.pack = lambda *a, **k: log.append("on")
     app.f_refs.pack_forget = lambda: log.append("off")
     pick("qwen", "inpaint")
+    assert log[-1] == "off"                                  # the slots belong to Multi Image Edit only
+    pick("qwen", "edit")
+    assert log[-1] == "off"
+    pick("qwen", "multi_edit")
     assert log[-1] == "on" and app.refslots.max_refs == 2 and app.refslots.tag_style == "<image{n}>"
     pick("qwen", "remove")
     assert log[-1] == "off"                                  # Remove Selection takes no references
-    pick("qwen", "edit")
+    pick("qwen", "multi_edit")
     assert log[-1] == "on"
 
     # Paste button / Ctrl+V
@@ -78,18 +82,40 @@ def main():
     app._refs_on_drop(type("E", (), {"data": "{%s} %s" % (tmp / "a b.png", tmp / "x.txt"), "action": "copy"})())
     assert [it.name for it in app.refslots.items] == ["a b.png"] and "not a picture" in app.lbl_refmsg["text"]
 
+    # the icon bars: paste and add file in the next free slot, five icons in a filled slot (copy text only with a description)
+    app.refslots.clear()
+    app._ref_icon_cache.clear()
+    app._refs_redraw()
+    kinds = {k for k, _c in app._ref_icon_cache}
+    assert {"paste", "file"} <= kinds and "remove" not in kinds
+    app.refslots.add(img, "q.png")
+    app._ref_icon_cache.clear()
+    app._refs_redraw()
+    kinds = {k for k, _c in app._ref_icon_cache}
+    assert {"remove", "pen", "cut", "describe"} <= kinds and "copy" not in kinds
+    app.refslots.items[0].description = "A red square."
+    app._refs_redraw()
+    assert "copy" in {k for k, _c in app._ref_icon_cache}
+    copied = []
+    app.root.clipboard_clear = lambda: copied.clear()
+    app.root.clipboard_append = lambda t: copied.append(t)
+    app._refs_copy_text(0)
+    assert copied == ["A red square."]
+    app.refslots.clear()
+    app.refslots.add(img, "a b.png")
+
     # the request: the images go along in Edit / Fill / Expand, never in other modes or for a model without slots
     app.refslots.add(img, "r.png")
     req = app._request()
     assert req.mode == "edit" and len(req.refs) == 2
-    pick("flux2", "edit")
+    pick("flux2", "multi_edit")
     assert app.refslots.max_refs == 3 and len(app._request().refs) == 2 and app.refslots.tag(0) == "image 2"
     pick("flux2", "upscale")
     assert app._request().refs == []
-    pick("qwen", "edit")
+    pick("qwen", "multi_edit")
     pick("moss", "txt2img")
     assert app._request().refs == [] and log[-1] == "off"
-    pick("qwen", "edit")
+    pick("qwen", "multi_edit")
     assert len(app._request().refs) == min(2, len(app.refslots.items))      # nothing was lost by the tab switch
 
     # the cut-out button: ComfyUI's answer replaces the picture, "Undo cut" brings the original back
@@ -123,8 +149,9 @@ def main():
         time.sleep(0.02)
     assert app.refslots.items[0].description == "A red square on blue." and not app._ref_busy
     assert app.lbl_refmsg["text"] == "<image2>: A red square on blue."
-    app._refs_to_prompt()
-    assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa\n<image2>: A red square on blue."
+    assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa"          # the text field itself stays as typed
+    assert app._request().params.prompt == "put it on the sofa\n<image2>: A red square on blue."   # the description goes along at the end
+    assert not hasattr(app, "b_refuse")
     app.bridge.describe_image = lambda im: (_ for _ in ()).throw(RuntimeError("ComfyUI is not running"))
     app._refs_describe(0)
     for _ in range(100):

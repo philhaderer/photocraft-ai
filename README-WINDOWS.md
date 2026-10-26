@@ -10,7 +10,9 @@ Local changes on top of the upstream bridge (Peszemeszek/photocraft-comfyui-brid
 
 ## Use
 
-1. Run `setup-windows.bat` once.
+1. Run `setup-windows.bat` once. It installs the packages the window needs, among them `tkinterdnd2` (drag and drop of
+   pictures onto the reference slots). Without it everything else works; the window then says so under the slots. Run
+   `setup-windows.bat` again to add it.
 2. Close PhotoCraft, then start `photocraft-ai.bat`. It starts PhotoCraft with `--control` and opens the bridge window.
 3. Open an image in PhotoCraft, make a selection, pick mode "Fill Selection", type the edit as an instruction
    ("Make the jacket red") and press Generate (Ctrl+Enter).

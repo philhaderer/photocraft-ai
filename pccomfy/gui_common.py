@@ -30,17 +30,17 @@ MODE_LABELS = [
     ("inpaint", "Fill Selection"),
     ("remove", "Remove Selection"),
     ("outpaint", "Expand image"),
-    ("reference", "Insert reference image"),
+    ("multi_edit", "Multi Image Edit"),
     ("upscale", "Upscale (new file)"),
     ("refine", "Refine (same size)"),
     ("img2img", "Image → image"),    # only for a workflow of your own (no model tab)
 ]
-SHORT_MODES = {"txt2img": "Text", "edit": "Edit", "inpaint": "Fill Selection", "outpaint": "Expand", "reference": "Reference",
+SHORT_MODES = {"txt2img": "Text", "edit": "Edit", "inpaint": "Fill Selection", "outpaint": "Expand", "multi_edit": "Multi Edit",
                "remove": "Remove Selection", "upscale": "Upscale", "refine": "Refine", "img2img": "Img2img"}   # layer names
 MODE_TIPS = {      # for a workflow of your own (no model tab); the tabs show the tips of their model (models.Model.mode_tips)
     "inpaint": "Select an area, type what should appear there, then Generate.",
     "remove": "Select the object (whole object inside), then Generate.",
-    "reference": "Put the reference on its own top layer, select where it goes, then Generate.",
+    "multi_edit": "Changes the whole picture from your text and the reference images in the slots. A selection is ignored.",
     "outpaint": "Extend the canvas with the Crop tool (Enter) and fill the new area white, then Generate.",
     "edit": "Changes the whole picture from your text. A selection is ignored.",
     "img2img": "Reworks the picture (or selection) from your text.",
@@ -102,6 +102,58 @@ def _arrow_icon(root, kind: str, color: str):
     return tk.PhotoImage(master=root, data=base64.b64encode(buf.getvalue()).decode("ascii"))
 
 
+SLOT_ART = {      # 16x16 pixel art ("#" = drawn) for the icons in the reference slots; "paste", "file" and "describe" are drawn in icon_image
+    "remove": ["................",
+               "................",
+               "..##........##..",
+               "...##......##...",
+               "....##....##....",
+               ".....##..##.....",
+               "......####......",
+               ".......##.......",
+               "......####......",
+               ".....##..##.....",
+               "....##....##....",
+               "...##......##...",
+               "..##........##..",
+               "................",
+               "................",
+               "................"],
+    "pen": ["................",
+            "..............##",
+            ".............###",
+            "............###.",
+            "...........###..",
+            "..........###...",
+            ".........###....",
+            "........###.....",
+            ".......###......",
+            "......###.......",
+            ".....###........",
+            "....###.........",
+            "...####.........",
+            "..#####.........",
+            "................",
+            "................"],
+    "cut": ["................",
+           ".#..........#...",
+           ".##........##...",
+           "..##......##....",
+           "...##....##.....",
+           "....##..##......",
+           ".....####.......",
+           "......##........",
+           ".....####.......",
+           "....##..##......",
+           "..###....###....",
+           ".#..#....#..#...",
+           ".#..#....#..#...",
+           "..##......##....",
+           "................",
+           "................"],
+}
+
+
 def icon_image(root, kind: str, color: str):
     """A 16x16 icon for a button, drawn pixel by pixel: "save" (floppy disk), "saveas" (floppy with a plus), "trash"."""
     if kind in ("undo", "redo"):
@@ -140,6 +192,28 @@ def icon_image(root, kind: str, color: str):
             for x, ch in enumerate(row):
                 if ch == "#":
                     px[y][x] = color
+    elif kind in SLOT_ART:                        # the small icons of the reference slots (see SLOT_ART)
+        for y, row in enumerate(SLOT_ART[kind]):
+            for x, ch in enumerate(row):
+                if ch == "#":
+                    px[y][x] = color
+    elif kind == "paste":                         # clipboard with a clip and two lines of text
+        rect(2, 2, 13, 15, fill=False)
+        rect(5, 0, 10, 3)
+        rect(5, 7, 10, 7)
+        rect(5, 10, 10, 10)
+    elif kind == "file":                          # a sheet with a plus: add a file
+        rect(1, 0, 10, 15, fill=False)
+        rect(3, 8, 8, 8)
+        rect(5, 6, 5, 10)
+        rect(11, 11, 15, 11)
+        rect(13, 9, 13, 13)
+    elif kind == "describe":                      # lines of text
+        rect(1, 2, 14, 2)
+        rect(1, 5, 11, 5)
+        rect(1, 8, 14, 8)
+        rect(1, 11, 8, 11)
+        rect(1, 14, 12, 14)
     elif kind == "copy":                          # two sheets
         rect(0, 0, 9, 11, fill=False)
         rect(5, 4, 14, 15, c=BG)
@@ -214,7 +288,6 @@ def preset_stem(name: str) -> str:
 BG, PANEL, FG, MUTED, ACCENT = "#535353", "#282828", "#eeeeee", "#cfcfcf", "#f28c28"   # PhotoCraft grey (measured from a screenshot), orange accent; PANEL = inactive tab, fields, buttons, slots
 NA_RED = "#ff6b6b"      # text of a tab that is not available (model files missing); 5.3 : 1 on PANEL
 DISABLED = "#8e8e8e"   # text of a greyed-out control: clearly darker than MUTED, so it reads as "not available here"
-REF_STYLES = {"classic": "Classic: subject first, long instruction", "simple": "Simple: picture first, one short sentence"}
 SCALE_MODES = ("upscale", "refine")   # these run only with an upscale workflow (a node titled pc:upscale)
 ERROR, ERROR_TEXT = "#e5484d", "#ffc2c2"
 DONE_GREEN = "#39A95D"      # only the word "Done" above the bar
@@ -325,6 +398,7 @@ __all__ = [
     "word_right",
     "_arrow_icon",
     "icon_image",
+    "SLOT_ART",
     "Tooltip",
     "ENHANCE_TIP",
     "LORA_TIP",
@@ -339,7 +413,6 @@ __all__ = [
     "MUTED",
     "ACCENT",
     "DISABLED",
-    "REF_STYLES",
     "SCALE_MODES",
     "ERROR",
     "ERROR_TEXT",

@@ -79,10 +79,10 @@ class StateMixin:
             "sampler": self.v_sampler.get(), "scheduler": self.v_scheduler.get(),
             "base_res": int(self.v_res.get()), "context": float(self.v_context.get()),
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
-            "scale": self._scale(), "ref_style": self._ref_style(),
+            "scale": self._scale(),
             "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
             "turbo": bool(self.v_turbo.get()), "stage_on": bool(self.v_stage.get()), "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "stage_strengths": [round(float(v.get()), 2) for v in self.v_sstr], "loras": self._loras(), "sharpen": round(float(self.v_sharpen.get()), 2), "match": round(float(self.v_match.get()), 2), "detail": round(float(self.v_detail.get()), 2),
-            "lora_strength": round(float(self.v_lora_str.get()), 2), "ref_collage": bool(self.v_collage.get()), "ref_cutout": bool(self.v_cutout.get()),
+            "lora_strength": round(float(self.v_lora_str.get()), 2),
             "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
             "feather_pct": round(float(self.v_feather.get()), 1),
             "prompt": self._prompt_text(), "negative": self.t_neg.get("1.0", "end").strip(),
@@ -100,6 +100,8 @@ class StateMixin:
                     notes.append(key)
 
         put(self.v_mode, "mode", str)
+        if self.v_mode.get() not in dict(MODE_LABELS):      # a mode that no longer exists (the old "reference"): the first one
+            self.v_mode.set(MODE_LABELS[0][0])
         wf = s.get("workflow")
         if wf is not None:
             if wf == BUILTIN or wf in list(self.cb_workflow["values"]):
@@ -156,9 +158,6 @@ class StateMixin:
             put(self.v_lora_str, "lora_strength", float)
             self._on_lora_str()
         self._on_detail()
-        put(self.v_collage, "ref_collage", bool)
-        put(self.v_cutout, "ref_cutout", bool)
-        put(self.v_refstyle, "ref_style", lambda v: REF_STYLES.get(v, REF_STYLES["classic"]))
         put(self.v_feather, "feather_pct", float)
         self._on_feather()
         if "layer_mask" in s:
@@ -246,11 +245,11 @@ class StateMixin:
     def _save_state(self, req: Request):
         p = req.params
         cfgmod.save_state({
-            "mode": req.mode, "workflow": self.v_workflow.get(), "clip": p.clip, "checkpoint": p.checkpoint, "prompt": p.prompt,
+            "mode": self.v_mode.get(), "workflow": self.v_workflow.get(), "clip": p.clip, "checkpoint": p.checkpoint, "prompt": p.prompt,
             "negative": p.negative, "steps": p.steps, "cfg": p.cfg, "denoise": self.v_denoise.get(),
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
             "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "prompt_h": self._prompt_lines(), "fooocus": req.fooocus, "enhance": bool(self.v_enhance.get()), "turbo": req.turbo, "layer_mask": req.layer_mask,
             "stage_on": req.stage_on, "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "stage_strengths": [round(float(v.get()), 2) for v in self.v_sstr], "detail": req.detail, "sharpen": round(float(self.v_sharpen.get()), 2), "match": req.match, "loras": [list(x) for x in req.loras], "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
-            "ref_collage": req.ref_collage, "ref_style": req.ref_style, "ref_cutout": req.ref_cutout, "runs": dict(self.state.get("runs", {})),
+            "runs": dict(self.state.get("runs", {})),
         })

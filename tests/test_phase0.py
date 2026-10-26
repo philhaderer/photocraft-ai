@@ -17,19 +17,19 @@ names = [n for m in mixins + (gui.App,) for n in vars(m) if callable(vars(m)[n])
 dup = sorted({n for n in names if names.count(n) > 1})
 assert not (set(vars(gui.RefSlotsMixin)) & set(names) - {"_on_mode_ui", "_request"}), "RefSlotsMixin wraps only these two (with super())"
 assert not dup, f"defined twice: {dup}"
-assert len(names) == 107, len(names)      # 107 methods of the old App, without __init__
+assert len(names) == 106, len(names)      # 106 methods of the old App, without __init__
 
 # 2. what the other tests and callers read from gui.py is still there
-for name in ("BUILTIN", "MODE_LABELS", "SHORT_MODES", "LAYER_MASKS", "REF_STYLES", "CLIP_DEFAULT", "ACCENT", "PROMPT_LINES", "FILL_CONTEXT",
+for name in ("BUILTIN", "MODE_LABELS", "SHORT_MODES", "LAYER_MASKS", "CLIP_DEFAULT", "ACCENT", "PROMPT_LINES", "FILL_CONTEXT",
              "word_left", "word_right", "sweep_requests", "duration_text", "scale_text", "parse_list", "winlink", "Tooltip", "run_gui", "DONE_GREEN"):
     assert hasattr(gui, name), name
 
 # 3. models: Expand is off for Flux 3 and Krea 2, everything else is unchanged; the new fields start neutral
 by = models.BY_KEY
-assert list(by["flux3"].modes) == ["txt2img", "edit", "remove", "upscale"]
+assert list(by["flux3"].modes) == ["txt2img", "edit", "multi_edit", "remove", "upscale"]
 assert list(by["krea2"].modes) == ["txt2img"]
-assert list(by["flux2"].modes) == ["txt2img", "edit", "remove", "outpaint", "upscale", "refine"]
-assert list(by["qwen"].modes) == ["txt2img", "edit", "inpaint", "outpaint", "remove"]
+assert list(by["flux2"].modes) == ["txt2img", "edit", "multi_edit", "remove", "outpaint", "upscale", "refine"]
+assert list(by["qwen"].modes) == ["txt2img", "edit", "multi_edit", "inpaint", "outpaint", "remove"]
 assert list(by["moss"].modes) == ["txt2img", "outpaint"]
 assert [m.key for m in models.MODELS] == ["flux3", "flux2", "qwen", "fibo", "krea2", "moss"]
 for m in models.MODELS:
@@ -63,4 +63,8 @@ app.pc, app.comfy, app.events = FakePC(), FakeComfy(), queue.Queue()
 app.refresh()
 kind, info = app.events.get(timeout=5)
 assert kind == "refresh" and info["pc"] == "PhotoCraft ●" and info["comfy"] == "ComfyUI ●" and "doc" not in info["pc"], info
+import threading
+for t in threading.enumerate():      # the refresh thread of the fake must end before the interpreter does (a race made the run abort sometimes)
+    if t is not threading.current_thread():
+        t.join(5)
 print("test_phase0 ok")

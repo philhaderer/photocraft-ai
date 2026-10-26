@@ -70,6 +70,8 @@ _EDIT = "Changes the whole picture from your text (\"make it night\"). A selecti
 _EXPAND = ("Extend the canvas with the Crop tool (Enter) and fill the new area white, then Generate.\n"
            "Text is optional; an empty prompt often works best. Expand large areas in small steps.")
 _REMOVE = "Select the object (whole object inside), then Generate. Text is optional: name what to remove (\"the dog\")."
+_MULTI = ("Edit the picture with reference images in the slots below (drop, paste or add files). "
+          "Name them in the text by their tags. The whole picture changes; a selection is ignored.")
 _UP = "Enlarges the picture (or selection) into a NEW document. Describe the picture before the prompt text. Max 24 MP."
 
 QWEN = Model(
@@ -78,6 +80,7 @@ QWEN = Model(
     {
         "txt2img": Mode("qwen-image-21-t2i.json", dict(base_res=1024, turbo=False, layer_mask="none", enhance=True)),
         "edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="none"), prompt_tip=EDIT_TIP),
+        "multi_edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="none"), prompt_tip=EDIT_TIP, run_as="edit"),
         "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=4.0)),
         "outpaint": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="auto")),
         "remove": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
@@ -89,6 +92,7 @@ QWEN = Model(
     mode_tips={
         "txt2img": _TXT,
         "edit": _EDIT,
+        "multi_edit": _MULTI,
         "inpaint": "Select an area, type what should appear there, then Generate.",
         "outpaint": _EXPAND,
         "remove": _REMOVE,
@@ -101,6 +105,7 @@ FLUX2 = Model(
     {
         "txt2img": Mode("flux2-klein-t2i.json", dict(base_res=1024, layer_mask="none", enhance=False)),
         "edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none"), prompt_tip=EDIT_TIP),
+        "multi_edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none"), prompt_tip=EDIT_TIP, run_as="edit"),
         "remove": Mode("flux2-klein-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
         "outpaint": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="auto")),
         "upscale": Mode("flux2-klein-upscale.json", dict(scale=1.5, turbo=True, context=0.0), FLUX2_DEFAULT, prompt_tip=DESCRIBE_TIP),
@@ -114,6 +119,7 @@ FLUX2 = Model(
     mode_tips={
         "txt2img": _TXT + " The checkbox lets the prompt upsampler write the long prompt.",
         "edit": _EDIT + " Nothing happens? Generate again or word it more fully.",
+        "multi_edit": _MULTI,
         "remove": _REMOVE + " Works only sometimes: generate again.",
         "outpaint": _EXPAND,
         "upscale": _UP,
@@ -127,6 +133,7 @@ FLUX3 = Model(
     {
         "txt2img": Mode("flux3-klein-t2i.json", dict(base_res=1536, layer_mask="none", enhance=False)),
         "edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none"), prompt_tip=EDIT_TIP),
+        "multi_edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none"), prompt_tip=EDIT_TIP, run_as="edit"),
         "remove": Mode("flux3-klein-edit.json", dict(_SOFT, base_res=1536, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
         "upscale": Mode("flux3-klein-upscale.json", dict(scale=1.5, turbo=True, stage_on=False, context=0.0), FLUX3_DEFAULT, prompt_tip=DESCRIBE_TIP),
     },
@@ -138,6 +145,7 @@ FLUX3 = Model(
     mode_tips={
         "txt2img": _TXT + " The checkbox lets the prompt upsampler write the long prompt.",
         "edit": _EDIT + " Nothing happens? Generate again or word it more fully.",
+        "multi_edit": _MULTI,
         "remove": _REMOVE,
         "upscale": "Enlarges into a NEW document: SeedVR2 cleans, Flux 3 redraws in tiles. Describe the picture before the prompt text. Max 24 MP.",
     },
@@ -186,6 +194,7 @@ FIBO = Model(
     {
         "txt2img": Mode("fibo2-t2i.json", dict(base_res=1224, layer_mask="none", enhance=False)),
         "edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=EDIT_TIP),
+        "multi_edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=EDIT_TIP, run_as="edit"),
         "refine": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), FIBO_REFINE, run_as="edit"),
         "inpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False)),
         "outpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
@@ -199,6 +208,7 @@ FIBO = Model(
     mode_tips={
         "txt2img": _TXT,
         "edit": _EDIT,
+        "multi_edit": _MULTI,
         "refine": "Relights the whole picture as a new layer at the same size. Change the prompt for other edits.",
         "inpaint": "Select an area, type what should appear there (text required), then Generate. To take something away use Remove Selection.",
         "outpaint": _EXPAND,

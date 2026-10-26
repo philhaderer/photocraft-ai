@@ -174,12 +174,12 @@ def has_yellow(im):
     return bool(((a[..., 0] > 240) & (a[..., 1] > 190) & (a[..., 1] < 240) & (a[..., 2] < 60)).any())
 
 
-def run(wf, prompt="", enhance=True, collage=True, style="classic", **kw):
+def run(wf, prompt="", enhance=True, mode="edit", **kw):
     tmp = tempfile.mkdtemp()
     pc, _, b = make(tmp, **kw)
     b.comfy = FakeComfy()
-    req = Request(mode="reference", workflow=str(ROOT / "workflows" / wf) if wf else None, enhance=enhance, ref_collage=collage, ref_style=style)
-    req.params = workflows.GenParams(prompt=prompt, seed=7)
+    req = Request(mode=mode, workflow=str(ROOT / "workflows" / wf) if wf else None, enhance=enhance)
+    req.params = workflows.GenParams(prompt=prompt or "make it night", seed=7)
     res = b.run(req)
     return pc, b, res
 
@@ -194,88 +194,19 @@ def expect_error(text, **kw):
 
 
 def main():
-    # imaging helpers
-    layer = rect(YELLOW, (140, 20, 180, 80))
-    rgba, rgb = imaging.reference_from_layer(layer)
-    assert rgba.size == (40, 60) and rgb.size == (40, 60) and rgb.getpixel((5, 5)) == YELLOW[:3]
-    big, _ = imaging.reference_from_layer(Image.new("RGBA", (3000, 1500), (1, 2, 3, 255)), max_side=1024)
-    assert big.size == (1024, 512)
+    # the old "Insert reference image" mode is gone: no mode, no request fields, no helpers
+    assert "reference" not in bridge.MODES
+    assert not hasattr(bridge, "reference_prompt") and not hasattr(imaging, "reference_from_layer")
+    for f in ("ref_style", "ref_collage", "ref_cutout"):
+        assert f not in Request.__dataclass_fields__, f
     try:
-        imaging.reference_from_layer(Image.new("RGBA", (50, 50), (0, 0, 0, 0)))
-        raise AssertionError("empty layer accepted")
-    except ValueError:
-        pass
-    placed = imaging.paste_reference(Image.new("RGB", (100, 100), "black"), rgba, imaging.Box(10, 10, 80, 60))
-    assert placed.getpixel((50, 40)) == YELLOW[:3] and placed.getpixel((12, 12)) == (0, 0, 0)  # 40x60 fits 40x60, centred
-    # the sentence: both image tags, the typed text, the placement
-    t = bridge.reference_prompt("standing on the left", True, " WHERE")
-    assert "<image_1>" in t and "<image_2>" in t and t.endswith("standing on the left") and "already pasted" in t and "WHERE" not in t
-    t = bridge.reference_prompt("standing on the left", False, " WHERE")
-    assert "WHERE standing on the left" in t and "pasted" not in t       # no copy: the words say where
-    assert t.startswith("Place the subject from <image_1> into <image_2>")  # subject first, picture second
-    w = bridge.reference_where(imaging.Box(10, 10, 20, 20), imaging.Box(0, 0, 40, 40))
-    assert "<image_2>" in w and "centre" in w and "25%" in w
-
-    for wf in ("fibo2-edit.json", "fibo2-edit.json"):
-        # with the rough placement
-        pc, b, res = run(wf, prompt="looking at the camera", enhance=True, collage=True)
-        g = b.comfy.graphs[0]
-        enc = next(n for n in g.values() if n["class_type"] == "TextEncodeFibo2")
-        assert "<image_2>" in enc["inputs"]["prompt"] and "<image_1>" in enc["inputs"]["prompt"], wf
-        assert "looking at the camera" in enc["inputs"]["prompt"] and "already pasted" in enc["inputs"]["prompt"], wf
-        assert not any(n["class_type"] in ("TextGenerate", "VGLBionicEditPrompt", "PreviewAny") for n in g.values()), wf  # text model bypassed
-        ref_node = g[enc["inputs"]["images.image_1"][0]]   # the reference is image_1, the picture image_2
-        pic_node = g[enc["inputs"]["images.image_2"][0]]
-        assert pic_node["inputs"]["image"].endswith("-image.png"), wf
-        ref_up = b.comfy.uploads[ref_node["inputs"]["image"]]
-        assert ref_up.size == (40, 60) and ref_up.getpixel((20, 30)) == YELLOW[:3], wf
-        img_up = next(v for k, v in b.comfy.uploads.items() if k.endswith("-image.png"))
-        assert has_yellow(img_up), wf  # the rough placement is in image_1
-        # the picture is all layers below the reference, the reference layer itself is untouched in the document
-        assert len(pc.docs) == 1 and [l["id"] for l in pc.docs[0].layers][:3] == [1, 2, 3], wf
-        assert pc.docs[0].layers[2]["img"].getpixel((150, 30)) == YELLOW, wf
-        assert res["layers"] and not any(c == "layer.layerMask.revealAll" for c, _ in pc.log), wf  # auto: no layer mask
-        # no placement: image_1 is the plain picture without the reference
-        pc, b, _ = run(wf, enhance=True, collage=False)
-        img_up = next(v for k, v in b.comfy.uploads.items() if k.endswith("-image.png"))
-        assert not has_yellow(img_up), wf
-        enc = next(n for n in b.comfy.graphs[0].values() if n["class_type"] == "TextEncodeFibo2")
-        assert "pasted" not in enc["inputs"]["prompt"] and "Put the subject at the" in enc["inputs"]["prompt"], wf
-
-    # the simple style: the picture is image1, the reference image2, one plain sentence, never a rough placement
-    t = bridge.simple_reference_prompt("standing, facing left", "lower right")
-    assert t == "Put the subject from image2 into the lower right of the picture from image1. standing, facing left", t
-    assert bridge.simple_reference_prompt("", "centre").endswith("of the picture from image1.")
-    for wf in ("fibo2-edit.json", "fibo2-edit.json"):
-        pc, b, res = run(wf, prompt="facing the camera", enhance=True, collage=True, style="simple")
-        g = b.comfy.graphs[0]
-        enc = next(n for n in g.values() if n["class_type"] == "TextEncodeFibo2")
-        assert enc["inputs"]["prompt"].startswith("Put the subject from image2 into the "), enc["inputs"]["prompt"]
-        assert enc["inputs"]["prompt"].endswith("facing the camera") and "<image" not in enc["inputs"]["prompt"], wf
-        pic_node = g[enc["inputs"]["images.image_1"][0]]    # the picture first, the reference second
-        ref_node = g[enc["inputs"]["images.image_2"][0]]
-        assert pic_node["inputs"]["image"].endswith("-image.png") and ref_node["inputs"]["image"].endswith("-ref.png"), wf
-        img_up = next(v for k, v in b.comfy.uploads.items() if k.endswith("-image.png"))
-        assert not has_yellow(img_up), wf                     # collage is ignored in this style
-        assert res["layers"]
-
-    # errors, each with a clear message
-    # no selection: the placed reference layer is the place (its position and size), and the sentence asks for the cut-out
-    pc, b, res = run("fibo2-edit.json", prompt="", style="simple", with_sel=False)
-    assert res["layers"]
-    assert bridge.simple_reference_prompt("", "centre", True).endswith("Remove the background of image2 first.")
-    assert "Remove the background" not in bridge.simple_reference_prompt("", "centre")
-    expect_error("own layer above the picture", layers=1)
-    expect_error("empty", top=Image.new("RGBA", (W, H), (0, 0, 0, 0)))
-    try:
-        run(None)
-        raise AssertionError("built-in graph accepted")
+        run("fibo2-edit.json", mode="reference")
+        raise AssertionError("old mode accepted")
     except BridgeError as e:
-        assert "reference slot" in str(e)
-    # two layers (one picture layer and the reference) work too: nothing left to flatten after dropping the top
-    pc, b, res = run("fibo2-edit.json", layers=2)
-    assert res["layers"] and len(pc.docs) == 1
-    print("ALL OK (reference mode)")
+        assert "Unknown mode" in str(e)
+    pc, b, res = run("fibo2-edit.json")          # a plain Edit still works and the layers stay untouched
+    assert res["layers"]
+    print("ALL OK (reference mode removed)")
 
 
 if __name__ == "__main__":

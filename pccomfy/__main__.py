@@ -161,12 +161,11 @@ def cmd_run(cfg: dict, a) -> int:
     p = GenParams(prompt=a.prompt, negative=a.negative if a.negative is not None else d["negative"],
                   checkpoint=a.checkpoint or d["checkpoint"], steps=a.steps or d["steps"],
                   cfg=a.cfg or d["cfg"], sampler=d["sampler"], scheduler=d["scheduler"], seed=a.seed,
-                  denoise=a.denoise if a.denoise is not None else (1.0 if a.mode in ("inpaint", "remove", "reference", "outpaint") else d["denoise"]))
+                  denoise=a.denoise if a.denoise is not None else (1.0 if a.mode in ("inpaint", "remove", "outpaint") else d["denoise"]))
     req = Request(mode=a.mode, params=p, workflow=a.workflow, base_res=a.res or d["base_res"],
                   context=d["context"], mask_grow=d["mask_grow"], mask_blur=d["mask_blur"],
                   outpaint=tuple(a.expand), overlap=d["overlap"], variants=a.variants, fooocus=not a.no_fooocus,
-                  layer_mask=a.layer_mask, enhance=not a.no_enhance, turbo=not a.no_turbo, scale=a.scale,
-                  ref_collage=not a.no_collage, ref_style=a.ref_style)
+                  layer_mask=a.layer_mask, enhance=not a.no_enhance, turbo=not a.no_turbo, scale=a.scale)
     b = make(cfg)
     if not p.checkpoint and not a.workflow:
         try:
@@ -219,10 +218,6 @@ def main(argv=None) -> int:
                    help="layer mask of the new layer: auto (default: none for Fill with a Fibo-type editor, else soft), "
                         "soft, hard from the selection, or none")
     r.add_argument("--no-fooocus", action="store_true", help="don't use the Fooocus patch (e.g. for SD1.5 models)")
-    r.add_argument("--ref-style", choices=("classic", "simple"), default="classic",
-                   help="reference mode: classic = subject first with a long instruction, simple = picture first, one short sentence")
-    r.add_argument("--no-collage", action="store_true",
-                   help="reference mode: do not paste a rough copy of the reference into the picture")
     r.add_argument("--no-enhance", action="store_true",
                    help="text-model workflows: send the prompt as typed, without the text model writing it")
     r.add_argument("--scale", type=float, default=2.0, help="upscale mode: factor per side (default 2)")

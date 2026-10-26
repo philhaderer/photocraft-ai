@@ -39,9 +39,24 @@ Stand: 2026-10-26, Branch `feat/l2-multi-image`.
 - **Gewählt:** Strg+V fügt ein Bild ein, außer ein Textfeld hat den Fokus (Prompt, Zahlenfelder). Dort bleibt Text-Einfügen.
 - **Alternative:** Strg+V nur, wenn der Mauszeiger über den Slots ist.
 
-## 9. Reference-Modus
-- **Gewählt:** Nur aus den Tabs (`models.py`) entfernt. Der Code in `bridge.py` und der Radio-Knopf im Fenster bleiben vorerst (das Fenster liest die Felder `ref_style`, `ref_collage`, `ref_cutout`).
-- **Alternative:** alles auf einmal löschen. Das berührt `gui_common.py`, `gui_modes.py`, `gui_state.py` (andere Lane), siehe FRAGEN.md.
+## 9. Reference-Modus (erledigt in Runde 2)
+- **Erledigt:** Der Modus „Insert reference image“ ist überall entfernt (Bridge, Fenster, Zustand, Kommandozeile, Hilfsfunktionen in `imaging.py`, Tests). Alte Presets mit dem Modus fallen auf den ersten Modus des Tabs zurück.
+- **Neu:** Modus `multi_edit` („Multi Image Edit“), im Modus-Block an der Stelle des alten. Er steht bei Qwen, Fibo, Flux 2 und Flux 3 und läuft als `run_as="edit"`: Edit-Workflow des Modells, ganzes Bild, keine Maske, Auswahl wird ignoriert. Die Slots erscheinen nur in diesem Modus (nicht bei Edit, Fill, Expand).
+- **Technisch:** `Request.mode` ist beim Lauf `edit`; das Fenster merkt sich `multi_edit` (Zustand speichert jetzt den gewählten Modus, nicht den Lauf-Modus; das behebt nebenbei, dass „Refine“ nach einem Neustart als „Edit“ zurückkam).
+- **Alternative:** Eigener Bridge-Modus `multi_edit` statt `run_as`. Mehr Code, kein Vorteil, solange er wie Edit läuft.
+- **Offen (FRAGEN.md 7):** mit Auswahl arbeiten? Ergebnis als neues Dokument?
+- **Manifest:** `manifest.py` (L1) kennt `multi_edit` noch nicht. Es braucht je Tab eine Zeile `"multi_edit": ModeSpec(requires=...)` wie bei `edit`; bis dahin ist `tests/test_detection.py` rot.
+
+## 12. Hintergrund hinter freigestellten Bildern
+- **Gewählt:** neutrales Grau (128, 128, 128), ein einziger Wert: `refslots.DEFAULT_BACKGROUND`. Gilt für alles, was durchsichtig ist (Freistellen, PNG mit Alpha), auch beim Senden. Die Vorschau im Slot zeigt weiter das dunkle Panel-Grau.
+- **Alternativen:** Weiß (vorher), Schalter im Slot, Grün (Chroma-Key-Farbe; riskant, weil das Modell sie ins Bild übernehmen könnte).
+
+## 11. Icon-Leiste in den Slots
+- **Gewählt:** Eine schmale Leiste (22 Punkt breit) am rechten Rand INNEN im Slot, 16-Punkt-Symbole untereinander, gezeichnet wie `icon_image` (Pixelbild in `gui_common.SLOT_ART` bzw. Zeichenbefehle, keine Bilddateien). Jedes Symbol hat einen Tooltip „Wort: Erklärung“ mit dem alten Wort.
+- **Gefüllter Slot (von oben nach unten):** Remove (Kreuz), Pen (Stift), Cut out / Undo cut (Schere), Describe (Textzeilen), Copy text (zwei Blätter, nur wenn es eine Beschreibung gibt). Cut out und Describe sind grau, solange ihr Auftrag läuft.
+- **Nächster freier Slot:** Paste (Klemmbrett) und Add file (Blatt mit Plus). Die Textknöpfe „Paste“ und „Add file“ in der Kopfzeile sind weg.
+- **Platz:** Slotbreite bleibt 108 Punkt (+6 Abstand). Die Leiste liegt im Slot, das Bild wird um 22 Punkt kleiner (86 Punkt). 5 Symbole à 20 Punkt = 100 Punkt, passt in 108 Höhe. Slots je Modell: Qwen 2, Fibo 2, Flux 2 3, Flux 3 3 (`max_refs`). Drei Slots brauchen 3 × 114 = 342 Punkt, das Fenster hat 380 − 24 = 356 nutzbar; also passt es bei 100 %. Bei 150 % Skalierung rechnet alles mit `_px` mit und bleibt im gleichen Verhältnis.
+- **Alternative:** Leiste unter dem Bild (nimmt Höhe statt Breite, aber du wolltest rechts) oder Symbole nur beim Daraufzeigen (schwerer zu entdecken).
 
 ## 10. Kleinkram
 - Commit-Titel beginnen mit `L2:` (statt "Window round N"), weil es keine Fenster-Runde ist.
@@ -49,3 +64,28 @@ Stand: 2026-10-26, Branch `feat/l2-multi-image`.
 - Der Tk-Stub in `tests/test_gui_presets.py` kennt jetzt Frame, Label und Canvas.
 - `tests/live_dnd.py` prüft tkinterdnd2 in einem Temp-Ordner, nicht in deinem Python.
 - Git kann hier keine Lock-Dateien löschen: ich benenne sie in `.git/stale-*` um.
+
+## 13. Beschreibung und Prompt (Runde 2)
+- **Gewählt:** Der Beschreibungstext ist ein kurzer Satz (Prompt: „Describe the main subject of this picture in one short sentence: what it is, its colour and most striking feature. No preamble.“, höchstens 60 Zeichen-Token; live geprüft: „A black cat with striking yellow eyes sits in green grass, ...“, 5 s). Er steht unter dem Bild im Slot und wird beim Senden automatisch ans Ende des Prompts gehängt (`RefSlots.prompt_with_descriptions`), eine Zeile je Bild. Das Textfeld im Fenster bleibt unverändert.
+- **Weg:** Der Knopf „Descriptions to prompt“ ist weg. „Copy text“ ist ein Symbol in der Leiste des Slots.
+- **Alternative:** Die Zeilen sofort ins Textfeld schreiben (du siehst sie, aber sie stehen doppelt, wenn du neu beschreibst).
+- **Beispiele je Modell:** `docs/prompt-aufbau.md`, erzeugt von `tests/test_prompt_aufbau.py --write`.
+- **tkinterdnd2:** fest in `setup-windows.bat` (pip) und `pyproject.toml` (Extra `dnd`). Fehlt es, steht unter den Slots ein Hinweis, alles andere geht.
+
+## 14. Prüfung: Eingänge und Nummerierung (Antwort auf ANTWORTEN.md, Runde 2)
+Es stimmt alles wie besprochen: Bild in PhotoCraft = Bild 1, Slot 1 = Bild 2, Slot 2 = Bild 3. Eine Auswahl wird ignoriert (Modus läuft als Edit).
+
+| Modell | offene Bild-Eingänge | Knoten je Slot | Tag im Prompt (Bild / Slot 1 / Slot 2 / Slot 3) | leerer Slot |
+|---|---|---|---|---|
+| Qwen 2.1 | 2 | LoadImage 13, 14 → `images.image_2`, `image_3` des Encoders | `<image1>` / `<image2>` / `<image3>` | Knoten und Verbindung werden entfernt |
+| Fibo 2 | 2 | LoadImage 90, 91 → `images.image_2`, `image_3` | `<image_1>` / `<image_2>` / `<image_3>` | wie oben |
+| Flux 2 Klein | 3 | je Slot LoadImage 301–303, VAEEncode 311–313, 2× ReferenceLatent (positiv, negativ) in der Kette | `image 1` / `image 2` / `image 3` / `image 4` | die ganze Kette des Slots wird entfernt, die Kette bleibt geschlossen |
+| Flux 3 Klein | 3 | LoadImage 301–303 → `images.image1` … `image3` von ReferenceMultiLatent (Bild = `image0`) | `<ref_image_0>` / `_1` / `_2` / `_3` | Knoten und Eingang werden entfernt |
+
+Nummerierung und Reihenfolge prüft `tests/test_refslots.py` am echten Graphen (Bild zuerst, Referenzen dahinter, Ketten geschlossen, ohne Zyklus).
+
+**Ungetestet, bitte so lesen:** Das Tag-Muster `<ref_image_{i}>` für das lokale Flux 3 Klein ist meine Annahme. Die Doku nennt für den Cloud-Knoten „FLUX 3 Image“ `image 1`, `image 2`. Qwen und Fibo sind live bestätigt (frühere Runde), Flux 2 ebenso strukturell; ein echter Mehrbild-Lauf je Modell steht aus.
+
+## Offen (nichts gebaut)
+- **Flux 3 Layout-Prompt / BBox:** „FLUX 3 Image Layout Prompt“ (Kernknoten, `<obj_N>`) und die Zeichenfläche f3k-bbox-nodes gehören laut Doku zum Cloud-Knoten. Ob das lokale Flux 3 Klein sie versteht und ob man damit Referenzbilder platzieren kann, ist nicht belegt. Du testest von Hand; später evtl. PhotoCraft-Auswahl als Box.
+- **Idealer Prompt für Multi Image Edit:** wird von Hand getestet; keine automatische Verfeinerung. `docs/prompt-aufbau.md` beschreibt nur den heutigen Stand.

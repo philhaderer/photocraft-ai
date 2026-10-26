@@ -170,7 +170,7 @@ def main():
     # Remove Selection: the text box is usable on every model that has the function
     for key in ("qwen", "flux2", "flux3", "fibo"):
         assert models.BY_KEY[key].modes["remove"].remove_text, key
-    assert [k for k, _ in gui.MODE_LABELS][:6] == ["txt2img", "edit", "inpaint", "remove", "outpaint", "reference"]
+    assert [k for k, _ in gui.MODE_LABELS][:6] == ["txt2img", "edit", "inpaint", "remove", "outpaint", "multi_edit"]
 
     # Flux 3: 15 steps in every workflow (the SeedVR2 pre-stage keeps its one step); Upscale shows "x 1.5"; a line above "Prompt"
     for wf in ("flux3-klein-edit.json", "flux3-klein-t2i.json", "flux3-klein-upscale.json"):
