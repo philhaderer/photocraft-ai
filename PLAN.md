@@ -59,7 +59,7 @@ Folge: ohne Umbau würden alle Lanes dieselbe Datei ändern. Deshalb gibt es Pha
 
 ## 4. Phasen und Lanes
 
-**Phase 0 (nacheinander, ein Chat):** Aufgaben 1 bis 5 und 20. Branch `refactor/split-gui`.
+**Phase 0 (erledigt 2026-10-26, in `next`; Aufgaben 1 bis 5 und 20; dazu `requires` in `Model`):** Aufgaben 1 bis 5 und 20. Branch `refactor/split-gui`.
 - `gui.py` bleibt als Einstieg, `App` erbt von Mixins (Prompt, LoRA, Modell/Modus, Zustand/Presets, Lauf/Fortschritt, Theme). Kein Verhalten ändert sich; alle 31 Tests müssen vorher und nachher grün sein.
 - `models.py` bekommt alle neuen Felder auf einmal, damit keine Lane die Dataclass anfasst.
 - `clipboard.py` wird jetzt gebaut, weil L2 (lesen) und L3 (schreiben) es beide brauchen.
