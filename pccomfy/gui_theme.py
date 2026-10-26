@@ -128,18 +128,51 @@ class ThemeMixin:
         def fit():
             self._fit_job = None
             try:
-                if abs(self.root.winfo_reqheight() - self.root.winfo_height()) > 2:
-                    self._fit_height()
+                self._fit_height()
             except tk.TclError:
                 pass
         self._fit_job = self.root.after(60, fit)
 
+    def _on_body_size(self, _event=None):
+        """The scrolled body changed its size (Advanced opened, a slot row appeared): its scroll area and the window follow."""
+        cv = getattr(self, "cv_body", None)
+        if cv is not None:
+            try:
+                cv.configure(scrollregion=cv.bbox("all"))
+            except tk.TclError:
+                pass
+        self._on_content_size()
+
+    def _max_height(self) -> int:
+        """The tallest the window may be: down to the bottom of the screen's work area from where the window starts."""
+        try:
+            top = max(0, int(self.root.winfo_rooty()))
+            return max(self._px(320), int(self.root.winfo_screenheight()) - top - self._px(56))   # 56: taskbar and frame
+        except (TypeError, ValueError, tk.TclError):
+            return 10 ** 6
+
     def _fit_height(self, width: int | None = None):
-        """The window is MIN_W wide (fixed) and exactly as high as its content needs."""
+        """The window is MIN_W wide (fixed) and exactly as high as its content needs. When that is taller than the screen
+        allows, the body under the tabs gets the room that is left and scrolls (thin bar on the right)."""
         self.root.update_idletasks()
+        cv, sb = getattr(self, "cv_body", None), getattr(self, "sb_body", None)
+        if cv is not None and sb is not None:
+            body = self.f_body.winfo_reqheight()
+            if isinstance(body, int) and body > 1:
+                cv.configure(height=body)
+                self.root.update_idletasks()
+                over = self.root.winfo_reqheight() - self._max_height()
+                if isinstance(over, int) and over > 0:
+                    cv.configure(height=max(self._px(120), body - over))
+                    sb.show()
+                else:
+                    sb.hide()
+                self.root.update_idletasks()
         empty = bool(getattr(self, "start_state", lambda: "")())      # no model chosen: a small window (tabs, one sentence, footer)
         w, h = self._px(MIN_W), max(self._px(80 if empty else 320), self.root.winfo_reqheight())
-        self.root.geometry(f"{w}x{h}")
+        if getattr(self, "_geom", None) != (w, h):
+            self._geom = (w, h)
+            self.root.geometry(f"{w}x{h}")
 
     def _pl_style(self, style: str):
         lbl = getattr(self, "lbl_pl", None)

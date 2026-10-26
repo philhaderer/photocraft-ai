@@ -149,14 +149,14 @@ class SettingsMixin:
         tabs, sentence, body, status line (the footer is packed at the bottom)."""
         state = self.start_state()
         self.v_empty.set(EMPTY_TEXT.get(state, ""))
-        for w in (self.f_tabs, self.lbl_empty, self.f_body):
+        for w in (self.f_tabs, self.lbl_empty, self.f_scrollbox):
             w.pack_forget()
         if state != "none_linked":
             self.f_tabs.pack(fill="x", padx=10, pady=(8, 2), before=self.f_status)
         if state:
             self.lbl_empty.pack(fill="x", padx=10, pady=(26, 22), before=self.f_status)
         else:
-            self.f_body.pack(fill="x", before=self.f_status)
+            self.f_scrollbox.pack(fill="x", before=self.f_status)     # the body sits in its scroll box (gui.py)
         hide_foot = state == "none_linked"
         if hide_foot != self._foot_hidden:
             self._foot_hidden = hide_foot

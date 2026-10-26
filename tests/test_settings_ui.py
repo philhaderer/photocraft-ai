@@ -123,7 +123,7 @@ def test_empty_view():
     det = lambda inv: {"_detect": True, "_inv": inv, "_yaml": [], "_disk": {}}      # noqa: E731
     cfgmod.save_state({})
     app = make_app()
-    shown = {n: Seen() for n in ("f_tabs", "lbl_empty", "f_body", "lbl_conn", "b_refresh", "b_reset")}
+    shown = {n: Seen() for n in ("f_tabs", "lbl_empty", "f_scrollbox", "lbl_conn", "b_refresh", "b_reset")}
     for n, w in shown.items():
         setattr(app, n, w)
     for n in ("lbl_conn", "b_refresh", "b_reset"):
@@ -139,7 +139,7 @@ def test_empty_view():
     assert on() == {"f_tabs", "lbl_empty"} | all_foot
     app.v_model.set("flux3")
     app._on_model()
-    assert on() == {"f_tabs", "f_body"} | all_foot and app.v_empty.get() == ""
+    assert on() == {"f_tabs", "f_scrollbox"} | all_foot and app.v_empty.get() == ""
     app.v_model.set("")
     app.v_workflow.set("some-own-workflow.json")                  # a workflow of your own is not an empty state
     assert app.start_state() == ""
