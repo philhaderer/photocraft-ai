@@ -283,6 +283,18 @@ def main():
     from PIL import Image
     assert bridge.remove_prompt(Image.new("L", (10, 10), 255), 1, "a car").startswith("Delete a car")
 
+    # the PhotoCraft slider: a click on the track sets the value there and calls the command; greyed out it does nothing
+    v, got = t.tk.DoubleVar(value=0.0), []
+    s = gui.Slider(None, from_=0, to=10, variable=v, command=got.append)
+    x0, x1 = s._ends()
+    s._click(type("E", (), {"x": (x0 + x1) / 2})())
+    assert abs(v.get() - 5) < 1e-6 and got and abs(float(got[0]) - 5) < 1e-6
+    s._click(type("E", (), {"x": x1 + 50})())
+    assert v.get() == 10                                   # beyond the end: the maximum
+    s.configure(state="disabled")
+    s._click(type("E", (), {"x": x0})())
+    assert v.get() == 10 and app.w_sharpen.__class__ is gui.Slider and app.lbl_sharpen["style"] == "Value.TLabel"
+
     # Text to image: every model shows the tip under the prompt
     for m in models.MODELS:
         if "txt2img" in m.modes:

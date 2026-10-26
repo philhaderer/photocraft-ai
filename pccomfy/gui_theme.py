@@ -61,11 +61,8 @@ class ThemeMixin:
               arrowcolor=[("disabled", DISABLED)])
         s.map("TCombobox", foreground=[("disabled", DISABLED), ("readonly", FG)], fieldbackground=[("disabled", BG), ("readonly", PANEL)],
               arrowcolor=[("disabled", DISABLED)])
-        # the slider is orange while it works, grey when greyed out (the edge feather: orange = active)
-        s.configure("Horizontal.TScale", background=ACCENT, troughcolor="#3a3a3a", bordercolor="#454545",
-                    lightcolor=ACCENT, darkcolor=ACCENT)
-        s.map("Horizontal.TScale", background=[("disabled", "#6a6a6a")], lightcolor=[("disabled", "#6a6a6a")],
-              darkcolor=[("disabled", "#6a6a6a")], troughcolor=[("disabled", BG)])
+        # the value of a slider (Slider, gui_common.py) sits in a small dark box on its right, as in PhotoCraft
+        s.configure("Value.TLabel", background=PANEL, foreground=FG, padding=(4, 1), font=(FONT, 9))
         s.map("TButton", foreground=[("disabled", DISABLED)])
         self.root.option_add("*TCombobox*Listbox.background", PANEL)
         self.root.option_add("*TCombobox*Listbox.foreground", FG)
@@ -101,28 +98,6 @@ class ThemeMixin:
                 cache[(kind, c, px)] = icons.photo(self.root, kind, c, self._px(px))
             return cache[(kind, c, px)]
         return (img(color), "disabled", img(DISABLED), "active", img(ACCENT))
-
-    def _scale_clicks(self):
-        """A click on a slider's trough moves the handle to where it was clicked (Tk's own behaviour steps by a whole page,
-        i.e. to the start or end of a short slider), and dragging follows the mouse."""
-        def to_click(e):
-            w = e.widget
-            try:
-                if str(w.cget("state")) == "disabled":
-                    return "break"
-                lo, hi = float(w.cget("from")), float(w.cget("to"))
-                x0, x1 = float(w.coords(lo)[0]), float(w.coords(hi)[0])
-                if x1 - x0 < 1:
-                    return None
-                w.set(lo + min(1.0, max(0.0, (e.x - x0) / (x1 - x0))) * (hi - lo))
-            except (tk.TclError, ValueError, TypeError, IndexError, AttributeError):
-                return None
-            return "break"
-        try:
-            self.root.bind_class("TScale", "<Button-1>", to_click)
-            self.root.bind_class("TScale", "<B1-Motion>", to_click)
-        except Exception:
-            pass
 
     def _slider_row(self, frame):
         """Sharpen, Match colours, Edge feather and Mix source/new share one layout: a label column and a value column of fixed
