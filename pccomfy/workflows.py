@@ -150,6 +150,7 @@ def inpaint_fooocus(p: GenParams, image_name: str, mask_name: str, head: str, pa
 
 # ---------- custom (templates) ----------
 
+DESCRIBE_WORKFLOW = Path(__file__).resolve().parent.parent / "workflows" / "describe-image.json"   # reference slots: Qwen 3.5 9B describes the picture
 BIREFNET_WORKFLOW = Path(__file__).resolve().parent.parent / "workflows" / "birefnet-remove-bg.json"   # reference slots: cut out the background
 
 

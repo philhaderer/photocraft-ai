@@ -110,6 +110,31 @@ def main():
     app._refs_cut(0)
     assert not app.refslots.items[0].cut_out
 
+    # the describe button: Qwen 3.5 9B's text lands in the slot and, on request, in the prompt (named like the model names the image)
+    app.bridge.describe_image = lambda im: "A red square on blue."
+    app.t_prompt.delete("1.0", "end")
+    app.t_prompt.insert("1.0", "put it on the sofa")
+    app._refs_describe(0)
+    for _ in range(100):
+        while pending:
+            pending.pop(0)()
+        if app.refslots.items[0].description:
+            break
+        time.sleep(0.02)
+    assert app.refslots.items[0].description == "A red square on blue." and not app._ref_busy
+    assert app.lbl_refmsg["text"] == "<image2>: A red square on blue."
+    app._refs_to_prompt()
+    assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa\n<image2>: A red square on blue."
+    app.bridge.describe_image = lambda im: (_ for _ in ()).throw(RuntimeError("ComfyUI is not running"))
+    app._refs_describe(0)
+    for _ in range(100):
+        while pending:
+            pending.pop(0)()
+        if "failed" in app.lbl_refmsg["text"]:
+            break
+        time.sleep(0.02)
+    assert app.lbl_refmsg["text"] == "Describe failed: ComfyUI is not running" and not app._ref_busy
+
     # the pen draws
     out = refslots.apply_strokes(Image.new("RGB", (100, 100), "white"), [("#ff0000", 10, [(10, 10), (90, 10)]), ("#00ff00", 8, [(50, 50)])], 1.0)
     assert out.getpixel((50, 10))[:3] == (255, 0, 0) and out.getpixel((50, 50))[:3] == (0, 255, 0) and out.getpixel((50, 80))[:3] == (255, 255, 255)

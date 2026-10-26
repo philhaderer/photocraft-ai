@@ -1,6 +1,6 @@
-"""Cut-out of a reference image: birefnet-remove-bg.json (ComfyUI's own BiRefNet nodes) and Bridge.remove_background.
+"""Tools of a reference slot: cut-out of the background and a description by Qwen 3.5 9B: birefnet-remove-bg.json (ComfyUI's own BiRefNet nodes) and Bridge.remove_background.
 
-    python tests/test_removebg.py
+    python tests/test_slot_tools.py
 """
 import sys
 import tempfile
@@ -42,7 +42,36 @@ def main():
     g = b.comfy.graphs[0]
     assert next(n for n in g.values() if n["class_type"] == "LoadImage")["inputs"]["image"] in b.comfy.uploads
     assert b.comfy.out_node == "6" and msgs and links_ok(g)
-    print("ALL OK (remove background)")
+
+    # Qwen 3.5 9B describes a picture (describe-image.json): the question defaults to the workflow's own, a typed one replaces it
+    d = workflows.load_template(workflows.DESCRIBE_WORKFLOW)
+    assert links_ok(d) and bridge.has_tag(d, "image") and bridge.has_tag(d, "prompt") and workflows.writer_name(d) == "Qwen 3.5 9B"
+
+    class TalkComfy(T.FakeComfy):
+        def wait(self, pid, on_progress=None, cancelled=None, timeout=0):
+            return {"outputs": {"4": {"text": ["A red circle", "on blue."]}}}
+
+    pc, _, b = T.make(tempfile.mkdtemp(), with_sel=False)
+    b.comfy = TalkComfy()
+    assert b.describe_image(Image.new("RGBA", (500, 300), (0, 0, 0, 0))) == "A red circle on blue."
+    g = b.comfy.graphs[0]
+    ask = next(n for n in g.values() if n["class_type"] == "TextGenerate")["inputs"]["prompt"]
+    assert ask.startswith("Describe this picture") and links_ok(g)
+    up = next(iter(b.comfy.uploads.values()))
+    assert up.mode == "RGB" and up.size[0] % 32 == 0 and up.size[1] % 32 == 0
+    b.describe_image(Image.new("RGB", (64, 64)), question="What colour is the hat?")
+    assert next(n for n in b.comfy.graphs[1].values() if n["class_type"] == "TextGenerate")["inputs"]["prompt"] == "What colour is the hat?"
+
+    class MuteComfy(T.FakeComfy):
+        def wait(self, pid, on_progress=None, cancelled=None, timeout=0):
+            return {"outputs": {"4": {"text": [""]}}}
+    b.comfy = MuteComfy()
+    try:
+        b.describe_image(Image.new("RGB", (64, 64)))
+        raise SystemExit("an empty answer is an error")
+    except bridge.BridgeError as e:
+        assert "no description" in str(e)
+    print("ALL OK (remove background, describe)")
 
 
 if __name__ == "__main__":

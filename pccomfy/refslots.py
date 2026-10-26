@@ -59,6 +59,7 @@ class RefImage:
     image: Image.Image               # what is sent (a cut-out replaces it; the original stays in `original`)
     name: str = ""                   # where it came from (file name, "clipboard")
     original: Image.Image | None = None
+    description: str = ""            # what Qwen 3.5 9B says the picture shows (the "Describe" button)
 
     @property
     def cut_out(self) -> bool:
@@ -210,7 +211,7 @@ class RefSlotsMixin:
     A slot takes a picture by drag and drop (tkinterdnd2, when installed), Ctrl+V (only when no text field has the focus),
     the "Paste" button or "Add file". Each slot has Remove, Cut out (BiRefNet in ComfyUI) and Pen."""
 
-    SLOT = 92            # px (before the display scaling): every slot is the same size, whatever the model
+    SLOT = 108           # px (before the display scaling): every slot is the same size, whatever the model
 
     # ---- wrapped window methods ----
     def _on_mode_ui(self):
@@ -260,6 +261,8 @@ class RefSlotsMixin:
         self.b_refadd = ttk.Button(head, text="Add file", style="Link.TButton", command=self._refs_add_file)
         self.b_refadd.pack(side="left", padx=(10, 0))
         Tooltip(self.b_refadd, "Picks a picture file. Or drop files onto a slot.")
+        self.b_refuse = ttk.Button(head, text="Descriptions to prompt", style="Link.TButton", command=self._refs_to_prompt)
+        Tooltip(self.b_refuse, "Adds one line per described image to your text: \"<image2>: a brown dog ...\".")
         self.f_refgrid = ttk.Frame(self.f_refs)
         self.f_refgrid.pack(fill="x", pady=(4, 0))
         self.lbl_refnames = ttk.Label(self.f_refs, text="", style="Muted.TLabel", wraplength=self._px(380 - 24), justify="left")
@@ -323,26 +326,32 @@ class RefSlotsMixin:
                 self._ref_photos.append(photo)
                 lbl = tk.Label(box, image=photo, bg=PANEL, bd=0)
                 lbl.pack(expand=True)
-                Tooltip(lbl, f"{it.name or 'clipboard'}" + ("  (cut out)" if it.cut_out else ""))
+                Tooltip(lbl, f"{it.name or 'clipboard'}" + ("  (cut out)" if it.cut_out else "") + (f"\n{it.description}" if it.description else ""))
                 tag = rs.tag(k)
                 ttk.Label(cell, text=tag or f"image {k + 2}", style="Hint.TLabel").pack(anchor="w")
-                bar = ttk.Frame(cell)
-                bar.pack(anchor="w")
                 busy = k in self._ref_busy
-                for text, tip, cmd in (("✕", "Remove this image.", lambda k=k: self._refs_remove(k)),
-                                       ("Cut out", "Removes the background (BiRefNet in ComfyUI). Click again to undo.", lambda k=k: self._refs_cut(k)),
-                                       ("Pen", "Draw on the image (a circle around the part that counts).", lambda k=k: self._refs_pen(k))):
-                    if text == "Cut out" and it.cut_out:
-                        text, tip = "Undo cut", "Back to the original picture."
-                    b = ttk.Button(bar, text=("…" if busy and text == "Cut out" else text), style="Link.TButton", command=cmd)
-                    b.pack(side="left", padx=(0, self._px(4)))
+                rows = (ttk.Frame(cell), ttk.Frame(cell))
+                for r in rows:
+                    r.pack(anchor="w")
+                buttons = [(0, "\u2715", "Remove this image.", lambda k=k: self._refs_remove(k)),
+                           (0, "Pen", "Draw on the image (a circle around the part that counts).", lambda k=k: self._refs_pen(k)),
+                           (1, "Undo cut" if it.cut_out else "Cut out",
+                            "Back to the original picture." if it.cut_out else "Removes the background (BiRefNet in ComfyUI).", lambda k=k: self._refs_cut(k)),
+                           (1, "Describe", "Qwen 3.5 9B writes a short description of this picture (about 5 s).", lambda k=k: self._refs_describe(k))]
+                for row, text, tip, cmd in buttons:
+                    b = ttk.Button(rows[row], text=("\u2026" if busy and text in ("Cut out", "Describe") else text), style="Link.TButton", command=cmd)
+                    b.pack(side="left", padx=(0, self._px(6)))
                     Tooltip(b, tip)
-                    if busy:
+                    if busy and text not in ("\u2715",):
                         b.configure(state="disabled")
             else:
                 tk.Label(box, text="Drop a picture\nor Ctrl+V" if k == len(rs.items) else "free", fg=MUTED, bg=PANEL, bd=0,
                          justify="center").pack(expand=True)
                 ttk.Label(cell, text="", style="Muted.TLabel").pack(anchor="w")
+        if any(it.description for it in rs.active):
+            self.b_refuse.pack(side="left", padx=(10, 0))
+        else:
+            self.b_refuse.pack_forget()
         over = len(rs.overflow)
         hint = rs.hint()
         self.lbl_refnames.configure(text=("Name them in your text: " + hint + "." if hint else
@@ -449,6 +458,49 @@ class RefSlotsMixin:
                 self._refs_say("")
             self._refs_redraw()
         self.root.after(200, check)
+
+    def _refs_describe(self, k: int):
+        """Qwen 3.5 9B describes the picture in the slot (ComfyUI, describe-image.json); the text goes into the slot's tooltip and
+        under the slots, and "Descriptions to prompt" can add it to your text."""
+        import threading
+        src = self.refslots.items[k]
+        if k in self._ref_busy:
+            return
+        self._ref_busy.add(k)
+        box: dict = {}
+
+        def work():
+            try:
+                box["text"] = self.bridge.describe_image(src.image)
+            except Exception as e:   # ComfyUI not running, no text model ...
+                box["error"] = str(e)
+
+        threading.Thread(target=work, daemon=True).start()
+        self._refs_say("Describing the picture \u2026")
+        self._refs_redraw()
+
+        def check():
+            if "text" not in box and "error" not in box:
+                self.root.after(200, check)
+                return
+            self._ref_busy.discard(k)
+            if "error" in box:
+                self._refs_say("Describe failed: " + box["error"])
+            else:
+                src.description = box["text"]
+                i = self.refslots.items.index(src) if src in self.refslots.items else 0
+                self._refs_say(f"{self.refslots.tag(i) or 'image'}: {box['text']}")
+            self._refs_redraw()
+        self.root.after(200, check)
+
+    def _refs_to_prompt(self):
+        lines = [f"{self.refslots.tag(i)}: {it.description}" for i, it in enumerate(self.refslots.active) if it.description]
+        if not lines:
+            return
+        t = self.t_prompt
+        cur = t.get("1.0", "end").strip()
+        t.insert("end", ("\n" if cur else "") + "\n".join(lines))
+        self._refs_say("Added to your text.")
 
     def _refs_pen(self, k: int):
         import tkinter as tk

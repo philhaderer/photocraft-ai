@@ -716,6 +716,25 @@ class Bridge:
         progress(1.0, "Background removed")
         return out.convert("RGBA")
 
+    def describe_image(self, im: Image.Image, progress: Progress | None = None, question: str = "",
+                       workflow: str | Path | None = None, clip: str = "") -> str:
+        """What the picture shows, in a sentence or two, written by the text model of describe-image.json (Qwen 3.5 9B reads
+        the picture itself; checked live). `question` replaces the workflow's own request. Used by the reference slots."""
+        progress = progress or (lambda f, m, **kw: None)
+        self._cancel.clear()
+        wf = Path(workflow) if workflow else workflows.DESCRIBE_WORKFLOW
+        tpl = workflows.load_template(wf)
+        small = refslots.prepare_image(im, 32, 768)   # a description needs no more pixels (and ~1 s less)
+        name = self.comfy.upload_image(small, f"pcc-{uuid.uuid4().hex[:8]}-describe.png")
+        graph, _ = workflows.apply_template(tpl, workflows.GenParams(prompt=question.strip(), clip=clip), name, None)
+        progress(0.1, "Describing the picture")
+        hist = self._wait(self.comfy.queue(graph), graph, str(wf), 0.1, 0.85, "", progress)
+        text = " ".join(self._vgl_text(graph, hist).split())
+        if not text:
+            raise BridgeError("The text model returned no description.")
+        progress(1.0, "Described")
+        return text
+
     # ---------- ComfyUI ----------
 
     @staticmethod
