@@ -54,6 +54,57 @@ def lists_without(**drop):
 NODES = {n for tab in manifest.TABS.values() for s in tab.modes.values() for n in s.nodes}
 
 
+def test_start_state():
+    refresh = {"pc": "PhotoCraft \u25CF", "comfy": "ComfyUI \u25CF"}
+    full = lambda: inventory.Inventory(td.full_lists(), NODES)       # noqa: E731
+    det = lambda inv: {"_detect": True, "_inv": inv, "_yaml": [], "_disk": {}}      # noqa: E731
+
+    # the very first start: no model is chosen, the old "open on the first model" step does not run
+    cfgmod.save_state({})
+    app = make_app()
+    assert app.v_model.get() == "" and app.start_state() == "choose"
+    app._apply_refresh(refresh)
+    assert app.v_model.get() == "" and app._last_model == "", app.v_model.get()
+    app._apply_refresh(det(full()))
+    assert app.v_model.get() == "" and app.start_state() == "choose"
+    app._apply_refresh(det(inventory.Inventory({})))
+    assert app.start_state() == "none_linked" and app.v_model.get() == ""
+    # a tab that is not available does not open from the empty state either: its settings do
+    app.v_model.set("krea2")
+    app._on_model()
+    assert app.v_model.get() == "" and app._settings_win is not None and app._settings_focus == "krea2"
+    app._settings_close()
+    # the first click on a model shows it and remembers it for the next start (state.json)
+    app._apply_refresh(det(full()))
+    app.v_model.set("flux3")
+    app._on_model()
+    assert app.v_model.get() == "flux3" and app.start_state() == "" and cfgmod.load_state()["model"] == "flux3"
+
+    # next start: the last model is chosen again (and its mode comes with the saved state)
+    cfgmod.save_state({"model": "krea2", "mode": "txt2img", "workflow": "krea2-turbo-t2i.json"})
+    app = make_app()
+    assert app.v_model.get() == "krea2" and app.v_mode.get() == "txt2img" and app._last_model == "krea2"
+    app._apply_refresh(det(full()))
+    assert app.v_model.get() == "krea2" and app.start_state() == ""
+
+    # next start, but the last model has lost its files: no tab is chosen, not a broken one; it stays that way
+    app = make_app()
+    broken = inventory.Inventory(lists_without(vae="qwen_image_vae.safetensors"), NODES)
+    app._apply_refresh(det(broken))
+    assert app.v_model.get() == "" and app.v_workflow.get() == gui.BUILTIN and app._last_model == ""
+    assert "Krea 2 Turbo is not available" in app.v_status.get() and app.start_state() == "choose"
+    app._apply_refresh(refresh)                         # the workflow list is read again: nothing picks the model up again
+    assert app.v_model.get() == ""
+    app._apply_refresh(det(full()))
+    assert app.v_model.get() == ""
+
+    # later in the session a reading that misses a file does not take the tab away from the user
+    app.v_model.set("flux3")
+    app._on_model()
+    app._apply_refresh(det(inventory.Inventory(lists_without(unet="flux3-image-klein-int8-convrot.safetensors"), NODES)))
+    assert app.v_model.get() == "flux3"
+
+
 def main():
     # the gear sits in the footer row, in the same frame as the Refresh and Reset buttons (not next to the tabs)
     made = []
@@ -259,6 +310,7 @@ def main():
     # a normal PhotoCraft/ComfyUI refresh still goes through the old path
     app._apply_refresh({"pc": "PhotoCraft \u25CF", "comfy": "ComfyUI \u25CF"})
     assert app.v_conn.get() == "PhotoCraft \u25CF   ComfyUI \u25CF"
+    test_start_state()
     print("ok")
 
 

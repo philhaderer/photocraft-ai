@@ -30,6 +30,8 @@ class SettingsMixin:
     _settings_win = None
     _settings_focus = None
     _last_model = ""
+    _refreshing = False         # inside StateMixin._apply_refresh (its "open on the first model" step is not wanted here)
+    _startup_checked = False    # the first reading after start has been looked at (a last model that is gone is let go once)
 
     # ---------- build (one call at the end of App._build) ----------
 
@@ -64,17 +66,22 @@ class SettingsMixin:
         threading.Thread(target=work, daemon=True).start()
 
     def _apply_refresh(self, info):
-        if info.get("_detect"):
-            self._yaml_sections, self._disk = info.get("_yaml", []), info.get("_disk", {})
-            if "_inv" in info:
-                self._set_inventory(info["_inv"], info.get("_inv_error", ""))
-            elif self._settings_win is not None:
-                self._settings_fill()
+        if not info.get("_detect"):
+            self._refreshing = True
+            try:
+                super()._apply_refresh(info)
+            finally:
+                self._refreshing = False
             return
-        super()._apply_refresh(info)
+        self._yaml_sections, self._disk = info.get("_yaml", []), info.get("_disk", {})
+        if "_inv" in info:
+            self._set_inventory(info["_inv"], info.get("_inv_error", ""))
+        elif self._settings_win is not None:
+            self._settings_fill()
 
     def _set_inventory(self, inv, err: str = ""):
         self.inv, self._inv_error = inv, err
+        self._let_go_unavailable_model()
         self.comfy.name_fixer = inv.apply_names if inv is not None else None    # a linked or differently written file name is renamed when a graph is queued
         self._update_tabs()
         try:
@@ -119,13 +126,41 @@ class SettingsMixin:
                 self.rb_modes[key].configure(state="disabled")
                 self.tt_modes[key].text += "\n\n" + inventory.tooltip_text(s, _LABELS.get(key, key))
 
+    # ---------- no model chosen ----------
+
+    def start_state(self) -> str:
+        """"none_linked": ComfyUI was read and not one tab can run; "choose": no tab is chosen; "": a model is chosen. The window
+        shows no parameters in the first two (the look of those states is decided in FRAGEN.md / docs, see entscheidungen)."""
+        if self.inv is not None and all(self.inv.tab_status(m.key).state == "missing" for m in models.MODELS):
+            return "none_linked"
+        return "choose" if not self.v_model.get() else ""
+
+    def _let_go_unavailable_model(self):
+        """At start only: the model of the last session may have lost its files meanwhile. Then no tab is chosen (instead of a
+        broken one). Later readings never take the tab away under the user's hands: the preflight explains a missing file."""
+        if self._startup_checked or self.inv is None:
+            return
+        self._startup_checked = True
+        m = self._model()
+        if m is not None and self.inv.tab_status(m.key).state == "missing":
+            self.v_model.set("")
+            self.v_workflow.set(BUILTIN)        # _sync_model would pick the model of the workflow again
+            self._last_model = ""
+            self._status(f"{m.label} is not available (model files missing). Choose a model.")
+
     def _on_model(self):
+        if self._refreshing and not self._last_model:
+            self.v_model.set("")                # first start: StateMixin would open on the first model; the user chooses
+            return
         key, prev = self.v_model.get(), self._last_model
-        if key and self.inv is not None and prev not in ("", key) and self.inv.tab_status(key).state == "missing":
-            self.v_model.set(prev)              # a greyed tab does not open: its settings do
+        if key and self.inv is not None and key != prev and self.inv.tab_status(key).state == "missing":
+            self.v_model.set(prev)              # a tab that is not available does not open: its settings do
             self.open_settings(focus=key)
             return
         self._last_model = self.v_model.get()
+        if key:                                  # the last model comes back at the next start (state.json, like the other settings)
+            self.state["model"] = key
+            cfgmod.save_state(self.state)
         super()._on_model()
 
     # ---------- presets ----------
