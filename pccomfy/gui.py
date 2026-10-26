@@ -9,9 +9,10 @@ from .gui_lora import LoraMixin
 from .gui_modes import ModeMixin
 from .gui_state import StateMixin
 from .gui_run import RunMixin
+from .refslots import RefSlotsMixin
 
 
-class App(ThemeMixin, PromptMixin, LoraMixin, ModeMixin, StateMixin, RunMixin):
+class App(RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, ModeMixin, StateMixin, RunMixin):
     def __init__(self, cfg: dict):
         self.cfg = cfg
         self.state = cfgmod.load_state()
