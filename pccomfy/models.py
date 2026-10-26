@@ -62,6 +62,7 @@ REMOVE_NAME_TIP = "Optional: name what to remove (\"the dog\")."
 MULTI_TIP = "You can start with a white image and use the reference images below to place them on the canvas."
 EDIT_TIP = "To remove something, say what replaces it: \u201cRemove the dog and paint the wall behind him\u201d"
 DESCRIBE_TIP = "Describe the image before this text."
+T2I_TIP = "Text to image: a completely new image is added to the canvas as a new layer."
 FLUX3_DEFAULT_OLD = "Restore the photo: remove blur, noise and compression artifacts and recover sharp, natural detail, keeping the same composition, people and colors."
 STOCK_PROMPTS = {FLUX2_DEFAULT_PREV, FLUX2_DEFAULT_OLD, FLUX3_DEFAULT_OLD, PLACEHOLDER, FLUX2_DEFAULT, FLUX3_DEFAULT, RELIGHT_NEUTRAL, RELIGHT_STUDIO, FIBO_REFINE}   # texts the window may replace when the mode changes
 
@@ -79,7 +80,7 @@ QWEN = Model(
     "qwen", "Qwen 2.1 Edit",
     "Qwen Image 2.1 Edit: instruction editor, best at Fill Selection, Remove Selection and Expand. Base res. 1024 works best.",
     {
-        "txt2img": Mode("qwen-image-21-t2i.json", dict(base_res=1024, turbo=False, layer_mask="none", enhance=True)),
+        "txt2img": Mode("qwen-image-21-t2i.json", dict(base_res=1024, turbo=False, layer_mask="none", enhance=True), prompt_tip=T2I_TIP),
         "edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="none"), prompt_tip=EDIT_TIP),
         "multi_edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="none"), prompt_tip=MULTI_TIP, run_as="edit"),
         "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=4.0)),
@@ -104,7 +105,7 @@ FLUX2 = Model(
     "flux2", "Flux 2 Klein Edit",
     "FLUX.2 Klein 9B: text to image, whole-image edits, Remove Selection, Expand, Upscale, Refine.",
     {
-        "txt2img": Mode("flux2-klein-t2i.json", dict(base_res=1024, layer_mask="none", enhance=False)),
+        "txt2img": Mode("flux2-klein-t2i.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=T2I_TIP),
         "edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none"), prompt_tip=EDIT_TIP),
         "multi_edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none"), prompt_tip=MULTI_TIP, run_as="edit"),
         "remove": Mode("flux2-klein-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
@@ -132,7 +133,7 @@ FLUX3 = Model(
     "flux3", "Flux 3 Klein Edit",
     "FLUX.3 Klein: text to image, whole-image edits, Remove Selection, Expand, Upscale.",
     {
-        "txt2img": Mode("flux3-klein-t2i.json", dict(base_res=1536, layer_mask="none", enhance=False)),
+        "txt2img": Mode("flux3-klein-t2i.json", dict(base_res=1536, layer_mask="none", enhance=False), prompt_tip=T2I_TIP),
         "edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none"), prompt_tip=EDIT_TIP),
         "multi_edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none"), prompt_tip=MULTI_TIP, run_as="edit"),
         "remove": Mode("flux3-klein-edit.json", dict(_SOFT, base_res=1536, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
@@ -161,7 +162,7 @@ MOSS = Model(
     "moss", "MOSS Image",
     "MOSS-Image: text to image and Expand. No edit functions.",
     {
-        "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "base_res": 1280, "layer_mask": "none", "enhance": False}),
+        "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "base_res": 1280, "layer_mask": "none", "enhance": False}, prompt_tip=T2I_TIP),
         "outpaint": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "auto", "match": 0.5}),
     },
     requires=(
@@ -181,7 +182,7 @@ KREA2 = Model(
     "krea2", "Krea 2 Turbo",
     "Krea-2 Turbo: fast text to image and Expand.",
     {
-        "txt2img": Mode("krea2-turbo-t2i.json", dict(base_res=1024, layer_mask="none", enhance=False)),
+        "txt2img": Mode("krea2-turbo-t2i.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=T2I_TIP),
         "outpaint": Mode("krea2-turbo-inpaint.json", dict(base_res=1024, layer_mask="auto")),
     },
     requires=(
@@ -198,7 +199,7 @@ FIBO = Model(
     "fibo", "Fibo 2.0 Edit",
     "Fibo 2.0 Edit Turbo: instruction editor with all edit functions.",
     {
-        "txt2img": Mode("fibo2-t2i.json", dict(base_res=1224, layer_mask="none", enhance=False)),
+        "txt2img": Mode("fibo2-t2i.json", dict(base_res=1224, layer_mask="none", enhance=False), prompt_tip=T2I_TIP),
         "edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=EDIT_TIP),
         "multi_edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=MULTI_TIP, run_as="edit"),
         "refine": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), FIBO_REFINE, run_as="edit"),

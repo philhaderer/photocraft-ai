@@ -283,6 +283,26 @@ def main():
     from PIL import Image
     assert bridge.remove_prompt(Image.new("L", (10, 10), 255), 1, "a car").startswith("Delete a car")
 
+    # Text to image: every model shows the tip under the prompt
+    for m in models.MODELS:
+        if "txt2img" in m.modes:
+            assert m.modes["txt2img"].prompt_tip == models.T2I_TIP, m.key
+    pick("flux3", "txt2img")
+    assert app._hint_text == models.T2I_TIP
+
+    # The bin next to "Prompt" empties the field; a greyed-out field (Remove without a name) stays as it is
+    app.t_prompt.configure(state="normal")
+    app.t_prompt.delete("1.0", "end")
+    app.t_prompt.insert("1.0", "a red car")
+    app.v_pchoice.set("Default")
+    app._clear_prompt()
+    assert app.t_prompt.get("1.0", "end").strip() == "" and app.v_pchoice.get() == ""
+    app.t_prompt.insert("1.0", "kept")
+    app.t_prompt.configure(state="disabled")
+    app._clear_prompt()
+    assert app.t_prompt.get("1.0", "end").strip() == "kept"
+    app.t_prompt.configure(state="normal")
+
     shutil.rmtree(t.TMP, ignore_errors=True)
     print("ALL OK (round 5)")
 

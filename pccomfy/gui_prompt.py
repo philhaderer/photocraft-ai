@@ -166,6 +166,17 @@ class PromptMixin:
         t.delete("1.0", "end")
         t.insert("1.0", text)
 
+    def _clear_prompt(self):
+        """The bin next to "Prompt": empties the field (one undo step, so Ctrl+Z in the field brings the text back)."""
+        t = self.t_prompt
+        if str(t.cget("state")) == "disabled":
+            return
+        t.edit_separator()
+        t.delete("1.0", "end")
+        t.edit_separator()
+        self.v_pchoice.set("")
+        t.focus_set()
+
     def _sync_prompt_field(self, mode: str):
         """Remove object ignores the text: the field is emptied and greyed out, the typed text comes back afterwards."""
         t = self.t_prompt
