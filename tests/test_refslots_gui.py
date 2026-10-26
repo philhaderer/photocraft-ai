@@ -205,6 +205,19 @@ def main():
             break
         time.sleep(0.02)
     assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa\n<image2>: A red square on green."
+    # a line changed by hand stays as it is; the window says so
+    app.t_prompt.delete("1.0", "end")
+    app.t_prompt.insert("1.0", "put it on the sofa\n<image2>: my red square")
+    app.bridge.describe_image = lambda im: "A red square on grey."
+    app._refs_describe(0)
+    for _ in range(100):
+        while pending:
+            pending.pop(0)()
+        if app.refslots.items[0].description == "A red square on grey.":
+            break
+        time.sleep(0.02)
+    assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa\n<image2>: my red square"
+    assert "kept" in app.lbl_refmsg["text"]
     assert not hasattr(app, "b_refuse")
     app.bridge.describe_image = lambda im: (_ for _ in ()).throw(RuntimeError("ComfyUI is not running"))
     app._refs_describe(0)

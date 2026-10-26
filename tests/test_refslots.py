@@ -206,7 +206,8 @@ def main():
     assert rs.put_description("", 1) == "<image3>: a dog"
     rs.items[1].description = "a brown dog"
     assert rs.put_description("hat on dog\n<image3>: a dog\nmore", 1, old="a dog") == "hat on dog\n<image3>: a brown dog\nmore"
-    assert rs.put_description("hat on dog\n<image3>: my own words", 1, old="a dog") == "hat on dog\n<image3>: my own words\n<image3>: a brown dog"
+    assert rs.put_description("hat on dog\n<image3>: my own words", 1, old="a dog") == "hat on dog\n<image3>: my own words"   # edited: kept
+    assert rs.put_description("hat on dog", 1, old="a dog") == "hat on dog"                                                   # deleted: kept
     print("ALL OK (refslots)")
 
 
