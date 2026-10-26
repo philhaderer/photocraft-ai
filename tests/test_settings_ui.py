@@ -259,7 +259,7 @@ def main():
     app._apply_refresh({"_detect": True, "_inv": inv, "_yaml": [], "_disk": {"seedvr2_3b_int8_convrot.safetensors": ["D:/models/diffusion_models/seedvr2_3b_int8_convrot.safetensors"]}})
     seg = app._settings_segments()
     links = [u for _t, style, u in seg if style == "link"]
-    assert "https://huggingface.co/Comfy-Org/SeedVR2" in links and "https://github.com/ausboss/ComfyUI-AusBoss" in links
+    assert manifest.FILES["seedvr2_3b_int8_convrot.safetensors"].url in links and "(3.5 GB)" in "".join(s for s, _st, _u in seg) and "https://github.com/ausboss/ComfyUI-AusBoss" in links
     assert all(u.startswith("https://") for u in links) and len(links) >= len(manifest.CONTRIBUTORS)
     joined = "".join(s for s, _st, _u in seg)
     assert "node AUSBOSS_NODES_TiledUpscale" in joined and "found on disk: D:/models/diffusion_models/seedvr2" in joined

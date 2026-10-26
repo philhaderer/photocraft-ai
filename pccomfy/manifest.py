@@ -8,7 +8,9 @@ Pure data, no ComfyUI and no Tk. Three levels per tab (decided with the user, se
 
 The file names are the ones the shipped ``workflows/*.json`` load (checked by tests/test_detection.py). The tab level
 ``required`` set is mirrored in ``models.Model.requires`` (the same names, ``tab_required``); a test keeps the two equal.
-Download links are the ones collected in the project notes ("shipping"); an empty link means: source not known yet.
+Download links are direct file links (Hugging Face ``resolve/main``, Civitai download API), each checked on 2026-10-27
+against the user's working copy by size and, where the name was not unique, by SHA256; the table with licences is
+``docs/model-downloads.md``. An empty link means: no public source right now.
 """
 from __future__ import annotations
 
@@ -28,9 +30,17 @@ KIND_LABEL = {"unet": "Diffusion model", "clip": "Text encoder", "vae": "VAE", "
 class File:
     name: str                       # as ComfyUI lists it (a LoRA carries its sub-folder, "Moss\\lora_dmd2.safetensors")
     kind: str                       # key of KINDS
-    url: str = ""                   # where to get it ("" = not known yet)
+    url: str = ""                   # direct download link ("" = no public source right now)
     note: str = ""                  # licence, gated, "likely, not confirmed" ...
     aliases: tuple = ()             # other names the same file is known under
+    size: int = 0                   # bytes, as the source serves it (0 = not known)
+
+    @property
+    def size_text(self) -> str:
+        """"9.4 GB", "165 MB" ("" when not known)."""
+        if not self.size:
+            return ""
+        return f"{self.size / 1e9:.1f} GB" if self.size >= 1e9 else f"{self.size / 1e6:.0f} MB"
 
     @property
     def folder(self) -> str:
@@ -44,35 +54,67 @@ class File:
 
 
 _HF = "https://huggingface.co/"
+_BFL3 = _HF + "black-forest-labs/flux-3-image-klein-comfy/resolve/main/"
+_QWEN21 = _HF + "Comfy-Org/Qwen-Image-2.1/resolve/main/"
+_MOSS = _HF + "Comfy-Org/MOSS-Image/resolve/main/"
+_KREA2 = _HF + "Comfy-Org/Krea-2/resolve/main/"
+_SEEDVR2 = _HF + "Comfy-Org/SeedVR2/resolve/main/"
+_GATED_BFL = "gated: Hugging Face login and accepting the FLUX Kommunity License"
+_NC = "non-commercial use only"
 _LIST = [
     # diffusion models
-    File("flux3-image-klein-int8-convrot.safetensors", "unet", _HF + "black-forest-labs/flux-3-image-klein-comfy", "gated: login and licence acceptance (FLUX Kommunity License v1.0)"),
-    File("flux-2-klein-9b-int8-ConvRot-comfyui.safetensors", "unet", _HF + "Sakujo/FLUX.2-Klein-9B-INT8-ConvRot"),
-    File("qwen_image_2.1_int8_convrot.safetensors", "unet", _HF + "Comfy-Org/Qwen-Image-2.1", "licence qwen-research"),
-    File("fibo2_edit_turbo_int8_convrot.safetensors", "unet"),
-    File("krea2_turbo_int8_convrot.safetensors", "unet"),
-    File("moss_image_sft_int8_convrot.safetensors", "unet", _HF + "Comfy-Org/MOSS-Image"),
-    File("seedvr2_3b_int8_convrot.safetensors", "unet", _HF + "Comfy-Org/SeedVR2"),
+    File("flux3-image-klein-int8-convrot.safetensors", "unet", _BFL3 + "diffusion_models/flux3-image-klein-int8-convrot.safetensors",
+         _GATED_BFL, size=5827874779),
+    File("flux-2-klein-9b-int8-ConvRot-comfyui.safetensors", "unet", "",
+         "the source (Hugging Face, Sakujo/FLUX.2-Klein-9B-INT8-ConvRot) is no longer public (checked 2026-10-27)", size=9405846682),
+    File("qwen_image_2.1_int8_convrot.safetensors", "unet", _QWEN21 + "diffusion_models/qwen_image_2.1_int8_convrot.safetensors",
+         "licence: Qwen research licence", size=7256783064),
+    File("fibo2_edit_turbo_int8_convrot.safetensors", "unet",
+         _HF + "Comfy-Org/Fibo-2.0/resolve/main/diffusion_models/fibo2_edit_turbo_int8_convrot.safetensors",
+         "licence: CC BY-NC 4.0 (" + _NC + ")", size=8408562474),
+    File("krea2_turbo_int8_convrot.safetensors", "unet", _KREA2 + "diffusion_models/krea2_turbo_int8_convrot.safetensors",
+         "licence: Krea 2 Community License", size=13492686496),
+    File("moss_image_sft_int8_convrot.safetensors", "unet", _MOSS + "diffusion_models/moss_image_sft_int8_convrot.safetensors",
+         "licence: Apache 2.0", size=5413698958),
+    File("seedvr2_3b_int8_convrot.safetensors", "unet", _SEEDVR2 + "diffusion_models/seedvr2_3b_int8_convrot.safetensors",
+         "licence: Apache 2.0", size=3458259704),
     # text encoders
-    File("qwen_3_8b_fp8mixed.safetensors", "clip", _HF + "Comfy-Org/flux2-klein-9B"),
-    File("qwen3vl_4b_int8_convrot.safetensors", "clip", _HF + "Comfy-Org/Fibo-2.0"),
-    File("qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors", "clip", _HF + "black-forest-labs/flux-3-image-klein-comfy"),
-    File("qwen3vl_8b_fp8_scaled.safetensors", "clip", _HF + "Comfy-Org/Qwen3-VL"),
-    File("qwen3vl_8b_int8_convrot.safetensors", "clip"),
-    File("qwen3.5_9b_w4a8_gptq.safetensors", "clip", _HF + "Comfy-Org/MOSS-Image"),
-    File("qwen3.5_9b_int8_convrot.safetensors", "clip"),
-    File("qwen3vl_4b_fp8_scaled.safetensors", "clip"),
+    File("qwen_3_8b_fp8mixed.safetensors", "clip",
+         _HF + "Comfy-Org/Flux-2-Klein-9B/resolve/main/split_files/text_encoders/qwen_3_8b_fp8mixed.safetensors",
+         "repo licence: FLUX non-commercial", size=8664848742),
+    File("qwen3vl_4b_int8_convrot.safetensors", "clip", _KREA2 + "text_encoders/qwen3vl_4b_int8_convrot.safetensors",
+         "also in Comfy-Org/Fibo-2.0 and the FLUX.3 Klein repo", size=4858559240),
+    File("qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors", "clip",
+         _BFL3 + "text_encoders/qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors", _GATED_BFL, size=6724090780),
+    File("qwen3vl_8b_fp8_scaled.safetensors", "clip",
+         _HF + "Comfy-Org/Qwen3-VL/resolve/main/text_encoders/qwen3vl_8b_fp8_scaled.safetensors", "licence: Apache 2.0", size=10588637512),
+    File("qwen3vl_8b_int8_convrot.safetensors", "clip", _QWEN21 + "text_encoders/qwen3vl_8b_int8_convrot.safetensors",
+         "licence: Apache 2.0 (also in Comfy-Org/Qwen3-VL)", size=9350798360),
+    File("qwen3.5_9b_w4a8_gptq.safetensors", "clip", _MOSS + "text_encoders/qwen3.5_9b_w4a8_gptq.safetensors",
+         "licence: Apache 2.0", size=7343591088),
+    File("qwen3.5_9b_int8_convrot.safetensors", "clip", _MOSS + "text_encoders/qwen3.5_9b_int8_convrot.safetensors",
+         "licence: Apache 2.0", size=9748121532),
+    File("qwen3vl_4b_fp8_scaled.safetensors", "clip", _KREA2 + "text_encoders/qwen3vl_4b_fp8_scaled.safetensors",
+         "licence: Apache 2.0 (also in Comfy-Org/Qwen3-VL)", size=5242467968),
     # VAEs
-    File("flux2-vae.safetensors", "vae", _HF + "Comfy-Org/flux2-dev"),
-    File("flux2-vae_small.safetensors", "vae", _HF + "Comfy-Org/MOSS-Image"),
-    File("qwen_image_2.1_vae_bf16.safetensors", "vae", _HF + "Comfy-Org/Qwen-Image-2.1"),
-    File("qwen_image_vae.safetensors", "vae"),
-    File("seedvr2_ema_vae_fp16.safetensors", "vae", _HF + "Comfy-Org/SeedVR2", aliases=("ema_vae_fp16.safetensors",)),
+    File("flux2-vae.safetensors", "vae", _HF + "Comfy-Org/Flux-2-Dev/resolve/main/split_files/vae/flux2-vae.safetensors",
+         "the copies in the Klein, MOSS and Fibo repos differ by a few bytes (file header) and work too", size=336213556),
+    File("flux2-vae_small.safetensors", "vae", _MOSS + "vae/flux2-vae_small.safetensors", "licence: Apache 2.0", size=249521340),
+    File("qwen_image_2.1_vae_bf16.safetensors", "vae", _QWEN21 + "vae/qwen_image_2.1_vae_bf16.safetensors",
+         "licence: Qwen research licence", size=675509688),
+    File("qwen_image_vae.safetensors", "vae", _KREA2 + "vae/qwen_image_vae.safetensors",
+         "also in Comfy-Org/Qwen-Image", size=253806246),
+    File("seedvr2_ema_vae_fp16.safetensors", "vae", _SEEDVR2 + "vae/seedvr2_ema_vae_fp16.safetensors",
+         "licence: Apache 2.0", aliases=("ema_vae_fp16.safetensors",), size=501324814),
     # LoRAs
-    File("qwen\\qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors", "lora", _HF + "Comfy-Org/Qwen-Image-2.1"),
-    File("Flux 2\\ultra_real_v4.safetensors", "lora", "https://civitai.com/models/2462105", "likely the Civitai LoRA 'UltraReal - Krea2, Klein9b' (not confirmed)"),
-    File("Moss\\lora_dmd2.safetensors", "lora", _HF + "lodestones/MOSS-Image-SFT-8-steps-dmd", "plausible: the repo's lora.safetensors, renamed"),
-    File("Moss\\lenovo_moss.safetensors", "lora"),
+    File("qwen\\qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors", "lora",
+         _QWEN21 + "loras/qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors", "licence: Qwen research licence", size=913314512),
+    File("Flux 2\\ultra_real_v4.safetensors", "lora", "https://civitai.com/api/download/models/2846977",
+         "Civitai 'UltraReal - Moss, Krea2, Klein9b' by vizsumit, version KL9_V4 (Civitai may ask to log in)", size=165705592),
+    File("Moss\\lora_dmd2.safetensors", "lora", _HF + "lodestones/MOSS-Image-Base-8-steps-dmd/resolve/main/lora_dmd2.safetensors",
+         "licence: Apache 2.0", size=1189176800),
+    File("Moss\\lenovo_moss.safetensors", "lora", _HF + "Danrisi/lenovo_moss/resolve/main/lenovo_moss.safetensors",
+         "Lenovo UltraReal by Danrisi (also on Civitai, model 1662740)", size=64527960),
 ]
 FILES: dict[str, File] = {f.name: f for f in _LIST}
 

@@ -278,6 +278,8 @@ class SettingsMixin:
                     if f.url:
                         add("   ", "")
                         add("download", "link", f.url)
+                        if f.size_text:
+                            add(f"  ({f.size_text})", "muted")
                     add("\n", "")
                     if f.note:
                         add("        " + f.note + "\n", "muted")

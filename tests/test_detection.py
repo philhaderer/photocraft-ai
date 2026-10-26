@@ -45,6 +45,9 @@ def full_lists():
 def test_manifest():
     for f in manifest.FILES.values():
         assert f.kind in manifest.KINDS, f
+        assert f.size > 0 and (f.url.startswith("https://") or f.note), f        # a direct link, or a note why there is none
+        assert not f.url or f.url.endswith(f.name.rpartition("\\")[2]) or "civitai.com/api/download" in f.url, f   # a FILE, not a model page
+    assert manifest.FILES["flux2-vae.safetensors"].size_text == "336 MB" and manifest.FILES["krea2_turbo_int8_convrot.safetensors"].size_text == "13.5 GB"
     assert manifest.FILES["Moss\\lora_dmd2.safetensors"].target == "models\\loras\\Moss"
     assert manifest.FILES["flux2-vae.safetensors"].target == "models\\vae"
     for key, tab in manifest.TABS.items():
@@ -154,11 +157,12 @@ def test_rows_and_texts():
     assert any(level == "optional" for _f, _fd, level in rows["moss"]["files"])
 
     lines = inventory.preflight(inv, "krea2", "txt2img")
-    assert lines == ["missing: qwen_image_vae.safetensors -> ComfyUI\\models\\vae"], lines
+    assert lines == ["missing: qwen_image_vae.safetensors -> ComfyUI\\models\\vae (download: "
+                     "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/vae/qwen_image_vae.safetensors)"], lines
     msg = inventory.short_message(lines, "Krea 2 Turbo")
     assert msg.startswith("Krea 2 Turbo: missing: qwen_image_vae.safetensors -> ComfyUI\\models\\vae") and "Restart ComfyUI" in msg
     lines2 = inventory.preflight(inventory.Inventory({}), "flux3", "edit")
-    assert len(lines2) == 3 and "(download: https://huggingface.co/black-forest-labs/flux-3-image-klein-comfy)" in lines2[0]
+    assert len(lines2) == 3 and "(download: https://huggingface.co/black-forest-labs/flux-3-image-klein-comfy/resolve/main/diffusion_models/" in lines2[0]
     assert "(+2 more, see Settings)" in inventory.short_message(lines2)
     assert inventory.preflight(None, "flux3", "edit") == [] and inventory.preflight(inv, "", "edit") == []
     assert inventory.preflight(inv, "unknown", "edit") == []         # a workflow of your own is never blocked
