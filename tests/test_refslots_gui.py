@@ -87,6 +87,21 @@ def main():
     app._refs_on_drop(type("E", (), {"data": "{%s} %s" % (tmp / "a b.png", tmp / "x.txt"), "action": "copy"})())
     assert [it.name for it in app.refslots.items] == ["a b.png"] and "not a picture" in app.lbl_refmsg["text"]
 
+    # a drop onto a filled slot replaces its picture (cut-out and description go); more files go behind the last slot
+    Image.new("RGB", (20, 20), "green").save(tmp / "g.png")
+    Image.new("RGB", (20, 20), "white").save(tmp / "w.png")
+    app.refslots.add(Image.new("RGB", (20, 20), "red"), "r.png")
+    app.refslots.items[0].description = "blue"
+    app.refslots.items[0].original = app.refslots.items[0].image
+    drop = lambda data, at=None: app._refs_on_drop(type("E", (), {"data": data, "action": "copy"})(), at)
+    drop("%s" % (tmp / "g.png"), 0)
+    assert [it.name for it in app.refslots.items] == ["g.png", "r.png"]
+    assert app.refslots.items[0].description == "" and not app.refslots.items[0].cut_out
+    drop("%s %s %s" % (tmp / "x.txt", tmp / "w.png", tmp / "g.png"), 1)        # the first PICTURE replaces, the rest is added
+    assert [it.name for it in app.refslots.items] == ["g.png", "w.png", "g.png"] and "not a picture" in app.lbl_refmsg["text"]
+    drop("%s" % (tmp / "w.png"))                                                 # onto the frame / the empty slot: added
+    assert len(app.refslots.items) == 4
+
     # Add file: the picker belongs to this window, and the link watchdog / menu guard pause while it is open
     import tkinter
     seen = {}
