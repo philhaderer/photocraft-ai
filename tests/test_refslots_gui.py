@@ -128,6 +128,17 @@ def main():
     pick("qwen", "multi_edit")
     assert len(app._request().refs) == min(2, len(app.refslots.items))      # nothing was lost by the tab switch
 
+    # a model change rewrites the image names typed in the prompt, and back
+    pick("qwen", "multi_edit")
+    app.t_prompt.delete("1.0", "end")
+    app.t_prompt.insert("1.0", "Put the hat from <image3> on <image2>, image 7 stays.")
+    pick("flux2", "multi_edit")
+    assert app.t_prompt.get("1.0", "end").strip() == "Put the hat from image 3 on image 2, image 7 stays."
+    pick("flux3", "multi_edit")
+    assert app.t_prompt.get("1.0", "end").strip() == "Put the hat from <ref_image_2> on <ref_image_1>, <ref_image_6> stays."
+    pick("qwen", "multi_edit")
+    assert app.t_prompt.get("1.0", "end").strip() == "Put the hat from <image3> on <image2>, <image7> stays."
+    app.t_prompt.delete("1.0", "end")
     # the cut-out button: ComfyUI's answer replaces the picture, "Undo cut" brings the original back
     app.bridge.remove_background = lambda im: Image.new("RGBA", im.size, (0, 0, 0, 0))
     pending = []

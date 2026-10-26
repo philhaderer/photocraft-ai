@@ -20,6 +20,38 @@ MAX_SIDE = 1024                      # the longest side of a reference image sen
 DEFAULT_BACKGROUND = (128, 128, 128)
 
 
+# ---- rewriting the image names in the prompt when the model changes ----
+
+MAX_TAG = 9      # image numbers that count as a tag (1 = the picture ... 9); at least the most slots of any model + 1
+
+
+def _tag_regex(style: str) -> "re.Pattern[str]":
+    """A pattern for the tags of one naming rule ("<image{n}>", "image {n}", "<ref_image_{i}>"); the number is group 1."""
+    parts = re.split(r"(\{n\}|\{i\})", style)
+    pat = "".join(r"(\d{1,2})" if x in ("{n}", "{i}") else re.escape(x) for x in parts)
+    if style[0].isalnum():
+        pat = r"(?<![\w<])" + pat          # "image 2" is a tag, "myimage 2" is not
+    if style[-1].isalnum() or style.rstrip().endswith("}"):
+        pat += r"(?!\d)"
+    return re.compile(pat)
+
+
+def retag(text: str, old_style: str, new_style: str) -> str:
+    """The prompt with every image name of the rule `old_style` written by the rule `new_style`. Only real tags change (the
+    exact pattern of the old rule, number 1..MAX_TAG); the numbering is converted (image 1 is the picture: "<image2>" = "image 2" =
+    "<ref_image_1>"), so going there and back gives the same text."""
+    if not text or not old_style or not new_style or old_style == new_style:
+        return text
+    old_zero = "{i}" in old_style
+
+    def conv(m):
+        number = int(m.group(1)) + (1 if old_zero else 0)          # 1 = the picture
+        if not 1 <= number <= MAX_TAG:
+            return m.group(0)
+        return new_style.format(n=number, i=number - 1)
+    return _tag_regex(old_style).sub(conv, text)
+
+
 class RefError(ValueError):
     pass
 
@@ -282,7 +314,26 @@ class RefSlotsMixin:
             return False
 
     # ---- show / hide / redraw ----
+    def _refs_retag(self):
+        """The model changed: the image names typed in the prompt get the new model's naming rule."""
+        m = self._refs_model()
+        if m is None or getattr(self, "_booting", False):
+            return
+        old = getattr(self, "_tag_style_seen", None)
+        self._tag_style_seen = m.tag_style
+        if not old or old == m.tag_style:
+            return
+        t = getattr(self, "t_prompt", None)
+        if t is None or str(t.cget("state")) == "disabled":
+            return
+        cur = t.get("1.0", "end").rstrip("\n")
+        new = retag(cur, old, m.tag_style)
+        if new != cur:
+            t.delete("1.0", "end")
+            t.insert("1.0", new)
+
     def _refs_update(self):
+        self._refs_retag()
         want = self._refs_wanted()
         if not want and getattr(self, "f_refs", None) is None:
             return

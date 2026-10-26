@@ -94,3 +94,9 @@ Nummerierung und Reihenfolge prüft `tests/test_refslots.py` am echten Graphen (
 - **Pen** ist komplett entfernt (Icon, Funktion `_refs_pen`, `apply_strokes`, Farben, Tooltip, Tests). `prepare_image` hatte keine Pen-Logik.
 - **Icons 1,7-fach** (`RefSlotsMixin.ICON_SCALE`): 16 → 27 Punkt, die Leiste ist 33 Punkt breit. Vier Symbole (Remove, Cut out, Describe, Copy text) à 30 Punkt brauchen 122 Punkt Höhe; der Slot ist deshalb 122 statt 108 Punkt hoch (Breite bleibt 108). Das Bild im Slot ist dadurch 71 Punkt breit statt 82.
 - **Alternative:** Symbole nebeneinander in zwei Spalten (Leiste 66 breit, Bild nur 38) oder Slot nicht höher, Symbole enger (kleiner als gewünscht).
+
+## 16. Bildnamen im Prompt beim Modellwechsel umschreiben
+- **Gewählt:** `refslots.retag(text, alt, neu)`. Erkannt wird nur das genaue Muster der alten Namensregel mit einer Zahl von 1 bis 9 (Qwen `<image3>`, Fibo `<image_3>`, Flux 2 `image 3` mit Wortgrenze, Flux 3 `<ref_image_2>`). Die Nummer wird umgerechnet (Bild 1 = Hauptbild; Flux 3 zählt ab 0, `ref_image_1` = Slot 1 = Bild 2). Hin und zurück gibt denselben Text (Test mit allen 4 x 4 Kombinationen).
+- **Wann:** bei jeder Änderung von Tab/Modus, sobald sich die Namensregel gegenüber dem letzten Modell mit Slots ändert (Krea und MOSS haben keine und lassen den Text, wie er ist). Beim Start und beim Laden eines Presets nicht (`_booting`).
+- **Grenze:** In der Flux-2-Regel ist auch ein ganz normales „image 3“ im Text ein Tag und wird umgerechnet. Das lässt sich nicht trennen.
+- **Alternative:** Nur beim Senden umschreiben (der Text im Fenster bliebe in der alten Schreibweise; du sähest nicht, was gesendet wird).

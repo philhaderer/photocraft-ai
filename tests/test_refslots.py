@@ -175,6 +175,21 @@ def main():
         raise SystemExit("Upscale takes no reference images")
     except BridgeError as e:
         assert "Multi Image Edit" in str(e), e
+    # changing the model rewrites the image names of the prompt: all 4 x 4 combinations, there and back, only real tags
+    styles = {k: models.BY_KEY[k].tag_style for k in WF}
+    def text_in(style):
+        t = lambda n: style.format(n=n, i=n - 1)
+        return f"Put the hat from {t(3)} on the dog in {t(2)} into {t(1)}, not a plain picture 7 or imagery 3 or a {{image}}."
+    for a, sa in styles.items():
+        for b, sb in styles.items():
+            conv = refslots.retag(text_in(sa), sa, sb)
+            if a == b:
+                assert conv == text_in(sa)
+                continue
+            assert conv == text_in(sb), (a, b, conv)
+            assert refslots.retag(conv, sb, sa) == text_in(sa), (a, b, conv)          # there and back: the same text
+    assert refslots.retag("<ref_image_0> and <ref_image_2>", "<ref_image_{i}>", "<image{n}>") == "<image1> and <image3>"   # 0 = the picture
+    assert refslots.retag("image 2, myimage 2, image 22", "image {n}", "<image{n}>") == "<image2>, myimage 2, image 22"
     print("ALL OK (refslots)")
 
 
