@@ -17,7 +17,7 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 ## 2. Repo und Git-Stand
 - Pfad `C:\programs\photocraft-comfyui-bridge`, Fork von Peszemeszek/photocraft-comfyui-bridge. Nur lokal, nichts gepusht.
 - Branches: `main` (Upstream), `windows-fibo` (abgenommener Stand 6aff33a), `refactor/split-gui` (Phase 0, in `next`), **`next` = Integrationsstand, den der Nutzer testet**.
-- Noch vorhanden, alle schon in `next` gemergt (Löschen nur nach Rückfrage): `feat/description-in-prompt-field`, `feat/expand-krea2-flux3-again`, `feat/new-user-test-start`, `feat/refs-max-in-header`, `feat/thin-scrollbar`, `feat/vector-slot-icons`, `fix/describe-keep-edited-line`, dazu dieser `docs/handoff-next-chat`.
+- Sonst keine Branches: alle Arbeits-Branches der Sitzung vom 26.10. sind gemergt und mit Erlaubnis des Nutzers gelöscht (die Commits stecken in `next`). Künftig: Löschen nur nach Rückfrage.
 - Tags: `backup-2026-10-26` (6df02df, vor Phase 0), **`vor-claude-code`** (65e955f, letzter Stand vor dem Umstieg auf Claude Code).
 - Lane-Klone `lanes/L1`, `lanes/L2` sind Altlast (per `.git/info/exclude` ignoriert, vollständig gemergt). Archiv der Lane-Fragen: `docs/archiv-lanes/`.
 - Tests: `python tests/run_all.py` (39 Dateien, alle grün unter Windows, ca. 16 s). Python des Nutzers: Pfad in `data/python.txt`.
