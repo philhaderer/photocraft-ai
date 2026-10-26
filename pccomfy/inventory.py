@@ -172,6 +172,8 @@ class Inventory:
 def fetch(comfy, mapping: dict | None = None) -> Inventory:
     """Read the lists from a ``comfy.ComfyUI``. Raises ComfyError when the server cannot be reached."""
     raw = comfy.inventory_raw()
+    if os.environ.get("PCCOMFY_SIMULATE_NO_MODELS"):    # test start of a new user ("photocraft-ai neuer-nutzer.bat"):
+        raw = {**raw, **{k: [] for k in LIST_KINDS}}     # ComfyUI answers, but its model folders look empty
     return Inventory({k: raw.get(k) for k in LIST_KINDS}, raw.get("nodes"), mapping)
 
 
