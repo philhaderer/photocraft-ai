@@ -75,3 +75,23 @@ Gewünscht: das Preset lädt nur, was geht; das Modell mit fehlenden Dateien wir
 - Eingriff in `gui.py` (nur `_build`): der Aufruf `self._build_settings()` ist von der Tab-Zeile in den Fußbereich gewandert und bekommt dessen Rahmen mit (`self._build_settings(foot)`, eine Zeile nach dem Reset-Knopf). Der Knopf steht mit `pack(side="right")` ganz rechts, die Tab-Zeile ist wieder wie vorher.
 - Alternative: Zahnrad in einer eigenen Zeile unter dem Fußbereich (kostet Höhe).
 - Live prüfen: ob links Platz bleibt, wenn „PhotoCraft ● ComfyUI ● Refresh Reset" und das Zahnrad zusammen in die feste Breite 380 passen.
+
+## 16. Aufgabe C: Farben
+Gewählt: die Konstante `PANEL` in `gui_common.py` (die Farbe eines inaktiven Tabs) von `#404040` auf `#282828`, zentral. Alles, was `PANEL` benutzt, folgt automatisch. Neu: `NA_RED = #ff6b6b` für die Schrift eines nicht verfügbaren Tabs (Hintergrund wie inaktiv, also `#282828`; das bisherige graue Aussehen ist weg). „Aktiv" ist unverändert (orange Hintergrund, dunkle Schrift). Der Klick auf einen nicht verfügbaren Tab öffnet die Einstellungen bei diesem Modell, der Tooltip bleibt.
+- Alternative Rottöne: `#ff5f5f` (4,95 : 1, kräftiger), `#ff7a7a` (5,84 : 1, heller). Gewählt `#ff6b6b` mit 5,3 : 1 (Mindestwert für gut lesbaren Text: 4,5).
+
+Wo `PANEL` (also die neue Farbe) im Plugin wirkt:
+- inaktive Tabs und alle normalen Knöpfe (Refresh, Reset, Zahnrad usw. über den Stil `TButton`)
+- Eingabefelder, Zahlenfelder (Spinbox), Dropdown-Felder samt aufklappbarer Liste, Seed-Feld
+- Prompt-Textfeld, LoRA-Auswahlliste
+- Schiebe-Regler-Schiene, Fortschrittsbalken-Schiene
+- Kästchen der Haken und Radioknöpfe, Rand-Schattierung der Bedienelemente (`lightcolor`/`darkcolor`)
+- Bild-Slots (Drop-Picture) und das Vorschau-Fenster der Referenzbilder, das Textfeld im Einstellungs-Fenster
+
+Mitgezogen als Text im Code: nur die Thumbnail-Füllfarbe in `refslots.py` (Zeile 191, `(0x40,0x40,0x40)` -> `(0x28,0x28,0x28)`), sonst hätte jedes Vorschaubild einen helleren Rand im Slot. Das ist eine Datei von L2: ein Einzeiler.
+- Nicht geändert: die Farbe der Titelleiste (`gui.py` Zeile 42, `winlink.caption(... 0x40 ...)`), weil sie nicht im erlaubten Bereich von `gui.py` liegt, und `tests/live_dnd.py` (manuelles Prüfskript). Frage dazu in FRAGEN.md.
+
+Kontrast (Verhältnis zu `PANEL`, vorher auf `#404040` -> jetzt auf `#282828`): Schrift `#eeeeee` 8,9 -> 12,7; Grau `#cfcfcf` 6,7 -> 9,5; DISABLED `#8e8e8e` 3,2 -> 4,5 (besser); Orange 4,2 -> 6,0; Done-Grün 3,5 -> 4,9; Rot 3,7 -> 5,3. Nichts wird schlechter. Zwei Auffälligkeiten:
+- Der Rand der Bedienelemente (`bordercolor #454545`, unverändert) ist jetzt heller als die Füllung: um Felder und Knöpfe erscheint eine feine helle Linie, vorher kaum sichtbar. Wirkt eher wie ein Rahmen. Wenn es stört: Randfarbe in `gui_theme.py` Zeile 14 auf `#282828` oder `#3a3a3a`.
+- Der Fehler-Knopf/-Marker `ERROR #e5484d` hat auf `#282828` nur 3,8 : 1, wird aber nur als Fläche mit heller Schrift benutzt (nicht als Text).
+- Live prüfen: ob die Regler-Griffe und Haken auf der dunkleren Schiene gut sichtbar sind (Griff-Farbe ist die Standardfarbe des Themes).

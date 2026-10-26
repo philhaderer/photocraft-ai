@@ -188,7 +188,7 @@ def apply_strokes(image: Image.Image, strokes: list, scale: float = 1.0) -> Imag
     return out
 
 
-def thumbnail_png(image: Image.Image, size: int, background=(0x40, 0x40, 0x40)) -> bytes:
+def thumbnail_png(image: Image.Image, size: int, background=(0x28, 0x28, 0x28)) -> bytes:   # the colour of gui_common.PANEL (the slot box behind the thumbnail)
     """A PNG of the picture that fits into a size x size square (kept proportional), transparency shown on `background`."""
     import io
     t = flatten(image, background)
