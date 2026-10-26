@@ -167,8 +167,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.cb_preset.bind("<<ComboboxSelected>>", lambda e: self.load_preset(self.v_preset.get()))
         self.cb_preset.grid(row=0, column=1, sticky="ew", padx=6)
         # icon buttons (drawn here: emoji do not render in Tk on Windows) leave the name list the room it needs
-        self._icons = {"save": icon_image(self.root, "save", FG), "saveas": icon_image(self.root, "saveas", FG),
-                       "delete": icon_image(self.root, "trash", ERROR_TEXT)}
+        self._icons = {"save": self._icon("save"), "saveas": self._icon("saveas"), "delete": self._icon("trash", ERROR_TEXT)}
         for col, (key, cmd, tip) in enumerate((("save", self.save_preset, "Save the preset under its name"),
                                                ("saveas", self.save_preset_as, "Save as a new preset…"),
                                                ("delete", self.delete_preset, "Delete the preset"))):
@@ -183,7 +182,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.cb_enhance = ttk.Checkbutton(self.f_enh, text="LLM prompt enhancement", variable=self.v_enhance, command=self._on_workflow)
         self.cb_enhance.pack(side="left")
         self.tt_enhance = Tooltip(self.cb_enhance, ENHANCE_TIP)
-        self._icons["copy"] = icon_image(self.root, "copy", FG)
+        self._icons["copy"] = self._icon("copy")
         self._last_vgl = ""             # the prompt the text model wrote in the last run
         self.b_copy = ttk.Button(self.f_enh, image=self._icons["copy"], style="Icon.TButton", command=self._copy_enhanced, state="disabled")
         self.b_copy.pack(side="left", padx=(8, 0))
@@ -254,8 +253,8 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.f_ptop = ttk.Frame(r)      # "Prompt" and, where a mode has ready-made prompts, radio buttons that fill the field
         self.f_ptop.pack(fill="x", padx=10)
         ttk.Label(self.f_ptop, text="Prompt").pack(side="left")
-        self._icons["clear"] = icon_image(self.root, "trash", FG)
-        self.b_clear = ttk.Button(self.f_ptop, image=self._icons["clear"], style="Icon.TButton", command=self._clear_prompt)
+        self._icons["clear"] = self._icon("trash")
+        self.b_clear = ttk.Button(self.f_ptop, image=self._icons["clear"], style="Link.TButton", command=self._clear_prompt)   # flat: the row keeps its height
         self.b_clear.pack(side="right")
         Tooltip(self.b_clear, "Delete the prompt (Ctrl+Z in the field brings it back).")
         self.f_pchoice = ttk.Frame(self.f_ptop)
@@ -318,7 +317,8 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         head = ttk.Frame(self.f_xl)
         head.pack(fill="x")
         ttk.Label(head, text="Extra LoRAs (style, detail ...)", style="Muted.TLabel").pack(side="left")
-        self.b_addlora = ttk.Button(head, text="+ Add", style="Link.TButton", command=self._add_lora_row)
+        self.b_addlora = ttk.Button(head, text="Add", image=self._icon("plus", MUTED), compound="left", style="Link.TButton",
+                                    command=self._add_lora_row)
         self.b_addlora.pack(side="left", padx=8)
         Tooltip(self.b_addlora, "Adds an extra LoRA (strength 0 to 1.5).")
         self.f_xl_rows = ttk.Frame(self.f_xl)
@@ -422,7 +422,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         Tooltip(self.b_go, "Generate (Ctrl+Enter)")
         self.b_stop = ttk.Button(bf, text="Cancel", command=self.stop, state="disabled")
         self.b_stop.pack(side="left", fill="y", padx=(6, 0))
-        self._icons.update({"undo": icon_image(self.root, "undo", FG), "redo": icon_image(self.root, "redo", FG)})
+        self._icons.update({"undo": self._icon("undo"), "redo": self._icon("redo")})
         self.b_undo = ttk.Button(bf, image=self._icons["undo"], style="Icon.TButton", command=self.undo_edit)
         self.b_undo.pack(side="left", fill="y", padx=(6, 0))
         self.b_redo = ttk.Button(bf, image=self._icons["redo"], style="Icon.TButton", command=self.redo_edit)

@@ -1,8 +1,8 @@
 """Line icons for the window, drawn with Pillow as vector shapes (no image files, no extra package).
 
 Every icon lives on a 24 x 24 grid with a 2-unit stroke, round ends and round corners, the style of the Lucide icon set
-(lucide.dev, ISC licence; the shapes here follow its icons x, scissors, message-square-text, copy, clipboard and
-image-plus). An icon is drawn 8 times larger and scaled down with Lanczos to the exact pixel size it is shown at
+(lucide.dev, ISC licence; the shapes here follow its icons x, scissors, message-square-text, copy, clipboard,
+image-plus, plus, settings, undo-2, redo-2, chevron-up/down/right, save and trash-2). An icon is drawn 8 times larger and scaled down with Lanczos to the exact pixel size it is shown at
 (display scaling included), so it stays sharp and even at 100 % and at 150 %, which the old 16 px pixel art did not.
 """
 from __future__ import annotations
@@ -55,6 +55,41 @@ SHAPES: dict[str, list[list[Point]]] = {
 }
 
 
+def _mirror(shape: list[list[Point]]) -> list[list[Point]]:
+    return [[(GRID - x, y) for x, y in line] for line in shape]
+
+
+def _gear(teeth: int = 8, r_out: float = 10.5, r_body: float = 8.0, half_top: float = 8, half_base: float = 14) -> list[list[Point]]:
+    """A gear: `teeth` flat teeth (r_out) on a round body (r_body), a hole in the middle."""
+    pts: list[Point] = []
+    step = 360 / teeth
+    for i in range(teeth):
+        c = i * step - 90
+        pts += _arc(12, 12, r_body, c - half_base, c - half_base, 1)[:1]
+        pts += _arc(12, 12, r_out, c - half_top, c + half_top, 3)
+        pts += _arc(12, 12, r_body, c + half_base, c + step - half_base, 3)
+    return [pts + pts[:1], _circle(12, 12, 3.2)]
+
+
+_UNDO = [[(9, 14), (4, 9), (9, 4)], [(4, 9), (14.5, 9)] + _arc(14.5, 14.5, 5.5, 270, 450, 12) + [(11, 20)]]
+_SAVE = [[(5, 3), (15.2, 3), (21, 8.8), (21, 19)] + _arc(19, 19, 2, 0, 90) + [(5, 21)] + _arc(5, 19, 2, 90, 180)
+         + [(3, 5)] + _arc(5, 5, 2, 180, 270)]
+SHAPES.update({
+    "plus": [[(5, 12), (19, 12)], [(12, 5), (12, 19)]],
+    "gear": _gear(),
+    "undo": _UNDO,
+    "redo": _mirror(_UNDO),
+    "chevron-up": [[(6, 15), (12, 9), (18, 15)]],
+    "chevron-down": [[(6, 9), (12, 15), (18, 9)]],
+    "chevron-right": [[(9, 6), (15, 12), (9, 18)]],
+    "save": _SAVE + [[(17, 21), (17, 14), (16, 13), (8, 13), (7, 14), (7, 21)], [(7, 3), (7, 7), (8, 8), (15, 8)]],
+    "saveas": _SAVE + [[(13, 14), (13, 20)], [(10, 17), (16, 17)], [(7, 3), (7, 7), (8, 8), (15, 8)]],
+    "trash": [[(3, 6), (21, 6)], [(19, 6), (19, 20)] + _arc(17, 20, 2, 0, 90) + [(7, 22)] + _arc(7, 20, 2, 90, 180) + [(5, 6)],
+              [(8, 6), (8, 4)] + _arc(10, 4, 2, 180, 270) + [(14, 2)] + _arc(14, 4, 2, 270, 360) + [(16, 6)],
+              [(10, 11), (10, 17)], [(14, 11), (14, 17)]],
+})
+
+
 def render(kind: str, color: str, px: int) -> Image.Image:
     """The icon `kind` as an RGBA picture of px x px in `color`."""
     n = px * SUPER
@@ -70,9 +105,16 @@ def render(kind: str, color: str, px: int) -> Image.Image:
     return im.resize((px, px), Image.LANCZOS)
 
 
-def photo(root, kind: str, color: str, px: int):
-    """The icon as a Tk PhotoImage (PNG data)."""
+def spin_arrow(up: bool, color: str, px: int) -> Image.Image:
+    """A flat chevron for a spin box: the middle band of the px x px icon (px wide, px / 2 high), so the two arrows stack
+    into the height of the field."""
+    im = render("chevron-up" if up else "chevron-down", color, px)
+    return im.crop((0, px // 4, px, px // 4 + px // 2))
+
+
+def photo(root, kind: str, color: str, px: int, image: Image.Image | None = None):
+    """The icon as a Tk PhotoImage (PNG data); `image` instead of `kind` for a ready picture (spin_arrow)."""
     import tkinter as tk
     buf = io.BytesIO()
-    render(kind, color, px).save(buf, "PNG")
+    (image if image is not None else render(kind, color, px)).save(buf, "PNG")
     return tk.PhotoImage(master=root, data=base64.b64encode(buf.getvalue()).decode("ascii"))

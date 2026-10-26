@@ -31,12 +31,12 @@ class LoraMixin:
         ent = ttk.Entry(row, textvariable=v_name)
         ent.grid(row=0, column=0, sticky="ew")
         rec["entry"] = ent
-        btn = ttk.Button(row, text="\u25be", style="Link.TButton", width=2, command=lambda: self._lora_toggle(rec))
+        btn = ttk.Button(row, image=self._icon("chevron-down", MUTED), style="Link.TButton", command=lambda: self._lora_toggle(rec))
         btn.grid(row=0, column=1, padx=(2, 0))
         rec["btn"] = btn
         sp = ttk.Spinbox(row, textvariable=v_str, from_=0.0, to=1.5, increment=0.05, width=5)
         sp.grid(row=0, column=2, padx=4)
-        rm = ttk.Button(row, text="x", style="Link.TButton", width=2, command=lambda: self._remove_lora_row(rec))
+        rm = ttk.Button(row, image=self._icon("remove", MUTED), style="Link.TButton", command=lambda: self._remove_lora_row(rec))
         rm.grid(row=0, column=3)
         # typing opens a list under the row that narrows with every key; a click (or Down, Enter) takes the entry
         ent.bind("<KeyRelease>", lambda e: self._lora_key(rec, e))
