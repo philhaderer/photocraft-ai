@@ -41,6 +41,7 @@ class ComfyUI:
         self.url = url.rstrip("/")
         self.timeout = timeout
         self.client_id = uuid.uuid4().hex
+        self.name_fixer: Callable[[dict], object] | None = None   # called with every graph before it is queued (see inventory.apply_names)
 
     # ---------- HTTP ----------
 
@@ -164,6 +165,8 @@ class ComfyUI:
     # ---------- execution ----------
 
     def queue(self, graph: dict) -> str:
+        if self.name_fixer is not None:
+            self.name_fixer(graph)
         j = self._json("/prompt", {"prompt": graph, "client_id": self.client_id})
         if j.get("node_errors"):
             raise ComfyError(self._explain(400, json.dumps(j)))

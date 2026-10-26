@@ -10,7 +10,9 @@ from pccomfy import gui_lora, gui_modes, gui_prompt, gui_run, gui_state, gui_the
 
 # 1. App is assembled from the six mixins and no method is defined twice
 mixins = (gui_theme.ThemeMixin, gui_prompt.PromptMixin, gui_lora.LoraMixin, gui_modes.ModeMixin, gui_state.StateMixin, gui_run.RunMixin)
-assert gui.App.__mro__[1:7] == mixins, gui.App.__mro__
+from pccomfy import ui_settings
+# L1: SettingsMixin stands in front on purpose: it wraps refresh, generate, _on_model ... and calls super(), so it is left out of the "defined twice" check
+assert gui.App.__mro__[1] is ui_settings.SettingsMixin and gui.App.__mro__[2:8] == mixins, gui.App.__mro__
 names = [n for m in mixins + (gui.App,) for n in vars(m) if callable(vars(m)[n]) and not n.startswith("__")]
 dup = sorted({n for n in names if names.count(n) > 1})
 assert not dup, f"defined twice: {dup}"
