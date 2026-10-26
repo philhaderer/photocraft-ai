@@ -18,6 +18,7 @@ def main():
     wl.available = lambda: True
     wl.link = lambda root, api=None: (calls.__setitem__("link", calls["link"] + 1), found["v"])[1]
     wl.unlink = lambda root, api=None: calls.__setitem__("unlink", calls["unlink"] + 1)
+    wl.owner_present = lambda api=None: True   # else on Windows the real check finds no PhotoCraft and the window quits
 
     app = gui.App(cfgmod.load())
     scheduled = []

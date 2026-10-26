@@ -2,6 +2,7 @@
 Run: python tests/run_all.py            (all files)
      python tests/run_all.py bars round  (only files whose name contains one of the words)
 Exit code 0 = all green. The tests use a stubbed Tk and a fake PhotoCraft: the real window and real generations are not covered."""
+import os
 import subprocess
 import sys
 import time
@@ -21,7 +22,9 @@ def main(words: list[str]) -> int:
     for p in files:
         t0 = time.monotonic()
         try:
-            r = subprocess.run([sys.executable, "-B", str(p)], cwd=ROOT, capture_output=True, text=True, timeout=300)
+            # UTF-8 both ways: on Windows the console code page cannot hold the tests' "·" and "→"
+            r = subprocess.run([sys.executable, "-B", str(p)], cwd=ROOT, capture_output=True, text=True, timeout=300,
+                               encoding="utf-8", errors="replace", env={**os.environ, "PYTHONIOENCODING": "utf-8"})
             ok, out = r.returncode == 0, (r.stdout + r.stderr)
         except subprocess.TimeoutExpired:
             ok, out = False, "timeout after 300 s"

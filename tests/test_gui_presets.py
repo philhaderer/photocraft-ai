@@ -109,6 +109,11 @@ sys.modules.update({"tkinter": tk, "tkinter.ttk": ttk, "tkinter.messagebox": mb,
 sys.path.insert(0, str(ROOT))
 from pccomfy import config as cfgmod, gui  # noqa: E402
 
+# On Windows the workflows and presets live in the repo itself; the tests must not copy onto or write into them
+cfgmod.WORKFLOWS_DIR = Path(TMP) / "workflows"
+cfgmod.PRESETS_DIR = Path(TMP) / "presets"
+cfgmod.DEFAULTS["comfyui"]["workflows_dir"] = str(cfgmod.WORKFLOWS_DIR)
+
 
 def main():
     app = gui.App(cfgmod.load())
