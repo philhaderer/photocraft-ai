@@ -103,3 +103,16 @@ Kontrast (Verhältnis zu `PANEL`, vorher auf `#404040` -> jetzt auf `#282828`): 
 - Modell nicht mehr verfügbar: Beim ersten Lesen von ComfyUI nach dem Start wird ein gewähltes Modell mit fehlenden Pflichtdateien abgewählt (`v_model` und `v_workflow` zurückgesetzt, sonst wählt `_sync_model` es über den Workflow wieder), mit der Meldung „<Modell> is not available (model files missing). Choose a model.". Nur beim Start: später im Betrieb nimmt ein Lesen dir nie den Tab weg, der Preflight erklärt dann, was fehlt.
 - Klick auf einen nicht verfügbaren Tab öffnet die Einstellungen auch aus dem Zustand „kein Modell gewählt" (vorher war dieser Fall ausgenommen).
 - Aufbau für das Verstecken der Parameter (kommt mit dem Aussehen): alle Bereiche unter den Tabs in einen gemeinsamen Rahmen in `_build` setzen und den Rahmen ein-/ausblenden. Einzelne Bereiche (Prompt, Regler, Modi) blenden sich selbst per `pack`/`pack_forget` ein und aus; ein gemeinsamer Rahmen verhindert, dass sie im leeren Zustand wieder auftauchen. Alternative: jeden Bereich einzeln verstecken (fehleranfälliger).
+
+## 18. Aufgabe B, zweiter Teil: das Aussehen des leeren Startzustands (Antworten 1 A bis 4 A)
+- **Kein Modell gewählt** (`"choose"`): sichtbar sind nur die Tabs, ein Satz „Choose a model" (grau, Größe 11, mittig) und die Fußzeile mit Zahnrad. Parameter, Generate und Fortschritt sind weg.
+- **Kein Modell verknüpft** (`"none_linked"`): nur der Satz „Link your model in the settings" und in der Fußzeile das Zahnrad. Tabs, Parameter, Generate, die Verbindungspunkte, Refresh und Reset sind ausgeblendet. Die Titelleiste bleibt `#404040`, die Startmeldung ist unverändert.
+- **Ein Workflow ohne Modell** (eigener Workflow, kein Tab) zählt nicht als leer: das ist der alte Zustand „eigener Workflow", er bleibt bedienbar. Dafür hat `start_state()` jetzt die Bedingung `kein Modell UND Workflow ist leer oder BUILTIN`.
+- **Umsetzung**: ein gemeinsamer Rahmen `f_body` unter den Tabs (`gui.py::_build`), in dem alle Parameter-Bereiche liegen. `_apply_start_state()` in `ui_settings.py` setzt Tabs, Satz und Rahmen in der Reihenfolge neu ein (`pack_forget`, dann `pack(before=status)`). Aufgerufen nach dem Bauen, nach jedem Lesen von ComfyUI und nach jedem Klick auf einen Tab.
+- **Eingriffe in fremde Dateien (klein)**:
+  - `gui.py::_build`: Rahmen `f_body`; Status und Fußzeile hängen jetzt direkt am Fenster, nicht mehr am Rahmen; Fußzeilen-Knöpfe als Attribute (`lbl_conn`, `b_refresh`, `b_reset`); `<Configure>` am Fenster statt am (früheren) Fenster-Frame, gleiche Wirkung.
+  - `refslots.py` (L2): `f_refs` hängt an `f_body` statt `root`, weil es mit `before=f_neg` eingefügt wird und `f_neg` im Rahmen liegt (eine Zeile).
+  - `gui_theme.py::_fit_height`: Mindesthöhe im leeren Zustand 80 statt 320 Pixel, damit das Fenster klein wird.
+- **Generate im leeren Zustand** (z. B. Ctrl+Enter): tut nichts, Statuszeile „Choose a model first." (sonst würde der eingebaute Graph ohne Modell laufen).
+- Alternative zum gemeinsamen Rahmen: jeden Bereich einzeln verstecken. Verworfen, weil sich Bereiche selbst wieder einblenden.
+- **Live prüfen**: Aussehen und Höhe des kleinen Fensters in beiden leeren Zuständen, dass beim Wechsel zu einem Tab alles wieder an der alten Stelle sitzt (Reihenfolge Tabs, Modi, Prompt, Regler, Status, Fußzeile), Fensterhöhe nach dem Wechsel.

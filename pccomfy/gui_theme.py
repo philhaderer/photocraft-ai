@@ -137,7 +137,8 @@ class ThemeMixin:
     def _fit_height(self, width: int | None = None):
         """The window is MIN_W wide (fixed) and exactly as high as its content needs."""
         self.root.update_idletasks()
-        w, h = self._px(MIN_W), max(self._px(320), self.root.winfo_reqheight())
+        empty = bool(getattr(self, "start_state", lambda: "")())      # no model chosen: a small window (tabs, one sentence, footer)
+        w, h = self._px(MIN_W), max(self._px(80 if empty else 320), self.root.winfo_reqheight())
         self.root.geometry(f"{w}x{h}")
 
     def _pl_style(self, style: str):

@@ -105,6 +105,55 @@ def test_start_state():
     assert app.v_model.get() == "flux3"
 
 
+class Seen:
+    """Stands in for a widget and only remembers whether it is packed (the Tk stub does not lay anything out)."""
+
+    def __init__(self):
+        self.on = False
+        self.fit = 0
+
+    def pack(self, *a, **k):
+        self.on = True
+
+    def pack_forget(self):
+        self.on = False
+
+
+def test_empty_view():
+    det = lambda inv: {"_detect": True, "_inv": inv, "_yaml": [], "_disk": {}}      # noqa: E731
+    cfgmod.save_state({})
+    app = make_app()
+    shown = {n: Seen() for n in ("f_tabs", "lbl_empty", "f_body", "lbl_conn", "b_refresh", "b_reset")}
+    for n, w in shown.items():
+        setattr(app, n, w)
+    for n in ("lbl_conn", "b_refresh", "b_reset"):
+        shown[n].on = True                                    # the footer starts packed (gui.py)
+    on = lambda: {n for n, w in shown.items() if w.on}      # noqa: E731
+    all_foot = {"lbl_conn", "b_refresh", "b_reset"}
+
+    app._apply_start_state()
+    assert on() == {"f_tabs", "lbl_empty"} | all_foot and app.v_empty.get() == "Choose a model"       # tabs + one sentence + footer, no body
+    app._apply_refresh(det(inventory.Inventory({})))
+    assert on() == {"lbl_empty"} and app.v_empty.get() == "Link your model in the settings"          # nothing linked: sentence + gear only
+    app._apply_refresh(det(inventory.Inventory(td.full_lists(), NODES)))
+    assert on() == {"f_tabs", "lbl_empty"} | all_foot
+    app.v_model.set("flux3")
+    app._on_model()
+    assert on() == {"f_tabs", "f_body"} | all_foot and app.v_empty.get() == ""
+    app.v_model.set("")
+    app.v_workflow.set("some-own-workflow.json")                  # a workflow of your own is not an empty state
+    assert app.start_state() == ""
+
+    # Generate in an empty state does nothing but say so
+    called = []
+    gui.RunMixin.generate = lambda self: called.append(1)
+    app.v_workflow.set(gui.BUILTIN)
+    assert app.start_state() == "choose"
+    app.generate()
+    assert called == [] and app.v_status.get() == "Choose a model first."
+    print("ok empty view")
+
+
 def main():
     # the gear sits in the footer row, in the same frame as the Refresh and Reset buttons (not next to the tabs)
     made = []
@@ -311,6 +360,7 @@ def main():
     app._apply_refresh({"pc": "PhotoCraft \u25CF", "comfy": "ComfyUI \u25CF"})
     assert app.v_conn.get() == "PhotoCraft \u25CF   ComfyUI \u25CF"
     test_start_state()
+    test_empty_view()
     print("ok")
 
 

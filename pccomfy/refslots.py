@@ -250,7 +250,7 @@ class RefSlotsMixin:
         self._ref_photos: list = []
         self._ref_busy: set[int] = set()
         self._ref_job = None
-        self.f_refs = ttk.Frame(self.root)
+        self.f_refs = ttk.Frame(self.f_body)      # inside the body frame (gui.py _build): it is packed before f_neg, which lives there
         head = ttk.Frame(self.f_refs)
         head.pack(fill="x")
         self.lbl_refs = ttk.Label(head, text="Reference images", style="Muted.TLabel")

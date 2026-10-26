@@ -133,6 +133,10 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
             self.tt_tabs[m.key] = Tooltip(rb, m.tip)
             self.rb_tabs[m.key] = rb
 
+        self.f_body = ttk.Frame(self.root)      # everything under the tabs: hidden while no model is chosen (ui_settings.py)
+        self.f_body.pack(fill="x")
+        r = self.f_body
+
         mf = ttk.Frame(r)
         mf.columnconfigure(1, weight=1)
         # Workflow and Text model live under "Advanced" (built below): the presets choose them.
@@ -444,18 +448,19 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.pb = ttk.Progressbar(row, mode="determinate", maximum=1.0)
         self.pb.pack(fill="x", pady=(2, 0))
         self._bar_value = 0.0
-        st = ttk.Frame(r)
+        st = self.f_status = ttk.Frame(self.root)
         st.pack(fill="x", padx=10, pady=(4, 0))
         self.lbl_err = ttk.Label(st, text="!", style="Badge.TLabel", width=2, anchor="center")
         self.lbl_status = ttk.Label(st, textvariable=self.v_status, wraplength=self._px(MIN_W - 40), justify="left")
         self.lbl_status.pack(side="left", fill="x", expand=True)
-        foot = ttk.Frame(r)
+        foot = ttk.Frame(self.root)
         foot.pack(fill="x", side="bottom", padx=10, pady=6)
-        ttk.Label(foot, textvariable=self.v_conn, style="Muted.TLabel").pack(side="left")
-        b_refresh = ttk.Button(foot, text="Refresh", command=self.refresh)
+        self.lbl_conn = ttk.Label(foot, textvariable=self.v_conn, style="Muted.TLabel")
+        self.lbl_conn.pack(side="left")
+        b_refresh = self.b_refresh = ttk.Button(foot, text="Refresh", command=self.refresh)
         b_refresh.pack(side="left", padx=(8, 0))
         Tooltip(b_refresh, "Reads PhotoCraft's and ComfyUI's state again: connection, installed LoRAs, samplers, text models, workflows.")
-        b_reset = ttk.Button(foot, text="Reset", command=self.reset_settings)
+        b_reset = self.b_reset = ttk.Button(foot, text="Reset", command=self.reset_settings)
         b_reset.pack(side="left", padx=(6, 0))
         Tooltip(b_reset, "Back to the startup settings of this tab and function.")
         self._build_settings(foot)      # the gear at the right end of this row (ui_settings.py)
@@ -463,7 +468,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         for cb in (self.cb_scale, self.cb_lm, self.cb_refstyle, self.cb_sampler, self.cb_sched):
             self._open_on_click(cb)         # the list opens on a click anywhere in the box, not only on the arrow
         self._fit_job = None
-        r.bind("<Configure>", self._on_content_size, add="+")      # the window follows its content: nothing hangs off the bottom
+        self.root.bind("<Configure>", self._on_content_size, add="+")      # the window follows its content: nothing hangs off the bottom
         self.root.bind("<Button-1>", self._lora_outside, add="+")
         self.root.bind("<Control-Return>", lambda e: (self.generate(), "break")[1])
         self.root.bind("<Escape>", lambda e: self.stop())

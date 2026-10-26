@@ -19,6 +19,7 @@ from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
 
 _LABELS = dict(MODE_LABELS)      # noqa: F405
+EMPTY_TEXT = {"choose": "Choose a model", "none_linked": "Link your model in the settings"}
 STATE_TEXT = {"ready": "ready", "partial": "some functions need files", "missing": "files missing"}
 
 
@@ -43,6 +44,12 @@ class SettingsMixin:
         self.b_gear = ttk.Button(foot, text="⚙", width=3, style="Icon.TButton", command=self.open_settings)
         self.b_gear.pack(side="right")
         Tooltip(self.b_gear, "Settings: which model files ComfyUI has, links to get the missing ones, ComfyUI folders, credits.")
+        style.configure("Empty.TLabel", foreground=MUTED, font=(FONT, 11))
+        self.v_empty = tk.StringVar(value="")
+        self.lbl_empty = ttk.Label(self.root, textvariable=self.v_empty, style="Empty.TLabel", anchor="center", justify="center",
+                                   wraplength=self._px(MIN_W - 40))
+        self._foot_hidden = False
+        self._apply_start_state(fit=False)
 
     # ---------- reading ComfyUI ----------
 
@@ -84,6 +91,7 @@ class SettingsMixin:
         self._let_go_unavailable_model()
         self.comfy.name_fixer = inv.apply_names if inv is not None else None    # a linked or differently written file name is renamed when a graph is queued
         self._update_tabs()
+        self._apply_start_state()
         try:
             self._update_mode_radios()
         except (AttributeError, tk.TclError):      # the window is still being built
@@ -133,7 +141,33 @@ class SettingsMixin:
         shows no parameters in the first two (the look of those states is decided in FRAGEN.md / docs, see entscheidungen)."""
         if self.inv is not None and all(self.inv.tab_status(m.key).state == "missing" for m in models.MODELS):
             return "none_linked"
-        return "choose" if not self.v_model.get() else ""
+        return "choose" if (not self.v_model.get() and self.v_workflow.get() in ("", BUILTIN)) else ""      # (a workflow of your own is no "no model")
+
+    def _apply_start_state(self, fit: bool = True):
+        """Show what belongs to the state: a model is chosen = everything; none chosen = the tabs, one sentence, the footer; no model
+        linked = only the sentence and the gear (the footer's connection dots, Refresh and Reset go too). Stacking order stays
+        tabs, sentence, body, status line (the footer is packed at the bottom)."""
+        state = self.start_state()
+        self.v_empty.set(EMPTY_TEXT.get(state, ""))
+        for w in (self.f_tabs, self.lbl_empty, self.f_body):
+            w.pack_forget()
+        if state != "none_linked":
+            self.f_tabs.pack(fill="x", padx=10, pady=(8, 2), before=self.f_status)
+        if state:
+            self.lbl_empty.pack(fill="x", padx=10, pady=(26, 22), before=self.f_status)
+        else:
+            self.f_body.pack(fill="x", before=self.f_status)
+        hide_foot = state == "none_linked"
+        if hide_foot != self._foot_hidden:
+            self._foot_hidden = hide_foot
+            for w in (self.lbl_conn, self.b_refresh, self.b_reset):
+                w.pack_forget()
+            if not hide_foot:
+                self.lbl_conn.pack(side="left")
+                self.b_refresh.pack(side="left", padx=(8, 0))
+                self.b_reset.pack(side="left", padx=(6, 0))
+        if fit and getattr(self, "_sized", False):
+            self._fit_height()
 
     def _let_go_unavailable_model(self):
         """At start only: the model of the last session may have lost its files meanwhile. Then no tab is chosen (instead of a
@@ -148,7 +182,7 @@ class SettingsMixin:
             self._last_model = ""
             self._status(f"{m.label} is not available (model files missing). Choose a model.")
 
-    def _on_model(self):
+    def _on_model_core(self):
         if self._refreshing and not self._last_model:
             self.v_model.set("")                # first start: StateMixin would open on the first model; the user chooses
             return
@@ -162,6 +196,10 @@ class SettingsMixin:
             self.state["model"] = key
             cfgmod.save_state(self.state)
         super()._on_model()
+
+    def _on_model(self):
+        self._on_model_core()
+        self._apply_start_state()
 
     # ---------- presets ----------
 
@@ -202,6 +240,9 @@ class SettingsMixin:
         return lines
 
     def generate(self):
+        if self.start_state():
+            self._status("Choose a model first.")      # Ctrl+Enter must not run with nothing chosen
+            return
         lines = self._preflight()
         if lines:
             self._status(inventory.short_message(lines, self._model().label), error=True)
