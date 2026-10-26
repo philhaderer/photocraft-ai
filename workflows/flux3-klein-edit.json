@@ -84,6 +84,18 @@
    "images.image0": [
     "2",
     0
+   ],
+   "images.image1": [
+    "301",
+    0
+   ],
+   "images.image2": [
+    "302",
+    0
+   ],
+   "images.image3": [
+    "303",
+    0
    ]
   },
   "_meta": {
@@ -159,6 +171,36 @@
   },
   "_meta": {
    "title": "pc:output Result"
+  }
+ },
+ "301": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 1",
+   "pc_slot": 1
+  }
+ },
+ "302": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 2",
+   "pc_slot": 2
+  }
+ },
+ "303": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 3",
+   "pc_slot": 3
   }
  }
 }

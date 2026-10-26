@@ -26,12 +26,16 @@ by = models.BY_KEY
 assert list(by["flux3"].modes) == ["txt2img", "edit", "remove", "upscale"]
 assert list(by["krea2"].modes) == ["txt2img"]
 assert list(by["flux2"].modes) == ["txt2img", "edit", "remove", "outpaint", "upscale", "refine"]
-assert list(by["qwen"].modes) == ["txt2img", "edit", "inpaint", "outpaint", "reference", "remove"]
+assert list(by["qwen"].modes) == ["txt2img", "edit", "inpaint", "outpaint", "remove"]
 assert list(by["moss"].modes) == ["txt2img", "outpaint"]
 assert [m.key for m in models.MODELS] == ["flux3", "flux2", "qwen", "fibo", "krea2", "moss"]
 for m in models.MODELS:
-    assert m.max_refs == 0 and m.tag_style == "" and m.requires == (), m.key
+    assert m.requires == (), m.key
+    assert (m.max_refs == 0) == (m.tag_style == ""), m.key                                     # a model with slots names its images
     assert set(m.mode_tips) <= set(m.modes), (m.key, set(m.mode_tips) - set(m.modes))      # no tooltip for a mode the model does not have
+assert {k: (m.max_refs, m.tag_style) for k, m in by.items()} == {
+    "qwen": (2, "<image{n}>"), "fibo": (2, "<image_{n}>"), "flux2": (3, "image {n}"), "flux3": (3, "<ref_image_{i}>"),
+    "krea2": (0, ""), "moss": (0, "")}                                                          # Multi Image Edit: slots per model
 assert "Expand" not in by["flux3"].tip and "Expand" not in by["krea2"].tip
 assert models.model_for_workflow("krea2-turbo-inpaint.json") is None      # the file stays in workflows/, but no tab uses it
 

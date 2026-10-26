@@ -70,6 +70,10 @@
    "images.image_2": [
     "90",
     0
+   ],
+   "images.image_3": [
+    "91",
+    0
    ]
   },
   "_meta": {
@@ -197,7 +201,18 @@
    "image": "example.png"
   },
   "_meta": {
-   "title": "pc:ref"
+   "title": "pc:ref",
+   "pc_slot": 1
+  }
+ },
+ "91": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 2",
+   "pc_slot": 2
   }
  }
 }
