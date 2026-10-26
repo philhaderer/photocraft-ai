@@ -258,7 +258,7 @@ class RefSlotsMixin:
     ComfyUI), Describe and (with a description) Copy text."""
 
     SLOT = 108         # px (before the display scaling): every slot is the same size, whatever the model
-    ICON_SCALE = 1.7   # the slot icons are the 16 px pixel art times this (the ONE place to make them bigger or smaller)
+    ICON_PX = 24       # size of the slot icons (vector line icons, icons.py) before the display scaling: the ONE place to change it
     PER_ROW = 3        # slots per row
     BAR_ICONS = 4      # the most icons one bar holds (the slot is as tall as that needs)
 
@@ -433,7 +433,7 @@ class RefSlotsMixin:
         return min(rs.max_refs, max(self.PER_ROW, len(rs.items) + 1))
 
     def _icon_px(self) -> int:
-        return int(16 * round(self.ICON_SCALE * 10) / 10)
+        return self.ICON_PX
 
     def _bar_px(self) -> int:
         """Width of the icon bar inside a slot (before the display scaling)."""
@@ -442,20 +442,16 @@ class RefSlotsMixin:
     def _refs_icon(self, kind: str, color: str):
         cache = self.__dict__.setdefault("_ref_icon_cache", {})
         if (kind, color) not in cache:
-            from .gui_common import icon_image
-            img = icon_image(self.root, kind, color)
-            try:
-                img = img.zoom(round(self.ICON_SCALE * 10)).subsample(10)     # 16 px -> 27 px at 1.7
-            except Exception:
-                pass
-            cache[(kind, color)] = img
+            from . import icons
+            cache[(kind, color)] = icons.photo(self.root, kind, color, self._px(self.ICON_PX))   # drawn at the real pixel size
         return cache[(kind, color)]
 
     def _refs_bar(self, box, buttons, busy: bool):
-        """The narrow icon bar at the right edge inside a slot: one 16 px icon per action, the old word as its tooltip.
-        `buttons`: (icon, word, explanation, command, waits) - an action that waits is greyed out while a job runs."""
+        """The narrow icon bar at the right edge inside a slot: one icon per action, the old word as its tooltip; under the
+        mouse an icon turns orange. `buttons`: (icon, word, explanation, command, waits) - an action that waits is greyed
+        out while a job runs."""
         import tkinter as tk
-        from .gui_common import DISABLED, FG, PANEL, Tooltip
+        from .gui_common import ACCENT, DISABLED, FG, PANEL, Tooltip
         bar = tk.Frame(box, width=self._px(self._bar_px()), bg=PANEL, bd=0)
         bar.pack(side="right", fill="y")
         for kind, word, tip, cmd, waits in buttons:
@@ -464,6 +460,8 @@ class RefSlotsMixin:
             lb.pack(pady=self._px(1))
             if not off:
                 lb.bind("<Button-1>", lambda e, c=cmd: c())
+                lb.bind("<Enter>", lambda e, l=lb, k=kind: l.configure(image=self._refs_icon(k, ACCENT)), add="+")
+                lb.bind("<Leave>", lambda e, l=lb, k=kind: l.configure(image=self._refs_icon(k, FG)), add="+")
             Tooltip(lb, f"{word}: {tip}")
 
     def _refs_copy_text(self, k: int):

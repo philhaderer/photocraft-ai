@@ -87,7 +87,12 @@ def main():
     app._refs_on_drop(type("E", (), {"data": "{%s} %s" % (tmp / "a b.png", tmp / "x.txt"), "action": "copy"})())
     assert [it.name for it in app.refslots.items] == ["a b.png"] and "not a picture" in app.lbl_refmsg["text"]
 
-    assert app.ICON_SCALE == 1.7 and app._icon_px() == 27 and app._bar_px() == 33      # icons 70 % bigger, one constant
+    assert app.ICON_PX == 24 and app._icon_px() == 24 and app._bar_px() == 30          # vector icons, one constant
+    from pccomfy import icons
+    for k in ("remove", "cut", "describe", "copy", "paste", "file"):                   # every slot icon draws, at any size
+        for px in (24, 36):
+            im = icons.render(k, "#eeeeee", px)
+            assert im.size == (px, px) and im.getbbox() is not None, (k, px)
     # the line "Max. images: x" is always there; the message line only takes room while it has text
     packs = []
     app.lbl_refmsg.pack = lambda *a, **k: packs.append("on")
