@@ -80,15 +80,15 @@ Berührungspunkte nur über feste Schnittstellen: `models.py` (nur L2, danach nu
 
 - `windows-fibo` bleibt der Stand, den du abgenommen hast. Neuer Branch `next` ist der Integrationsstand, **den du testest**.
 - Je Aufgabe ein Branch (`feat/...`, `fix/...`) aus `next`. Vor dem Zusammenführen laufen alle Tests (`python tests/run_all.py`). Danach Merge in `next`, nie zwei Merges gleichzeitig, nie Push.
-- Lane-Ordner: `lanes/L1`, `lanes/L2` im Repo-Ordner sind eigenständige Klone (eigenes `.git`, vom Haupt-Repo per `.git/info/exclude` ignoriert), damit ein Lane-Chat nur seinen Ordner braucht. Die Lane committet auf ihrem Branch; der Haupt-Chat holt ihn mit `git fetch lanes/L1 feat/l1-detection:refs/lanes/l1` und führt ihn nach Tests in `next` zusammen.
+- Arbeitsweise seit dem Umstieg auf Claude Code (Entscheidung 2026-10-26): eine Claude-Code-Sitzung arbeitet Branch für Branch direkt im Repo und mergt nach grünen Tests in `next`. Keine Lane-Chats und kein FRAGEN/ANTWORTEN-Ablauf mehr; Fragen stellt die Sitzung direkt im Chat. Sollen zwei Aufgaben wirklich parallel laufen, dann per `git worktree` statt eigener Klone.
+- Altlast: `lanes/L1`, `lanes/L2` sind eigenständige Klone (per `.git/info/exclude` ignoriert), vollständig in `next` gemergt und werden nicht mehr benutzt. Archiv der Fragen und Antworten: `docs/archiv-lanes/`.
 - Wenn du ein Ergebnis abgenommen hast, wird `windows-fibo` auf `next` vorgezogen. Das neue Repo entsteht erst vor dem Veröffentlichen.
-- Commits wie bisher: beschreibend, Trailer `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
+- Commits wie bisher: beschreibend, Trailer `Co-Authored-By: Claude <Modell der laufenden Sitzung> <noreply@anthropic.com>` (z. B. `Claude Opus 5.5`).
 
 ## 6. Wann ein neuer Chat sinnvoll ist
 
-- Jetzt, sobald `CLAUDE.md` und `PLAN.md` committet sind.
-- Danach je Lane ein eigener Chat (eigener Arbeitsordner pro Lane, dort nur die eigenen Dateien lesen).
-- Außerdem, wenn Regeln vergessen werden, Antworten sich wiederholen oder ein Chat sehr lang wird.
+- Wenn Regeln vergessen werden, Antworten sich wiederholen oder ein Chat sehr lang wird.
+- Bei einem größeren Themenwechsel (z. B. nach Abschluss von L3) kann eine frische Sitzung sinnvoll sein; sie liest `CLAUDE.md`, `PLAN.md` und `docs/HANDOFF-claude-code.md`.
 
 ## 7. Risiken und offene Punkte
 
