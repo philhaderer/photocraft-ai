@@ -225,7 +225,11 @@ class StateMixin:
         except (OSError, ValueError) as e:
             self._status(f"Could not load the preset: {e}", error=True)
             return
-        notes = self._apply_settings(data.get("settings", data) if isinstance(data, dict) else {})
+        settings = data.get("settings", data) if isinstance(data, dict) else {}
+        blocked = self.preset_blocked(settings)      # L1: a preset whose model has missing files keeps the current tab and says why
+        if blocked:
+            settings = {k: v for k, v in settings.items() if k not in ("mode", "workflow", "model")}
+        notes = ([blocked] if blocked else []) + self._apply_settings(settings)
         self._status(f"Loaded preset “{name}”." + (f" Not applied: {'; '.join(notes)}." if notes else ""))
 
     def delete_preset(self):
