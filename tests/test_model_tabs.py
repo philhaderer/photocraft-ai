@@ -183,7 +183,14 @@ def main():
     assert app._hint_text == models.EDIT_TIP            # Edit whole image: the tip under the prompt, also orange
     app.v_mode.set("txt2img")
     app._on_model()
-    assert app.t_prompt["highlightbackground"] != gui.ACCENT
+    assert app._hint_text == models.T2I_TIP             # Text to image: says that a new image is added, also orange
+    app.v_model.set("qwen")
+    app.v_mode.set("inpaint")
+    app._on_model()
+    assert app.t_prompt["highlightbackground"] != gui.ACCENT     # Fill has no tip: the plain frame
+    app.v_model.set("flux2")
+    app.v_mode.set("txt2img")
+    app._on_model()
     assert models.BY_KEY["moss"].modes["txt2img"].settings["enhance"] is False   # MOSS: the prompt enhancer starts off
     assert gui.PROMPT_LINES == 5
     mm = models.BY_KEY

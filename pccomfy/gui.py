@@ -254,6 +254,10 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.f_ptop = ttk.Frame(r)      # "Prompt" and, where a mode has ready-made prompts, radio buttons that fill the field
         self.f_ptop.pack(fill="x", padx=10)
         ttk.Label(self.f_ptop, text="Prompt").pack(side="left")
+        self._icons["clear"] = icon_image(self.root, "trash", FG)
+        self.b_clear = ttk.Button(self.f_ptop, image=self._icons["clear"], style="Icon.TButton", command=self._clear_prompt)
+        self.b_clear.pack(side="right")
+        Tooltip(self.b_clear, "Delete the prompt (Ctrl+Z in the field brings it back).")
         self.f_pchoice = ttk.Frame(self.f_ptop)
         self.f_pchoice.pack(side="left", padx=(10, 0))
         self.v_pchoice = tk.StringVar(value="")
