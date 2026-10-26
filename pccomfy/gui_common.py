@@ -340,6 +340,106 @@ class ThinScrollbar:
         self.canvas.yview_scroll(-1 if e.delta > 0 else 1, "units")
 
 
+class Slider(tk.Canvas):
+    """A slider in PhotoCraft's look: a thin track, light up to the value and dark after it, and a round white knob (drawn
+    smooth with Pillow; Tk's own ovals are jagged). It stands in for ttk.Scale: from_, to, variable, command, length and
+    configure(state=...). A click on the track jumps there, dragging follows the mouse; greyed out it is grey and ignores
+    the mouse."""
+
+    TRACK, KNOB = 4, 14                              # px before the display scaling
+    FILL, REST = "#e6e6e6", "#2a2a2a"                # the track up to the value / after it
+    FILL_OFF, KNOB_OFF = "#6a6a6a", "#9a9a9a"        # greyed out
+    _knobs: dict = {}                                # (colour, size) -> PhotoImage, shared by all sliders
+
+    def __init__(self, parent, from_=0.0, to=1.0, variable=None, command=None, length=None, scale: float = 1.0, **kw):
+        self._s = scale
+        self._lo, self._hi, self._var, self._cmd = float(from_), float(to), variable, command
+        try:
+            bg = ttk.Style().lookup("TFrame", "background") or BG
+        except Exception:
+            bg = BG
+        super().__init__(parent, height=round(self.KNOB * scale) + 2, width=length or round(120 * scale), bg=bg,
+                         highlightthickness=0, bd=0, cursor="hand2", **kw)
+        self.bind("<Configure>", lambda e: self._draw())
+        self.bind("<Button-1>", self._click)
+        self.bind("<B1-Motion>", self._click)
+        if variable is not None:
+            try:
+                variable.trace_add("write", lambda *a: self._draw())    # the knob follows presets, resets, loaded state
+            except Exception:
+                pass
+        self._draw()
+
+    def configure(self, cnf=None, **kw):
+        out = super().configure(cnf, **kw)
+        if cnf or kw:
+            self._draw()
+        return out
+
+    config = configure
+
+    def _on(self) -> bool:
+        return str(self.cget("state")) != "disabled"
+
+    def _value(self) -> float:
+        try:
+            return min(self._hi, max(self._lo, float(self._var.get())))
+        except (TypeError, ValueError, AttributeError, tk.TclError):
+            return self._lo
+
+    def _ends(self):
+        w = self.winfo_width()
+        if not isinstance(w, int) or w <= 1:
+            try:
+                w = int(self.cget("width"))
+            except (TypeError, ValueError):
+                w = 120
+        r = self.KNOB * self._s / 2
+        return r + 1, max(r + 2, w - r - 1)
+
+    def _knob(self, colour: str, d: int):
+        if (colour, d) not in self._knobs:
+            from PIL import Image, ImageDraw
+            n = d * 8
+            im = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+            ImageDraw.Draw(im).ellipse([4, 4, n - 5, n - 5], fill=colour, outline="#3a3a3a", width=6)
+            import base64
+            import io
+            buf = io.BytesIO()
+            im.resize((d, d), Image.LANCZOS).save(buf, "PNG")
+            self._knobs[(colour, d)] = tk.PhotoImage(master=self, data=base64.b64encode(buf.getvalue()).decode("ascii"))
+        return self._knobs[(colour, d)]
+
+    def _draw(self):
+        try:
+            self.delete("all")
+            x0, x1 = self._ends()
+            h = self.winfo_height()
+            cy = (h if isinstance(h, int) and h > 1 else round(self.KNOB * self._s) + 2) / 2
+            on, t = self._on(), max(2, round(self.TRACK * self._s))
+            xv = x0 + (self._value() - self._lo) / ((self._hi - self._lo) or 1) * (x1 - x0)
+            self.create_line(x0, cy, x1, cy, fill=self.REST, width=t, capstyle="round")
+            if xv > x0:
+                self.create_line(x0, cy, xv, cy, fill=self.FILL if on else self.FILL_OFF, width=t, capstyle="round")
+            self.create_image(xv, cy, image=self._knob("#ffffff" if on else self.KNOB_OFF, round(self.KNOB * self._s)))
+        except (tk.TclError, ImportError, OSError):
+            pass
+
+    def _click(self, e):
+        if not self._on():
+            return "break"
+        x0, x1 = self._ends()
+        v = self._lo + min(1.0, max(0.0, (e.x - x0) / ((x1 - x0) or 1))) * (self._hi - self._lo)
+        if self._var is not None:
+            self._var.set(v)
+        self._draw()
+        if self._cmd:
+            self._cmd(str(v))        # as ttk.Scale does: the new value as text
+        return "break"
+
+
+VALUE_W = 9        # characters of a slider's value box: "hard edge" fits, so every slider row has the same length
+
 ENHANCE_TIP = "On: a text model writes the detailed prompt from your short text. Off: your text is sent as typed."
 LORA_TIP = "The workflow's own LoRA: on/off, and its strength."
 STAGE_TIP = "A stage of the workflow you can switch off."
@@ -437,6 +537,8 @@ __all__ = [
     "PhotoCraft",
     "PhotoCraftError",
     "ThinScrollbar",
+    "Slider",
+    "VALUE_W",
     "workflows_tags",
     "FLUX2_SCHEDULER",
     "GenParams",

@@ -38,7 +38,6 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.root.resizable(False, False)       # a fixed width; the height is set from the content (_fit_height)
         self._sized = False
         self._style()
-        self._scale_clicks()
         self.root.after(200, lambda: winlink.caption(self.root, (0x40, 0x40, 0x40), (0xee, 0xee, 0xee)))
 
         g = lambda k, default: self.state.get(k, default)  # noqa: E731
@@ -194,9 +193,9 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.f_lora = ttk.Frame(mf)    # strength of that LoRA
         self.f_lora.grid(row=2, column=1, sticky="ew", padx=6, pady=(2, 0))
         self.f_lora.columnconfigure(0, weight=1)
-        self.w_lora_str = ttk.Scale(self.f_lora, from_=0.0, to=1.0, variable=self.v_lora_str, command=self._on_lora_str)
+        self.w_lora_str = Slider(self.f_lora, scale=self.ui, from_=0.0, to=1.0, variable=self.v_lora_str, command=self._on_lora_str)
         self.w_lora_str.grid(row=0, column=0, sticky="ew")
-        self.lbl_lora_str = ttk.Label(self.f_lora, width=5, style="Muted.TLabel")
+        self.lbl_lora_str = ttk.Label(self.f_lora, width=5, style="Value.TLabel", anchor="center")
         self.lbl_lora_str.grid(row=0, column=1, sticky="e", padx=(6, 0))
         Tooltip(self.w_lora_str, "LoRA strength (0 = off, 1 = full).")
         # up to three switchable stages of a workflow (SeedVR2, an optional LoRA, skip-layer guidance ...), each its own checkbox
@@ -210,10 +209,10 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
             self.stage_cbs.append(cb)
             sf = ttk.Frame(mf)
             sf.grid(row=3 + i, column=2, sticky="e", padx=(0, 6), pady=(2, 0))
-            sc = ttk.Scale(sf, from_=0.0, to=1.0, variable=self.v_sstr[i], length=self._px(110),
+            sc = Slider(sf, scale=self.ui, from_=0.0, to=1.0, variable=self.v_sstr[i], length=self._px(110),
                            command=lambda _v=None: self._update_stage_scales())
             sc.pack(side="left")
-            lb = ttk.Label(sf, width=5, style="Muted.TLabel")
+            lb = ttk.Label(sf, width=5, style="Value.TLabel", anchor="center")
             lb.pack(side="left", padx=(4, 0))
             Tooltip(sc, "LoRA strength (0 = off, 1 = full).")
             sf.grid_remove()
@@ -240,9 +239,9 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._slider_row(ff)
         lbl_f = ttk.Label(ff, text="Edge feather", style="Muted.TLabel")
         lbl_f.grid(row=0, column=0, sticky="w")
-        self.w_feather = sc = ttk.Scale(ff, from_=0, to=10, variable=self.v_feather, command=self._on_feather)
+        self.w_feather = sc = Slider(ff, scale=self.ui, from_=0, to=10, variable=self.v_feather, command=self._on_feather)
         sc.grid(row=0, column=1, sticky="ew", padx=8)
-        self.lbl_feather = ttk.Label(ff, style="Muted.TLabel", anchor="e")
+        self.lbl_feather = ttk.Label(ff, width=VALUE_W, style="Value.TLabel", anchor="center")
         self.lbl_feather.grid(row=0, column=2, sticky="e")
         self._on_feather()
         for w in (lbl_f, sc):
@@ -283,18 +282,18 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._slider_row(self.f_sharp)
         lb_sharp = ttk.Label(self.f_sharp, text="Sharpen result", style="Muted.TLabel")
         lb_sharp.grid(row=0, column=0, sticky="w")
-        self.w_sharpen = ttk.Scale(self.f_sharp, from_=0.0, to=1.0, variable=self.v_sharpen, command=self._on_sharpen)
+        self.w_sharpen = Slider(self.f_sharp, scale=self.ui, from_=0.0, to=1.0, variable=self.v_sharpen, command=self._on_sharpen)
         self.w_sharpen.grid(row=0, column=1, sticky="ew", padx=8)
-        self.lbl_sharpen = ttk.Label(self.f_sharp, style="Muted.TLabel", anchor="e")
+        self.lbl_sharpen = ttk.Label(self.f_sharp, width=VALUE_W, style="Value.TLabel", anchor="center")
         self.lbl_sharpen.grid(row=0, column=2, sticky="e")
         Tooltip(self.w_sharpen, "Sharpens the finished result a little. 0 = off.")
         self._on_sharpen()
         self._sharp_widgets = (lb_sharp, self.w_sharpen, self.lbl_sharpen)   # hidden in Expand image
         lb_match = ttk.Label(self.f_sharp, text="Match colours", style="Muted.TLabel")
         lb_match.grid(row=1, column=0, sticky="w", pady=(2, 0))
-        self.w_match = ttk.Scale(self.f_sharp, from_=0.0, to=1.0, variable=self.v_match, command=self._on_match)
+        self.w_match = Slider(self.f_sharp, scale=self.ui, from_=0.0, to=1.0, variable=self.v_match, command=self._on_match)
         self.w_match.grid(row=1, column=1, sticky="ew", padx=8, pady=(2, 0))
-        self.lbl_match = ttk.Label(self.f_sharp, style="Muted.TLabel", anchor="e")
+        self.lbl_match = ttk.Label(self.f_sharp, width=VALUE_W, style="Value.TLabel", anchor="center")
         self.lbl_match.grid(row=1, column=2, sticky="e", pady=(2, 0))
         self._match_widgets = (lb_match, self.w_match, self.lbl_match)   # shown only where the function can use them
         Tooltip(self.w_match, "Pulls the new area's saturation back towards its surroundings. 0 = off.")
@@ -372,9 +371,9 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.f_detail = ttk.Frame(r)      # Upscale and Refine
         self._slider_row(self.f_detail)
         ttk.Label(self.f_detail, text="Mix source image/new image", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
-        self.w_detail = ttk.Scale(self.f_detail, from_=0.0, to=1.0, variable=self.v_detail, command=self._on_detail)
+        self.w_detail = Slider(self.f_detail, scale=self.ui, from_=0.0, to=1.0, variable=self.v_detail, command=self._on_detail)
         self.w_detail.grid(row=0, column=1, sticky="ew", padx=8)
-        self.lbl_detail = ttk.Label(self.f_detail, style="Muted.TLabel", anchor="e")
+        self.lbl_detail = ttk.Label(self.f_detail, width=VALUE_W, style="Value.TLabel", anchor="center")
         self.lbl_detail.grid(row=0, column=2, sticky="e")
         Tooltip(self.w_detail, "100 % = only the new image; less mixes in the plain scaled original (tames over-sharp results).")
         self._on_detail()
