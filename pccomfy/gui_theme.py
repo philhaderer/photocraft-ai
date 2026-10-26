@@ -45,7 +45,8 @@ class ThemeMixin:
         s.configure("Grip.TFrame", background="#454545")
         s.configure("Hint.TLabel", foreground=ACCENT)
         s.configure("Sep.TFrame", background="#9a9a9a")
-        s.configure("Done.TLabel", foreground=DONE_GREEN, font=(FONT, 10, "bold"))
+        s.configure("Done.TLabel", foreground=DONE_GREEN, font=(FONT, 10, "bold"))      # the word "Done"
+        s.configure("DoneRest.TLabel", foreground=FG, font=(FONT, 10, "bold"))        # what follows it (seed, layers, time)
         # greyed out must be visible on the dark theme (clam keeps nearly the normal text colour)
         for w in ("TCheckbutton", "TRadiobutton", "TLabel"):
             s.map(w, foreground=[("disabled", DISABLED)])

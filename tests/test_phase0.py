@@ -14,7 +14,7 @@ assert gui.App.__mro__[1:7] == mixins, gui.App.__mro__
 names = [n for m in mixins + (gui.App,) for n in vars(m) if callable(vars(m)[n]) and not n.startswith("__")]
 dup = sorted({n for n in names if names.count(n) > 1})
 assert not dup, f"defined twice: {dup}"
-assert len(names) == 106, len(names)      # 107 methods of the old App, without __init__
+assert len(names) == 107, len(names)      # 107 methods of the old App, without __init__
 
 # 2. what the other tests and callers read from gui.py is still there
 for name in ("BUILTIN", "MODE_LABELS", "SHORT_MODES", "LAYER_MASKS", "REF_STYLES", "CLIP_DEFAULT", "ACCENT", "PROMPT_LINES", "FILL_CONTEXT",

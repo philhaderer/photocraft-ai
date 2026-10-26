@@ -431,8 +431,13 @@ class App(ThemeMixin, PromptMixin, LoraMixin, ModeMixin, StateMixin, RunMixin):
         self.v_pl = tk.StringVar(value="")
         row = ttk.Frame(r)
         row.pack(fill="x", padx=10, pady=(6, 0))
-        self.lbl_pl = ttk.Label(row, textvariable=self.v_pl, style="Muted.TLabel", anchor="w", justify="left")    # above the bar, the full width, text on the left: never covered by it
-        self.lbl_pl.pack(anchor="w", fill="x")
+        top = ttk.Frame(row)                                  # above the bar, text on the left: never covered by it
+        top.pack(fill="x")
+        self.lbl_pl = ttk.Label(top, textvariable=self.v_pl, style="Muted.TLabel", anchor="w", justify="left")    # the step, or the green word "Done"
+        self.lbl_pl.pack(side="left")
+        self.v_pl_rest = tk.StringVar(value="")
+        self.lbl_pl_rest = ttk.Label(top, textvariable=self.v_pl_rest, style="DoneRest.TLabel", anchor="w")      # after "Done": seed, layers, time
+        self.lbl_pl_rest.pack(side="left")
         self.pb = ttk.Progressbar(row, mode="determinate", maximum=1.0)
         self.pb.pack(fill="x", pady=(2, 0))
         self._bar_value = 0.0

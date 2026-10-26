@@ -183,8 +183,16 @@ class RunMixin:
     def _reset_progress(self, done: bool = False, text: str = ""):
         self._bar_value = 1.0 if done else 0.0
         self.pb.configure(value=self._bar_value)
-        self.v_pl.set((text or "Done") if done else "")      # clearly readable above the full bar; the line below adds the seed
+        full = (text or "Done") if done else ""
+        word, rest = (full[:4], full[4:]) if full.startswith("Done") else (full, "")      # only the word "Done" is green
+        self.v_pl.set(word)
+        self._set_rest(rest)
         self._pl_style("Done.TLabel" if done else "Muted.TLabel")
+
+    def _set_rest(self, text: str):
+        v = getattr(self, "v_pl_rest", None)
+        if v is not None and v.get() != text:
+            v.set(text)
 
     def _set_progress(self, fraction: float, msg: str | None, phase: str, phase_fraction: float, elapsed: float | None):
         """Move the single bar and name the step. Idempotent and only forward: Tk is touched only when the value or the
@@ -202,6 +210,7 @@ class RunMixin:
             text = "Preparing"
         if self.v_pl.get() != text:
             self.v_pl.set(text)
+        self._set_rest("")
         self._pl_style("Muted.TLabel")
         if fraction is not None and fraction > self._bar_value:
             self._bar_value = round(fraction, 3)

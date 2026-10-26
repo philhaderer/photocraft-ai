@@ -204,9 +204,9 @@ def main():
         assert lm2, (key, mode, "no layer mask in Upscale / Refine")
     # one progress line: the success text sits above the bar, nothing is set below it
     app._reset_progress(done=True, text="Done · seed 5 · 1 layer")
-    assert app.v_pl.get() == "Done · seed 5 · 1 layer" and app._bar_value == 1.0
+    assert app.v_pl.get() == "Done" and app.v_pl_rest.get() == " · seed 5 · 1 layer" and app._bar_value == 1.0      # only "Done" is green
     app._reset_progress()
-    assert app.v_pl.get() == ""
+    assert app.v_pl.get() == "" and app.v_pl_rest.get() == ""
     # Reset: back to the startup settings of this tab and function
     pick("qwen", "edit")
     app.v_seed.set(99); app.v_sharpen.set(0.5); app.v_detail.set(0.3)
