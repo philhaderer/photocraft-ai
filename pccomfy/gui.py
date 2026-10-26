@@ -514,6 +514,20 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
                 self.v_status.set("PhotoCraft window not found - this window stays free until it appears")
         self._link_job = self.root.after(1500, self._try_link)
 
+    def _dialog(self, fn, **kw):
+        """A Windows dialog (file picker ...) owned by this window. The link watchdog and the menu guard pause while it is
+        open: re-linking this owned window under the dialog made Tk redraw it (the window showed twice, garbled)."""
+        for name in ("_link_job", "_popup_job"):
+            job = getattr(self, name, None)
+            if job:
+                self.root.after_cancel(job)
+                setattr(self, name, None)
+        try:
+            return fn(parent=self.root, **kw)
+        finally:
+            if self.v_top.get() and winlink.available() and not getattr(self, "_closing", False):
+                self._link_job = self.root.after(300, self._try_link)    # links again and restarts the menu guard
+
     def _on_destroy(self, e):
         if e.widget is not self.root or getattr(self, "_closing", False):
             return

@@ -87,6 +87,20 @@ def main():
     app._refs_on_drop(type("E", (), {"data": "{%s} %s" % (tmp / "a b.png", tmp / "x.txt"), "action": "copy"})())
     assert [it.name for it in app.refslots.items] == ["a b.png"] and "not a picture" in app.lbl_refmsg["text"]
 
+    # Add file: the picker belongs to this window, and the link watchdog / menu guard pause while it is open
+    import tkinter
+    seen = {}
+    def picker(**kw):
+        seen.update(kw, link=app._link_job, popup=app._popup_job)
+        return (str(tmp / "a b.png"),)
+    tkinter.filedialog = type("FD", (), {"askopenfilenames": staticmethod(picker)})
+    sys.modules["tkinter.filedialog"] = tkinter.filedialog
+    app._link_job, app._popup_job = "after#1", "after#2"
+    app.refslots.clear()
+    app._refs_add_file()
+    assert seen["parent"] is app.root and seen["link"] is None and seen["popup"] is None
+    assert [it.name for it in app.refslots.items] == ["a b.png"]
+
     assert app.ICON_PX == 24 and app._icon_px() == 24 and app._bar_px() == 30          # vector icons, one constant
     from pccomfy import icons
     for k in ("remove", "cut", "describe", "copy", "paste", "file"):                   # every slot icon draws, at any size
