@@ -10,6 +10,7 @@ Das Bild im PhotoCraft-Dokument ist Bild 1, Slot 1 ist Bild 2, Slot 2 Bild 3 usw
 - **FLUX.2 klein (fal.ai-Leitfaden, Drittanbieter):** Bilder über ihre Reihenfolge ansprechen; Beispiel: „The subject from the first image wearing the jacket from the second image, photographed in the environment from the third image.“ Eine Höchstzahl nennt der Leitfaden nicht. Quelle: https://fal.ai/learn/devs/flux-2-klein-prompt-guide
 - **ComfyUI-Knoten „FLUX 3 Image“ (Cloud-Knoten):** bis zu 10 Referenzbilder; im Prompt „image 1, image 2, and so on“. Quelle: https://docs.comfy.org/built-in-nodes/Flux3ImageNode.md
 - **Qwen Image 2.1 (ComfyUI-Knoten `TextEncodeQwenImage21`, per Abfrage deines ComfyUI):** bis zu 16 Bild-Eingänge; mit `resolution` 0 behält jedes Referenzbild seine Größe (Vielfache von 32). Das Tag-Muster `<imageN>` steht nicht in dieser Abfrage.
+- **Knotenbeschreibung in deinem ComfyUI (`Flux3PromptBuilderKJ`, KJNodes):** Boxen werden als JSON-Tabelle (Raster 0 bis 1000) an den Prompt gehängt, mit `<id>` im Prompt bindet man Wörter an eine Box; bei Referenzbildern „a box drawn on a reference marks where an object is in it; … draw again [on the output] to place that object there“. Das ist die Beschreibung des Knotens, kein Test mit Flux 3 Klein.
 - **Flux 3 Layout-Prompt (ComfyUI-Doku):** Layout-Tabelle über Boxen (`<obj_N>`), gehört zum Cloud-Knoten. Referenzbilder werden dort nicht per Box platziert (nicht beschrieben). Siehe `docs/flux3-bbox-workflow-notes.md` (Haupt-Chat).
 
 ## B. Handtests (von dir)
