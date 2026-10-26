@@ -305,14 +305,12 @@ class RefSlotsMixin:
         head.pack(fill="x")
         self.lbl_refs = ttk.Label(head, text="Reference images", style="Muted.TLabel")
         self.lbl_refs.pack(side="left")
+        self.lbl_refmax = ttk.Label(head, text="", style="Muted.TLabel")      # always shown, on the line above the slots:
+        self.lbl_refmax.pack(side="left", padx=(self._px(12), 0))           # "Reference images (1/3)   Max. images: 3"
         self.f_refgrid = ttk.Frame(self.f_refs)
         self.f_refgrid.pack(fill="x", pady=(4, 0))
-        names_row = ttk.Frame(self.f_refs)      # one line: the names hint on the left, "Max. images: x" on the right (same look)
-        names_row.pack(fill="x", pady=(4, 0))
-        self.lbl_refmax = ttk.Label(names_row, text="", style="Muted.TLabel")
-        self.lbl_refmax.pack(side="right", anchor="n", padx=(self._px(8), 0))     # always shown
-        self.lbl_refnames = ttk.Label(names_row, text="", style="Muted.TLabel", wraplength=self._px(380 - 24 - 100), justify="left")
-        self.lbl_refnames.pack(side="left", fill="x", expand=True)
+        self.lbl_refnames = ttk.Label(self.f_refs, text="", style="Muted.TLabel", wraplength=self._px(380 - 24), justify="left")
+        self.lbl_refnames.pack(fill="x", pady=(4, 0))
         self.lbl_refmsg = ttk.Label(self.f_refs, text="", style="Hint.TLabel", wraplength=self._px(380 - 24), justify="left")   # only packed while it has text
         self._refs_dnd = self._refs_setup_dnd()
         try:
