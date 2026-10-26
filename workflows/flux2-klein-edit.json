@@ -150,11 +150,11 @@
     0
    ],
    "positive": [
-    "212",
+    "333",
     0
    ],
    "negative": [
-    "210",
+    "323",
     0
    ]
   },
@@ -251,6 +251,195 @@
   },
   "_meta": {
    "title": "pc:output Result"
+  }
+ },
+ "301": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 1",
+   "pc_slot": 1
+  }
+ },
+ "311": {
+  "class_type": "VAEEncode",
+  "inputs": {
+   "pixels": [
+    "301",
+    0
+   ],
+   "vae": [
+    "203",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Reference 1 VAE Encode",
+   "pc_slot": 1
+  }
+ },
+ "321": {
+  "class_type": "ReferenceLatent",
+  "inputs": {
+   "conditioning": [
+    "210",
+    0
+   ],
+   "latent": [
+    "311",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Reference 1 (negative)",
+   "pc_slot": 1,
+   "pc_pass": "conditioning"
+  }
+ },
+ "331": {
+  "class_type": "ReferenceLatent",
+  "inputs": {
+   "conditioning": [
+    "212",
+    0
+   ],
+   "latent": [
+    "311",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Reference 1 (positive)",
+   "pc_slot": 1,
+   "pc_pass": "conditioning"
+  }
+ },
+ "302": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 2",
+   "pc_slot": 2
+  }
+ },
+ "312": {
+  "class_type": "VAEEncode",
+  "inputs": {
+   "pixels": [
+    "302",
+    0
+   ],
+   "vae": [
+    "203",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Reference 2 VAE Encode",
+   "pc_slot": 2
+  }
+ },
+ "322": {
+  "class_type": "ReferenceLatent",
+  "inputs": {
+   "conditioning": [
+    "321",
+    0
+   ],
+   "latent": [
+    "312",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Reference 2 (negative)",
+   "pc_slot": 2,
+   "pc_pass": "conditioning"
+  }
+ },
+ "332": {
+  "class_type": "ReferenceLatent",
+  "inputs": {
+   "conditioning": [
+    "331",
+    0
+   ],
+   "latent": [
+    "312",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Reference 2 (positive)",
+   "pc_slot": 2,
+   "pc_pass": "conditioning"
+  }
+ },
+ "303": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 3",
+   "pc_slot": 3
+  }
+ },
+ "313": {
+  "class_type": "VAEEncode",
+  "inputs": {
+   "pixels": [
+    "303",
+    0
+   ],
+   "vae": [
+    "203",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Reference 3 VAE Encode",
+   "pc_slot": 3
+  }
+ },
+ "323": {
+  "class_type": "ReferenceLatent",
+  "inputs": {
+   "conditioning": [
+    "322",
+    0
+   ],
+   "latent": [
+    "313",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Reference 3 (negative)",
+   "pc_slot": 3,
+   "pc_pass": "conditioning"
+  }
+ },
+ "333": {
+  "class_type": "ReferenceLatent",
+  "inputs": {
+   "conditioning": [
+    "332",
+    0
+   ],
+   "latent": [
+    "313",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Reference 3 (positive)",
+   "pc_slot": 3,
+   "pc_pass": "conditioning"
   }
  }
 }

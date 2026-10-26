@@ -95,6 +95,10 @@
    "images.image_2": [
     "13",
     0
+   ],
+   "images.image_3": [
+    "14",
+    0
    ]
   },
   "_meta": {
@@ -167,7 +171,8 @@
    "image": "example.png"
   },
   "_meta": {
-   "title": "pc:ref"
+   "title": "pc:ref",
+   "pc_slot": 1
   }
  },
  "9": {
@@ -181,6 +186,16 @@
   },
   "_meta": {
    "title": "pc:latent"
+  }
+ },
+ "14": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 2",
+   "pc_slot": 2
   }
  }
 }

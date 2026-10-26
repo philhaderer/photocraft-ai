@@ -72,8 +72,8 @@ def main():
     app._on_mode()
     assert app.v_workflow.get() == "fibo2-edit.json" and app._request().enhance is False
     app.v_enhance.set(False)
-    # Match colours only in Fill and Reference
-    for mode, shown in (("inpaint", True), ("reference", True), ("outpaint", False), ("edit", False)):
+    # Match colours only in Fill (the Reference mode is gone: reference slots replace it)
+    for mode, shown in (("inpaint", True), ("outpaint", False), ("edit", False)):
         grid = [rec(w, "grid") for w in app._match_widgets]
         gone = [rec(w, "grid_remove") for w in app._match_widgets]
         pick("fibo", mode)

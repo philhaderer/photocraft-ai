@@ -150,6 +150,10 @@ def inpaint_fooocus(p: GenParams, image_name: str, mask_name: str, head: str, pa
 
 # ---------- custom (templates) ----------
 
+DESCRIBE_WORKFLOW = Path(__file__).resolve().parent.parent / "workflows" / "describe-image.json"   # reference slots: Qwen 3.5 9B describes the picture
+BIREFNET_WORKFLOW = Path(__file__).resolve().parent.parent / "workflows" / "birefnet-remove-bg.json"   # reference slots: cut out the background
+
+
 def load_template(path: str | Path) -> dict:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if "nodes" in data and "links" in data:
@@ -172,7 +176,7 @@ def resolve(path: str | Path) -> list[str]:
 
 
 def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name: str | None,
-                   ref_name: str | None = None, ref_first: bool = True) -> tuple[dict, str | None]:
+                   ref_name: "str | list[str] | None" = None, ref_first: bool = True) -> tuple[dict, str | None]:
     """Fill parameters into `pc:*` nodes. Returns (graph, output node id or None).
 
     A title may carry several tags (e.g. "pc:prompt pc:size" for one node that takes the prompt and the size).
@@ -181,8 +185,14 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
     `pc:ref` is the slot for a reference image (a LoadImage feeding TextEncodeFibo2's `images.image_2`). The slot is
     always in the workflow; with no reference (`ref_name` None) the node and the links to it are dropped, so the run
     is exactly the one-image run. With a reference it becomes `image_1` and the picture `image_2` (reference_first).
+    Several references (Multi Image Edit): `ref_name` is a list; slot n (`pc_slot` in the _meta of the nodes of one slot,
+    1 when missing) gets the n-th name, the slots that stay empty are dropped (drop_ref_slot). The picture stays first.
     """
     g = json.loads(json.dumps(graph))  # deep copy
+    refs = [ref_name] if isinstance(ref_name, str) else [r for r in (ref_name or []) if r]
+    if len(refs) > ref_slot_count(g) and refs:
+        raise ValueError(f"The workflow has room for {ref_slot_count(g)} reference image(s), {len(refs)} were given."
+                         if ref_slot_count(g) else "The workflow has no reference slot (a LoadImage node titled pc:ref).")
     out_node = None
     seen = set()
     for nid, node in g.items():
@@ -221,21 +231,21 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
                     inp["megapixels"] = round(float(p.extra["megapixels"]), 4)
             elif tag == "output":
                 out_node = nid
-            elif tag == "ref" and ref_name is not None:
-                inp["image"] = ref_name
+            elif tag == "ref" and node.get("class_type") == "LoadImage":
+                if 1 <= slot_of(node) <= len(refs):
+                    inp["image"] = refs[slot_of(node) - 1]
     if image_name is not None and "image" not in seen:
         raise ValueError("The workflow has no LoadImage node titled pc:image.")
     if mask_name is not None and "mask" not in seen:
         raise ValueError("The workflow has no mask node titled pc:mask.")
-    if ref_name is not None and "ref" not in seen:
+    if refs and "ref" not in seen:
         raise ValueError("The workflow has no reference slot (a LoadImage node titled pc:ref).")
     if image_name is None and "image" in seen and not drop_empty_slot(g, "image", only_keys="images."):
         raise ValueError("The workflow has a pc:image node, but this mode sends no image.")
     if mask_name is None and "mask" in seen and not drop_empty_slot(g, "mask"):
         raise ValueError("The workflow has a pc:mask node, but this mode has no mask (selection).")
-    if ref_name is None:
-        drop_ref_slot(g)
-    elif ref_first:
+    drop_ref_slot(g, len(refs) + 1)     # the slots without a picture (all of them when there is no reference)
+    if refs and ref_first and len(refs) == 1:
         reference_first(g)
     return g, out_node
 
@@ -308,15 +318,44 @@ def drop_empty_slot(graph: dict, tag: str, only_keys: str = "") -> bool:
     return True
 
 
-def drop_ref_slot(graph: dict) -> None:
-    """No reference image: remove the pc:ref nodes and every input that was linked to them (in place)."""
-    ids = {nid for nid, n in graph.items() if "ref" in _tags(n)}
+def slot_of(node: dict) -> int:
+    """The reference slot a node belongs to: `pc_slot` in its _meta (every node of one slot carries it, e.g. the
+    LoadImage and the ReferenceLatent nodes behind it), else 1 for a node titled pc:ref, else 0 (no slot)."""
+    meta = node.get("_meta", {}) if isinstance(node, dict) else {}
+    if "pc_slot" in meta:
+        return int(meta["pc_slot"])
+    return 1 if "ref" in _tags(node) else 0
+
+
+def ref_slot_count(graph: dict) -> int:
+    """How many reference images the workflow takes (the number of different slots)."""
+    return len({slot_of(n) for n in graph.values() if isinstance(n, dict) and slot_of(n) > 0})
+
+
+def drop_ref_slot(graph: dict, from_slot: int = 1) -> None:
+    """Remove the nodes of the reference slots `from_slot` and up, and every input that was linked to them (in place).
+    A removed node with `pc_pass` in its _meta (the name of one of its inputs, e.g. a ReferenceLatent's "conditioning")
+    is passed through: whatever linked to it links to that input's source instead, so a chain stays closed."""
+    ids = {nid for nid, n in graph.items() if isinstance(n, dict) and slot_of(n) >= from_slot > 0}
+    gone = {nid: graph[nid] for nid in ids}
+
+    def resolve(v):
+        while isinstance(v, list) and v and str(v[0]) in gone:
+            node = gone[str(v[0])]
+            key = node.get("_meta", {}).get("pc_pass")
+            v = node.get("inputs", {}).get(key) if key else None
+        return v
+
     for nid in ids:
         del graph[nid]
     for n in graph.values():
         inp = n.get("inputs", {})
-        for k in [k for k, v in inp.items() if isinstance(v, list) and v and str(v[0]) in ids]:
-            del inp[k]
+        for k in [k for k, v in inp.items() if isinstance(v, list) and v and str(v[0]) in gone]:
+            v = resolve(inp[k])
+            if v is None:
+                del inp[k]
+            else:
+                inp[k] = v
 
 
 TEXT_ENCODERS = ("TextEncode", "CLIPTextEncode", "AUSBOSS_NODES_Text")   # plain text holders: not a text model

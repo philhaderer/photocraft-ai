@@ -121,7 +121,6 @@ TABS: dict[str, TabSpec] = {
             "edit": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),
             "inpaint": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),
             "outpaint": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),
-            "reference": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),
             "remove": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),
         },
         optional=("qwen\\qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors",)),

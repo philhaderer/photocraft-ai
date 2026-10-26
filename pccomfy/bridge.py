@@ -32,11 +32,12 @@ from typing import Callable
 import numpy as np
 from PIL import Image
 
-from . import imaging, workflows
+from . import imaging, refslots, workflows
 from .comfy import ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 
 MODES = ("inpaint", "remove", "reference", "outpaint", "img2img", "edit", "txt2img", "upscale", "refine")
+REF_MODES = ("edit", "inpaint", "outpaint")      # the modes that take reference images (Multi Image Edit)
 SCALE_MODES = ("upscale", "refine")   # the picture goes to the workflow at its own size; the workflow sets the result's size
 MAX_RESULT_MP = 24.0                  # Upscale: refuse results above this many megapixels
 LAYER_MASKS = ("auto", "soft", "selection", "none")
@@ -77,6 +78,7 @@ class Request:
     stages_off: list = field(default_factory=list)   # node ids of more stages (pc_stage_off) to skip: an optional LoRA, SLG ...
     detail: float = 1.0                  # Upscale/Refine: share of the new result mixed with the plainly scaled original (1 = all new)
     ref_cutout: bool = True              # reference mode, simple style: the sentence also asks to remove the reference's background
+    refs: list = field(default_factory=list)     # Multi Image Edit: the reference images (PIL, RGB or RGBA); image 1 is the picture, these are 2, 3 ...
     loras: list = field(default_factory=list)   # extra LoRAs [(file name, strength), ...] chained in front of the samplers
     match: float = 0.0                   # 0..1: pull colours that are louder than the surroundings back towards them (Fill / Expand / Reference)
     sharpen: float = 0.0                 # 0..1: a light sharpening of the result (high-pass style, like KJNodes' Image Sharpen)
@@ -355,6 +357,13 @@ class Bridge:
         if req.mode == "reference" and not (req.workflow and all(
                 workflows.has_ref_slot(workflows.load_template(w)) for w in _wfs)):
             raise BridgeError("Insert reference image needs a workflow with a reference slot (the Fibo workflows have one).")
+        if req.refs:
+            if req.mode not in REF_MODES:
+                raise BridgeError("Reference images work with Edit, Fill Selection and Expand image.")
+            slots = [workflows.ref_slot_count(workflows.load_template(w)) for w in _wfs if w]
+            if not req.workflow or not slots or min(slots) < len(req.refs):
+                raise BridgeError(f"This model's workflow has room for {min(slots) if slots else 0} reference image(s), "
+                                  f"{len(req.refs)} are in the slots.")
         if req.mode in SCALE_MODES:
             if not (req.workflow and all(workflows.has_upscale_slot(workflows.load_template(w)) for w in _wfs)):
                 raise BridgeError("Upscale and Refine need a workflow that sets the result's size (a node titled "
@@ -564,6 +573,10 @@ class Bridge:
         ref_name = None
         if req.mode == "reference":
             ref_name = self.comfy.upload_image(ref_rgb, f"pcc-{tag}-ref.png")
+        elif req.refs:
+            mult = max(workflows.size_multiple(workflows.load_template(w)) for w in wf_paths if w)
+            ref_name = [self.comfy.upload_image(refslots.prepare_image(im, mult), f"pcc-{tag}-ref{n + 1}.png")
+                        for n, im in enumerate(req.refs)]
         # a workflow without a pc:mask node (the Flux 2/3 Klein edit ones) gets the instruction only, no mask
         wf_mask_node = (not wf_paths[0]) or any(has_tag(json.loads(Path(w).read_text(encoding="utf-8")), "mask") for w in wf_paths if w)
         if req.mode in ("inpaint", "reference", "outpaint") and wf_mask_node:
@@ -686,6 +699,42 @@ class Bridge:
         progress(1.0, f"Done (seed {p.seed})", phase="place")
         return {"seed": p.seed, "vgl": self.last_vgl, "layers": layers, "region": region.__dict__, "size": [gw, gh], "pipeline": self.pipeline}
 
+    # ---------- cut-out (reference slots) ----------
+
+    def remove_background(self, im: Image.Image, progress: Progress | None = None, workflow: str | Path | None = None) -> Image.Image:
+        """The picture with its background cut away (RGBA), made by ComfyUI's own BiRefNet nodes (birefnet-remove-bg.json,
+        model `birefnet.safetensors` in models/background_removal). Used by the reference slots: it needs no PhotoCraft."""
+        progress = progress or (lambda f, m, **kw: None)
+        self._cancel.clear()
+        wf = Path(workflow) if workflow else workflows.BIREFNET_WORKFLOW
+        tpl = workflows.load_template(wf)
+        name = self.comfy.upload_image(im.convert("RGB") if im.mode not in ("RGB", "RGBA") else im, f"pcc-{uuid.uuid4().hex[:8]}-cut.png")
+        graph, out_node = workflows.apply_template(tpl, workflows.GenParams(), name, None)
+        progress(0.1, "Cutting out the background")
+        hist = self._wait(self.comfy.queue(graph), graph, str(wf), 0.1, 0.85, "", progress)
+        out = self.comfy.output_images(hist, out_node)[0]
+        progress(1.0, "Background removed")
+        return out.convert("RGBA")
+
+    def describe_image(self, im: Image.Image, progress: Progress | None = None, question: str = "",
+                       workflow: str | Path | None = None, clip: str = "") -> str:
+        """What the picture shows, in a sentence or two, written by the text model of describe-image.json (Qwen 3.5 9B reads
+        the picture itself; checked live). `question` replaces the workflow's own request. Used by the reference slots."""
+        progress = progress or (lambda f, m, **kw: None)
+        self._cancel.clear()
+        wf = Path(workflow) if workflow else workflows.DESCRIBE_WORKFLOW
+        tpl = workflows.load_template(wf)
+        small = refslots.prepare_image(im, 32, 768)   # a description needs no more pixels (and ~1 s less)
+        name = self.comfy.upload_image(small, f"pcc-{uuid.uuid4().hex[:8]}-describe.png")
+        graph, _ = workflows.apply_template(tpl, workflows.GenParams(prompt=question.strip(), clip=clip), name, None)
+        progress(0.1, "Describing the picture")
+        hist = self._wait(self.comfy.queue(graph), graph, str(wf), 0.1, 0.85, "", progress)
+        text = " ".join(self._vgl_text(graph, hist).split())
+        if not text:
+            raise BridgeError("The text model returned no description.")
+        progress(1.0, "Described")
+        return text
+
     # ---------- ComfyUI ----------
 
     @staticmethod
@@ -714,7 +763,7 @@ class Bridge:
                               + ". Put it in the LoRA folder and restart ComfyUI (it only re-reads the folder at start), or switch the LoRA off.")
         return tpl
 
-    def _graph(self, req: Request, p, image_name, mask_name, wf: str | None = None, ref_name: str | None = None,
+    def _graph(self, req: Request, p, image_name, mask_name, wf: str | None = None, ref_name: "str | list[str] | None" = None,
                force_plain: bool = False):
         if wf:
             tpl = workflows.load_template(wf)
@@ -742,7 +791,7 @@ class Bridge:
             if names:
                 tpl = names(tpl)
             return workflows.apply_template(tpl, p, image_name, mask_name, ref_name,
-                                            ref_first=req.ref_style != "simple")
+                                            ref_first=req.ref_style != "simple" and not req.refs)
         if not p.checkpoint:
             raise BridgeError("Pick a model (checkpoint) or a custom workflow.")
         if req.mode == "txt2img":

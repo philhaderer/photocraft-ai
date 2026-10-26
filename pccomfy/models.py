@@ -29,8 +29,9 @@ class Model:
     tip: str
     modes: dict                     # mode key -> Mode (a mode that is not here is greyed out)
     mode_tips: dict = field(default_factory=dict)   # mode key -> the tooltip of that mode's radio button (this model only)
-    max_refs: int = 0               # Multi Image Edit: how many reference-image slots this model takes (0 = none yet)
-    tag_style: str = ""             # Multi Image Edit: how this model names the images in the prompt ("" = not set yet)
+    max_refs: int = 0               # Multi Image Edit: how many reference-image slots this model takes (0 = none)
+    tag_style: str = ""             # Multi Image Edit: how this model names an image in the prompt; {n} counts from 1 (the picture
+                                    # is image 1, the first reference image 2), {i} from 0 ("" = no names)
     requires: tuple = ()            # model detection: the model files this tab needs (file names, as ComfyUI lists them); () = not set yet
 
     def workflows(self) -> list[str]:
@@ -69,7 +70,6 @@ _EDIT = "Changes the whole picture from your text (\"make it night\"). A selecti
 _EXPAND = ("Extend the canvas with the Crop tool (Enter) and fill the new area white, then Generate.\n"
            "Text is optional; an empty prompt often works best. Expand large areas in small steps.")
 _REMOVE = "Select the object (whole object inside), then Generate. Text is optional: name what to remove (\"the dog\")."
-_REF = "Put the reference on its own top layer, select where it goes, then Generate. The layers below are the picture."
 _UP = "Enlarges the picture (or selection) into a NEW document. Describe the picture before the prompt text. Max 24 MP."
 
 QWEN = Model(
@@ -80,7 +80,6 @@ QWEN = Model(
         "edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="none"), prompt_tip=EDIT_TIP),
         "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=4.0)),
         "outpaint": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, layer_mask="auto")),
-        "reference": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=True, ref_style="simple", ref_cutout=True, layer_mask="auto")),
         "remove": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=True, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
     },
     requires=(
@@ -92,9 +91,9 @@ QWEN = Model(
         "edit": _EDIT,
         "inpaint": "Select an area, type what should appear there, then Generate.",
         "outpaint": _EXPAND,
-        "reference": _REF,
         "remove": _REMOVE,
-    })
+    },
+    max_refs=2, tag_style="<image{n}>")
 
 FLUX2 = Model(
     "flux2", "Flux 2 Klein Edit",
@@ -119,7 +118,8 @@ FLUX2 = Model(
         "outpaint": _EXPAND,
         "upscale": _UP,
         "refine": "Cleans up the picture (or selection) at the same size, as a new layer. Describe the picture before the prompt text.",
-    })
+    },
+    max_refs=3, tag_style="image {n}")
 
 FLUX3 = Model(
     "flux3", "Flux 3 Klein Edit",
@@ -140,7 +140,8 @@ FLUX3 = Model(
         "edit": _EDIT + " Nothing happens? Generate again or word it more fully.",
         "remove": _REMOVE,
         "upscale": "Enlarges into a NEW document: SeedVR2 cleans, Flux 3 redraws in tiles. Describe the picture before the prompt text. Max 24 MP.",
-    })
+    },
+    max_refs=3, tag_style="<ref_image_{i}>")
 
 # MOSS: the DMD2 speed LoRA (8 steps, CFG 1.5) is the model's own LoRA; the Lenovo UltraReal LoRA and the skip-layer
 # guidance (SLG) are switches that start on (best result in the live tests); the LLM prompt enhancer starts off.
@@ -188,7 +189,6 @@ FIBO = Model(
         "refine": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), FIBO_REFINE, run_as="edit"),
         "inpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False)),
         "outpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
-        "reference": Mode("fibo2-edit.json", dict(base_res=1024, ref_style="simple", ref_cutout=True, layer_mask="auto", enhance=False)),
         "remove": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
     },
     requires=(
@@ -202,9 +202,9 @@ FIBO = Model(
         "refine": "Relights the whole picture as a new layer at the same size. Change the prompt for other edits.",
         "inpaint": "Select an area, type what should appear there (text required), then Generate. To take something away use Remove Selection.",
         "outpaint": _EXPAND,
-        "reference": _REF + " Cut the reference out first.",
         "remove": _REMOVE + " Retries up to 3 times if the object stays.",
-    })
+    },
+    max_refs=2, tag_style="<image_{n}>")
 
 MODELS = [FLUX3, FLUX2, QWEN, FIBO, KREA2, MOSS]      # the order of the tabs
 BY_KEY = {m.key: m for m in MODELS}

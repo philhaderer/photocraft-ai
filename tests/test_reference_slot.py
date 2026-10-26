@@ -44,9 +44,11 @@ def main():
         assert links_resolve(off) and "images.image_2" in off[enc]["inputs"], name
     # a workflow without a slot cannot take a reference
     tpl = workflows.load_template(FILES[0])
-    del tpl[[k for k, n in tpl.items() if "pc:ref" in n.get("_meta", {}).get("title", "")][0]]
+    for k in [k for k, n in tpl.items() if "pc:ref" in n.get("_meta", {}).get("title", "")]:
+        del tpl[k]
     for n in tpl.values():
         n["inputs"].pop("images.image_2", None)
+        n["inputs"].pop("images.image_3", None)
     try:
         workflows.apply_template(tpl, p, "img.png", "mask.png", ref_name="ref.png")
         raise SystemExit("expected ValueError")
