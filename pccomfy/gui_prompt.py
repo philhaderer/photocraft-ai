@@ -197,7 +197,8 @@ class PromptMixin:
 
     def _show_negative(self):
         opened = bool(self.v_neg_open.get())
-        self.btn_neg.configure(text=("\u25be Negative prompt" if opened else "\u25b8 Negative prompt"))
+        self.btn_neg.configure(text="Negative prompt", compound="left",
+                               image=self._icon("chevron-down" if opened else "chevron-right", MUTED))
         if opened:
             self.neg_body.pack(fill="x", pady=(4, 0))
         else:

@@ -118,7 +118,8 @@ def main():
 
     assert app.ICON_PX == 24 and app._icon_px() == 24 and app._bar_px() == 30          # vector icons, one constant
     from pccomfy import icons
-    for k in ("remove", "cut", "describe", "copy", "paste", "file"):                   # every slot icon draws, at any size
+    for k in ("remove", "cut", "describe", "copy", "paste", "file",                    # every slot and window icon draws, at any size
+              "plus", "gear", "undo", "redo", "chevron-up", "chevron-down", "chevron-right", "save", "saveas", "trash"):
         for px in (24, 36):
             im = icons.render(k, "#eeeeee", px)
             assert im.size == (px, px) and im.getbbox() is not None, (k, px)

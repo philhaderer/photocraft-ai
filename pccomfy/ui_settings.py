@@ -41,7 +41,7 @@ class SettingsMixin:
         self._last_model = self.v_model.get()
         style = ttk.Style()
         style.configure("Missing.Tab.Toolbutton", foreground=NA_RED)      # a tab that is not available: red text, the background of an inactive tab
-        self.b_gear = ttk.Button(foot, text="⚙", width=3, style="Icon.TButton", command=self.open_settings)
+        self.b_gear = ttk.Button(foot, image=self._icon("gear"), style="Icon.TButton", command=self.open_settings)
         self.b_gear.pack(side="right")
         Tooltip(self.b_gear, "Settings: which model files ComfyUI has, links to get the missing ones, ComfyUI folders, credits.")
         style.configure("Empty.TLabel", foreground=MUTED, font=(FONT, 11))

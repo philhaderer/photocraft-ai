@@ -163,13 +163,14 @@ def main():
             super().__init__(master, **k)
             self.master = master
             self.text = k.get("text")
+            self.image = k.get("image")
             made.append(self)
 
     plain = t.ttk.Button
     t.ttk.Button = RecBtn
     probe = gui.App(cfgmod.load())
     t.ttk.Button = plain
-    assert probe.b_gear.master is not probe.f_tabs and probe.b_gear.text == "\u2699" and probe.b_gear.master is not None
+    assert probe.b_gear.master is not probe.f_tabs and probe.b_gear.image == probe._icon("gear") and probe.b_gear.master is not None
     foot = [b.master for b in made if b.text in ("Refresh", "Reset")]
     assert len(foot) == 2 and foot[0] is foot[1] and probe.b_gear.master is foot[0]
     del probe

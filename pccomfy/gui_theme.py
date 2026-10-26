@@ -3,6 +3,10 @@ from __future__ import annotations
 
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
+from . import icons
+
+ICON_PX = 20       # the window's button icons (vector, icons.py) before the display scaling; the slot icons have their own (24)
+SPIN_PX = 14       # the chevrons of the spin boxes: flatter than a button icon, so the field keeps its height
 
 
 class ThemeMixin:
@@ -65,6 +69,38 @@ class ThemeMixin:
         s.map("TButton", foreground=[("disabled", DISABLED)])
         self.root.option_add("*TCombobox*Listbox.background", PANEL)
         self.root.option_add("*TCombobox*Listbox.foreground", FG)
+        self._spin_arrows(s)
+
+    def _spin_arrows(self, s):
+        """The spin boxes' up/down arrows: thin chevrons (icons.py) instead of clam's big filled triangles; orange under the
+        mouse, grey when greyed out. Without image support the theme's own arrows stay."""
+        try:
+            px = self._px(SPIN_PX)
+            imgs = {(up, c): icons.photo(self.root, "", c, px, icons.spin_arrow(up, c, px))
+                    for up in (True, False) for c in (FG, ACCENT, DISABLED)}
+            self._spin_imgs = imgs          # Tk drops an image Python no longer holds
+            for up, name in ((True, "Chev.uparrow"), (False, "Chev.downarrow")):
+                if name not in s.element_names():
+                    s.element_create(name, "image", imgs[(up, FG)], ("disabled", imgs[(up, DISABLED)]),
+                                     ("pressed", imgs[(up, ACCENT)]), ("active", imgs[(up, ACCENT)]),
+                                     padding=(self._px(3), self._px(1)))
+            s.layout("TSpinbox", [("Spinbox.field", {"side": "top", "sticky": "we", "children": [
+                ("null", {"side": "right", "sticky": "", "children": [
+                    ("Chev.uparrow", {"side": "top", "sticky": "e"}), ("Chev.downarrow", {"side": "bottom", "sticky": "e"})]}),
+                ("Spinbox.padding", {"sticky": "nswe", "children": [("Spinbox.textarea", {"sticky": "nswe"})]})]})])
+        except Exception:
+            pass
+
+    def _icon(self, kind: str, color: str = FG, px: int = ICON_PX):
+        """A button icon (icons.py) at px before the display scaling, as a ttk image spec: `color`, grey when the button is
+        greyed out, orange under the mouse (like the slot icons)."""
+        cache = self.__dict__.setdefault("_icon_cache", {})
+
+        def img(c):
+            if (kind, c, px) not in cache:
+                cache[(kind, c, px)] = icons.photo(self.root, kind, c, self._px(px))
+            return cache[(kind, c, px)]
+        return (img(color), "disabled", img(DISABLED), "active", img(ACCENT))
 
     def _scale_clicks(self):
         """A click on a slider's trough moves the handle to where it was clicked (Tk's own behaviour steps by a whole page,

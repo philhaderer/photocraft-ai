@@ -140,7 +140,8 @@ class ModeMixin:
 
     def _show_advanced(self):
         opened = bool(self.v_adv_open.get())
-        self.btn_adv.configure(text=("\u25be Advanced" if opened else "\u25b8 Advanced"))
+        self.btn_adv.configure(text="Advanced", compound="left",
+                               image=self._icon("chevron-down" if opened else "chevron-right", MUTED))
         if opened:
             self.adv_body.pack(fill="x", pady=(4, 0))
         else:
