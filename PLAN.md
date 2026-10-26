@@ -1,6 +1,6 @@
 # PLAN: PhotoCraft x ComfyUI plugin, release 1
 
-Stand 2026-10-26. Entwurf zur Freigabe: nichts davon ist gebaut. Backup: Tag `backup-2026-10-26` (6df02df) und das ZIP des Users.
+Stand 2026-10-26, 20:10. Der Plan ist freigegeben. **Gebaut und in `next` gemergt:** Phase 0, Lane L1 (Erkennung/Settings) und Lane L2 (Multi Image Edit, Runden 1 bis 3). **Offen:** L3 (Fenster-Politur), L4 (Inhalte), Flux-3-Boxen (Entscheidung offen), Easy Mode zuletzt. Aktueller Gesamtstand und offene Entscheidungen: `docs/HANDOFF-claude-code.md`. Backup: Tag `backup-2026-10-26` (6df02df) und das ZIP des Users.
 
 ## 1. Entscheidungen des Users (26.10.)
 
@@ -68,8 +68,8 @@ Folge: ohne Umbau würden alle Lanes dieselbe Datei ändern. Deshalb gibt es Pha
 
 | Lane | Besitzt (nur diese Lane ändert sie) | Reihenfolge |
 |---|---|---|
-| L1 Erkennung/Settings | `inventory.py`, `manifest.py`, `ui_settings.py`, `config.py`, `comfy.py` | zuerst |
-| L2 Multi Image Edit | `refslots.py`, `bridge.py`, `workflows.py`, `workflows/*.json`, `models.py` | parallel zu L1 |
+| L1 Erkennung/Settings (**erledigt, in `next`**) | `inventory.py`, `manifest.py`, `ui_settings.py`, `config.py`, `comfy.py` | zuerst |
+| L2 Multi Image Edit (**erledigt, Runden 1 bis 3, in `next`**) | `refslots.py`, `bridge.py`, `workflows.py`, `workflows/*.json`, `models.py` | parallel zu L1 |
 | L3 Fenster-Politur | Theme-Mixin, Titelleiste, Menü, Icons | nach L1 oder L2 |
 | L4 Inhalte | `styles.py`, `tips.py`, Daten, Beispiele, `docs/` | jederzeit (nur neue Dateien) |
 | Easy Mode | `easymode.py` | zuletzt, braucht L1, L2, Hide/Show aus L3 |
