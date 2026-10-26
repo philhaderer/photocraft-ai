@@ -686,6 +686,23 @@ class Bridge:
         progress(1.0, f"Done (seed {p.seed})", phase="place")
         return {"seed": p.seed, "vgl": self.last_vgl, "layers": layers, "region": region.__dict__, "size": [gw, gh], "pipeline": self.pipeline}
 
+    # ---------- cut-out (reference slots) ----------
+
+    def remove_background(self, im: Image.Image, progress: Progress | None = None, workflow: str | Path | None = None) -> Image.Image:
+        """The picture with its background cut away (RGBA), made by ComfyUI's own BiRefNet nodes (birefnet-remove-bg.json,
+        model `birefnet.safetensors` in models/background_removal). Used by the reference slots: it needs no PhotoCraft."""
+        progress = progress or (lambda f, m, **kw: None)
+        self._cancel.clear()
+        wf = Path(workflow) if workflow else workflows.BIREFNET_WORKFLOW
+        tpl = workflows.load_template(wf)
+        name = self.comfy.upload_image(im.convert("RGB") if im.mode not in ("RGB", "RGBA") else im, f"pcc-{uuid.uuid4().hex[:8]}-cut.png")
+        graph, out_node = workflows.apply_template(tpl, workflows.GenParams(), name, None)
+        progress(0.1, "Cutting out the background")
+        hist = self._wait(self.comfy.queue(graph), graph, str(wf), 0.1, 0.85, "", progress)
+        out = self.comfy.output_images(hist, out_node)[0]
+        progress(1.0, "Background removed")
+        return out.convert("RGBA")
+
     # ---------- ComfyUI ----------
 
     @staticmethod

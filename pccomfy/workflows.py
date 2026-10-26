@@ -150,6 +150,9 @@ def inpaint_fooocus(p: GenParams, image_name: str, mask_name: str, head: str, pa
 
 # ---------- custom (templates) ----------
 
+BIREFNET_WORKFLOW = Path(__file__).resolve().parent.parent / "workflows" / "birefnet-remove-bg.json"   # reference slots: cut out the background
+
+
 def load_template(path: str | Path) -> dict:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if "nodes" in data and "links" in data:

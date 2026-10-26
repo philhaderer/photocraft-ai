@@ -1,0 +1,8 @@
+{
+  "1": {"class_type": "LoadImage", "inputs": {"image": "example.png"}, "_meta": {"title": "pc:image"}},
+  "2": {"class_type": "LoadBackgroundRemovalModel", "inputs": {"bg_removal_name": "birefnet.safetensors"}, "_meta": {"title": "BiRefNet"}},
+  "3": {"class_type": "RemoveBackground", "inputs": {"bg_removal_model": ["2", 0], "image": ["1", 0]}, "_meta": {"title": "Foreground mask"}},
+  "4": {"class_type": "InvertMask", "inputs": {"mask": ["3", 0]}, "_meta": {"title": "Mask to alpha"}},
+  "5": {"class_type": "JoinImageWithAlpha", "inputs": {"image": ["1", 0], "alpha": ["4", 0]}, "_meta": {"title": "Cut-out (RGBA)"}},
+  "6": {"class_type": "PreviewImage", "inputs": {"images": ["5", 0]}, "_meta": {"title": "pc:output"}}
+}
