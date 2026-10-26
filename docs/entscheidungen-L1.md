@@ -70,3 +70,8 @@ Gewünscht: das Preset lädt nur, was geht; das Modell mit fehlenden Dateien wir
   ```
   Damit werden Zeile 102 (`put(self.v_mode, "mode", str)`) und Zeilen 103 bis 109 (Workflow) für dieses Preset übersprungen. Der Rest des Presets (Text usw.) wird wie bisher gesetzt; `_sync_model` (Zeile 174) lässt dann den bisherigen Tab stehen. Die Meldung erscheint durch `load_preset` (Zeile 229) als „Not applied: ...".
 - Offen für den Haupt-Chat: ob Regler, die zu diesem Modell gehören (Auflösung, Stärke), mit ausgenommen werden sollen. Ich würde sie mitnehmen (sie sind harmlos), damit nichts halb zum falschen Modell passt, bräuchte es eine Liste der Schlüssel.
+
+## 15. Aufgabe A: Zahnrad in der Fußzeile
+- Eingriff in `gui.py` (nur `_build`): der Aufruf `self._build_settings()` ist von der Tab-Zeile in den Fußbereich gewandert und bekommt dessen Rahmen mit (`self._build_settings(foot)`, eine Zeile nach dem Reset-Knopf). Der Knopf steht mit `pack(side="right")` ganz rechts, die Tab-Zeile ist wieder wie vorher.
+- Alternative: Zahnrad in einer eigenen Zeile unter dem Fußbereich (kostet Höhe).
+- Live prüfen: ob links Platz bleibt, wenn „PhotoCraft ● ComfyUI ● Refresh Reset" und das Zahnrad zusammen in die feste Breite 380 passen.

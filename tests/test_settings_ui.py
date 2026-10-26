@@ -55,6 +55,25 @@ NODES = {n for tab in manifest.TABS.values() for s in tab.modes.values() for n i
 
 
 def main():
+    # the gear sits in the footer row, in the same frame as the Refresh and Reset buttons (not next to the tabs)
+    made = []
+
+    class RecBtn(t.Widget):
+        def __init__(self, master=None, **k):
+            super().__init__(master, **k)
+            self.master = master
+            self.text = k.get("text")
+            made.append(self)
+
+    plain = t.ttk.Button
+    t.ttk.Button = RecBtn
+    probe = gui.App(cfgmod.load())
+    t.ttk.Button = plain
+    assert probe.b_gear.master is not probe.f_tabs and probe.b_gear.text == "\u2699" and probe.b_gear.master is not None
+    foot = [b.master for b in made if b.text in ("Refresh", "Reset")]
+    assert len(foot) == 2 and foot[0] is foot[1] and probe.b_gear.master is foot[0]
+    del probe
+
     app = make_app()
 
     # the hooks: SettingsMixin first, a gear button, a tooltip object per tab

@@ -33,13 +33,13 @@ class SettingsMixin:
 
     # ---------- build (one call at the end of App._build) ----------
 
-    def _build_settings(self):
+    def _build_settings(self, foot):
+        """The gear button at the right end of the footer row (the one with the connection dots, Refresh and Reset)."""
         self._last_model = self.v_model.get()
         style = ttk.Style()
         style.configure("Missing.Tab.Toolbutton", foreground=DISABLED)      # inherits everything else from Tab.Toolbutton
-        self.b_gear = ttk.Button(self.f_tabs, text="⚙", width=3, style="Icon.TButton", command=self.open_settings)
-        self.b_gear.grid(row=0, column=2, sticky="nsew", padx=(4, 0), pady=2)
-        self.f_tabs.columnconfigure(2, weight=0)
+        self.b_gear = ttk.Button(foot, text="⚙", width=3, style="Icon.TButton", command=self.open_settings)
+        self.b_gear.pack(side="right")
         Tooltip(self.b_gear, "Settings: which model files ComfyUI has, links to get the missing ones, ComfyUI folders, credits.")
 
     # ---------- reading ComfyUI ----------

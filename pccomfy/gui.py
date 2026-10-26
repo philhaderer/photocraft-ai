@@ -132,7 +132,6 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
             rb.grid(row=i // cols, column=i % cols, sticky="ew", padx=2, pady=2)
             self.tt_tabs[m.key] = Tooltip(rb, m.tip)
             self.rb_tabs[m.key] = rb
-        self._build_settings()          # the gear next to the tabs (ui_settings.py)
 
         mf = ttk.Frame(r)
         mf.columnconfigure(1, weight=1)
@@ -459,6 +458,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         b_reset = ttk.Button(foot, text="Reset", command=self.reset_settings)
         b_reset.pack(side="left", padx=(6, 0))
         Tooltip(b_reset, "Back to the startup settings of this tab and function.")
+        self._build_settings(foot)      # the gear at the right end of this row (ui_settings.py)
 
         for cb in (self.cb_scale, self.cb_lm, self.cb_refstyle, self.cb_sampler, self.cb_sched):
             self._open_on_click(cb)         # the list opens on a click anywhere in the box, not only on the arrow
