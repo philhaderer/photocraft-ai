@@ -63,4 +63,8 @@ app.pc, app.comfy, app.events = FakePC(), FakeComfy(), queue.Queue()
 app.refresh()
 kind, info = app.events.get(timeout=5)
 assert kind == "refresh" and info["pc"] == "PhotoCraft ●" and info["comfy"] == "ComfyUI ●" and "doc" not in info["pc"], info
+import threading
+for t in threading.enumerate():      # the refresh thread of the fake must end before the interpreter does (a race made the run abort sometimes)
+    if t is not threading.current_thread():
+        t.join(5)
 print("test_phase0 ok")
