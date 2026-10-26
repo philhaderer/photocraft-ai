@@ -133,20 +133,30 @@ class RefSlots:
         self.items.insert(i, item)
         return i
 
-    def add_file(self, path) -> int:
+    def put(self, i: int, image: Image.Image, name: str = "") -> int:
+        """A new picture in filled slot `i` (a drop onto it): its cut-out and description go, its place stays."""
+        self.items[i] = RefImage(image.convert("RGBA") if image.mode not in ("RGB", "RGBA") else image.copy(), name)
+        return i
+
+    def add_file(self, path, at: int | None = None) -> int:
+        """A picture file into the next free slot, or in place of filled slot `at`."""
         p = Path(path)
         if p.suffix.lower() not in clipboard.IMAGE_SUFFIXES or not p.is_file():
             raise RefError(f"{p.name}: not a picture file.")
         with Image.open(p) as im:
             im.load()
+            if at is not None and 0 <= at < len(self.items):
+                return self.put(at, im, p.name)
             return self.add(im, p.name)
 
-    def add_files(self, paths) -> tuple[int, list[str]]:
-        """Drop of several files: as many as fit. Returns (how many were added, messages for the ones that were not)."""
+    def add_files(self, paths, at: int | None = None) -> tuple[int, list[str]]:
+        """Drop of several files: as many as fit. Dropped onto filled slot `at`, the first picture replaces it and the
+        others are added behind the last slot. Returns (how many were taken, messages for the ones that were not)."""
         n, notes = 0, []
         for p in paths:
             try:
-                self.add_file(p)
+                self.add_file(p, at)
+                at = None
                 n += 1
             except (RefError, OSError) as e:
                 notes.append(str(e))
@@ -389,6 +399,9 @@ class RefSlotsMixin:
                 self._ref_photos.append(photo)
                 lbl = tk.Label(box, image=photo, bg=PANEL, bd=0)
                 lbl.pack(expand=True, side="left")
+                if self._refs_dnd:      # a drop onto a filled slot replaces its picture (the rest of the frame adds)
+                    self._refs_slot_drop(box, k)
+                    self._refs_slot_drop(lbl, k)
                 Tooltip(lbl, f"{it.name or 'clipboard'}" + ("  (cut out)" if it.cut_out else "") + (f"\n{it.description}" if it.description else ""))
                 tag = rs.tag(k)
                 ttk.Label(cell, text=tag or f"image {k + 2}", style="Hint.TLabel", anchor="center").pack(fill="x")      # centred under the slot
@@ -514,16 +527,27 @@ class RefSlotsMixin:
         paths = self._dialog(filedialog.askopenfilenames, title="Reference images", filetypes=[("Pictures", " ".join("*" + e for e in clipboard.IMAGE_SUFFIXES)), ("All files", "*.*")])
         self._refs_add_paths(self.root.tk.splitlist(paths) if isinstance(paths, str) else paths)
 
-    def _refs_on_drop(self, event):
+    def _refs_slot_drop(self, widget, k: int):
+        try:
+            from tkinterdnd2 import DND_FILES
+            widget.drop_target_register(DND_FILES)
+            widget.dnd_bind("<<Drop>>", lambda e, k=k: self._refs_on_drop(e, k))
+        except Exception:
+            pass
+
+    def _refs_on_drop(self, event, at: int | None = None):
+        """Files dropped onto the slots: added, or (onto filled slot `at`) the first one replaces that picture."""
         try:
             paths = [Path(p) for p in self.root.tk.splitlist(event.data)]
         except Exception:
             paths = parse_drop_data(str(getattr(event, "data", "")))
-        self._refs_add_paths(paths)
+        self._refs_add_paths(paths, at)
         return getattr(event, "action", "copy")
 
-    def _refs_add_paths(self, paths):
-        n, notes = self.refslots.add_files(paths)
+    def _refs_add_paths(self, paths, at: int | None = None):
+        if at is not None:
+            self._ref_busy.discard(at)
+        n, notes = self.refslots.add_files(paths, at)
         self._refs_say(notes[0] if notes else "")
         self._refs_redraw()
 
