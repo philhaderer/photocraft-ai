@@ -205,6 +205,9 @@ PEN_COLOURS = ("#ff2a2a", "#2ad14b", "#2a7bff", "#ffd400", "#000000", "#ffffff")
 # The window part (Tk): one hook in gui.py puts RefSlotsMixin in front of the window's other mixins
 # ======================================================================================================================
 
+MULTI_MODE = "multi_edit"     # the window mode that shows the slots (it runs as a whole-image edit)
+
+
 class RefSlotsMixin:
     """The reference slots of the window. Built the first time the window shows them (`_refs_ensure`), so the hook in gui.py
     is only the class line: `_on_mode_ui` (called on every tab / mode change) and `_request` are wrapped here.
@@ -229,13 +232,12 @@ class RefSlotsMixin:
         return m if (m is not None and m.max_refs > 0) else None
 
     def _refs_wanted(self) -> bool:
-        from .bridge import REF_MODES
-        return self._refs_model() is not None and self.v_mode.get() in REF_MODES
+        return self._refs_model() is not None and self.v_mode.get() == MULTI_MODE
 
     def _refs_for(self, run_mode: str) -> list:
         from .bridge import REF_MODES
         slots = getattr(self, "refslots", None)
-        if slots is None or run_mode not in REF_MODES or self._refs_model() is None:
+        if slots is None or run_mode not in REF_MODES or not self._refs_wanted():
             return []
         return slots.images()
 

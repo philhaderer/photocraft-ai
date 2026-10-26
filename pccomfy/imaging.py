@@ -216,34 +216,6 @@ def layer_box(layer: Image.Image) -> "Box | None":
     return Box(box[0], box[1], box[2] - box[0], box[3] - box[1]) if box else None
 
 
-def reference_from_layer(layer: Image.Image, max_side: int = 1024) -> tuple[Image.Image, Image.Image]:
-    """A reference image exported from a single layer: cropped to its visible pixels and at most `max_side` px on
-    the long side. Returns (RGBA with the layer's transparency, RGB on white for the model).
-    Raises ValueError when the layer has no visible pixels."""
-    rgba = layer.convert("RGBA")
-    box = rgba.getchannel("A").point(lambda a: 255 if a > 8 else 0).getbbox()
-    if box is None:
-        raise ValueError("The reference layer is empty (fully transparent).")
-    rgba = rgba.crop(box)
-    scale = min(1.0, max_side / max(rgba.size))
-    if scale < 1.0:
-        rgba = rgba.resize((max(1, round(rgba.width * scale)), max(1, round(rgba.height * scale))), Image.LANCZOS)
-    rgb = Image.new("RGB", rgba.size, "white")
-    rgb.paste(rgba, mask=rgba.getchannel("A"))
-    return rgba, rgb
-
-
-def paste_reference(crop: Image.Image, ref_rgba: Image.Image, box: Box) -> Image.Image:
-    """Rough placement: the reference scaled to fit inside `box` (aspect kept), centred in it, over the crop.
-    It shows an instruction-based editor where the subject goes and how large it should be."""
-    out = crop.convert("RGB")
-    s = min(box.w / ref_rgba.width, box.h / ref_rgba.height)
-    w, h = max(1, round(ref_rgba.width * s)), max(1, round(ref_rgba.height * s))
-    r = ref_rgba.resize((w, h), Image.LANCZOS)
-    out.paste(r.convert("RGB"), (box.x + (box.w - w) // 2, box.y + (box.h - h) // 2), r.getchannel("A"))
-    return out
-
-
 def mark_outline(img: Image.Image, mask: Image.Image, width: int = 4, color: tuple[int, int, int] = (255, 0, 0)) -> Image.Image:
     """Draw the outline of the selection (`mask`, same size as `img`) into a copy of `img`: a line `width` px thick on
     each side of the edge. Instruction-based editors (Fibo) cannot read a mask, but they can see a coloured outline."""

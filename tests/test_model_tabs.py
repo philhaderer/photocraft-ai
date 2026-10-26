@@ -39,7 +39,7 @@ def main():
     assert app.rb_modes["refine"]["state"] == "disabled"
 
     # the modes follow each other in the order text, edit, fill, remove, expand, reference, upscale, refine
-    assert [k for k, _ in gui.MODE_LABELS] == ["txt2img", "edit", "inpaint", "remove", "outpaint", "reference", "upscale", "refine", "img2img"]
+    assert [k for k, _ in gui.MODE_LABELS] == ["txt2img", "edit", "inpaint", "remove", "outpaint", "multi_edit", "upscale", "refine", "img2img"]
 
     # MOSS: text to image, Generative fill, Expand (a test); the DMD2 LoRA is its own LoRA, Lenovo and SLG are switches
     app.v_model.set("moss")

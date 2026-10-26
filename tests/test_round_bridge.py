@@ -77,16 +77,6 @@ def main():
     assert dup["mergedOnly"] is False and any(c == "layer.delete" for c in cmds)       # the hidden layer was dropped
     first_paste = cmds.index("edit.paste")
     assert any(c == "layer.select" and p.get("layer") == top_id for c, p in pc.log[:first_paste]), "result not placed on top"
-    pc, _, b = T.make(tempfile.mkdtemp(), with_sel=True)
-    pc.docs[0].layers[-1]["visible"] = False
-    b.comfy = T.FakeComfy()
-    req = Request(mode="reference", workflow=str(ROOT / "workflows" / "qwen-image-21-edit.json"), preset="X", run_no=1, ref_style="simple")
-    req.params = workflows.GenParams(prompt="", seed=5)
-    try:
-        b.run(req)
-        raise AssertionError("hidden reference accepted")
-    except bridge.BridgeError as e:
-        assert "switched off" in str(e)
     # a switched-off TOP layer (the user's case) must not break Refine / Expand: the duplicate has layer ids of its own
     from pccomfy import models
     for wf_name, mode, kw in (("flux3-klein-upscale.json", "refine", {}), ("flux2-klein-upscale.json", "refine", {}),

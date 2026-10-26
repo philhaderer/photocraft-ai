@@ -94,9 +94,6 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._vals_key = None                # (workflow, speed LoRA on) the steps / CFG / denoise fields were last read for
         self._wf_vals: dict = {}
         self._lora_wf = g("workflow", "")   # the workflow the LoRA strength slider was last set for
-        self.v_collage = tk.BooleanVar(value=g("ref_collage", True))
-        self.v_cutout = tk.BooleanVar(value=g("ref_cutout", True))
-        self.v_refstyle = tk.StringVar(value=REF_STYLES.get(g("ref_style", "simple"), REF_STYLES["simple"]))
         self.v_lmask = tk.StringVar(value=LAYER_MASKS.get(g("layer_mask", "auto"), LAYER_MASKS["auto"]))
         self.v_status = tk.StringVar(value="Ready")
         self.v_conn = tk.StringVar(value="")
@@ -361,25 +358,6 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         Tooltip(self.w_detail, "100 % = only the new image; less mixes in the plain scaled original (tames over-sharp results).")
         self._on_detail()
 
-        self.f_ref = ttk.LabelFrame(r, text="Reference image")
-        ttk.Label(self.f_ref, text="The top layer is the reference. Select where it should go.\nEverything below it is the picture.",
-                  style="Muted.TLabel", justify="left", wraplength=self._px(360)).pack(anchor="w", padx=6, pady=(0, 2))
-        sty = ttk.Frame(self.f_ref)
-        sty.pack(fill="x", padx=6, pady=(0, 4))
-        lbs = ttk.Label(sty, text="Style", style="Muted.TLabel")
-        lbs.pack(side="left")
-        self.cb_refstyle = ttk.Combobox(sty, textvariable=self.v_refstyle, values=list(REF_STYLES.values()), state="readonly", width=22)
-        self.cb_refstyle.pack(side="left", padx=6)
-        self.cb_refstyle.bind("<<ComboboxSelected>>", lambda e: self._update_availability())
-        for w in (lbs, self.cb_refstyle):
-            Tooltip(w, "Classic: long instruction, reference first. Simple: one short sentence, picture first.")
-        self.cb_cutout = ttk.Checkbutton(self.f_ref, text="Cut out the reference (remove its background)", variable=self.v_cutout)
-        self.cb_cutout.pack(anchor="w", padx=6, pady=(0, 4))
-        Tooltip(self.cb_cutout, "Asks the model to remove the reference's background first.")
-        self.cb_collage = ttk.Checkbutton(self.f_ref, text="Rough placement in the picture", variable=self.v_collage)
-        self.cb_collage.pack(anchor="w", padx=6, pady=(0, 6))
-        Tooltip(self.cb_collage, "Pastes a rough copy of the reference into the selection to show where it goes.")
-
         self.f_img = ttk.LabelFrame(self.adv_body, text="Image and mask")
         self.f_img.grid(row=7, column=0, columnspan=2, sticky="ew", pady=(8, 0))
         tips = {
@@ -460,7 +438,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         b_reset.pack(side="left", padx=(6, 0))
         Tooltip(b_reset, "Back to the startup settings of this tab and function.")
 
-        for cb in (self.cb_scale, self.cb_lm, self.cb_refstyle, self.cb_sampler, self.cb_sched):
+        for cb in (self.cb_scale, self.cb_lm, self.cb_sampler, self.cb_sched):
             self._open_on_click(cb)         # the list opens on a click anywhere in the box, not only on the arrow
         self._fit_job = None
         r.bind("<Configure>", self._on_content_size, add="+")      # the window follows its content: nothing hangs off the bottom

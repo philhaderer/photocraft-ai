@@ -35,15 +35,19 @@ def main():
     assert getattr(app, "f_refs", None) is None, "a model without slots builds nothing"
     assert app._request().refs == []
 
-    pick("qwen", "edit")
+    pick("qwen", "multi_edit")
     assert app.f_refs is not None
     app.f_refs.pack = lambda *a, **k: log.append("on")
     app.f_refs.pack_forget = lambda: log.append("off")
     pick("qwen", "inpaint")
+    assert log[-1] == "off"                                  # the slots belong to Multi Image Edit only
+    pick("qwen", "edit")
+    assert log[-1] == "off"
+    pick("qwen", "multi_edit")
     assert log[-1] == "on" and app.refslots.max_refs == 2 and app.refslots.tag_style == "<image{n}>"
     pick("qwen", "remove")
     assert log[-1] == "off"                                  # Remove Selection takes no references
-    pick("qwen", "edit")
+    pick("qwen", "multi_edit")
     assert log[-1] == "on"
 
     # Paste button / Ctrl+V
@@ -82,14 +86,14 @@ def main():
     app.refslots.add(img, "r.png")
     req = app._request()
     assert req.mode == "edit" and len(req.refs) == 2
-    pick("flux2", "edit")
+    pick("flux2", "multi_edit")
     assert app.refslots.max_refs == 3 and len(app._request().refs) == 2 and app.refslots.tag(0) == "image 2"
     pick("flux2", "upscale")
     assert app._request().refs == []
-    pick("qwen", "edit")
+    pick("qwen", "multi_edit")
     pick("moss", "txt2img")
     assert app._request().refs == [] and log[-1] == "off"
-    pick("qwen", "edit")
+    pick("qwen", "multi_edit")
     assert len(app._request().refs) == min(2, len(app.refslots.items))      # nothing was lost by the tab switch
 
     # the cut-out button: ComfyUI's answer replaces the picture, "Undo cut" brings the original back

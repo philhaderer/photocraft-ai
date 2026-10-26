@@ -36,8 +36,8 @@ from . import imaging, refslots, workflows
 from .comfy import ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 
-MODES = ("inpaint", "remove", "reference", "outpaint", "img2img", "edit", "txt2img", "upscale", "refine")
-REF_MODES = ("edit", "inpaint", "outpaint")      # the modes that take reference images (Multi Image Edit)
+MODES = ("inpaint", "remove", "outpaint", "img2img", "edit", "txt2img", "upscale", "refine")
+REF_MODES = ("edit",)      # the bridge modes that take reference images: Multi Image Edit runs as a whole-image edit
 SCALE_MODES = ("upscale", "refine")   # the picture goes to the workflow at its own size; the workflow sets the result's size
 MAX_RESULT_MP = 24.0                  # Upscale: refuse results above this many megapixels
 LAYER_MASKS = ("auto", "soft", "selection", "none")
@@ -69,15 +69,11 @@ class Request:
                                          # "soft" = same mask the model got, "selection" = hard selection, "none"
     feather_pct: float = 2.0             # soft layer mask for editors that ignore the mask: % of the selection's shorter side
     scale: float = 2.0                   # Upscale: factor per side (Refine always runs at 1.0)
-    ref_style: str = "simple"            # reference mode: "classic" = subject first (<image_1>), long instruction, rough placement;
-                                         # "simple" = the picture first (image1), the reference second (image2), one short sentence
-    ref_collage: bool = True             # reference mode: also paste a rough copy of the reference where it should go
     lora_strength: float | None = None   # strength of the workflow's pc:lora loader (None = what the workflow has)
     stage_on: bool = True                # workflows with a switchable stage (pc_stage_off, e.g. SeedVR2): False = skip the first one
     stage_strengths: dict = field(default_factory=dict)   # stage node id -> LoRA strength (a stage with a slider, e.g. MOSS' Lenovo LoRA)
     stages_off: list = field(default_factory=list)   # node ids of more stages (pc_stage_off) to skip: an optional LoRA, SLG ...
     detail: float = 1.0                  # Upscale/Refine: share of the new result mixed with the plainly scaled original (1 = all new)
-    ref_cutout: bool = True              # reference mode, simple style: the sentence also asks to remove the reference's background
     refs: list = field(default_factory=list)     # Multi Image Edit: the reference images (PIL, RGB or RGBA); image 1 is the picture, these are 2, 3 ...
     loras: list = field(default_factory=list)   # extra LoRAs [(file name, strength), ...] chained in front of the samplers
     match: float = 0.0                   # 0..1: pull colours that are louder than the surroundings back towards them (Fill / Expand / Reference)
@@ -163,36 +159,8 @@ def effective_layer_mask(choice: str, mode: str, editor: bool, has_sel: bool) ->
     if not has_sel:
         return "none"
     if choice == "auto":
-        return "none" if (editor and mode in ("inpaint", "reference", "outpaint")) else "soft"
+        return "none" if (editor and mode in ("inpaint", "outpaint")) else "soft"
     return choice
-
-
-REFERENCE_PROMPT = ("Place the subject from <image_1> into <image_2>. Keep the subject exactly as it looks in <image_1> "
-                    "(face, hair, clothing, colours, proportions) and match the lighting, colours and shadows of "
-                    "<image_2>. Keep everything else in <image_2> unchanged.")
-REFERENCE_COLLAGE_NOTE = (" A rough copy of the subject is already pasted into <image_2>: keep the subject at exactly "
-                          "that position and size and make it blend into the scene.")
-
-
-def reference_prompt(typed: str, collage: bool, where: str = "") -> str:
-    """The instruction for "insert reference image". Fibo 2 Edit composes best with the subject first: <image_1> is the
-    reference, <image_2> the picture (live tests: with the picture first the model redraws the reference and ignores
-    the scene). With the rough placement the pasted copy shows where; otherwise `where` (reference_where) says it."""
-    text = REFERENCE_PROMPT + (REFERENCE_COLLAGE_NOTE if collage else where)
-    if typed.strip():
-        text += " " + typed.strip()
-    return text
-
-
-def simple_reference_prompt(typed: str, where: str, cutout: bool = False) -> str:
-    """The "simple" style, from a live test that worked (Fibo 2 Edit Turbo, a tower into a landscape without cutting it
-    out): the picture is image1, the reference image2, and one plain sentence says where it goes."""
-    text = f"Put the subject from image2 into the {where} of the picture from image1."
-    if cutout:   # the reference needs no cutting out beforehand: the model removes its background itself
-        text += " Remove the background of image2 first."
-    if typed.strip():
-        text += " " + typed.strip()
-    return text
 
 
 def _where(sel: "imaging.Box", crop: "imaging.Box") -> tuple[str, int]:
@@ -209,12 +177,6 @@ def placement_hint(sel: "imaging.Box", crop: "imaging.Box") -> str:
     """Where the selection lies inside the crop, in words, for instruction-based editors that only see the crop."""
     where, share = _where(sel, crop)
     return f" (Apply this only at the {where} of the image, in an area of roughly {share}% of the image; leave everything else as it is.)"
-
-
-def reference_where(sel: "imaging.Box", crop: "imaging.Box") -> str:
-    """Reference mode without the rough placement: where the subject goes in <image_2> and how large."""
-    where, share = _where(sel, crop)
-    return f" Put the subject at the {where} of <image_2>, covering roughly {share}% of the image."
 
 
 # Live test (Fibo 2 Edit Turbo, dragon on a meadow, 3 seeds): "Erase the main subject inside the red rectangle completely,
@@ -354,12 +316,9 @@ class Bridge:
         tag = uuid.uuid4().hex[:8]
         _wfs = workflows.resolve(req.workflow) if req.workflow else [None]
         self.last_vgl = ""
-        if req.mode == "reference" and not (req.workflow and all(
-                workflows.has_ref_slot(workflows.load_template(w)) for w in _wfs)):
-            raise BridgeError("Insert reference image needs a workflow with a reference slot (the Fibo workflows have one).")
         if req.refs:
             if req.mode not in REF_MODES:
-                raise BridgeError("Reference images work with Edit, Fill Selection and Expand image.")
+                raise BridgeError("Reference images work in the mode Multi Image Edit.")
             slots = [workflows.ref_slot_count(workflows.load_template(w)) for w in _wfs if w]
             if not req.workflow or not slots or min(slots) < len(req.refs):
                 raise BridgeError(f"This model's workflow has room for {min(slots) if slots else 0} reference image(s), "
@@ -370,7 +329,7 @@ class Bridge:
                                   "pc:upscale), e.g. flux3-klein-upscale.json.")
             if req.mode == "upscale" and not 1.0 <= float(req.scale) <= 8.0:
                 raise BridgeError("Upscale factor: between 1 and 8.")
-        if req.enhance and req.mode not in ("reference",) + SCALE_MODES and not p.prompt.strip() and not self._kind(req, p, _wfs):
+        if req.enhance and req.mode not in SCALE_MODES and not p.prompt.strip() and not self._kind(req, p, _wfs):
             for w in _wfs:
                 if w and prompt_phase_nodes(json.loads(Path(w).read_text(encoding="utf-8"))):
                     raise BridgeError("Type an instruction first: this workflow's text model writes the prompt from it "
@@ -480,12 +439,6 @@ class Bridge:
         has_sel = bool(doc.get("hasSelection")) and req.mode not in ("edit", "txt2img")   # these work on the whole canvas, a selection is ignored
         if req.mode == "inpaint" and not has_sel:
             raise BridgeError("Select the area to fill first (e.g. Lasso or Rectangular Marquee).")
-        if req.mode == "reference":
-            if len(doc.get("layers", [])) < 2:
-                raise BridgeError("Put the reference image on its own layer above the picture: the top layer is the reference.")
-            if layer_visible(doc["layers"][0]) is False:
-                raise BridgeError("The top layer (the reference image) is switched off in PhotoCraft. Switch it on (the eye icon) and generate again.")
-
         wf_paths = workflows.resolve(req.workflow) if req.workflow else [None]
         # an instruction-based editor (Fibo) never sees the mask: it gets the white margin as it is plus a sentence
         # saying what it is; a smeared edge fill would look finished to it and come back unchanged
@@ -506,27 +459,12 @@ class Bridge:
         src = mask = None
         if req.mode != "txt2img" or has_sel:
             progress(0.05, "Exporting the image from PhotoCraft", phase="prepare")
-            ref_rgba = ref_rgb = None
-            if req.mode == "reference":
-                try:
-                    ref_full = self._export_top_layer(orig, tag)
-                    ref_rgba, ref_rgb = imaging.reference_from_layer(ref_full)
-                except ValueError as e:
-                    raise BridgeError(str(e) + " Is the top layer (the reference image) switched off in PhotoCraft?") from None
-            src, mask = self._export(orig, tag, need_mask=has_sel, drop_top=(req.mode == "reference"))
-            if req.mode == "reference" and mask is None:
-                # no selection: the reference layer, placed where it belongs, is the place (and its size)
-                lb = imaging.layer_box(ref_full)
-                if lb is None or ref_full.size != (W, H):
-                    raise BridgeError("Select where the reference image should go (e.g. Rectangular Marquee), or place its layer there.")
-                mask = Image.new("L", (W, H), 0)
-                mask.paste(255, lb.pil())
-                has_sel = True
+            src, mask = self._export(orig, tag, need_mask=has_sel)
             if keep is not None:
                 src = imaging.white_outside(src, keep) if editor else imaging.clear_outside(src, keep)
 
         bbox = None
-        if req.mode in ("inpaint", "reference", "outpaint"):
+        if req.mode in ("inpaint", "outpaint"):
             bbox = imaging.mask_bbox(mask)
             if bbox is None:
                 raise BridgeError("The selection is empty.")
@@ -563,23 +501,19 @@ class Bridge:
             image_name = self.comfy.upload_image(Image.new("RGB", (gw, gh), "white"), f"pcc-{tag}-image.png")
         if req.mode != "txt2img":
             crop_full = src.crop(region.pil())
-            if req.mode == "reference" and req.ref_collage and req.ref_style != "simple":
-                crop_full = imaging.paste_reference(crop_full, ref_rgba, imaging.Box(bbox.x - region.x, bbox.y - region.y, bbox.w, bbox.h))
             crop = imaging.to_rgb(crop_full).resize((gw, gh), Image.LANCZOS)
             crop_plain = crop
             if marked:
                 crop = imaging.mark_outline(crop, mask.crop(region.pil()).resize((gw, gh), Image.NEAREST), outline_width(gw, gh))
             image_name = self.comfy.upload_image(crop, f"pcc-{tag}-image.png")
         ref_name = None
-        if req.mode == "reference":
-            ref_name = self.comfy.upload_image(ref_rgb, f"pcc-{tag}-ref.png")
-        elif req.refs:
+        if req.refs:
             mult = max(workflows.size_multiple(workflows.load_template(w)) for w in wf_paths if w)
             ref_name = [self.comfy.upload_image(refslots.prepare_image(im, mult), f"pcc-{tag}-ref{n + 1}.png")
                         for n, im in enumerate(req.refs)]
         # a workflow without a pc:mask node (the Flux 2/3 Klein edit ones) gets the instruction only, no mask
         wf_mask_node = (not wf_paths[0]) or any(has_tag(json.loads(Path(w).read_text(encoding="utf-8")), "mask") for w in wf_paths if w)
-        if req.mode in ("inpaint", "reference", "outpaint") and wf_mask_node:
+        if req.mode in ("inpaint", "outpaint") and wf_mask_node:
             m = imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
             m = m.resize((gw, gh), Image.BILINEAR)
             mask_name = self.comfy.upload_image(m.convert("RGB"), f"pcc-{tag}-mask.png")
@@ -595,12 +529,6 @@ class Bridge:
             gp = p
             if keep is not None and editor:
                 gp = dataclasses.replace(p, prompt=outpaint_prompt(p.prompt, req.enhance, keep, (W, H)))
-            if req.mode == "reference":
-                # the text model is bypassed in this mode: a fixed instruction with <image_1>/<image_2> (+ where)
-                if req.ref_style == "simple":
-                    gp = dataclasses.replace(p, prompt=simple_reference_prompt(p.prompt, _where(bbox, region)[0], req.ref_cutout))
-                else:
-                    gp = dataclasses.replace(p, prompt=reference_prompt(p.prompt, req.ref_collage, reference_where(bbox, region)))
             if removal:   # fixed instruction, the text model is bypassed
                 gp = dataclasses.replace(p, prompt=remove_prompt(mask.crop(region.pil()), 0, req.remove_target))
             elif fill:    # marked area + fixed wrapper around the typed text; goes through the text model only when the
@@ -665,7 +593,7 @@ class Bridge:
                 layer_mask = imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
         mode = lm_mode
         sel_small = None   # the new area in the size the model drew it, for "match colours"
-        if req.match > 0 and req.mode in ("inpaint", "outpaint", "reference") and mask is not None and results and results[0][1]:
+        if req.match > 0 and req.mode in ("inpaint", "outpaint") and mask is not None and results and results[0][1]:
             sel_small = mask.crop(region.pil()).resize(results[0][1][0].size, Image.NEAREST)
         items = [(label, i, im, len(ims)) for label, ims in results for i, im in enumerate(ims)]
         layers = []
@@ -767,7 +695,7 @@ class Bridge:
                force_plain: bool = False):
         if wf:
             tpl = workflows.load_template(wf)
-            if not req.enhance or req.mode == "reference" or force_plain:
+            if not req.enhance or force_plain:
                 # first: without the text model, a picture it alone needed (Text to image) is not required either
                 tpl = workflows.bypass_prompt_writer(tpl, p.prompt)
             if not req.turbo:
@@ -791,7 +719,7 @@ class Bridge:
             if names:
                 tpl = names(tpl)
             return workflows.apply_template(tpl, p, image_name, mask_name, ref_name,
-                                            ref_first=req.ref_style != "simple" and not req.refs)
+                                            ref_first=False)
         if not p.checkpoint:
             raise BridgeError("Pick a model (checkpoint) or a custom workflow.")
         if req.mode == "txt2img":
@@ -845,30 +773,15 @@ class Bridge:
         im.load()
         return im
 
-    def _export_top_layer(self, orig: int, tag: str) -> Image.Image:
-        """The top layer on its own (with its transparency), exported from a throw-away duplicate."""
-        pc = self.pc
-        pc.execute("image.duplicate", {"name": f"pccomfy-{tag}-ref", "mergedOnly": False})
-        try:
-            for layer in pc.document()["layers"][1:]:  # index 0 is the top layer
-                pc.execute("layer.delete", {"layer": layer["id"]})
-            name, full = self._path(tag, "ref")
-            pc.save(name)
-            return self._wait_file(full)
-        finally:
-            pc.close_active()
-            pc.activate(orig)
-
-    def _export(self, orig: int, tag: str, need_mask: bool, drop_top: bool = False) -> tuple[Image.Image, Image.Image | None]:
-        """The picture (and the selection as a mask) from a throw-away duplicate. With `drop_top` the top layer (the
-        reference) is left out: the picture is all layers below it, flattened in the duplicate only."""
+    def _export(self, orig: int, tag: str, need_mask: bool) -> tuple[Image.Image, Image.Image | None]:
+        """The picture (and the selection as a mask) from a throw-away duplicate."""
         pc = self.pc
         # the picture the model sees is what is VISIBLE: layers that are switched off must not be in it. With any of them
         # present the duplicate keeps its layers, drops the hidden ones and is flattened (the plain merged copy may include
         # them). The duplicate has its own layer ids: the hidden layers are found again by their position in the stack.
         layers0 = [l for l in pc.document().get("layers", []) if isinstance(l, dict)]
         hidden_at = [i for i, l in enumerate(layers0) if layer_visible(l) is False]
-        pc.execute("image.duplicate", {"name": f"pccomfy-{tag}", "mergedOnly": not (drop_top or hidden_at)})
+        pc.execute("image.duplicate", {"name": f"pccomfy-{tag}", "mergedOnly": not hidden_at})
         try:
             if hidden_at:
                 dup = [l for l in pc.document().get("layers", []) if isinstance(l, dict)]
@@ -879,11 +792,7 @@ class Bridge:
                     ids = [l["id"] for l in dup if l.get("name") in names and "id" in l]
                 for lid in ids:
                     pc.execute("layer.delete", {"layer": lid})
-                if not drop_top:
-                    self._try("layer.flattenImage")
-            if drop_top:
-                pc.execute("layer.delete", {"layer": pc.document()["layers"][0]["id"]})
-                self._try("layer.flattenImage")  # nothing to flatten when only one layer is left
+                self._try("layer.flattenImage")
             src_name, src_full = self._path(tag, "src")
             pc.save(src_name)
             mask = None

@@ -16,7 +16,6 @@ eff = bridge.effective_layer_mask
 def main():
     # auto: Fill / Expand / reference + editor that ignores the mask -> none; mask workflows keep soft
     assert eff("auto", "inpaint", True, True) == "none"
-    assert eff("auto", "reference", True, True) == "none"  # Insert reference image: same as Fill
     assert eff("auto", "outpaint", True, True) == "none"   # Fibo redraws the whole crop: no layer mask to switch off by hand
     assert eff("auto", "outpaint", False, True) == "soft"
     assert eff("auto", "inpaint", False, True) == "soft"

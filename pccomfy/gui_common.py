@@ -30,17 +30,17 @@ MODE_LABELS = [
     ("inpaint", "Fill Selection"),
     ("remove", "Remove Selection"),
     ("outpaint", "Expand image"),
-    ("reference", "Insert reference image"),
+    ("multi_edit", "Multi Image Edit"),
     ("upscale", "Upscale (new file)"),
     ("refine", "Refine (same size)"),
     ("img2img", "Image → image"),    # only for a workflow of your own (no model tab)
 ]
-SHORT_MODES = {"txt2img": "Text", "edit": "Edit", "inpaint": "Fill Selection", "outpaint": "Expand", "reference": "Reference",
+SHORT_MODES = {"txt2img": "Text", "edit": "Edit", "inpaint": "Fill Selection", "outpaint": "Expand", "multi_edit": "Multi Edit",
                "remove": "Remove Selection", "upscale": "Upscale", "refine": "Refine", "img2img": "Img2img"}   # layer names
 MODE_TIPS = {      # for a workflow of your own (no model tab); the tabs show the tips of their model (models.Model.mode_tips)
     "inpaint": "Select an area, type what should appear there, then Generate.",
     "remove": "Select the object (whole object inside), then Generate.",
-    "reference": "Put the reference on its own top layer, select where it goes, then Generate.",
+    "multi_edit": "Changes the whole picture from your text and the reference images in the slots. A selection is ignored.",
     "outpaint": "Extend the canvas with the Crop tool (Enter) and fill the new area white, then Generate.",
     "edit": "Changes the whole picture from your text. A selection is ignored.",
     "img2img": "Reworks the picture (or selection) from your text.",
@@ -213,7 +213,6 @@ def preset_stem(name: str) -> str:
 
 BG, PANEL, FG, MUTED, ACCENT = "#535353", "#404040", "#eeeeee", "#cfcfcf", "#f28c28"   # PhotoCraft grey (measured from a screenshot), orange accent
 DISABLED = "#8e8e8e"   # text of a greyed-out control: clearly darker than MUTED, so it reads as "not available here"
-REF_STYLES = {"classic": "Classic: subject first, long instruction", "simple": "Simple: picture first, one short sentence"}
 SCALE_MODES = ("upscale", "refine")   # these run only with an upscale workflow (a node titled pc:upscale)
 ERROR, ERROR_TEXT = "#e5484d", "#ffc2c2"
 DONE_GREEN = "#39A95D"      # only the word "Done" above the bar
@@ -337,7 +336,6 @@ __all__ = [
     "MUTED",
     "ACCENT",
     "DISABLED",
-    "REF_STYLES",
     "SCALE_MODES",
     "ERROR",
     "ERROR_TEXT",

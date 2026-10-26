@@ -174,7 +174,7 @@ def main():
         b.run(req)
         raise SystemExit("Upscale takes no reference images")
     except BridgeError as e:
-        assert "Edit, Fill" in str(e), e
+        assert "Multi Image Edit" in str(e), e
     print("ALL OK (refslots)")
 
 

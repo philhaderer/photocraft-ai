@@ -27,10 +27,6 @@ class ModeMixin:
             self.f_detail.pack(fill="x", padx=10, pady=4, after=self.f_sharp)
         else:
             self.f_detail.pack_forget()
-        if mode == "reference":
-            self.f_ref.pack(fill="x", padx=10, pady=4, after=self.f_sharp)
-        else:
-            self.f_ref.pack_forget()
         self.w_denoise.configure(state="disabled" if mode == "txt2img" or self._ignores_mask() else "normal")   # an editor always runs at 1.0
         expand = mode == "outpaint"        # Expand image: the plugin's own defaults, none of the finishing options
         if self._run_mode() in ("txt2img", "edit") + SCALE_MODES or expand:    # nothing to blend into / a new document / the whole picture: no layer mask
@@ -38,7 +34,7 @@ class ModeMixin:
         elif not self.f_lm.winfo_manager():
             self.f_lm.pack(fill="x", padx=10, pady=(2, 4), before=self.f_adv)
         for w in self._match_widgets:      # pulling colours back only makes sense where a new area meets the old picture
-            if mode in ("inpaint", "reference"):
+            if mode == "inpaint":
                 w.grid()
             else:
                 w.grid_remove()
@@ -62,9 +58,6 @@ class ModeMixin:
         m = self._model()
         spec = m.modes.get(mode) if m else None
         return (spec.run_as if spec and spec.run_as else mode)
-
-    def _ref_style(self) -> str:
-        return {v: k for k, v in REF_STYLES.items()}.get(self.v_refstyle.get(), "simple")
 
     def _scale(self) -> float:
         try:
@@ -171,9 +164,9 @@ class ModeMixin:
         else:
             self._couple_workflow()
         self._on_mode_ui()
-        self._on_workflow()  # the text model is not used in reference mode
+        self._on_workflow()
         mode = self.v_mode.get()
-        if mode in ("inpaint", "remove", "reference", "outpaint", "edit"):
+        if mode in ("inpaint", "remove", "outpaint", "edit", "multi_edit"):
             self.v_denoise.set(1.0)  # full denoise inside the mask; lower it to keep more of the original
         elif mode == "img2img" and self.v_denoise.get() >= 0.99 and not self._ignores_mask():
             self.v_denoise.set(0.6)   # not for Fibo-type editors: below 1.0 they produce a different, broken picture
@@ -196,9 +189,6 @@ class ModeMixin:
         self.v_feather.set(2.0)
         self.v_detail.set(1.0)
         self.v_lmask.set(LAYER_MASKS["auto"])
-        self.v_refstyle.set(REF_STYLES["simple"])
-        self.v_collage.set(True)
-        self.v_cutout.set(True)
         self.v_cmp_res.set("")
         self.v_cmp_ctx.set("")
         self.v_scale.set(scale_text(1.5))
@@ -230,7 +220,7 @@ class ModeMixin:
             return choice == "soft"
         if self.v_mode.get() == "upscale":
             return False
-        if self.v_mode.get() not in ("inpaint", "remove", "reference", "outpaint"):
+        if self.v_mode.get() not in ("inpaint", "remove", "outpaint"):
             return True
         return not self._ignores_mask()
 
@@ -371,7 +361,7 @@ class ModeMixin:
             return
         mode = self._run_mode()
         scale = mode in SCALE_MODES
-        masked = mode in ("inpaint", "remove", "reference", "outpaint")
+        masked = mode in ("inpaint", "remove", "outpaint")
         editor = self._ignores_mask()
 
         def on(widget, yes, normal="normal"):
@@ -391,8 +381,6 @@ class ModeMixin:
         on(self.w_adv["Mask grow"], masked and not editor)
         on(self.w_adv["Mask blur"], masked and not editor)
         on(self.cb_lm, mode != "upscale", "readonly")        # Upscale opens a new document: no layer to mask
-        on(self.cb_cutout, self._ref_style() == "simple")     # the classic sentence has its own wording
-        on(self.cb_collage, self._ref_style() == "classic")   # the simple style never pastes a rough copy
         on(self.t_neg, self._wf_has_tag("negative"))
         self.t_neg.configure(fg=FG if self._wf_has_tag("negative") else DISABLED)
 
@@ -407,7 +395,7 @@ class ModeMixin:
             self.cb_fooocus.grid_remove()
         # the text model applies to custom workflows (nodes tagged pc:clip), not to the built-in graph, and only
         # while the prompt enhancement is on
-        has_writer = self._has_text_model() and self.v_mode.get() not in ("reference", "remove")  # these modes: fixed instruction
+        has_writer = self._has_text_model() and self.v_mode.get() != "remove"  # this mode: fixed instruction
         self.cb_enhance.configure(state="normal" if has_writer else "disabled")
         llm = next((m for m in (writer_model(t) for t in self._wf_templates()) if m), "")
         self.tt_enhance.text = ENHANCE_TIP + (f"\nText model: {llm}" if llm else "")
