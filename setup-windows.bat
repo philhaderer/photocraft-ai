@@ -17,7 +17,7 @@ echo The virtual environment cannot open a Tk window, so %PYEXE% is used directl
 set "PYRUN=%PYEXE%"
 set "PIPARGS=--user"
 :install
-"%PYRUN%" -m pip install %PIPARGS% pillow numpy websocket-client
+"%PYRUN%" -m pip install %PIPARGS% pillow numpy websocket-client tkinterdnd2
 if errorlevel 1 goto :pipfail
 (echo %PYRUN%)>"%~dp0data\python.txt"
 echo.

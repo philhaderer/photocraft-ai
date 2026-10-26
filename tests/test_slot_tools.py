@@ -56,7 +56,7 @@ def main():
     assert b.describe_image(Image.new("RGBA", (500, 300), (0, 0, 0, 0))) == "A red circle on blue."
     g = b.comfy.graphs[0]
     ask = next(n for n in g.values() if n["class_type"] == "TextGenerate")["inputs"]["prompt"]
-    assert ask.startswith("Describe this picture") and links_ok(g)
+    assert ask.startswith("Describe the main subject") and links_ok(g)
     up = next(iter(b.comfy.uploads.values()))
     assert up.mode == "RGB" and up.size[0] % 32 == 0 and up.size[1] % 32 == 0
     b.describe_image(Image.new("RGB", (64, 64)), question="What colour is the hat?")

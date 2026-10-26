@@ -149,8 +149,9 @@ def main():
         time.sleep(0.02)
     assert app.refslots.items[0].description == "A red square on blue." and not app._ref_busy
     assert app.lbl_refmsg["text"] == "<image2>: A red square on blue."
-    app._refs_to_prompt()
-    assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa\n<image2>: A red square on blue."
+    assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa"          # the text field itself stays as typed
+    assert app._request().params.prompt == "put it on the sofa\n<image2>: A red square on blue."   # the description goes along at the end
+    assert not hasattr(app, "b_refuse")
     app.bridge.describe_image = lambda im: (_ for _ in ()).throw(RuntimeError("ComfyUI is not running"))
     app._refs_describe(0)
     for _ in range(100):

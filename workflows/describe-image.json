@@ -2,8 +2,8 @@
  "1": {"class_type": "LoadImage", "inputs": {"image": "example.png"}, "_meta": {"title": "pc:image"}},
  "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": "qwen3.5_9b_int8_convrot.safetensors", "type": "stable_diffusion", "device": "default"}, "_meta": {"title": "pc:clip"}},
  "3": {"class_type": "TextGenerate",
-  "inputs": {"clip": ["2", 0], "prompt": "", "image": ["1", 0], "max_length": 160, "sampling_mode": "off", "thinking": false, "use_default_template": true, "mtp": "auto"},
+  "inputs": {"clip": ["2", 0], "prompt": "", "image": ["1", 0], "max_length": 60, "sampling_mode": "off", "thinking": false, "use_default_template": true, "mtp": "auto"},
   "_meta": {"title": "pc:prompt", "pc_llm_name": "Qwen 3.5 9B",
-   "pc_default_prompt": "Describe this picture in one or two plain sentences, as a caption for an image editor: the main subject (what it is, its colours, clothing, pose), then the background. Quote any visible text exactly. No lists, no preamble."}},
+   "pc_default_prompt": "Describe the main subject of this picture in one short sentence: what it is, its colour and most striking feature. No preamble."}},
  "4": {"class_type": "PreviewAny", "inputs": {"source": ["3", 0]}, "_meta": {"title": "pc:vgl"}}
 }

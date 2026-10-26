@@ -8,6 +8,7 @@ license = "MIT OR Apache-2.0"
 
 [project.optional-dependencies]
 progress = ["websocket-client"]
+dnd = ["tkinterdnd2"]      # drag and drop onto the reference slots (setup-windows.bat installs it)
 
 [project.scripts]
 pccomfy = "pccomfy.__main__:main"

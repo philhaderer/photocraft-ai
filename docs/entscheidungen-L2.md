@@ -47,6 +47,10 @@ Stand: 2026-10-26, Branch `feat/l2-multi-image`.
 - **Offen (FRAGEN.md 7):** mit Auswahl arbeiten? Ergebnis als neues Dokument?
 - **Manifest:** `manifest.py` (L1) kennt `multi_edit` noch nicht. Es braucht je Tab eine Zeile `"multi_edit": ModeSpec(requires=...)` wie bei `edit`; bis dahin ist `tests/test_detection.py` rot.
 
+## 12. Hintergrund hinter freigestellten Bildern
+- **Gewählt:** neutrales Grau (128, 128, 128), ein einziger Wert: `refslots.DEFAULT_BACKGROUND`. Gilt für alles, was durchsichtig ist (Freistellen, PNG mit Alpha), auch beim Senden. Die Vorschau im Slot zeigt weiter das dunkle Panel-Grau.
+- **Alternativen:** Weiß (vorher), Schalter im Slot, Grün (Chroma-Key-Farbe; riskant, weil das Modell sie ins Bild übernehmen könnte).
+
 ## 11. Icon-Leiste in den Slots
 - **Gewählt:** Eine schmale Leiste (22 Punkt breit) am rechten Rand INNEN im Slot, 16-Punkt-Symbole untereinander, gezeichnet wie `icon_image` (Pixelbild in `gui_common.SLOT_ART` bzw. Zeichenbefehle, keine Bilddateien). Jedes Symbol hat einen Tooltip „Wort: Erklärung“ mit dem alten Wort.
 - **Gefüllter Slot (von oben nach unten):** Remove (Kreuz), Pen (Stift), Cut out / Undo cut (Schere), Describe (Textzeilen), Copy text (zwei Blätter, nur wenn es eine Beschreibung gibt). Cut out und Describe sind grau, solange ihr Auftrag läuft.
@@ -60,3 +64,10 @@ Stand: 2026-10-26, Branch `feat/l2-multi-image`.
 - Der Tk-Stub in `tests/test_gui_presets.py` kennt jetzt Frame, Label und Canvas.
 - `tests/live_dnd.py` prüft tkinterdnd2 in einem Temp-Ordner, nicht in deinem Python.
 - Git kann hier keine Lock-Dateien löschen: ich benenne sie in `.git/stale-*` um.
+
+## 13. Beschreibung und Prompt (Runde 2)
+- **Gewählt:** Der Beschreibungstext ist ein kurzer Satz (Prompt: „Describe the main subject of this picture in one short sentence: what it is, its colour and most striking feature. No preamble.“, höchstens 60 Zeichen-Token; live geprüft: „A black cat with striking yellow eyes sits in green grass, ...“, 5 s). Er steht unter dem Bild im Slot und wird beim Senden automatisch ans Ende des Prompts gehängt (`RefSlots.prompt_with_descriptions`), eine Zeile je Bild. Das Textfeld im Fenster bleibt unverändert.
+- **Weg:** Der Knopf „Descriptions to prompt“ ist weg. „Copy text“ ist ein Symbol in der Leiste des Slots.
+- **Alternative:** Die Zeilen sofort ins Textfeld schreiben (du siehst sie, aber sie stehen doppelt, wenn du neu beschreibst).
+- **Beispiele je Modell:** `docs/prompt-aufbau.md`, erzeugt von `tests/test_prompt_aufbau.py --write`.
+- **tkinterdnd2:** fest in `setup-windows.bat` (pip) und `pyproject.toml` (Extra `dnd`). Fehlt es, steht unter den Slots ein Hinweis, alles andere geht.

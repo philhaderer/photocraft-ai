@@ -94,7 +94,7 @@ def main():
     # what is sent: flat, at most 1024 px, multiples of the model's grid
     big = Image.new("RGBA", (3000, 1500), (255, 0, 0, 0))
     out = refslots.prepare_image(big, 32)
-    assert out.mode == "RGB" and out.size == (1024, 512) and out.getpixel((0, 0)) == (255, 255, 255)
+    assert out.mode == "RGB" and out.size == (1024, 512) and out.getpixel((0, 0)) == refslots.DEFAULT_BACKGROUND == (128, 128, 128)
     assert refslots.prepare_image(Image.new("RGB", (100, 75)), 32).size == (96, 64)
     assert refslots.prepare_image(Image.new("RGB", (5, 5)), 16).size == (16, 16)
 
@@ -157,7 +157,7 @@ def main():
             assert len(sent) == k and links_ok(g), (key, k)
             mult = 32 if key == "qwen" else 16
             assert all(im.mode == "RGB" and im.size[0] % mult == 0 and im.size[1] % mult == 0 for im in sent), (key, k)
-            assert all(im.getpixel((0, 0)) == (255, 255, 255) for im in sent), "transparent areas turn white"
+            assert all(im.getpixel((0, 0)) == refslots.DEFAULT_BACKGROUND for im in sent), "transparent areas turn grey"
     # errors: too many images, a mode that takes none
     pc, _, b = T.make(tempfile.mkdtemp(), with_sel=False)
     b.comfy = T.FakeComfy()
