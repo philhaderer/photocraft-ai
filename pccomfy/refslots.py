@@ -321,7 +321,7 @@ class RefSlotsMixin:
                 lbl.pack(expand=True, side="left")
                 Tooltip(lbl, f"{it.name or 'clipboard'}" + ("  (cut out)" if it.cut_out else "") + (f"\n{it.description}" if it.description else ""))
                 tag = rs.tag(k)
-                ttk.Label(cell, text=tag or f"image {k + 2}", style="Hint.TLabel").pack(anchor="w")
+                ttk.Label(cell, text=tag or f"image {k + 2}", style="Hint.TLabel", anchor="center").pack(fill="x")      # centred under the slot
                 if it.description:      # shown under the image; it is also added to the end of the prompt
                     ttk.Label(cell, text=it.description, style="Muted.TLabel", wraplength=s, justify="left").pack(anchor="w")
                 busy = k in self._ref_busy
