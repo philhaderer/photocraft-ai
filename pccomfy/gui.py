@@ -415,8 +415,8 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         for w in (lb, cb_lm):
             Tooltip(w, "How the result is blended into your picture: auto (recommended), soft (feathered), hard (selection as is), none.")
 
-        bf = ttk.Frame(r)
-        bf.pack(fill="x", padx=10, pady=(8, 2))
+        bf = self.f_go = ttk.Frame(r)   # Generate, Cancel, Undo, Redo: above the line over "Prompt", under the functions
+        bf.pack(fill="x", padx=10, pady=(6, 2), before=self.sep_prompt)
         self.b_go = ttk.Button(bf, text="Generate", width=11, style="Accent.TButton", command=self.generate)
         self.b_go.pack(side="left", fill="y")
         Tooltip(self.b_go, "Generate (Ctrl+Enter)")
