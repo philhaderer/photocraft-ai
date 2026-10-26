@@ -130,8 +130,22 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
             self.tt_tabs[m.key] = Tooltip(rb, m.tip)
             self.rb_tabs[m.key] = rb
 
-        self.f_body = ttk.Frame(self.root)      # everything under the tabs: hidden while no model is chosen (ui_settings.py)
-        self.f_body.pack(fill="x")
+        # everything under the tabs: hidden while no model is chosen (ui_settings.py). It sits in a Canvas, so it can scroll
+        # with a thin bar when the window would be taller than the screen (Advanced open, many slots): _fit_height decides.
+        self.f_scrollbox = ttk.Frame(self.root)
+        self.f_scrollbox.pack(fill="x")
+        try:
+            body_bg = ttk.Style().lookup("TFrame", "background") or BG
+        except Exception:
+            body_bg = BG
+        self.cv_body = tk.Canvas(self.f_scrollbox, bg=body_bg, highlightthickness=0, bd=0)
+        self.cv_body.pack(side="left", fill="both", expand=True)
+        self.sb_body = ThinScrollbar(self.f_scrollbox, self.cv_body, self._px(6), body_bg)
+        self.f_body = ttk.Frame(self.cv_body)
+        self._body_win = self.cv_body.create_window(0, 0, window=self.f_body, anchor="nw")
+        self.cv_body.bind("<Configure>", lambda e: self.cv_body.itemconfigure(self._body_win, width=e.width), add="+")
+        self.f_body.bind("<Configure>", self._on_body_size, add="+")
+        self.root.bind_all("<MouseWheel>", self.sb_body.wheel, add="+")
         r = self.f_body
 
         mf = ttk.Frame(r)

@@ -258,6 +258,88 @@ class Tooltip:
             self.tip = None
 
 
+class ThinScrollbar:
+    """A very thin vertical scroll bar for a Canvas: a narrow strip with a rounded handle, no arrows. Dragging the handle,
+    a click on the strip and the mouse wheel scroll; the handle lightens under the mouse. Shown only while it is needed
+    (`show` / `hide`)."""
+
+    THUMB, THUMB_HOT = "#808080", "#b0b0b0"      # visible on the window grey (#535353) without standing out
+
+    def __init__(self, parent, canvas, width: int, bg: str):
+        self.canvas, self.width = canvas, width
+        self.bar = tk.Canvas(parent, width=width, height=1, bg=bg, highlightthickness=0, bd=0, cursor="arrow")   # height: from the canvas beside it
+        self.shown = False
+        self._first, self._last, self._drag, self._hot = 0.0, 1.0, None, False
+        canvas.configure(yscrollcommand=self.set)
+        self.bar.bind("<Configure>", lambda e: self._draw())
+        self.bar.bind("<Enter>", lambda e: self._heat(True))
+        self.bar.bind("<Leave>", lambda e: self._heat(False))
+        self.bar.bind("<ButtonPress-1>", self._press)
+        self.bar.bind("<B1-Motion>", self._move)
+        self.bar.bind("<ButtonRelease-1>", lambda e: setattr(self, "_drag", None))
+
+    def show(self):
+        if not self.shown:
+            self.shown = True
+            self.bar.pack(side="right", fill="y", before=self.canvas)
+
+    def hide(self):
+        if self.shown:
+            self.shown = False
+            self.bar.pack_forget()
+            self.canvas.yview_moveto(0)
+
+    def set(self, first, last):
+        self._first, self._last = float(first), float(last)
+        self._draw()
+
+    def _heat(self, hot: bool):
+        self._hot = hot
+        self._draw()
+
+    def _draw(self):
+        b = self.bar
+        try:
+            h = b.winfo_height()
+            b.delete("all")
+        except tk.TclError:
+            return
+        if not isinstance(h, int) or h <= 1 or self._last - self._first >= 1.0:
+            return
+        w = self.width
+        y0 = max(0, round(self._first * h))
+        y1 = min(h, max(y0 + 2 * w, round(self._last * h)))
+        r, c = w / 2, (self.THUMB_HOT if (self._hot or self._drag is not None) else self.THUMB)
+        b.create_oval(1, y0, w - 1, y0 + w, fill=c, outline=c)             # round ends
+        b.create_oval(1, y1 - w, w - 1, y1, fill=c, outline=c)
+        b.create_rectangle(1, y0 + r, w - 1, y1 - r, fill=c, outline=c)
+
+    def _press(self, e):
+        h = max(1, self.bar.winfo_height())
+        f = e.y / h
+        if self._first <= f <= self._last:
+            self._drag = (e.y, self._first)                   # grab the handle where it was hit
+        else:
+            self.canvas.yview_moveto(f - (self._last - self._first) / 2)    # a click on the strip: jump there
+        self._draw()
+
+    def _move(self, e):
+        if self._drag is not None:
+            y, first = self._drag
+            self.canvas.yview_moveto(first + (e.y - y) / max(1, self.bar.winfo_height()))
+
+    def wheel(self, e):
+        """Mouse wheel anywhere over the scrolled area (not over a text field or a list, which scroll themselves)."""
+        if not self.shown:
+            return
+        try:
+            if e.widget.winfo_class() in ("Text", "Listbox", "TCombobox", "ComboboxPopdownFrame"):
+                return
+        except Exception:
+            pass
+        self.canvas.yview_scroll(-1 if e.delta > 0 else 1, "units")
+
+
 ENHANCE_TIP = "On: a text model writes the detailed prompt from your short text. Off: your text is sent as typed."
 LORA_TIP = "The workflow's own LoRA: on/off, and its strength."
 STAGE_TIP = "A stage of the workflow you can switch off."
@@ -354,6 +436,7 @@ __all__ = [
     "ComfyUI",
     "PhotoCraft",
     "PhotoCraftError",
+    "ThinScrollbar",
     "workflows_tags",
     "FLUX2_SCHEDULER",
     "GenParams",
