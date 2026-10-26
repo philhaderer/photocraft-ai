@@ -224,6 +224,14 @@ def test_comfy_reading():
     inv = inventory.fetch(c, {"x": "y"})
     assert inv.tab_status("flux3").state == "partial" or inv.tab_status("flux3").state == "ready"
     assert inv.mapping == {"x": "y"}
+    os.environ["PCCOMFY_SIMULATE_NO_MODELS"] = "1"      # the new-user test start: ComfyUI answers, but has no model files
+    try:
+        empty = inventory.fetch(c)
+        assert all(empty.lists[k] == [] for k in inventory.LIST_KINDS)
+        assert all(empty.tab_status(m.key).state != "ready" for m in models.MODELS)
+    finally:
+        del os.environ["PCCOMFY_SIMULATE_NO_MODELS"]
+    assert inventory.fetch(c).lists["unet"] == lists["unet"]
     assert FakeComfy(lists, all_nodes=False).inventory_raw()["nodes"] is None          # node list unreadable: not fatal
     try:
         FakeComfy(lists, up=False).inventory_raw()
