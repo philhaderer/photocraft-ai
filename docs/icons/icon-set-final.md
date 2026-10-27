@@ -1,6 +1,6 @@
-# Funktions-Symbole: Bauanleitung (vorbereitet, nicht eingebaut)
+# Funktions-Symbole: Bauanleitung
 
-Stand 2026-10-27. Vom User gewählt, noch nichts im Code. Vorschau: `docs/icons/icon-set-final.png` (Kopie aus `data/`, dort von einem anderen Chat erstellt).
+Stand 2026-10-27. Vom User gewählt, **eingebaut** (Branch `feat/function-icons`, in `next`); Symbol und Text stehen linksbündig wie in der Vorschau. Vorschau: `docs/icons/icon-set-final.png` (Kopie aus `data/`, dort von einem anderen Chat erstellt).
 
 | Funktion (key) | Symbol | Vorschau-Name |
 |---|---|---|
