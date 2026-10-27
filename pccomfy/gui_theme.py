@@ -19,6 +19,9 @@ class ThemeMixin:
                     lightcolor=PANEL, darkcolor=PANEL, troughcolor=PANEL, focuscolor=ACCENT, font=(FONT, 10))
         s.configure("TLabel", background=BG, foreground=FG)
         s.configure("Muted.TLabel", foreground=MUTED, font=(FONT, 9))
+        s.configure("TNotebook", background=BG, borderwidth=0, tabmargins=(0, 4, 0, 0))     # the tabs of the settings window
+        s.configure("TNotebook.Tab", background=PANEL, foreground=FG, padding=(14, 4), borderwidth=0)
+        s.map("TNotebook.Tab", background=[("selected", ACCENT), ("active", "#5f5f5f")], foreground=[("selected", "#1b1b1b")])
         for name, colour in (("ConnOk", DONE_GREEN), ("ConnBad", ERROR), ("ConnWait", MUTED)):     # the ComfyUI dot
             s.configure(f"{name}.TLabel", foreground=colour, font=(FONT, 9))
         s.configure("Badge.TLabel", background=ERROR, foreground="white", font=(FONT, 10, "bold"))
