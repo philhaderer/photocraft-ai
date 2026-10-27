@@ -24,7 +24,7 @@ class ModeMixin:
         else:
             self.f_scale.pack_forget()
         if self._run_mode() in SCALE_MODES:
-            self.f_detail.pack(fill="x", padx=10, pady=4, after=self.f_sharp)
+            self.f_detail.pack(fill="x", padx=10, pady=4, before=self.f_adv)
         else:
             self.f_detail.pack_forget()
         self.w_denoise.configure(state="disabled" if mode == "txt2img" or self._ignores_mask() else "normal")   # an editor always runs at 1.0
@@ -32,7 +32,7 @@ class ModeMixin:
         if self._run_mode() in ("txt2img", "edit") + SCALE_MODES or expand:    # nothing to blend into / a new document / the whole picture: no layer mask
             self.f_lm.pack_forget()
         elif not self.f_lm.winfo_manager():
-            self.f_lm.pack(fill="x", padx=10, pady=(2, 4), before=self.f_adv)
+            self.f_lm.pack(fill="x", pady=(2, 0))      # the last row of the finishing options
         for w in self._match_widgets:      # pulling colours back only makes sense where a new area meets the old picture
             if mode == "inpaint":
                 w.grid()
@@ -43,7 +43,6 @@ class ModeMixin:
                 w.grid_remove()
             else:
                 w.grid()
-        self.f_sharp.pack_configure(pady=0 if expand else (6, 0))
         self._show_enhance_box(not expand)
         self._update_prompt_hint()
         self._sync_prompt_field(mode)
@@ -140,7 +139,7 @@ class ModeMixin:
 
     def _show_advanced(self):
         opened = bool(self.v_adv_open.get())
-        self.btn_adv.configure(text="Advanced", compound="left",
+        self.btn_adv.configure(text="Advanced settings", compound="left",
                                image=self._icon("chevron-down" if opened else "chevron-right", MUTED))
         if opened:
             self.adv_body.pack(fill="x", pady=(4, 0))
@@ -241,7 +240,10 @@ class ModeMixin:
         self.w_feather.configure(state="normal" if on else "disabled")
         shown = bool(self.f_feather.winfo_manager()) if hasattr(self.f_feather, "winfo_manager") else False
         if on and not shown:
-            self.f_feather.pack(fill="x", padx=10, pady=(4, 0), before=self.f_lm if self.f_lm.winfo_manager() else self.f_adv)
+            if self.f_lm.winfo_manager():
+                self.f_feather.pack(fill="x", pady=(2, 0), before=self.f_lm)
+            else:
+                self.f_feather.pack(fill="x", pady=(2, 0))
         elif not on and shown:
             self.f_feather.pack_forget()
         if on != shown and getattr(self, "_sized", False):

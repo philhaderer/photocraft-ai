@@ -68,7 +68,7 @@ class PromptMixin:
         """The "LLM prompt enhancement" row (with the copy button): not in Expand image."""
         shown = bool(self.f_enh.winfo_manager())
         if on and not shown:
-            self.f_enh.pack(fill="x", padx=10, pady=(6, 0), before=self.f_sharp)
+            self.f_enh.pack(fill="x", padx=10, pady=(6, 0), before=self.f_detail if self.f_detail.winfo_manager() else self.f_adv)
         elif not on and shown:
             self.f_enh.pack_forget()
         if on != shown and getattr(self, "_sized", False):
