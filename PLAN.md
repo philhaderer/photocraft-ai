@@ -1,6 +1,6 @@
 # PLAN: PhotoCraft x ComfyUI plugin, release 1
 
-Stand 2026-10-26, 20:10. Der Plan ist freigegeben. **Gebaut und in `next` gemergt:** Phase 0, Lane L1 (Erkennung/Settings) und Lane L2 (Multi Image Edit, Runden 1 bis 3). **Offen:** L3 (Fenster-Politur), L4 (Inhalte), Flux-3-Boxen (Entscheidung offen), Easy Mode zuletzt. Aktueller Gesamtstand und offene Entscheidungen: `docs/HANDOFF-claude-code.md`. Backup: Tag `backup-2026-10-26` (6df02df) und das ZIP des Users.
+Stand 2026-10-27. Der Plan ist freigegeben. **Gebaut und in `next` gemergt:** Phase 0, Lane L1 (Erkennung/Settings), Lane L2 (Multi Image Edit, Runden 1 bis 3) und die erste UI-Runde vom 26./27.10. (Icons, Slider, Slot-Fixes, Downloadlinks; Details im Handoff). **Als Nächstes:** die Aufgabenliste in Abschnitt 8 (kleine Verbesserungen zuerst, dann weiter nach Plan). **Offen:** L3 (Fenster-Politur), L4 (Inhalte), Flux-3-Boxen (Entscheidung offen), Easy Mode zuletzt. Aktueller Gesamtstand und offene Entscheidungen: `docs/HANDOFF-claude-code.md`. Backup: Tag `backup-2026-10-26` (6df02df) und das ZIP des Users.
 
 ## 1. Entscheidungen des Users (26.10.)
 
@@ -99,3 +99,33 @@ Berührungspunkte nur über feste Schnittstellen: `models.py` (nur L2, danach nu
 - Krea-Style-Explorer: Lizenz des Repos und der Bilder vor dem Mitliefern klären (Klonen zum Ansehen ist okay).
 - Scribble/Sketch, Remove-Prompt, Encoder-Tausch, Steps-Prüfung: Recherche- und Testaufgaben ohne Code, getrennt von den Lanes (`docs/tests/`).
 - Easy-Mode-Ranking ist ein Datensatz in `easymode.py`; „Favorit“ aus dem Rechtsklick überschreibt ihn je Funktion.
+
+## 8. Aufgabenliste des Users vom 27.10. (Reihenfolge: kleine Verbesserungen zuerst, dann weiter nach Plan)
+
+Wortlaut des Users sinngemäß übernommen; Details, Befunde und Optionen stehen im Handoff, Abschnitt 6.
+
+**A. Kleine Verbesserungen (zuerst)**
+1. Leerzeile unter den Drop-Slots weg (vor dem Befüllen; vermutlich der Platz, an dem nach dem Befüllen der Bild-Tag erscheint).
+2. Überflüssige Leerzeile nach „Advanced“ weg.
+3. Chevron bei „Advanced“ steht zu weit rechts.
+4. „Extra LoRAs (style, detail ...)“ umbenennen in „Custom LoRAs:“, den „+ Add“-Knopf ganz nach rechts, die Leerzeile danach löschen.
+5. Text „PhotoCraft“ ganz unten links weg (der User fragt, was er bringt).
+6. ComfyUI-Punkt unten: rot, wenn nicht verbunden, grün, wenn verbunden.
+7. Slider: der dunklere Teil der Spur in PhotoCrafts Farbe `#686868`.
+8. Slider überall rechts, gleich breit und fest; auch bei den modellspezifischen LoRAs rechts neben dem Text (heute: Workflow-LoRA-Slider unter dem Haken).
+9. Slider-Werte müssen eintippbar sein (alle Slider).
+10. „Sharpen result“, „Match colours“, „Edge feather“ und das Dropdown „Layer mask“ kommen unter „Advanced“; „Advanced“ heißt neu „Advanced settings“.
+
+**B. Wichtig**
+11. Startposition: Das Plugin wird nach dem PhotoCraft-Start oft zu weit links oben gesetzt; Drag and Drop nach unten macht dann Probleme (das Fenster verschwindet kurz). Es soll an einer festen Position starten.
+12. Flux 2 Klein 9B: keine öffentliche Quelle mehr. Die vom User genannte Datei (`obsxrver/ComfyUI-Native-INT8_ConvRot`, `flux-2-klein-base-9b-int8-ConvRot.safetensors`) wurde am 27.10. geprüft: **nicht bytegleich** (anderer Inhalt, wohl das Base-Modell); Umbenennen geht nicht. Entscheidung des Users offen (siehe Handoff 6.B).
+
+**C. Neue Funktionen**
+13. Settings (Zahnrad): neben jeder Modell-Datei ein Knopf, mit dem der User sie gegen eine eigene Datei tauscht. Wortlaut vorschlagen (z. B. „Use my own file…“).
+14. Strg+Z / Strg+Y: Die Notiz des Users ist abgebrochen („hier war gemeint, dass man mit STRG“) → beim User nachfragen, was gemeint war (bisher: Handoff-Aufgabe 6.8 alt).
+
+**D. Recherche und Entscheidungen**
+15. UX-Frage: Funktionen zuerst wählen, das Modell darunter (statt Modell-Tabs oben)? Folgen für die UX aufschreiben, Optionen nennen, nichts bauen.
+16. State-of-the-art-UI-Fonts recherchieren, drei vorschlagen (Lizenz, Windows-Verfügbarkeit, Tk-Tauglichkeit).
+
+**E. Danach laut Plan** (offen aus der alten Liste): Refresh/Reset (alt 6.7), Krea-2-Expand (alt 6.10), Flux-3-Expand-Steps (alt 6.11), Masken-Option A und Seam-Korrektur T2 (alt 6.12), restliche Design-Vorschläge (alt 6.3), dann L3, L4, Easy Mode.
