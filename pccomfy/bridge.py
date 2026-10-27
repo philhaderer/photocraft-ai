@@ -831,12 +831,20 @@ class Bridge:
         pc = self.pc
         center = list(region.center)
         self._copy_png(orig, im, tag, f"result{i}")
-        if mode == "selection":
-            if not first:  # pasting drops the selection – bring it back for the next variant
-                pc.execute("select.reselect")
-            layer = pc.execute("edit.pasteSpecial.pasteInto", {"center": center})["layer"]
-        else:
-            layer = pc.execute("edit.paste", {"center": center})["layer"]
+        helper = self._pixel_target(tag)
+        try:
+            if mode == "selection":
+                if not first:  # pasting drops the selection – bring it back for the next variant
+                    pc.execute("select.reselect")
+                layer = pc.execute("edit.pasteSpecial.pasteInto", {"center": center})["layer"]
+            else:
+                layer = pc.execute("edit.paste", {"center": center})["layer"]
+        finally:
+            if helper is not None:
+                self._try("layer.delete", {"layer": helper})
+        if helper is not None:
+            self._try("layer.select", {"layer": layer})     # the next variant goes on top of this one, not on the layer below
+        if mode != "selection":
             if mode == "soft" and layer_mask is not None:
                 # soft, editable layer mask: a white mask, then the mask's luminosity pasted into it
                 self._copy_png(orig, layer_mask.convert("RGB"), tag, f"lmask{i}")
@@ -847,6 +855,21 @@ class Bridge:
         if hidden:
             self._try("layer.hideLayers", {"layer": layer})
         return layer
+
+    def _pixel_target(self, tag: str) -> "int | None":
+        """An empty pixel layer above the active one, so the paste lands in a layer of its own: with an adjustment layer
+        (brightness, curves ...) active, PhotoCraft pastes into that layer's mask and the run broke off. Returns its id
+        (deleted again after the paste), or None when it could not be made."""
+        name = f"pccomfy-target-{tag}"
+        try:
+            res = self.pc.execute("layer.new.layer", {"name": name}) or {}
+            lid = res.get("layer") if isinstance(res, dict) else None
+            if lid is None:
+                lid = next((l["id"] for l in self.pc.document().get("layers", [])
+                            if isinstance(l, dict) and l.get("name") == name and "id" in l), None)
+            return lid
+        except (PhotoCraftError, KeyError, TypeError):
+            return None
 
     def _open_upscaled(self, results, orig: int, orig_name: str, region: "imaging.Box", p, tag: str, progress, req: Request | None = None) -> dict:
         """Upscale: every result becomes a new document (like Photoshop's Image Size into a new file); the original
