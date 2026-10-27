@@ -274,6 +274,12 @@ def main():
     app.open_settings()
     exp, avail = app._link_choices()
     assert "flux2-vae.safetensors" in exp and "my_vae.safetensors" in avail["vae"]
+    # "Choose another file..." next to every file (found or missing): it sets the boxes to that file
+    picks = [u for _t, style, u in app._settings_segments() if style == "pick"]
+    assert picks and set(picks) == set(exp), (len(picks), len(exp))
+    assert all(t == "Choose another file…" for t, style, _u in app._settings_segments() if style == "pick")
+    app._choose_for("flux2-vae.safetensors")
+    assert app.v_link_exp.get() == "flux2-vae.safetensors" and "my_vae.safetensors" in app.cb_link_act["values"]
     app.v_link_exp.set("flux2-vae.safetensors")
     app._link_expected_picked()
     assert "my_vae.safetensors" in app.cb_link_act["values"] and "flux3-image-klein-int8-convrot.safetensors" not in app.cb_link_act["values"]

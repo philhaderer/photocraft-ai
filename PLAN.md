@@ -30,7 +30,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 2. ~~**Flux 2 Klein 9B ohne Quelle** (B.12)~~: **erledigt 27.10.** Die obsxrver-Fassung (`flux-2-klein-9b_int8_convrot.safetensors`) liefert im A/B-Test gleichwertige Bilder bei gleichem Tempo; Workflows und Download-Liste nutzen jetzt sie (Entscheidung des Users: Option B). Die alte Datei bindet der User später über C.13 ein.
 
 **C. Neue Funktion**
-3. **Eigene Datei statt Modell** (C.13), als Nächstes: Im Zahnrad-Fenster neben jeder Modell-Datei ein Knopf („Use my own file…“ empfohlen), Auswahl aus ComfyUIs Dateiliste des passenden Ordners.
+3. ~~**Eigene Datei statt Modell** (C.13)~~: **erledigt 27.10.**, Link „Choose another file…“ neben jeder Datei (Wortlaut vom User gewählt). Ursprünglich: Im Zahnrad-Fenster neben jeder Modell-Datei ein Knopf („Use my own file…“ empfohlen), Auswahl aus ComfyUIs Dateiliste des passenden Ordners.
 
 **D. Recherche (nichts bauen, Ergebnis vorlegen)**
 4. **Funktionen zuerst, Modell darunter?** (D.15): Folgen für die UX, Optionen, Empfehlung.

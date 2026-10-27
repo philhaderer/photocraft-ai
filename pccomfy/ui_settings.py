@@ -20,6 +20,7 @@ from .gui_common import __all__ as _ALL  # noqa: F401
 
 _LABELS = dict(MODE_LABELS)      # noqa: F405
 EMPTY_TEXT = {"choose": "Choose a model", "none_linked": "Link your model in the settings"}
+PICK_TEXT = "Choose another file…"     # next to every file in the settings window (C.13, wording chosen by the user)
 STATE_TEXT = {"ready": "ready", "partial": "some functions need files", "missing": "files missing"}
 
 
@@ -252,7 +253,8 @@ class SettingsMixin:
     # ---------- the overlay: content as plain data (tested without Tk) ----------
 
     def _settings_segments(self) -> list[tuple]:
-        """The overlay text as (text, style, url) pieces; style is head / ok / bad / muted / note / link."""
+        """The overlay text as (text, style, url) pieces; style is head / ok / bad / muted / note / link, or "pick": a link
+        that chooses another installed file for the expected one named in the third field."""
         seg: list[tuple] = []
         add = lambda text, style="", url="": seg.append((text, style, url))  # noqa: E731
         if self.inv is None:
@@ -270,7 +272,10 @@ class SettingsMixin:
                 for f, found, level in row["files"]:
                     if found is not None:
                         add("    ✓ ", "ok")
-                        add(f.name + ("" if found == f.name else f"  (as {found})") + ("   optional" if level == "optional" else "") + "\n", "muted")
+                        add(f.name + ("" if found == f.name else f"  (as {found})") + ("   optional" if level == "optional" else ""), "muted")
+                        add("   ", "")
+                        add(PICK_TEXT, "pick", f.name)
+                        add("\n", "")
                         continue
                     add("    ✗ ", "bad" if level == "required" else "note")
                     add(f.name, "")
@@ -280,6 +285,8 @@ class SettingsMixin:
                         add("download", "link", f.url)
                         if f.size_text:
                             add(f"  ({f.size_text})", "muted")
+                    add("   ", "")
+                    add(PICK_TEXT, "pick", f.name)
                     add("\n", "")
                     if f.note:
                         add("        " + f.note + "\n", "muted")
@@ -302,7 +309,7 @@ class SettingsMixin:
             for k, v in sorted(links.items()):
                 add(f"    {k}  →  {v}\n", "muted")
         else:
-            add("    none. Use the boxes below when a file has another name.\n", "muted")
+            add(f"    none. Use “{PICK_TEXT}” next to a file, or the boxes below.\n", "muted")
         add("\n", "")
         add("ComfyUI folders (extra_model_paths.yaml)\n", "head")
         path = cfgmod.extra_paths_file()
@@ -326,14 +333,13 @@ class SettingsMixin:
         return seg
 
     def _link_choices(self) -> tuple[list[str], dict]:
-        """(the expected file names that can be linked, installed files per kind)."""
+        """(the expected file names that can be linked: every file of the list, installed files per kind)."""
         if self.inv is None:
             return [], {}
-        mapped = cfgmod.model_map()
         names = []
         for row in self.inv.rows():
-            for f, found, _level in row["files"]:
-                if (found is None or f.name in mapped) and f.name not in names:
+            for f, _found, _level in row["files"]:
+                if f.name not in names:
                     names.append(f.name)
         return names, self.inv.lists
 
@@ -379,6 +385,7 @@ class SettingsMixin:
         self.cb_link_exp.grid(row=1, column=0, sticky="ew", pady=2)
         self.cb_link_act.grid(row=2, column=0, sticky="ew", pady=2)
         self.cb_link_exp.bind("<<ComboboxSelected>>", lambda e: self._link_expected_picked())
+        self.cb_link_act.bind("<<ComboboxSelected>>", lambda e: self._link_models())     # picking a file links it at once
         link.columnconfigure(0, weight=1)
         bl = ttk.Button(link, text="Link", command=self._link_models)
         bl.grid(row=1, column=1, padx=(6, 0))
@@ -438,11 +445,14 @@ class SettingsMixin:
         n = 0
         for text, style, url in self._settings_segments():
             tags = (style,) if style and style != "link" else ()
-            if style == "link":
+            if style in ("link", "pick"):
                 n += 1
                 tag = f"link{n}"
                 t.tag_configure(tag, foreground=ACCENT, underline=True)
-                t.tag_bind(tag, "<Button-1>", lambda e, u=url: webbrowser.open(u))
+                if style == "pick":
+                    t.tag_bind(tag, "<Button-1>", lambda e, u=url: self._choose_for(u))
+                else:
+                    t.tag_bind(tag, "<Button-1>", lambda e, u=url: webbrowser.open(u))
                 t.tag_bind(tag, "<Enter>", lambda e: t.configure(cursor="hand2"))
                 t.tag_bind(tag, "<Leave>", lambda e: t.configure(cursor="arrow"))
                 tags = (tag,)
@@ -470,6 +480,20 @@ class SettingsMixin:
         self.cb_link_act["values"] = avail
         mapped = cfgmod.model_map().get(exp)
         self.v_link_act.set(mapped if mapped in avail else "")
+
+    def _choose_for(self, expected: str):
+        """The link next to a file: the boxes below are set to it and the list of the installed files of its kind opens
+        (ComfyUI's own list: it only knows its folders); picking one links it at once."""
+        self.v_link_exp.set(expected)
+        self._link_expected_picked()
+        if not self.cb_link_act["values"]:
+            self._status("ComfyUI lists no file of this kind. Copy yours into its folder and restart ComfyUI.", error=True)
+            return
+        try:
+            self.cb_link_act.focus_set()
+            self.cb_link_act.tk.call("ttk::combobox::Post", self.cb_link_act)
+        except (tk.TclError, AttributeError):
+            pass
 
     def _link_models(self):
         exp, act = self.v_link_exp.get(), self.v_link_act.get()
