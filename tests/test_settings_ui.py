@@ -221,7 +221,7 @@ def main():
     assert "Installed models" in text and "Credits" not in text and "\u25C0" in text
     assert "Credits" in "".join(p for p, _tags in app.t_credits.parts)          # the second tab of the settings window
     assert "\u2717 qwen_image_vae.safetensors" in text and "ComfyUI\\models\\vae" in text
-    assert app.v_set_conn.get() == "ComfyUI connected" and app.lbl_set_dot.cget("style") == "ConnOk.TLabel"
+    assert not hasattr(app, "lbl_set_dot")                 # no ComfyUI dot in the settings window (the footer has it)
     app._settings_close()
     assert app._settings_win is None
 
@@ -252,7 +252,7 @@ def main():
     assert called == ["krea2", "", "krea2"]
     app.open_settings()
     text = "".join(p for p, _tags in app.t_settings.parts)
-    assert "ComfyUI could not be read." in text and "No connection to ComfyUI" in text and app.v_set_conn.get() == "ComfyUI not connected" and app.lbl_set_dot.cget("style") == "ConnBad.TLabel"
+    assert "ComfyUI could not be read." in text and "No connection to ComfyUI" in text
     app._settings_close()
 
     # the overlay text: downloads are links, a missing node names its pack, the credits are links
@@ -296,8 +296,11 @@ def main():
     app._link_models()
     app._link_reset()                                     # Reset: the links of the start (none here)
     assert cfgmod.model_map() == {} and app.b_link_reset["state"] == "disabled"
-    app._link_undo()                                      # the reset can be undone too
+    assert app.b_link_undo["state"] == "disabled"        # Undo takes back relinks only, not the reset
+    app.v_link_act.set("my_vae.safetensors")
+    app._link_models()
     assert cfgmod.model_map() == {"flux2-vae.safetensors": "my_vae.safetensors"}
+    assert "flux2-vae.safetensors  (your file: my_vae.safetensors)" in "".join(s for s, _st, _u in app._settings_segments())
     assert app.rb_tabs["flux3"]["style"] == "Tab.Toolbutton" and app.inv.tab_status("flux3").state == "ready"
     g = {"1": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae.safetensors"}}}
     app.comfy.name_fixer(g)
