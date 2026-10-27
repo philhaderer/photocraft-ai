@@ -25,6 +25,15 @@ Stand 2026-10-27. Quelle: die Befehlsliste der Engine (`photocraft-cli commands 
 - Weg: keiner. Von den Befehlen, die wir benutzen, fehlt in keiner Version einer; geändert hat sich nur `edit.paste` (siehe oben).
 - Beim Umstieg auf 0.16 bleibt also noch: einmal den Start über `photocraft-ai 0.16.bat` und einen Lauf je Funktion live prüfen (Steuerport, `ui.inspect`/`session.inspect`).
 
+## Was daraus wurde (Entscheidung des Users, 27.10.)
+
+Gebaut: 1 (Feather-Vorschau, als Quick Mask), 2 (Gruppe, Name „<Funktion> <Lauf-Nr.>“) und 4 (ohne Zwischenablage). Abgelehnt: 3 (Expand bleibt wie bisher). Befunde beim Bauen, in 0.15.1 und 0.16 gleich:
+
+- `layer.copyToDocument` macht das **Ziel** zum aktiven Dokument; vor dem Schließen der Ergebnis-PNG muss sie wieder aktiviert werden, sonst schließt man das Bild des Nutzers. Die Kopie landet als Pixel-Ebene über der aktiven (auch über einer Einstellungsebene) und wird aktiv; `offset` setzt sie pixelgenau.
+- Ist eine **Gruppe** aktiv, landet die Kopie **in** der Gruppe. Das Plugin schiebt das Ergebnis dann mit `layer.moveTo {position: "above"}` über die Gruppe.
+- `layer.layerMask.revealSelection` verbraucht die Auswahl (danach keine Auswahl). Die weiche Maske geht über `select.loadSelection {channel: "transparency"}` einer Hilfsebene: auf den Grauwert genau.
+- Quick Mask an: `document.inspect` meldet keine Auswahl; aus: die Auswahl ist wieder da.
+
 ## Was daraus werden kann (Vorschläge, Entscheidung des Users)
 
 1. **Feather-Vorschau** (E.9 Ränder): Schalter oder Knopf „Show feather“, der die Auswahl in PhotoCraft per `select.modify.feather` weich macht. Vorher die Auswahl mit `saveSelection` sichern, danach mit `loadSelection` zurückholen.
