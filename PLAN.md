@@ -53,6 +53,11 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 **L3 Fenster-Politur**
 11. Hide/Show (Einklappen zur Titelleiste), Rechtsklick-Menü auf Tabs (Favorit, ausblenden, Workflow-JSON speichern), „Copy canvas to clipboard“, alten Knopf „Insert reference image“ entfernen, falls noch sichtbar.
 
+**E2. Aus dem Live-Test 28.10.**
+- ~~Option B für Fill (Qwen, Fibo)~~: **gebaut 28.10.** Layer mask „soft“ = Auswahl voll deckend, weicher Rand nur außen, Breite = Edge feather; „auto“ aus dem Menü entfernt (Expand behält genau, was „auto“ ergab); Context ist ein Regler 0–1 (Schritt 0.05); Reset setzt alles zurück (Ausnahme: aufgeklappte Bereiche, Checkpoint-Datei des eingebauten Graphen). Live-Test durch den User offen.
+- **Context und Maske genauer abstimmen** (User: „müssen wir uns noch genauer kümmern“): größerer Context gibt bei Qwen bessere, genauer passende Ergebnisse. Startwerte für Context und Edge feather je Modell mit der Feather-Vorschau festlegen.
+- **Runde (gezeichnete) und eckige Auswahl vergleichen**, dazu Tooltips, wie man sie verwendet; eventuell je ein Modus für rechteckige und runde Auswahlen. Bekannt: eine geglättete Auswahl (Ellipse, Lasso) gilt als „schon weich“ und bekommt keinen weichen Rand vom Plugin (`imaging.is_soft`). Referenz des Users: Fibo, Rechteck, soft, 6,5 % Feather ist gut.
+
 **F. OpenFill-Ideen (aus `ideas.md`)**
 12. **Live-Vorschau** unten im Plugin (T3a): ComfyUI mit `--preview-method taesd`, Frames über den Websocket; Layout-Optionen (immer reserviert / nur während des Laufs / Klick vergrößert).
 13. **Verlauf der letzten 20 Läufe**, Lauf erneut laden (T3b): Ort, Umfang (nur Prompt oder alle Einstellungen, Seed fest oder neu) mit dem User klären.
