@@ -421,7 +421,6 @@ class RefSlotsMixin:
                 # the one empty slot takes the pictures: paste and add file sit in its bar
                 self._refs_bar(box, [("paste", "Paste", "Takes the picture from the clipboard (Ctrl+V does the same when no text field has the focus).", self._refs_paste, False),
                                      ("file", "Add file", "Picks a picture file. Or drop files onto a slot.", self._refs_add_file, False)], False)
-                ttk.Label(cell, text="", style="Muted.TLabel").pack(anchor="w")
         over = len(rs.overflow)
         self.lbl_refmax.configure(text=f"Max. images: {rs.max_refs}")
         hint = rs.hint()

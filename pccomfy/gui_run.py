@@ -188,6 +188,19 @@ class RunMixin:
         self.v_pl.set(word)
         self._set_rest(rest)
         self._pl_style("Done.TLabel" if done else "Muted.TLabel")
+        self._show_pl_line()
+
+    def _show_pl_line(self):
+        """The line above the bar takes room only while it says something (the step, or "Done"): no empty line before the
+        first run."""
+        top = getattr(self, "f_pl_top", None)
+        if top is None:
+            return
+        shown = bool(top.winfo_manager())
+        if self.v_pl.get() and not shown:
+            top.pack(fill="x", before=self.pb)
+        elif not self.v_pl.get() and shown:
+            top.pack_forget()
 
     def _set_rest(self, text: str):
         v = getattr(self, "v_pl_rest", None)
@@ -210,6 +223,7 @@ class RunMixin:
             text = "Preparing"
         if self.v_pl.get() != text:
             self.v_pl.set(text)
+            self._show_pl_line()
         self._set_rest("")
         self._pl_style("Muted.TLabel")
         if fraction is not None and fraction > self._bar_value:
