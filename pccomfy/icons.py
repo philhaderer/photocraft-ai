@@ -2,7 +2,9 @@
 
 Every icon lives on a 24 x 24 grid with a 2-unit stroke, round ends and round corners, the style of the Lucide icon set
 (lucide.dev, ISC licence; the shapes here follow its icons x, scissors, message-square-text, copy, clipboard,
-image-plus, plus, settings, undo-2, redo-2, chevron-up/down/right, save and trash-2). An icon is drawn 8 times larger and scaled down with Lanczos to the exact pixel size it is shown at
+image-plus, plus, settings, undo-2, redo-2, chevron-up/down/right, save and trash-2; of the function symbols `fn-multi_edit`
+follows images, `fn-upscale` scaling, `fn-refine` focus and `fn-edit` sparkles, the other `fn-` shapes are our own in the
+same style). An icon is drawn 8 times larger and scaled down with Lanczos to the exact pixel size it is shown at
 (display scaling included), so it stays sharp and even at 100 % and at 150 %, which the old 16 px pixel art did not.
 """
 from __future__ import annotations
@@ -75,7 +77,7 @@ _UNDO = [[(9, 14), (4, 9), (9, 4)], [(4, 9), (14.5, 9)] + _arc(14.5, 14.5, 5.5, 
 _SAVE = [[(5, 3), (15.2, 3), (21, 8.8), (21, 19)] + _arc(19, 19, 2, 0, 90) + [(5, 21)] + _arc(5, 19, 2, 90, 180)
          + [(3, 5)] + _arc(5, 5, 2, 180, 270)]
 SHAPES.update({
-    "placeholder": [_rrect(4, 4, 16, 16, 3)],      # a function symbol until the user delivers his own (assets/functions)
+    "placeholder": [_rrect(4, 4, 16, 16, 3)],      # a function without a symbol of its own (img2img)
     "plus": [[(5, 12), (19, 12)], [(12, 5), (12, 19)]],
     "gear": _gear(),
     "undo": _UNDO,
@@ -88,6 +90,52 @@ SHAPES.update({
     "trash": [[(3, 6), (21, 6)], [(19, 6), (19, 20)] + _arc(17, 20, 2, 0, 90) + [(7, 22)] + _arc(7, 20, 2, 90, 180) + [(5, 6)],
               [(8, 6), (8, 4)] + _arc(10, 4, 2, 180, 270) + [(14, 2)] + _arc(14, 4, 2, 270, 360) + [(16, 6)],
               [(10, 11), (10, 17)], [(14, 11), (14, 17)]],
+})
+
+
+def _dashed(x0: float, y0: float, x1: float, y1: float, dash: float = 1.6, gap: float = 4.4) -> list[list[Point]]:
+    """A dashed rectangle: solid corners, short dashes along the sides (a selection)."""
+    c = 2.5
+    out = [[(x0, y0 + c), (x0, y0), (x0 + c, y0)], [(x1 - c, y0), (x1, y0), (x1, y0 + c)],
+           [(x1, y1 - c), (x1, y1), (x1 - c, y1)], [(x0 + c, y1), (x0, y1), (x0, y1 - c)]]
+    for ax, ay, bx, by in [(x0 + c, y0, x1 - c, y0), (x1, y0 + c, x1, y1 - c), (x1 - c, y1, x0 + c, y1), (x0, y1 - c, x0, y0 + c)]:
+        length = math.hypot(bx - ax, by - ay)
+        n = max(1, round((length - gap) / (dash + gap)))
+        step = (length - n * dash) / (n + 1)
+        ux, uy = (bx - ax) / length, (by - ay) / length
+        for i in range(n):
+            s = step * (i + 1) + dash * i
+            out.append([(ax + ux * s, ay + uy * s), (ax + ux * (s + dash), ay + uy * (s + dash))])
+    return out
+
+
+def _star(cx: float, cy: float, s: float, inner: float = 0.28) -> list[Point]:
+    """A four-pointed spark."""
+    pts = [(cx + (s if i % 2 == 0 else s * inner) * math.cos(math.radians(-90 + i * 45)),
+            cy + (s if i % 2 == 0 else s * inner) * math.sin(math.radians(-90 + i * 45))) for i in range(8)]
+    return pts + pts[:1]
+
+
+def _plus(cx: float, cy: float, s: float) -> list[list[Point]]:
+    return [[(cx - s, cy), (cx + s, cy)], [(cx, cy - s), (cx, cy + s)]]
+
+
+# the symbols of the function buttons (key = the mode in MODE_LABELS); "fn-" because "remove" above is the X of the
+# remove buttons. img2img (only for a workflow of your own) keeps the placeholder.
+_FOCUS = [[(3, 7), (3, 5)] + _arc(5, 5, 2, 180, 270) + [(7, 3)], [(17, 3)] + _arc(19, 5, 2, 270, 360) + [(21, 7)],
+          [(21, 17)] + _arc(19, 19, 2, 0, 90) + [(17, 21)], [(7, 21)] + _arc(5, 19, 2, 90, 180) + [(3, 17)]]
+SHAPES.update({
+    "fn-txt2img": [_rrect(3, 3, 18, 18, 2), [(8, 8), (16, 8)], [(12, 8), (12, 17)]],
+    "fn-outpaint": [_rrect(8, 8, 8, 8, 1.5)] + _dashed(2, 2, 22, 22),
+    "fn-inpaint": _dashed(3, 3, 21, 21) + [_star(12, 12, 5)],
+    "fn-remove": _dashed(3, 3, 21, 21) + [[(9, 9), (15, 15)], [(15, 9), (9, 15)]],
+    "fn-edit": [_star(10, 13, 7.5, 0.25)] + _plus(19, 5, 2) + _plus(19.5, 18, 1.4),
+    "fn-multi_edit": [[(18, 22), (4, 22)] + _arc(4, 20, 2, 90, 180) + [(2, 8)],
+                      _rrect(6, 2, 16, 16, 2), [(22, 13), (18, 9), (9, 18)], _circle(11, 7, 1.6)],
+    "fn-upscale": [_rrect(3, 13, 8, 8, 1.5), [(13, 11), (21, 3)], [(15, 3), (21, 3), (21, 9)],
+                   [(3, 9), (3, 5)] + _arc(5, 5, 2, 180, 270) + [(9, 3)],
+                   [(21, 15), (21, 19)] + _arc(19, 19, 2, 0, 90) + [(15, 21)]],
+    "fn-refine": _FOCUS + [_circle(12, 12, 3)],
 })
 
 

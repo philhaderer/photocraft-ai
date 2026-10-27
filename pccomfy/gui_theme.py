@@ -36,7 +36,7 @@ class ThemeMixin:
         s.configure("TButton", background=PANEL, foreground=FG, padding=6)
         s.map("TButton", background=[("active", "#5f5f5f")])
         s.configure("Icon.TButton", padding=(6, 4))
-        s.configure("Tab.Toolbutton", background=PANEL, foreground=FG, padding=(4, 5), anchor="center", relief="flat",
+        s.configure("Tab.Toolbutton", background=PANEL, foreground=FG, padding=(8, 5), anchor="w", relief="flat",
                     borderwidth=0, font=(FONT, 10))
         s.map("Tab.Toolbutton", background=[("selected", ACCENT), ("active", "#5f5f5f")],
               foreground=[("selected", "#1b1b1b")])
@@ -117,8 +117,9 @@ class ThemeMixin:
         return (img(color), "disabled", img(DISABLED), "active", img(ACCENT))
 
     def _function_icon(self, key: str):
-        """The symbol of a function button: the user's picture pccomfy/assets/functions/<key>.png when it is there, else a
-        placeholder. Light on the dark button, dark on the orange (selected) one, grey when greyed out."""
+        """The symbol of a function button: the user's picture pccomfy/assets/functions/<key>.png when it is there, else the
+        shape fn-<key> (icons.py), else a placeholder. Light on the dark button, dark on the orange (selected) one, grey when
+        greyed out."""
         from pathlib import Path
         path = Path(__file__).resolve().parent / "assets" / "functions" / f"{key}.png"
         cache = self.__dict__.setdefault("_icon_cache", {})
@@ -133,7 +134,8 @@ class ThemeMixin:
                         pic = icons.from_file(path, c, px)
                     except OSError:
                         pic = None
-                cache[k] = icons.photo(self.root, "placeholder", c, px, image=pic)
+                kind = f"fn-{key}" if f"fn-{key}" in icons.SHAPES else "placeholder"
+                cache[k] = icons.photo(self.root, kind, c, px, image=pic)
             return cache[k]
         return (img(FG), "selected", img("#1b1b1b"), "disabled", img(DISABLED))
 
