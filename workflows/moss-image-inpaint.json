@@ -41,7 +41,7 @@
   },
   "_meta": {
    "title": "pc:lora DMD2 speed LoRA",
-   "pc_lora_label": "DMD2 speed LoRA (8 steps)",
+   "pc_lora_label": "DMD2 LoRA (8 steps)",
    "pc_lora_tip": "DMD2 speed LoRA: 8 steps instead of 25. Off = full recipe (25 steps, CFG 2.5)."
   }
  },
@@ -58,7 +58,7 @@
   "_meta": {
    "title": "LoRA: Lenovo UltraReal (optional)",
    "pc_stage_off": {
-    "label": "Lenovo UltraReal LoRA",
+    "label": "UltraReal LoRA",
     "rewire": [
      "5"
     ],
