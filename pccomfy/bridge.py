@@ -17,6 +17,7 @@ the empty area, selects it with an overlap onto the original, then the same as i
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import json
 import os
@@ -603,27 +604,28 @@ class Bridge:
             except (KeyError, IndexError, TypeError, PhotoCraftError):
                 pass
         # last item first: #1 ends up on top, visible and active, the others hidden below it
-        for n, g in enumerate(reversed(range(len(items)))):
-            label, i, raw, count = items[g]
-            rgb = raw.convert("RGB")
-            if req.match > 0 and sel_small is not None:
-                rgb = imaging.match_saturation(rgb, crop_plain, sel_small, req.match)
-            im = rgb.resize((region.w, region.h), Image.LANCZOS)
-            im = imaging.sharpen(im, req.sharpen)
-            label = " ".join(x for x in (label, req.label) if x)
-            if req.preset:
-                name = f"{req.preset} #{req.run_no}" + (f".{i + 1}" if count > 1 else "") + (f" [{label}]" if label else "")
-            else:
-                name = (f"AI {mode_name}" + (f" [{label}]" if label else "") + f": {base} [{p.seed}]"
-                        + (f" #{i + 1}" if count > 1 else ""))
-            layers.insert(0, self._import(orig, im, region, mode, name, tag, g, first=(n == 0), hidden=(g > 0),
-                                          layer_mask=layer_mask))
+        with self._keep_selection(tag, on=(mode == "soft" and layer_mask is not None)) as kept:
+            for n, g in enumerate(reversed(range(len(items)))):
+                label, i, raw, count = items[g]
+                rgb = raw.convert("RGB")
+                if req.match > 0 and sel_small is not None:
+                    rgb = imaging.match_saturation(rgb, crop_plain, sel_small, req.match)
+                im = rgb.resize((region.w, region.h), Image.LANCZOS)
+                im = imaging.sharpen(im, req.sharpen)
+                label = " ".join(x for x in (label, req.label) if x)
+                if req.preset:
+                    name = f"{req.preset} #{req.run_no}" + (f".{i + 1}" if count > 1 else "") + (f" [{label}]" if label else "")
+                else:
+                    name = (f"AI {mode_name}" + (f" [{label}]" if label else "") + f": {base} [{p.seed}]"
+                            + (f" #{i + 1}" if count > 1 else ""))
+                layers.insert(0, self._import(orig, im, region, mode, name, tag, g, first=(n == 0), hidden=(g > 0),
+                                              layer_mask=layer_mask))
         if req.mode == "outpaint":
             self._last_expand = {"doc": orig_name, "size": (W, H), "keep": keep, "layers": list(layers)}
             if self.pc.document().get("hasSelection"):    # (PhotoCraft prints "no selection" in its status bar otherwise)
                 self._try("select.deselect")   # the new-area selection is not needed any more; a rerun finds the area again
-        elif has_sel:
-            self._try("select.reselect")  # selection comes back, ready for another generation
+        elif has_sel and not kept and mode == "selection":
+            self._try("select.reselect")  # the layer mask used the selection up: it comes back, ready for another generation
         progress(1.0, f"Done (seed {p.seed})", phase="place")
         return {"seed": p.seed, "vgl": self.last_vgl, "layers": layers, "region": region.__dict__, "size": [gw, gh], "pipeline": self.pipeline}
 
@@ -813,63 +815,71 @@ class Bridge:
             pc.activate(orig)
         return src, mask
 
-    def _copy_png(self, orig: int, im: Image.Image, tag: str, suffix: str) -> None:
-        """Image → PhotoCraft clipboard: save PNG, open it, Select All + Copy, close it."""
+    def _place_png(self, orig: int, im: Image.Image, region: imaging.Box, tag: str, suffix: str) -> int:
+        """Image → a new layer in document `orig`, its top left corner at the region's: save PNG, open it, copy its layer
+        straight across (layer.copyToDocument), close it. PhotoCraft's clipboard is not touched, so what the user
+        copied is still there after a run. The copy is a pixel layer above the active one (also with an adjustment
+        layer active, which once took a paste into its mask) and becomes the active layer.
+        Live finding (0.15.1 and 0.16): the copy makes the DESTINATION active, so the PNG is activated again before it
+        is closed; a plain close would have closed the user's picture."""
         pc = self.pc
         name, full = self._path(tag, suffix)
         im.save(full)
         pc.open(name)
+        src = pc.session().get("active")
+        if src is None or src == orig:
+            raise BridgeError(f"PhotoCraft did not open the result file {name}.")
         try:
-            pc.execute("select.all")
-            pc.execute("edit.copy")
+            res = pc.execute("layer.copyToDocument", {"document": orig, "source": src, "offset": [region.x, region.y]})
         finally:
+            pc.activate(src)
             pc.close_active()
             pc.activate(orig)
+        try:
+            return res["layers"][0]
+        except (KeyError, IndexError, TypeError):
+            raise BridgeError(f"PhotoCraft gave no layer for the result (answer: {json.dumps(res, default=str)[:200]})") from None
 
     def _import(self, orig: int, im: Image.Image, region: imaging.Box, mode: str, layer_name: str, tag: str, i: int,
                 first: bool = True, hidden: bool = False, layer_mask: Image.Image | None = None) -> int:
         pc = self.pc
-        center = list(region.center)
-        self._copy_png(orig, im, tag, f"result{i}")
-        helper = self._pixel_target(tag)
-        try:
-            if mode == "selection":
-                if not first:  # pasting drops the selection – bring it back for the next variant
-                    pc.execute("select.reselect")
-                layer = pc.execute("edit.pasteSpecial.pasteInto", {"center": center})["layer"]
-            else:
-                layer = pc.execute("edit.paste", {"center": center})["layer"]
-        finally:
-            if helper is not None:
+        if mode == "selection" and not first:   # the mask of the variant before used the selection up: bring it back
+            pc.execute("select.reselect")
+        layer = self._place_png(orig, im, region, tag, f"result{i}")
+        if mode == "selection":
+            pc.execute("layer.layerMask.revealSelection", {"layer": layer})
+        elif mode == "soft" and layer_mask is not None:
+            # soft, editable layer mask: the mask as the transparency of a helper layer, loaded as a selection and turned
+            # into the layer's mask (exact to the grey value, checked in both versions); the helper is deleted again.
+            # The user's selection is saved before and restored after all variants (_keep_selection).
+            helper_im = Image.new("RGBA", layer_mask.size, (255, 255, 255, 0))
+            helper_im.putalpha(layer_mask.convert("L"))
+            helper = self._place_png(orig, helper_im, region, tag, f"lmask{i}")
+            try:
+                pc.execute("select.loadSelection", {"channel": "transparency", "layer": helper})
+            finally:
                 self._try("layer.delete", {"layer": helper})
-        if helper is not None:
-            self._try("layer.select", {"layer": layer})     # the next variant goes on top of this one, not on the layer below
-        if mode != "selection":
-            if mode == "soft" and layer_mask is not None:
-                # soft, editable layer mask: a white mask, then the mask's luminosity pasted into it
-                self._copy_png(orig, layer_mask.convert("RGB"), tag, f"lmask{i}")
-                pc.execute("layer.select", {"layer": layer})
-                pc.execute("layer.layerMask.revealAll", {"layer": layer})
-                pc.execute("edit.paste", {"center": center, "target": "mask"})
+            pc.execute("layer.layerMask.revealSelection", {"layer": layer})
+        self._try("layer.select", {"layer": layer})     # the next variant goes on top of this one, not on the layer below
         self._try("layer.renameLayer", {"layer": layer, "name": layer_name})
         if hidden:
             self._try("layer.hideLayers", {"layer": layer})
         return layer
 
-    def _pixel_target(self, tag: str) -> "int | None":
-        """An empty pixel layer above the active one, so the paste lands in a layer of its own: with an adjustment layer
-        (brightness, curves ...) active, PhotoCraft pastes into that layer's mask and the run broke off. Returns its id
-        (deleted again after the paste), or None when it could not be made."""
-        name = f"pccomfy-target-{tag}"
+    @contextlib.contextmanager
+    def _keep_selection(self, tag: str, on: bool):
+        """The soft layer mask is made through a selection: save the user's selection in a channel of its own before and
+        load it back afterwards (also when the run breaks off), then delete the channel. Yields True when it did so."""
+        name = f"pccomfy-sel-{tag}"
+        saved = bool(on and self.pc.document().get("hasSelection"))
+        if saved:   # no _try: without the saved copy the user's selection would be lost, better stop here
+            self.pc.execute("select.saveSelection", {"name": name})
         try:
-            res = self.pc.execute("layer.new.layer", {"name": name}) or {}
-            lid = res.get("layer") if isinstance(res, dict) else None
-            if lid is None:
-                lid = next((l["id"] for l in self.pc.document().get("layers", [])
-                            if isinstance(l, dict) and l.get("name") == name and "id" in l), None)
-            return lid
-        except (PhotoCraftError, KeyError, TypeError):
-            return None
+            yield saved
+        finally:
+            if saved:
+                self._try("select.loadSelection", {"channel": name})
+                self._try("channel.delete", {"channel": name})
 
     def _open_upscaled(self, results, orig: int, orig_name: str, region: "imaging.Box", p, tag: str, progress, req: Request | None = None) -> dict:
         """Upscale: every result becomes a new document (like Photoshop's Image Size into a new file); the original
