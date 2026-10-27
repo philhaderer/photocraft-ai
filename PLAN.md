@@ -8,7 +8,7 @@ Stand 2026-10-27 (dritte Sitzung). Der Plan ist freigegeben. Abschnitt 3 ist die
 - UI-Runde 26./27.10.: Icons, PhotoCraft-Slider, Undo/Redo-Knöpfe, Papierkorb am Prompt, Knopfzeile über dem Prompt, Downloadlinks im Zahnrad-Fenster.
 - Liste A vom 27.10. (Abstände, Chevron, „Custom LoRAs:“, ComfyUI-Punkt grün/rot, Slider rechts in einer Spalte und eintippbar, „Advanced settings“) und die Nachrunde: Ergebnis über einer Korrekturebene (vom User bestätigt), Flux 2 Refine startet auf „Default“, Leerzeile nach dem letzten LoRA weg, Qwen ohne Turbo, Expand/Edit getauscht, kürzere Slider-Texte.
 - Zweite Sitzung 27.10., danach: feste Startposition, Flux 2 Klein über die obsxrver-Datei (alle 24 Dateien mit Link), „Choose another file…“ mit Relink/Undo/Reset, Settings-Tabs „Models“/„Credits“, Fensterkopf „Funktion zuerst“ (Funktions-Buttons, Modell-Chips).
-- Dritte Sitzung 27.10.: Funktions-Symbole (`fn-<key>` in `icons.py`), Funktions-Buttons linksbündig (Entscheidung des Users). Live bestätigt vom User: neuer Fensterkopf (Chips, Namen, Höhe, 150 %), Startposition, Flux-2-Lauf mit der obsxrver-Datei.
+- Dritte Sitzung 27.10.: Funktions-Symbole (`fn-<key>` in `icons.py`), Funktions-Buttons linksbündig, 8 px zwischen Symbol und Text (Entscheidungen des Users); Schrift Inter wie in PhotoCraft (D.16, Option A). Live bestätigt vom User: neuer Fensterkopf (Chips, Namen, Höhe, 150 %), Startposition, Flux-2-Lauf mit der obsxrver-Datei.
 - Einzelheiten: `git log next` und Handoff, Abschnitt 4.
 
 ## 2. Entscheidungen des Users (gelten weiter)
@@ -41,7 +41,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 
 **D. Recherche (nichts bauen, Ergebnis vorlegen)**
 4. ~~**Funktionen zuerst, Modell darunter?** (D.15)~~: **gebaut 27.10.** (`docs/ux-funktion-zuerst.md`). Entscheidung des Users: Funktionen oben als große Buttons mit Symbol, Modelle darunter als Umriss-Chips (alle sichtbar, unpassende grau), feste Reihenfolge; das beste Modell wählt später der Easy Mode. Offen: die Symbole des Users (`pccomfy/assets/functions/`, Platzhalter bis dahin).
-5. **UI-Fonts** (D.16): **Recherche fertig 27.10.** (`docs/ui-schriften.md`, Vergleichsblatt `docs/ui-schriften.png`; Befund: PhotoCraft benutzt Inter). Entscheidung des Users offen: A Inter mitliefern (empfohlen), B Segoe UI Variable, C IBM Plex Sans, D Segoe UI bleibt.
+5. **UI-Fonts** (D.16): **Recherche fertig 27.10.** (`docs/ui-schriften.md`, Vergleichsblatt `docs/ui-schriften.png`; Befund: PhotoCraft benutzt Inter). **Gebaut 27.10.:** Option A des Users, Inter wird mitgeliefert (Kopie der Windows-Dateien, Inter 3.019, Regular und SemiBold), eine Stufe kleiner als die alten Segoe-Größen. Live-Prüfung durch den User offen (100 % und 150 %, Chips, Slider-Texte, Zahnrad-Fenster, Tooltips; Vergleich mit `PCCOMFY_NO_INTER=1`).
 6. **PhotoCraft-Befehle prüfen** (OpenFill T1): Tabelle „Befehl → gibt es ihn → Folge für uns“ (Feather-Vorschau, Snapshots als ein Undo, Gruppen für Varianten, Crop über den Rand). Gegen die PhotoCraft-Version prüfen, die der User nutzt (0.15.1; ein Starter für 0.16 liegt im Repo-Ordner, ungetrackt).
 
 **E. Offen aus der alten Liste**
@@ -62,7 +62,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 15. **Flux-3-Boxen** (Entscheidung offen: A Textlauf von `Flux3LayoutPrompt` zuerst, B Knoten in den Workflow, C nur von Hand; Notizen `docs/flux3-bbox-workflow-notes.md`).
 16. **L4 Inhalte:** Krea-Style-Chooser, Tipps, tägliche Tooltips, Tutorial-PSDs.
 17. **Easy Mode** (`easymode.py`), braucht Hide/Show aus L3.
-18. **Release:** neues Repo, Credits (Upstream, Lucide-Icons, Modelle, Danrisi), README-Windows, Prüfung auf 16 GB; `photocraft-ai.bat` auf die aktuelle PhotoCraft-Version angleichen?
+18. **Release:** neues Repo, Credits (Upstream, Lucide-Icons, Inter-Schrift (OFL), Modelle, Danrisi), README-Windows, Prüfung auf 16 GB; `photocraft-ai.bat` auf die aktuelle PhotoCraft-Version angleichen?
 
 **Geparkt** (vom User nicht entschieden, aus `ideas.md`): Expand-Warnung über 25 % je Seite und automatische Runden; schnelles Remove mit LaMa (GPL-3.0, nur als Abhängigkeit); ComfyUI automatisch starten/herunterladen; Gerät beim Start loggen, „Open log folder“. Verworfen: Varianten-Picker, Cancel/Undo neu bauen.
 
@@ -77,7 +77,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 
 - „Workflow-JSON speichern“: unsere Workflows sind API-Format. Ob dein ComfyUI-Frontend es per Drag and Drop lädt, ist ungeprüft; sonst braucht es eine Umwandlung ins Editor-Format.
 - Krea-Style-Explorer: Lizenz des Repos und der Bilder vor dem Mitliefern klären.
-- Lizenzen für den Release: Fibo 2.0 (CC BY-NC) und die FLUX.2-Dateien nur nicht-kommerziell; Lenovo UltraReal verlangt Nennung von Danrisi; Lucide-Icons (ISC) nennen.
+- Lizenzen für den Release: Fibo 2.0 (CC BY-NC) und die FLUX.2-Dateien nur nicht-kommerziell; Lenovo UltraReal verlangt Nennung von Danrisi; Lucide-Icons (ISC) nennen; Inter (SIL OFL 1.1) liegt mit `OFL-Inter.txt` bei.
 - Scribble/Sketch, Remove-Prompt, Encoder-Tausch, Steps-Prüfung: Recherche- und Testaufgaben ohne Code (`docs/tests/`).
 - PhotoCraft 0.16: Wenn du umsteigst, die Befehle aus Punkt 6 und den Start (`photocraft-ai 0.16.bat`) einmal gegen 0.16 prüfen.
 
