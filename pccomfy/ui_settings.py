@@ -40,6 +40,8 @@ class SettingsMixin:
     def _build_settings(self, foot):
         """The gear button at the right end of the footer row (the one with the connection dots, Refresh and Reset)."""
         self._last_model = self.v_model.get()
+        self._map_start = cfgmod.model_map()       # the links at startup ("Reset to startup")
+        self._map_undo: list[dict] = []            # the links before each change ("Undo")
         style = ttk.Style()
         style.configure("Missing.Tab.Toolbutton", foreground=NA_RED)      # a tab that is not available: red text, the background of an inactive tab
         self.b_gear = ttk.Button(foot, image=self._icon("gear"), style="Icon.TButton", command=self.open_settings)
@@ -309,7 +311,7 @@ class SettingsMixin:
             for k, v in sorted(links.items()):
                 add(f"    {k}  →  {v}\n", "muted")
         else:
-            add(f"    none. Use “{PICK_TEXT}” next to a file, or the boxes below.\n", "muted")
+            add(f"    none. Use “{PICK_TEXT}” next to a file.\n", "muted")
         add("\n", "")
         add("ComfyUI folders (extra_model_paths.yaml)\n", "head")
         path = cfgmod.extra_paths_file()
@@ -324,7 +326,12 @@ class SettingsMixin:
                 for key, paths in sec["folders"].items():
                     for p in paths:
                         add(f"      {key}: {p}\n", "muted")
-        add("\n", "")
+        return seg
+
+    def _credits_segments(self) -> list[tuple]:
+        """The "Credits" tab: who made the code, nodes and models the plugin builds on (links)."""
+        seg: list[tuple] = []
+        add = lambda text, style="", url="": seg.append((text, style, url))  # noqa: E731
         add("Credits\n", "head")
         for name, what, url in manifest.CONTRIBUTORS:
             add("    ", "")
@@ -376,37 +383,59 @@ class SettingsMixin:
         b.pack(side="right")
         Tooltip(b, "Reads ComfyUI's installed model files and node classes again.")
 
-        link = ttk.Frame(win)
-        link.pack(fill="x", side="bottom", padx=10, pady=(4, 8))
+        nb = ttk.Notebook(win)              # tab 1: the model files; tab 2: credits
+        nb.pack(fill="both", expand=True, padx=10, pady=(0, 8))
+        tab_models, tab_credits = ttk.Frame(nb), ttk.Frame(nb)
+        nb.add(tab_models, text="Models")
+        nb.add(tab_credits, text="Credits")
+        self.nb_settings = nb
+
+        # another file for an expected one: nothing changes until "Relink"; Undo and Reset go back
+        link = ttk.Frame(tab_models)
+        link.pack(fill="x", side="bottom", pady=(6, 0))
+        link.columnconfigure(1, weight=1)
         self.v_link_exp, self.v_link_act = tk.StringVar(value=""), tk.StringVar(value="")
-        ttk.Label(link, text="Link a file of another name", style="Muted.TLabel").grid(row=0, column=0, columnspan=3, sticky="w")
+        self.v_link_cur = tk.StringVar(value="")
+        ttk.Label(link, text="Use another file", style="Muted.TLabel").grid(row=0, column=0, columnspan=4, sticky="w")
+        for r, text in ((1, "Expected file"), (2, "Current file"), (3, "New file")):
+            ttk.Label(link, text=text, style="Muted.TLabel").grid(row=r, column=0, sticky="w", padx=(0, 8), pady=2)
         self.cb_link_exp = ttk.Combobox(link, textvariable=self.v_link_exp, state="readonly", width=34)
-        self.cb_link_act = ttk.Combobox(link, textvariable=self.v_link_act, state="readonly", width=34)
-        self.cb_link_exp.grid(row=1, column=0, sticky="ew", pady=2)
-        self.cb_link_act.grid(row=2, column=0, sticky="ew", pady=2)
+        self.cb_link_exp.grid(row=1, column=1, columnspan=3, sticky="ew", pady=2)
         self.cb_link_exp.bind("<<ComboboxSelected>>", lambda e: self._link_expected_picked())
-        self.cb_link_act.bind("<<ComboboxSelected>>", lambda e: self._link_models())     # picking a file links it at once
-        link.columnconfigure(0, weight=1)
-        bl = ttk.Button(link, text="Link", command=self._link_models)
-        bl.grid(row=1, column=1, padx=(6, 0))
-        Tooltip(bl, "Use the installed file in the lower box wherever the plugin expects the one in the upper box.")
-        bu = ttk.Button(link, text="Unlink", command=self._unlink_model)
-        bu.grid(row=2, column=1, padx=(6, 0))
-        by = ttk.Button(link, text="Choose extra_model_paths.yaml…", command=self._choose_yaml)
-        by.grid(row=3, column=0, sticky="w", pady=(6, 0))
+        ttk.Label(link, textvariable=self.v_link_cur).grid(row=2, column=1, columnspan=3, sticky="w", pady=2)
+        self.cb_link_act = ttk.Combobox(link, textvariable=self.v_link_act, state="readonly", width=34)
+        self.cb_link_act.grid(row=3, column=1, columnspan=3, sticky="ew", pady=2)
+        btns = ttk.Frame(link)
+        btns.grid(row=4, column=0, columnspan=4, sticky="w", pady=(4, 0))
+        self.b_relink = ttk.Button(btns, text="Relink", command=self._link_models)
+        self.b_relink.pack(side="left")
+        Tooltip(self.b_relink, "Use the new file wherever the plugin expects the expected one. Choosing the expected file itself removes the link.")
+        self.b_link_undo = ttk.Button(btns, text="Undo", command=self._link_undo)
+        self.b_link_undo.pack(side="left", padx=(6, 0))
+        Tooltip(self.b_link_undo, "Takes back the last change of the links.")
+        self.b_link_reset = ttk.Button(btns, text="Reset to startup", command=self._link_reset)
+        self.b_link_reset.pack(side="left", padx=(6, 0))
+        Tooltip(self.b_link_reset, "All links as they were when the plugin started.")
+        by = ttk.Button(link, text="Choose extra_model_paths.yaml\u2026", command=self._choose_yaml)
+        by.grid(row=5, column=0, columnspan=3, sticky="w", pady=(8, 0))
         Tooltip(by, "ComfyUI's extra_model_paths.yaml: shows where your model folders are and which files lie there. Read only.")
         bc = ttk.Button(link, text="Clear", command=lambda: self.settings_set_yaml(""))
-        bc.grid(row=3, column=1, padx=(6, 0), pady=(6, 0))
+        bc.grid(row=5, column=3, sticky="e", pady=(8, 0))
 
-        body = ttk.Frame(win)
-        body.pack(fill="both", expand=True, padx=10)
+        self.t_settings = self._settings_text(tab_models)
+        self.t_credits = self._settings_text(tab_credits)
+        self._settings_fill()
+
+    def _settings_text(self, parent):
+        body = ttk.Frame(parent)
+        body.pack(fill="both", expand=True)
         sb = ttk.Scrollbar(body)
         sb.pack(side="right", fill="y")
-        self.t_settings = tk.Text(body, wrap="word", bg=PANEL, fg=FG, relief="flat", borderwidth=0, padx=8, pady=6,
-                                  font=(FONT, 10), yscrollcommand=sb.set, cursor="arrow")
-        self.t_settings.pack(side="left", fill="both", expand=True)
-        sb.configure(command=self.t_settings.yview)
-        self._settings_fill()
+        t = tk.Text(body, wrap="word", bg=PANEL, fg=FG, relief="flat", borderwidth=0, padx=8, pady=6,
+                    font=(FONT, 10), yscrollcommand=sb.set, cursor="arrow")
+        t.pack(side="left", fill="both", expand=True)
+        sb.configure(command=t.yview)
+        return t
 
     def _own_settings(self, win):
         """The settings window behaves like the bridge window: an owned window of it (and so, through it, of PhotoCraft). It lies
@@ -430,7 +459,19 @@ class SettingsMixin:
             pass
 
     def _settings_fill(self):
-        t = self.t_settings
+        self._fill_text(self.t_settings, self._settings_segments())
+        t_credits = getattr(self, "t_credits", None)
+        if t_credits is not None:
+            self._fill_text(t_credits, self._credits_segments())
+        self.v_set_conn.set("ComfyUI connected" if self.inv is not None else "ComfyUI not connected")
+        set_dot(self.lbl_set_dot, self.inv is not None)
+        exp, _lists = self._link_choices()
+        self.cb_link_exp["values"] = exp
+        if self.v_link_exp.get() not in exp:
+            self.v_link_exp.set(exp[0] if exp else "")
+        self._link_expected_picked()
+
+    def _fill_text(self, t, segments):
         try:
             top = t.yview()[0]
         except (tk.TclError, TypeError, IndexError):
@@ -443,7 +484,7 @@ class SettingsMixin:
         t.tag_configure("note", foreground=ACCENT)
         t.tag_configure("muted", foreground=MUTED)
         n = 0
-        for text, style, url in self._settings_segments():
+        for text, style, url in segments:
             tags = (style,) if style and style != "link" else ()
             if style in ("link", "pick"):
                 n += 1
@@ -462,28 +503,35 @@ class SettingsMixin:
             t.yview_moveto(top)
         except tk.TclError:
             pass
-        self.v_set_conn.set("ComfyUI connected" if self.inv is not None else "ComfyUI not connected")
-        set_dot(self.lbl_set_dot, self.inv is not None)
-        exp, _lists = self._link_choices()
-        self.cb_link_exp["values"] = exp
-        if self.v_link_exp.get() not in exp:
-            self.v_link_exp.set(exp[0] if exp else "")
-        self._link_expected_picked()
 
     # ---------- link a file of another name ----------
 
     def _link_expected_picked(self):
+        """The expected file changed: "Current file" says what the plugin uses for it now, "New file" offers the installed
+        files of its kind (the expected name first: choosing it removes a link). Nothing changes before "Relink"."""
         exp = self.v_link_exp.get()
         f = manifest.FILES.get(exp)
         _names, lists = self._link_choices()
         avail = list(lists.get(f.kind, [])) if f is not None else []
+        if exp and f is not None:
+            avail = [exp] + [n for n in avail if n != exp]
         self.cb_link_act["values"] = avail
+        self.v_link_act.set("")
+        found = self.inv.found(exp) if (self.inv is not None and exp) else None
         mapped = cfgmod.model_map().get(exp)
-        self.v_link_act.set(mapped if mapped in avail else "")
+        self.v_link_cur.set("" if not exp else (f"{mapped}  (linked)" if mapped else (found or "missing")))
+        self._link_buttons()
+
+    def _link_buttons(self):
+        try:
+            self.b_link_undo.configure(state="normal" if self._map_undo else "disabled")
+            self.b_link_reset.configure(state="normal" if cfgmod.model_map() != self._map_start else "disabled")
+        except (AttributeError, tk.TclError):
+            pass
 
     def _choose_for(self, expected: str):
         """The link next to a file: the boxes below are set to it and the list of the installed files of its kind opens
-        (ComfyUI's own list: it only knows its folders); picking one links it at once."""
+        (ComfyUI's own list: it only knows its folders). The choice takes effect only with "Relink"."""
         self.v_link_exp.set(expected)
         self._link_expected_picked()
         if not self.cb_link_act["values"]:
@@ -496,23 +544,42 @@ class SettingsMixin:
             pass
 
     def _link_models(self):
+        """ "Relink": the new file is used from now on (the expected file itself removes the link)."""
         exp, act = self.v_link_exp.get(), self.v_link_act.get()
         if not exp or not act:
             return
-        cfgmod.set_model_link(exp, act)
-        self._after_link_change()
+        before = cfgmod.model_map()
+        cfgmod.set_model_link(exp, "" if act == exp else act)
+        if cfgmod.model_map() != before:
+            self._map_undo.append(before)
+        self._after_link_change("Linked: " + (f"{exp} \u2192 {act}." if act != exp else f"{exp} is used again."))
 
     def _unlink_model(self):
         exp = self.v_link_exp.get()
         if exp:
-            cfgmod.set_model_link(exp, "")
-            self._after_link_change()
+            self.v_link_act.set(exp)
+            self._link_models()
 
-    def _after_link_change(self):
+    def _link_undo(self):
+        if self._map_undo:
+            cfgmod.set_model_map(self._map_undo.pop())
+            self._after_link_change("Undone: the links are as before the last change.")
+
+    def _link_reset(self):
+        if cfgmod.model_map() != self._map_start:
+            self._map_undo.append(cfgmod.model_map())
+            cfgmod.set_model_map(dict(self._map_start))
+            self._after_link_change("The links are as they were at startup.")
+
+    def _after_link_change(self, msg: str = "Link saved."):
         if self.inv is not None:
             self.inv.mapping = cfgmod.model_map()
             self._set_inventory(self.inv, self._inv_error)      # statuses, tabs and the overlay follow at once
-        self._status("Link saved.")
+        try:
+            self._link_expected_picked()
+        except (AttributeError, tk.TclError):
+            pass
+        self._status(msg)
 
     # ---------- extra_model_paths.yaml ----------
 

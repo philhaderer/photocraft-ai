@@ -218,7 +218,8 @@ def main():
     assert app.v_model.get() == "flux3" and app._last_model == "flux3"
     assert app._settings_win is not None and app._settings_focus == "krea2"
     text = "".join(p for p, _tags in app.t_settings.parts)
-    assert "Installed models" in text and "Credits" in text and "\u25C0" in text
+    assert "Installed models" in text and "Credits" not in text and "\u25C0" in text
+    assert "Credits" in "".join(p for p, _tags in app.t_credits.parts)          # the second tab of the settings window
     assert "\u2717 qwen_image_vae.safetensors" in text and "ComfyUI\\models\\vae" in text
     assert app.v_set_conn.get() == "ComfyUI connected" and app.lbl_set_dot.cget("style") == "ConnOk.TLabel"
     app._settings_close()
@@ -257,7 +258,7 @@ def main():
     # the overlay text: downloads are links, a missing node names its pack, the credits are links
     inv = inventory.Inventory(lists_without(unet="seedvr2_3b_int8_convrot.safetensors"), {"SeedVR2Preprocess"})
     app._apply_refresh({"_detect": True, "_inv": inv, "_yaml": [], "_disk": {"seedvr2_3b_int8_convrot.safetensors": ["D:/models/diffusion_models/seedvr2_3b_int8_convrot.safetensors"]}})
-    seg = app._settings_segments()
+    seg = app._settings_segments() + app._credits_segments()
     links = [u for _t, style, u in seg if style == "link"]
     assert manifest.FILES["seedvr2_3b_int8_convrot.safetensors"].url in links and "(3.5 GB)" in "".join(s for s, _st, _u in seg) and "https://github.com/ausboss/ComfyUI-AusBoss" in links
     assert all(u.startswith("https://") for u in links) and len(links) >= len(manifest.CONTRIBUTORS)
@@ -283,8 +284,19 @@ def main():
     app.v_link_exp.set("flux2-vae.safetensors")
     app._link_expected_picked()
     assert "my_vae.safetensors" in app.cb_link_act["values"] and "flux3-image-klein-int8-convrot.safetensors" not in app.cb_link_act["values"]
+    assert app.cb_link_act["values"][0] == "flux2-vae.safetensors" and app.v_link_cur.get() == "missing"
+    app.v_link_act.set("my_vae.safetensors")
+    assert cfgmod.model_map() == {}                       # choosing alone changes nothing: only "Relink" does
+    app._link_models()
+    assert cfgmod.model_map() == {"flux2-vae.safetensors": "my_vae.safetensors"}
+    assert app.v_link_cur.get() == "my_vae.safetensors  (linked)" and app.b_link_undo["state"] == "normal"
+    app._link_undo()                                      # Undo: back to no link
+    assert cfgmod.model_map() == {} and app.b_link_undo["state"] == "disabled"
     app.v_link_act.set("my_vae.safetensors")
     app._link_models()
+    app._link_reset()                                     # Reset: the links of the start (none here)
+    assert cfgmod.model_map() == {} and app.b_link_reset["state"] == "disabled"
+    app._link_undo()                                      # the reset can be undone too
     assert cfgmod.model_map() == {"flux2-vae.safetensors": "my_vae.safetensors"}
     assert app.rb_tabs["flux3"]["style"] == "Tab.Toolbutton" and app.inv.tab_status("flux3").state == "ready"
     g = {"1": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae.safetensors"}}}

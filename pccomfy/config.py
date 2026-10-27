@@ -139,6 +139,11 @@ def set_model_link(expected: str, local: str | None) -> None:
     set_setting("model_map", m or None)
 
 
+def set_model_map(m: dict) -> None:
+    """Replace all links at once (Undo / Reset in the settings window)."""
+    set_setting("model_map", dict(m) or None)
+
+
 def extra_paths_file() -> str:
     """The extra_model_paths.yaml the user pointed the overlay at ("" = none)."""
     return str(get_setting("extra_paths_file", "") or "")
