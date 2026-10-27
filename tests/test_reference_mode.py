@@ -33,6 +33,7 @@ def rect(color, box):
 class Doc:
     def __init__(self, name, layers, sel=None):
         self.name, self.layers, self.sel, self.active = name, layers, sel, None  # layers: bottom first {id, img, visible}
+        self.last_sel, self.channels, self.raw = None, {}, None   # select.reselect, saved selections, an opened file's own pixels
 
 
 class FakePC:
@@ -58,7 +59,12 @@ class FakePC:
         out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         for l in doc.layers:
             if l["visible"]:
-                out.alpha_composite(l["img"])
+                im = l["img"]
+                if l.get("mask") is not None:   # a layer mask (revealSelection): scales the layer's alpha
+                    im = im.copy()
+                    im.putalpha(Image.fromarray((np.asarray(im.getchannel("A"), dtype=np.uint16)
+                                                 * np.asarray(l["mask"], dtype=np.uint16) // 255).astype(np.uint8)))
+                out.alpha_composite(im)
         return out
 
     def session(self):
@@ -66,7 +72,17 @@ class FakePC:
 
     def document(self):
         d = self.doc
-        return {"width": W, "height": H, "hasSelection": d.sel is not None, "layers": [{"id": l["id"], "visible": l["visible"], "name": l.get("name", "Layer")} for l in reversed(d.layers)]}
+        return {"width": W, "height": H, "hasSelection": d.sel is not None,
+                "layers": [{"id": l["id"], "visible": l["visible"], "name": l.get("name", "Layer"), "hasMask": l.get("mask") is not None,
+                            **({"kind": "Group", "layers": l["children"]} if "children" in l else {})}
+                           for l in reversed(d.layers)]}
+
+    def _layer(self, d, lid):
+        lay = next((l for l in d.layers if l["id"] == lid), None)
+        if lay is None:
+            from pccomfy.photocraft import PhotoCraftError
+            raise PhotoCraftError(f"no such layer {lid}")
+        return lay
 
     def execute(self, cmd, params=None):
         params = params or {}
@@ -103,21 +119,48 @@ class FakePC:
             color = {"white": (255, 255, 255, 255), "black": (0, 0, 0, 255)}[params["contents"]]
             lay["img"].paste(Image.new("RGBA", (W, H), color), (0, 0), d.sel if d.sel is not None else None)
         elif cmd == "select.deselect":
-            d.sel = None
+            d.last_sel, d.sel = d.sel if d.sel is not None else d.last_sel, None
+        elif cmd == "select.reselect":
+            d.sel = d.last_sel
+        elif cmd == "select.saveSelection":
+            d.channels[params["name"]] = d.sel.copy()
+            return {"channel": len(d.channels) - 1, "name": params["name"]}
+        elif cmd == "select.loadSelection":
+            if params["channel"] == "transparency":
+                d.sel = self._layer(d, params["layer"])["img"].getchannel("A")
+            else:
+                d.sel = d.channels[params["channel"]].copy()
+            return {"selected": True}
+        elif cmd == "channel.delete":
+            del d.channels[params["channel"]]
+        elif cmd == "layer.layerMask.revealSelection":   # like PhotoCraft: the selection becomes the mask and is gone
+            if d.sel is None:
+                from pccomfy.photocraft import PhotoCraftError
+                raise PhotoCraftError("layer.layerMask.revealSelection: no selection")
+            self._layer(d, params["layer"])["mask"] = d.sel.copy()
+            d.last_sel, d.sel = d.sel, None
+        elif cmd == "layer.copyToDocument":
+            # like PhotoCraft (checked in 0.15.1 and 0.16): a new layer above the destination's active one, placed by the
+            # offset from where it lay in the source; the DESTINATION becomes the active document; the clipboard stays
+            src = self.docs[params.get("source", self.active)]
+            dst = self.docs[params["document"]]
+            img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            img.paste(src.raw, tuple(params.get("offset", (0, 0))))
+            lay = {"id": self._id(), "img": img, "visible": True, "name": "Layer"}
+            at = next((k for k, l in enumerate(dst.layers) if l["id"] == dst.active), len(dst.layers) - 1)
+            dst.layers.insert(at + 1, lay)
+            dst.active = lay["id"]
+            self.active = params["document"]
+            return {"document": params["document"], "layers": [lay["id"]], "offset": params.get("offset", [0, 0])}
+        elif cmd == "layer.renameLayer":
+            self._layer(d, params["layer"])["name"] = params["name"]
+        elif cmd == "layer.hideLayers":
+            lay = self._layer(d, params["layer"])
+            lay["visible"] = not lay["visible"]
         elif cmd == "select.all":
             d.sel = Image.new("L", (W, H), 255)
-        elif cmd == "edit.copy":
-            self.clip = self.composite(d)
-        elif cmd == "edit.paste":
-            lay = {"id": self._id(), "img": Image.new("RGBA", (W, H), (0, 0, 0, 0)), "visible": True}
-            if params.get("target") != "mask":
-                lay["img"] = self.clip.copy()
-            d.layers.append(lay)
-            return {"layer": lay["id"]}
-        elif cmd == "edit.pasteSpecial.pasteInto":
-            lay = {"id": self._id(), "img": self.clip.copy(), "visible": True}
-            d.layers.append(lay)
-            return {"layer": lay["id"]}
+        elif cmd in ("edit.copy", "edit.paste", "edit.pasteSpecial.pasteInto"):
+            raise AssertionError(f"{cmd}: a run must not use PhotoCraft's clipboard (it holds what the user copied)")
         return {}
 
     def save(self, name):
@@ -129,6 +172,7 @@ class FakePC:
         canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         canvas.paste(im.resize((W, H)))
         self.docs.append(Doc(name, [{"id": self._id(), "img": canvas, "visible": True}]))
+        self.docs[-1].raw = im
         self.active = len(self.docs) - 1
         return {}
 
