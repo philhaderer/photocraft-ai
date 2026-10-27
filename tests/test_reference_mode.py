@@ -66,7 +66,7 @@ class FakePC:
 
     def document(self):
         d = self.doc
-        return {"width": W, "height": H, "hasSelection": d.sel is not None, "layers": [{"id": l["id"], "visible": l["visible"]} for l in reversed(d.layers)]}
+        return {"width": W, "height": H, "hasSelection": d.sel is not None, "layers": [{"id": l["id"], "visible": l["visible"], "name": l.get("name", "Layer")} for l in reversed(d.layers)]}
 
     def execute(self, cmd, params=None):
         params = params or {}
@@ -92,8 +92,10 @@ class FakePC:
                 raise PhotoCraftError("layer.flattenImage: nothing to flatten")
             d.layers = [{"id": self._id(), "img": self.composite(d), "visible": True}]
         elif cmd == "layer.new.layer":
-            d.layers.append({"id": self._id(), "img": Image.new("RGBA", (W, H), (0, 0, 0, 0)), "visible": True})
+            d.layers.append({"id": self._id(), "img": Image.new("RGBA", (W, H), (0, 0, 0, 0)), "visible": True,
+                             "name": params.get("name", "Layer")})
             d.active = d.layers[-1]["id"]
+            return {"layer": d.active}
         elif cmd == "layer.select":
             d.active = params["layer"]
         elif cmd == "edit.fill":

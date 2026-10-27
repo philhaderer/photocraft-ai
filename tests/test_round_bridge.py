@@ -77,6 +77,13 @@ def main():
     assert dup["mergedOnly"] is False and any(c == "layer.delete" for c in cmds)       # the hidden layer was dropped
     first_paste = cmds.index("edit.paste")
     assert any(c == "layer.select" and p.get("layer") == top_id for c, p in pc.log[:first_paste]), "result not placed on top"
+    # every paste lands on an empty pixel layer made just before it (an adjustment layer on top took the paste into its
+    # mask and the run broke off); that helper layer is gone afterwards
+    for k, c in enumerate(cmds):
+        if c in ("edit.paste", "edit.pasteSpecial.pasteInto") and pc.log[k][1].get("target") != "mask" and pc.log[k - 1][0] != "layer.new.layer":
+            assert pc.log[k - 1][0] == "layer.new.layer" or cmds[k - 1] in ("select.reselect",), (k, cmds[k - 3:k + 1])
+    assert not any(l.get("name", "").startswith("pccomfy-target") for l in pc.docs[0].layers)
+    assert sum(1 for c, p in pc.log if c == "layer.new.layer" and p.get("name", "").startswith("pccomfy-target")) >= 1
     # a switched-off TOP layer (the user's case) must not break Refine / Expand: the duplicate has layer ids of its own
     from pccomfy import models
     for wf_name, mode, kw in (("flux3-klein-upscale.json", "refine", {}), ("flux2-klein-upscale.json", "refine", {}),
