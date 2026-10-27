@@ -50,7 +50,7 @@ def main():
     assert app.cb_enhance["text"] == "LLM prompt enhancement (Qwen 3.5 9B)"
     assert app.v_turbo.get() is True and app.cb_turbo["text"].startswith("DMD2") and app.v_lora_str.get() == 1.0
     assert [k for k, rb in app.rb_modes.items() if rb["state"] == "normal"] == ["txt2img", "outpaint"]   # Generative fill is off again (not good enough)
-    assert [c["text"] for c in app.stage_cbs] == ["Lenovo UltraReal LoRA", "Skip-layer guidance (SLG)", "Stage"]
+    assert [c["text"] for c in app.stage_cbs] == ["UltraReal LoRA", "Skip-layer guidance (SLG)", "Stage"]
     assert app.v_stage.get() and app.v_stage2.get()                                    # Lenovo on, SLG on
     r = app._request()
     assert r.stage_on is True and r.stages_off == [] and r.turbo is True

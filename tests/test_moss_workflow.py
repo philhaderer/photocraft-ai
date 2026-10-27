@@ -51,7 +51,7 @@ def main():
     assert (on["steps"], on["cfg"]) == (8, 1.5)              # with it: 8 steps, CFG 1.5
     # the Lenovo LoRA and the skip-layer guidance are switches; both start off
     sw = workflows.stage_switches(tpl)
-    assert [l for _, l in sw] == ["Lenovo UltraReal LoRA", "Skip-layer guidance (SLG)"]
+    assert [l for _, l in sw] == ["UltraReal LoRA", "Skip-layer guidance (SLG)"]
     assert [workflows.stage_default_on(tpl, n) for n, _ in sw] == [False, False]
     for off_ids in (["5"], ["7"], ["5", "7"]):
         gg = workflows.bypass_stage(tpl, off_ids)
