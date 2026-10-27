@@ -104,12 +104,14 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._booting = False
         self._on_top()
         self._fit_height(self._px(MIN_W))
+        self._place_window()
         self._sized = True
         self.root.after(100, self._poll)
         self.root.after(200, self.refresh)
         self.refresh_presets()
         self.root.protocol("WM_DELETE_WINDOW", self._quit)
         self.root.bind("<Destroy>", self._on_destroy, add="+")
+        self.root.bind("<Configure>", self._remember_pos, add="+")
 
     def _build(self, d):
         r = self.root
@@ -491,6 +493,56 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         else:
             winlink.unlink(self.root)
 
+    def _place_window(self):
+        """The window starts where it was last (saved in the state), if that is still on a screen. Otherwise it is placed
+        at the first link: top right inside PhotoCraft, under its menu bar (winlink.first_position)."""
+        self._placed = False
+        self._win_pos = None
+        pos = self.state.get("win_pos")
+        try:
+            x, y = int(pos[0]), int(pos[1])
+        except (TypeError, ValueError, IndexError):
+            return
+        if winlink.on_screen(x + self._px(40), y + self._px(10)) is False:    # the title bar must be reachable
+            return
+        self.root.geometry(f"+{x}+{y}")
+        self._win_pos = (x, y)
+        self._placed = True
+        self._checked_band = False
+
+    def _place_at_owner(self):
+        """Called once PhotoCraft's window is known: a first start goes to its top right corner; a saved position that
+        lies in its menu bar moves just below it."""
+        rect = winlink.owner_rect()
+        if rect is None:
+            return
+        w = self.root.winfo_width()
+        if not getattr(self, "_placed", True):
+            x, y = winlink.first_position(rect, w, self.ui)
+        elif not getattr(self, "_checked_band", True) and self._win_pos:
+            x, y = winlink.below_menu_bar(self._win_pos, w, rect, self.ui)
+        else:
+            return
+        self._placed, self._checked_band = True, True
+        if (x, y) != self._win_pos:
+            self.root.geometry(f"+{x}+{y}")
+            self._win_pos = (x, y)
+
+    def _remember_pos(self, e=None):
+        """Keeps the window's place for the next start (saved with the state)."""
+        if e is not None and e.widget is not self.root:
+            return
+        try:
+            if self.root.state() != "normal":
+                return
+            m = re.match(r"\d+x\d+([+-]-?\d+)([+-]-?\d+)", self.root.geometry())
+        except tk.TclError:
+            return
+        if m:
+            x, y = int(m.group(1).replace("+", "")), int(m.group(2).replace("+", ""))
+            if x > -10000 and y > -10000:       # a minimized window reports -32000
+                self._win_pos = (x, y)
+
     def _yield_popups(self):
         """PhotoCraft draws its menus inside its own window, so this window cannot be put below them. Instead (Windows):
         a click in PhotoCraft's menu bar hides this window while the menu is in use; it returns with the next click
@@ -505,6 +557,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         if not self.v_top.get():
             return
         if winlink.link(self.root):
+            self._place_at_owner()
             self._link_tries = 0
             self._pc_seen, self._pc_gone = True, 0
             if not getattr(self, "_popup_job", None):

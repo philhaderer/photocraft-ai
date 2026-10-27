@@ -138,6 +138,12 @@ class Win32Api:
         self.u.GetWindowRect(hwnd, self.c.byref(r))
         return r.left, r.top, r.right, r.bottom
 
+    def monitor_at(self, x: int, y: int) -> int:
+        """The monitor under a point, 0 when the point is on none (MONITOR_DEFAULTTONULL)."""
+        self.u.MonitorFromPoint.restype = self.w.HMONITOR
+        self.u.MonitorFromPoint.argtypes = [self.w.POINT, self.w.DWORD]
+        return int(self.u.MonitorFromPoint(self.w.POINT(int(x), int(y)), 0) or 0)
+
     def show(self, hwnd: int, visible: bool) -> None:
         """Hide / show without activating (SW_HIDE / SW_SHOWNOACTIVATE)."""
         self.u.ShowWindow(hwnd, 4 if visible else 0)
@@ -226,6 +232,47 @@ MENU_BAND = int(os.environ.get("PCC_MENU_BAND", "70"))      # px (96 dpi) from t
 MENU_DROP = int(os.environ.get("PCC_MENU_DROP", "620"))     # px (96 dpi) below the top that an open menu can reach
 
 
+def first_position(owner_rect, width: int, ui: float = 1.0) -> tuple[int, int]:
+    """Where the window goes when no position was saved yet: the top right corner inside PhotoCraft's window, just
+    under its menu bar (never over the menu bar: there a click on our title bar counted as a menu click)."""
+    L, T, R, _B = owner_rect
+    margin = round(16 * ui)
+    return max(L, R - width - margin), T + round(MENU_BAND * ui) + margin
+
+
+def below_menu_bar(pos, width: int, owner_rect, ui: float = 1.0) -> tuple[int, int]:
+    """A saved position whose top edge lies in PhotoCraft's title/menu band (and overlaps it sideways) is moved just under it."""
+    x, y = pos
+    L, T, R, _B = owner_rect
+    band = T + round(MENU_BAND * ui)
+    if x < R and x + width > L and T - round(40 * ui) <= y < band:
+        y = band + round(16 * ui)
+    return x, y
+
+
+def owner_rect(api=None):
+    """PhotoCraft's main window rectangle (left, top, right, bottom), or None."""
+    if not available() and api is None:
+        return None
+    try:
+        api = api or Win32Api()
+        owner = pick_window(api.windows(), exe_name())
+        return api.rect(owner) if owner else None
+    except Exception:
+        return None
+
+
+def on_screen(x: int, y: int, api=None) -> bool | None:
+    """Is the point on any monitor? None = cannot tell (not Windows)."""
+    if not available() and api is None:
+        return None
+    try:
+        api = api or Win32Api()
+        return bool(api.monitor_at(x, y))
+    except Exception:
+        return None
+
+
 def menu_step(state: dict, cursor, lbutton: bool, esc: bool, owner_rect, win_rect, ui: float = 1.0) -> dict:
     """The "menus win" rule for a bridge window that lies over PhotoCraft's menus (PhotoCraft draws its menus inside its own
     window, so no z-order trick can put them above ours). Pure: state {hidden, l} in, state out.
@@ -236,9 +283,10 @@ def menu_step(state: dict, cursor, lbutton: bool, esc: bool, owner_rect, win_rec
     click = lbutton and not was_down
     x, y = cursor
     L, T, R, B = owner_rect
-    in_owner = L <= x < R and T <= y < B
-    in_band = in_owner and y < T + MENU_BAND * ui
     wl, wt, wr, wb = win_rect
+    in_owner = L <= x < R and T <= y < B
+    on_us = not hidden and wl <= x < wr and wt <= y < wb     # a click on this window itself (its title bar) is no menu click
+    in_band = in_owner and not on_us and y < T + MENU_BAND * ui
     over = not (wr <= L or wl >= R or wb <= T or wt >= T + (MENU_BAND + MENU_DROP) * ui)
     if not hidden:
         if click and in_band and over:

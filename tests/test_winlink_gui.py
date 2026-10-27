@@ -57,6 +57,35 @@ def main():
     cfgmod.save_state({})
     app._on_destroy(E())                                                      # owner closed -> state saved once
     assert cfgmod.load_state().get("mode")
+
+    # start position: a first start is placed in PhotoCraft's top right corner at the first link and remembered
+    geo = []
+    app.root.geometry = lambda g=None: geo.append(g) if g else "380x700+1204+86"
+    app.root.winfo_width = lambda: 380
+    app.root.state = lambda: "normal"
+    wl.owner_rect = lambda api=None: (0, 0, 1600, 900)
+    app._placed, app._win_pos = False, None
+    app._place_at_owner()
+    assert geo == [f"+{1600 - 380 - 16}+{wl.MENU_BAND + 16}"], geo
+    app._place_at_owner()
+    assert len(geo) == 1                                                     # only once
+    app._remember_pos()                                                      # the user moved it: the new place is kept
+    assert app._win_pos == (1204, 86)
+    cfgmod.save_state({})
+    app._closing = False
+    app._on_destroy(E())
+    assert cfgmod.load_state().get("win_pos") == [1204, 86]
+    # the next start uses it (when it is on a screen); one in PhotoCraft's menu bar is moved just below it
+    app.state = {"win_pos": [40, 10]}
+    wl.on_screen = lambda x, y, api=None: True
+    geo.clear()
+    app._place_window()
+    assert geo == ["+40+10"] and app._placed
+    app._place_at_owner()
+    assert geo[-1] == f"+40+{wl.MENU_BAND + 16}"
+    wl.on_screen = lambda x, y, api=None: False                              # the monitor is gone: placed at PhotoCraft again
+    app._place_window()
+    assert app._placed is False
     print("ALL OK (winlink gui)")
 
 
