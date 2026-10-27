@@ -110,7 +110,7 @@ Wortlaut des Users sinngemäß übernommen; Details, Befunde und Optionen stehen
 3. Chevron bei „Advanced“ steht zu weit rechts.
 4. „Extra LoRAs (style, detail ...)“ umbenennen in „Custom LoRAs:“, den „+ Add“-Knopf ganz nach rechts, die Leerzeile danach löschen.
 5. Text „PhotoCraft“ ganz unten links weg (der User fragt, was er bringt).
-6. ComfyUI-Punkt unten: rot, wenn nicht verbunden, grün, wenn verbunden.
+6. ComfyUI-Punkt unten: rot, wenn nicht verbunden, grün, wenn verbunden (bestätigt 27.10.).
 7. Slider: der dunklere Teil der Spur in PhotoCrafts Farbe `#686868`.
 8. Slider überall rechts, gleich breit und fest; auch bei den modellspezifischen LoRAs rechts neben dem Text (heute: Workflow-LoRA-Slider unter dem Haken).
 9. Slider-Werte müssen eintippbar sein (alle Slider).
@@ -122,7 +122,7 @@ Wortlaut des Users sinngemäß übernommen; Details, Befunde und Optionen stehen
 
 **C. Neue Funktionen**
 13. Settings (Zahnrad): neben jeder Modell-Datei ein Knopf, mit dem der User sie gegen eine eigene Datei tauscht. Wortlaut vorschlagen (z. B. „Use my own file…“).
-14. Strg+Z / Strg+Y: Die Notiz des Users ist abgebrochen („hier war gemeint, dass man mit STRG“) → beim User nachfragen, was gemeint war (bisher: Handoff-Aufgabe 6.8 alt).
+14. ~~Strg+Z / Strg+Y~~: gestrichen (27.10.: „das lassen wir so“); es bleibt wie heute.
 
 **D. Recherche und Entscheidungen**
 15. UX-Frage: Funktionen zuerst wählen, das Modell darunter (statt Modell-Tabs oben)? Folgen für die UX aufschreiben, Optionen nennen, nichts bauen.

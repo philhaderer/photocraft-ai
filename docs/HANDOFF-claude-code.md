@@ -18,7 +18,7 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 ## 2. Repo und Git-Stand
 - Pfad `C:\programs\photocraft-comfyui-bridge`, Fork von Peszemeszek/photocraft-comfyui-bridge. Nur lokal, nichts gepusht.
 - Branches: `main` (Upstream), `windows-fibo` (abgenommener Stand 6aff33a), `refactor/split-gui` (Phase 0, in `next`), **`next` = Integrationsstand, den der Nutzer testet**.
-- Arbeits-Branches vom 26./27.10., alle in `next` gemergt und **noch nicht gelöscht** (Löschen nur nach Rückfrage): `feat/prompt-clear-and-t2i-tip`, `feat/generate-row-above-prompt`, `fix/one-empty-slot`, `fix/add-file-dialog-parent`, `feat/drop-replaces-slot`, `feat/window-icons`, `feat/photocraft-sliders`, `feat/model-download-links`, `docs/handoff-2026-10-27`.
+- Arbeits-Branches vom 26./27.10., alle in `next` gemergt und **noch nicht gelöscht** (Löschen nur nach Rückfrage): `feat/prompt-clear-and-t2i-tip`, `feat/generate-row-above-prompt`, `fix/one-empty-slot`, `fix/add-file-dialog-parent`, `feat/drop-replaces-slot`, `feat/window-icons`, `feat/photocraft-sliders`, `feat/model-download-links`, `docs/handoff-2026-10-27`, `docs/handoff-decisions`.
 - Tags: `backup-2026-10-26` (6df02df, vor Phase 0), `vor-claude-code` (65e955f).
 - Lane-Klone `lanes/L1`, `lanes/L2` sind Altlast (per `.git/info/exclude` ignoriert). Archiv: `docs/archiv-lanes/`.
 - Tests: `python tests/run_all.py` (39 Dateien, alle grün, ca. 16 s). Python des Nutzers: Pfad in `data/python.txt`.
@@ -53,6 +53,7 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 - Rechtsklick auf Modell-Tab: Favorit, Tab ausblenden, Workflow-JSON speichern. Minimize = Einklappen (hide/show).
 - Krea-Styles bis 50 per Bildauswahl; Tutorial-PSDs mit Testbild; Tooltips bei jedem Start.
 - Tipp-Wortlaut Text to image: abgenommen. Icons: 20 px (Slot-Icons 24 px). Drop auf mehrere Bilder: erstes ersetzt, Rest anhängen.
+- Strg+Z/Strg+Y: bleibt wie heute, keine Plugin-Tastenkürzel (27.10.). ComfyUI-Punkt: rot = nicht verbunden, grün = verbunden (27.10.).
 - Branches: vor jedem Löschen fragen.
 
 ## 6. Aufgaben für den nächsten Chat (Liste des Nutzers vom 27.10., auch in PLAN.md 8)
@@ -64,7 +65,7 @@ Jede Aufgabe auf eigenem Branch, Optionen vorher nennen, wo Design oder Wortlaut
 3. **Chevron bei „Advanced“ zu weit rechts:** Link.TButton mit `compound="left"` zentriert Bild+Text bzw. hat Innenabstand; links bündig machen (`anchor="w"`/Padding 0) wie bei „Negative prompt“, beide gleich.
 4. **„Extra LoRAs (style, detail ...)“ → „Custom LoRAs:“**, „+ Add“ ganz nach rechts (`pack(side="right")`), Leerzeile danach weg (gui.py, `f_xl`/`head`).
 5. **Text „PhotoCraft“ unten links weg.** Was er heute bringt: `v_conn` zeigt „PhotoCraft ●/○“ = ob der PhotoCraft-Steuerport (127.0.0.1:7878) erreichbar ist (gui_state.py `refresh`). Ohne ihn fehlt diese Anzeige; da das Plugin ohne PhotoCraft nicht arbeiten kann und Fehler ohnehin als Meldung kommen, ist er verzichtbar. Mit dem Nutzer bestätigen, dann entfernen (und Tests anpassen).
-6. **ComfyUI-Punkt:** rot, wenn nicht verbunden, grün, wenn verbunden (der Nutzer schrieb „grün, wenn nicht“: offensichtlich verschrieben). Heute nur Zeichen ●/○ im Text; farbiger Punkt braucht ein eigenes Label/Canvas (`DONE_GREEN`/`ERROR` aus gui_common). Das Zahnrad-Fenster zeigt den Punkt ebenfalls (ui_settings.py Zeile ~454): dort einheitlich.
+6. **ComfyUI-Punkt:** rot, wenn nicht verbunden, grün, wenn verbunden (vom Nutzer am 27.10. bestätigt). Heute nur Zeichen ●/○ im Text; farbiger Punkt braucht ein eigenes Label/Canvas (`DONE_GREEN`/`ERROR` aus gui_common). Das Zahnrad-Fenster zeigt den Punkt ebenfalls (ui_settings.py Zeile ~454): dort einheitlich.
 7. **Slider-Farbe:** dunkler Teil der Spur `#686868` (PhotoCraft) statt `#2a2a2a` (`Slider.REST`). Hellen Teil und Knopf mit PhotoCraft vergleichen lassen.
 8. **Slider überall rechts, gleich breit, fest:** alle Slider in einer rechten Spalte mit fester Breite; auch die Workflow-LoRA (heute unter dem Haken „LoRA“, gui.py `f_lora` in Zeile 2) und die Stage-LoRAs (heute `length=110`) rechts neben ihrem Text. Gemeinsame Breite als Konstante (z. B. in gui_theme.py), Wert-Kästchen gleich breit.
 9. **Werte eintippbar:** das Wert-Kästchen wird ein Eingabefeld (ttk.Entry im Kästchen-Stil); Enter/Fokusverlust übernimmt, Werte werden auf den Bereich begrenzt; Anzeige-Format wie heute (%, 0.00, „hard edge“ = 0). Feather nimmt 0 an und zeigt „hard edge“. Option zuerst mit dem Nutzer klären: Feld immer editierbar (empfohlen) oder erst per Doppelklick.
@@ -76,7 +77,7 @@ Jede Aufgabe auf eigenem Branch, Optionen vorher nennen, wo Design oder Wortlaut
 
 ### C. Neue Funktionen
 13. **Eigene Datei statt Modell (Settings):** neben jeder Modell-Datei im Zahnrad-Fenster ein Knopf, mit dem der User eine eigene Datei wählt, die statt der erwarteten benutzt wird. Wortlaut vorschlagen, Nutzer wählt; Vorschläge: „Use my own file…“ (empfohlen), „Replace with my file…“, „Choose another file…“. Technik: die Zuordnung (erwarteter Name → eigener Name aus ComfyUIs Liste) in config speichern; `fix_lora_names`/Graph-Anpassung (workflows.py) setzt beim Senden den eigenen Namen ein; Erkennung (inventory.py) zählt die Datei als vorhanden. Auswahl aus ComfyUIs Dateiliste des passenden Ordners (nicht freier Dateidialog, ComfyUI kennt nur seine Ordner).
-14. **Strg+Z / Strg+Y:** Die Notiz des Nutzers ist abgebrochen: „STRG+Z: hier war gemeint, dass man mit STRG“. **Beim Nutzer nachfragen**, was gemeint war. Bisheriger Plan (alt 6.8): Strg+Z/Strg+Shift+Z wie Undo/Redo-Knöpfe, im Prompt-Feld bleibt Text-Undo (Option A) oder immer Plugin-Undo (Option B).
+14. ~~Strg+Z / Strg+Y~~: **gestrichen** (Entscheidung 27.10.: „das lassen wir so“). Strg+Z/Strg+Y bleiben wie heute (Text-Undo im Prompt-Feld); keine Plugin-Undo-Tastenkürzel bauen.
 
 ### D. Recherche und Entscheidungen (nichts bauen, Ergebnis vorlegen)
 15. **Funktionen zuerst, Modell darunter?** Der Nutzer überlegt, die Funktionen (Text to image, Edit, Fill …) als erste Wahl oben zu setzen und das Modell darunter, weil Nutzer eher ihre Aufgabe wählen. Folgen für die UX aufschreiben: was passiert mit gesperrten Kombinationen (heute: Funktion grau je Modell → künftig Modell grau je Funktion), Start-/Leerzustände (`start_state`, ui_settings.py), Easy-Mode-Ranking (wählt dann automatisch das beste Modell je Funktion: passt gut zusammen), Rechtsklick-Favoriten, Presets/gespeicherter Zustand, Platzbedarf bei 380 px, Tooltips je Modell. Optionen nennen (z. B. A Funktion oben + Modell-Dropdown, B Funktion oben + Modell-Tabs, C bleibt), Empfehlung.
