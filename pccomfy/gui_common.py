@@ -361,7 +361,7 @@ class Slider(tk.Canvas):
     the mouse."""
 
     TRACK, KNOB = 4, 14                              # px before the display scaling
-    FILL, REST = "#e6e6e6", "#2a2a2a"                # the track up to the value / after it
+    FILL, REST = "#e6e6e6", "#686868"                # the track up to the value / after it (PhotoCraft's grey)
     FILL_OFF, KNOB_OFF = "#6a6a6a", "#9a9a9a"        # greyed out
     _knobs: dict = {}                                # (colour, size) -> PhotoImage, shared by all sliders
 
@@ -388,6 +388,9 @@ class Slider(tk.Canvas):
         out = super().configure(cnf, **kw)
         if cnf or kw:
             self._draw()
+        box = vars(self).get("box")          # its value box (ValueBox) is greyed out with it
+        if box is not None and "state" in kw:
+            box.configure(state=kw["state"])
         return out
 
     config = configure
@@ -453,6 +456,47 @@ class Slider(tk.Canvas):
 
 
 VALUE_W = 9        # characters of a slider's value box: "hard edge" fits, so every slider row has the same length
+SLIDER_W = 140     # px (before the display scaling) of every slider: all of them sit in one column on the right
+
+
+class ValueBox(ttk.Entry):
+    """The value of a slider in a small dark box on its right (as in PhotoCraft), and you can type into it: Enter or
+    leaving the box takes the number (a % sign, a comma and "hard edge" are understood), kept inside the slider's range;
+    anything else puts the shown value back. `factor`: shown = value * factor (100 for the % sliders). `command` shows the
+    value in its format, as after a drag. configure(text=...) shows a value, as the label it stands in for did."""
+
+    def __init__(self, parent, slider, command, factor: float = 1.0):
+        self._text = tk.StringVar(value="")
+        super().__init__(parent, textvariable=self._text, width=VALUE_W, style="Value.TEntry", justify="center", font=(FONT, 9))
+        self._slider, self._cmd, self._factor = slider, command, factor
+        slider.box = self
+        for ev in ("<Return>", "<KP_Enter>", "<FocusOut>"):
+            self.bind(ev, self._commit)
+        self.bind("<Escape>", lambda e: self._cmd())
+
+    def configure(self, cnf=None, **kw):
+        if "text" in kw:
+            self._text.set(kw.pop("text"))
+            if not (cnf or kw):
+                return None
+        return super().configure(cnf, **kw)
+
+    config = configure
+
+    def cget(self, key):
+        return self._text.get() if key == "text" else super().cget(key)
+
+    def _commit(self, _e=None):
+        s = self._slider
+        raw = self._text.get().strip().lower().replace(",", ".").replace("%", "").strip()
+        try:
+            v = 0.0 if raw.startswith("hard") else float(raw) / self._factor
+        except ValueError:
+            v = None
+        if v is not None and s._var is not None and s._on():
+            s._var.set(min(s._hi, max(s._lo, v)))
+            s._draw()
+        self._cmd()
 
 ENHANCE_TIP = "On: a text model writes the detailed prompt from your short text. Off: your text is sent as typed."
 LORA_TIP = "The workflow's own LoRA: on/off, and its strength."
@@ -553,6 +597,8 @@ __all__ = [
     "ThinScrollbar",
     "Slider",
     "VALUE_W",
+    "SLIDER_W",
+    "ValueBox",
     "workflows_tags",
     "FLUX2_SCHEDULER",
     "GenParams",

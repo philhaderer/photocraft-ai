@@ -293,7 +293,24 @@ def main():
     assert v.get() == 10                                   # beyond the end: the maximum
     s.configure(state="disabled")
     s._click(type("E", (), {"x": x0})())
-    assert v.get() == 10 and app.w_sharpen.__class__ is gui.Slider and app.lbl_sharpen["style"] == "Value.TLabel"
+    assert v.get() == 10 and app.w_sharpen.__class__ is gui.Slider and app.lbl_sharpen["style"] == "Value.TEntry"
+    # the value box of a slider takes typed values: %, comma, "hard edge", kept in range; nonsense shows the old value
+    for typed, want in (("35 %", 0.35), ("12,5", 0.125), ("250", 1.0), ("-3", 0.0), ("abc", 0.0)):
+        app.lbl_sharpen.configure(text=typed)
+        app.lbl_sharpen._commit()
+        assert abs(app.v_sharpen.get() - want) < 1e-9, (typed, app.v_sharpen.get())
+    assert app.lbl_sharpen.cget("text") == "0 %"
+    app.w_feather.configure(state="normal")
+    app.v_feather.set(4)
+    app.lbl_feather.configure(text="hard edge")
+    app.lbl_feather._commit()
+    assert app.v_feather.get() == 0 and app.lbl_feather.cget("text") == "hard edge"
+    app.w_sharpen.configure(state="disabled")
+    assert app.lbl_sharpen["state"] == "disabled"           # greyed out with its slider
+    app.lbl_sharpen.configure(text="50")
+    app.lbl_sharpen._commit()
+    assert app.v_sharpen.get() == 0.0                         # a greyed-out slider takes no typed value
+    app.w_sharpen.configure(state="normal")
 
     # Text to image: every model shows the tip under the prompt
     for m in models.MODELS:

@@ -66,6 +66,10 @@ class ThemeMixin:
               arrowcolor=[("disabled", DISABLED)])
         # the value of a slider (Slider, gui_common.py) sits in a small dark box on its right, as in PhotoCraft
         s.configure("Value.TLabel", background=PANEL, foreground=FG, padding=(4, 1), font=(FONT, 9))
+        s.configure("Value.TEntry", fieldbackground=PANEL, foreground=FG, padding=(4, 1), bordercolor=PANEL,
+                    lightcolor=PANEL, darkcolor=PANEL, insertcolor=FG)       # the same box, and you can type into it (ValueBox)
+        s.map("Value.TEntry", bordercolor=[("focus", ACCENT)], lightcolor=[("focus", ACCENT)],
+              foreground=[("disabled", DISABLED)], fieldbackground=[("disabled", BG)])
         s.map("TButton", foreground=[("disabled", DISABLED)])
         self.root.option_add("*TCombobox*Listbox.background", PANEL)
         self.root.option_add("*TCombobox*Listbox.foreground", FG)
@@ -103,11 +107,10 @@ class ThemeMixin:
         return (img(color), "disabled", img(DISABLED), "active", img(ACCENT))
 
     def _slider_row(self, frame):
-        """Sharpen, Match colours, Edge feather and Mix source/new share one layout: a label column and a value column of fixed
-        width, the slider in between, so all bars are equally long and end at the same place on the right."""
-        frame.columnconfigure(0, minsize=self._px(158))
-        frame.columnconfigure(1, weight=1)
-        frame.columnconfigure(2, minsize=self._px(60))
+        """Sharpen, Match colours, Edge feather and Mix source/new share one layout: the label takes the room on the left,
+        the slider (SLIDER_W) and its value box sit on the right, so all bars are equally long and end at the same place
+        (the LoRA sliders beside their checkboxes too)."""
+        frame.columnconfigure(0, weight=1)
 
     def _open_on_click(self, cb):
         def post(_e=None):
