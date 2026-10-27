@@ -37,30 +37,36 @@ def main():
     app = gui.App(cfgmod.load())
     assert RecStyle.seen["Tab.Toolbutton"]["anchor"] == "w"
 
-    # which shape each button asks for: fn-<key>, the placeholder for img2img, the user's picture before both
-    asked = []
-    real_photo = icons.photo
-    icons.photo = lambda root, kind, c, px, image=None: asked.append((kind, image)) or (kind, c)
+    # which shape each button asks for: fn-<key>, the placeholder for img2img, the user's picture before both;
+    # every symbol carries FN_GAP of empty room on its right (the gap to the text)
+    asked, shown = [], []
+    real_photo, real_render = icons.photo, icons.render
+    icons.render = lambda kind, c, px: asked.append(kind) or real_render(kind, c, px)
+    icons.photo = lambda root, kind, c, px, image=None: shown.append(image) or c
     try:
         app._icon_cache = {}
         normal, _sel, selected, _dis, disabled = app._function_icon("inpaint")
-        assert normal == ("fn-inpaint", gui.FG) and selected == ("fn-inpaint", "#1b1b1b") and disabled[1] == gui.DISABLED
-        assert app._function_icon("img2img")[0][0] == "placeholder"
+        assert asked == ["fn-inpaint"] * 3 and (normal, selected, disabled) == (gui.FG, "#1b1b1b", gui.DISABLED)
+        px = app._px(gui_theme.ICON_PX)
+        assert shown[0].size == (px + app._px(gui_theme.FN_GAP), px) and gui_theme.FN_GAP == 8
+        assert shown[0].crop((px, 0, shown[0].width, px)).getbbox() is None          # the gap is empty
+        asked.clear()
+        app._function_icon("img2img")
+        assert asked and set(asked) == {"placeholder"}
         own = Path(gui_theme.__file__).resolve().parent / "assets" / "functions" / "refine.png"
         made = not own.exists()
         if made:
-            own.parent.mkdir(parents=True, exist_ok=True)
             from PIL import Image
             Image.new("RGBA", (40, 40), (0, 0, 0, 255)).save(own)
         try:
             asked.clear()
             app._function_icon("refine")
-            assert asked and all(img is not None for _kind, img in asked), asked     # the picture, not the shape
+            assert asked == [], asked                                                  # the picture, not the shape
         finally:
             if made:
                 own.unlink()
     finally:
-        icons.photo = real_photo
+        icons.photo, icons.render = real_photo, real_render
     print("ok")
 
 

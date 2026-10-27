@@ -3,9 +3,12 @@ from __future__ import annotations
 
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
+from PIL import Image
+
 from . import icons
 
 ICON_PX = 20       # the window's button icons (vector, icons.py) before the display scaling; the slot icons have their own (24)
+FN_GAP = 8         # room between a function symbol and its text (ttk has no gap option: the symbol gets it on its right)
 SPIN_PX = 14       # the chevrons of the spin boxes: flatter than a button icon, so the field keeps its height
 
 
@@ -118,7 +121,7 @@ class ThemeMixin:
 
     def _function_icon(self, key: str):
         """The symbol of a function button: the user's picture pccomfy/assets/functions/<key>.png when it is there, else the
-        shape fn-<key> (icons.py), else a placeholder. Light on the dark button, dark on the orange (selected) one, grey when
+        shape fn-<key> (icons.py), else a placeholder, with FN_GAP of room on its right. Light on the dark button, dark on the orange (selected) one, grey when
         greyed out."""
         from pathlib import Path
         path = Path(__file__).resolve().parent / "assets" / "functions" / f"{key}.png"
@@ -134,8 +137,11 @@ class ThemeMixin:
                         pic = icons.from_file(path, c, px)
                     except OSError:
                         pic = None
-                kind = f"fn-{key}" if f"fn-{key}" in icons.SHAPES else "placeholder"
-                cache[k] = icons.photo(self.root, kind, c, px, image=pic)
+                if pic is None:
+                    pic = icons.render(f"fn-{key}" if f"fn-{key}" in icons.SHAPES else "placeholder", c, px)
+                wide = Image.new("RGBA", (px + self._px(FN_GAP), px), (0, 0, 0, 0))
+                wide.paste(pic, (0, 0))
+                cache[k] = icons.photo(self.root, None, c, px, image=wide)
             return cache[k]
         return (img(FG), "selected", img("#1b1b1b"), "disabled", img(DISABLED))
 
