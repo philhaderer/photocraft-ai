@@ -12,7 +12,7 @@ answers "401" until then.
 | File | Folder (ComfyUI\models\...) | Size | Source | Licence | Gated |
 |---|---|---|---|---|---|
 | flux3-image-klein-int8-convrot.safetensors | diffusion_models | 5.8 GB | [black-forest-labs/flux-3-image-klein-comfy](https://huggingface.co/black-forest-labs/flux-3-image-klein-comfy/resolve/main/diffusion_models/flux3-image-klein-int8-convrot.safetensors) | FLUX Kommunity License | yes |
-| flux-2-klein-9b-int8-ConvRot-comfyui.safetensors | diffusion_models | 9.4 GB | **none right now**: Sakujo/FLUX.2-Klein-9B-INT8-ConvRot is no longer public (401) | (FLUX non-commercial, from the base model) | – |
+| flux-2-klein-9b_int8_convrot.safetensors | diffusion_models | 9.4 GB | [obsxrver/ComfyUI-Native-INT8_ConvRot](https://huggingface.co/obsxrver/ComfyUI-Native-INT8_ConvRot/resolve/main/diffusion_models/flux-2-klein-9b_int8_convrot.safetensors) | FLUX non-commercial (upstream FLUX.2 klein 9B) | no |
 | qwen_image_2.1_int8_convrot.safetensors | diffusion_models | 7.3 GB | [Comfy-Org/Qwen-Image-2.1](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/diffusion_models/qwen_image_2.1_int8_convrot.safetensors) | Qwen research licence | no |
 | fibo2_edit_turbo_int8_convrot.safetensors | diffusion_models | 8.4 GB | [Comfy-Org/Fibo-2.0](https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/diffusion_models/fibo2_edit_turbo_int8_convrot.safetensors) | CC BY-NC 4.0 (non-commercial) | no |
 | krea2_turbo_int8_convrot.safetensors | diffusion_models | 13.5 GB | [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_int8_convrot.safetensors) | Krea 2 Community License | no |
@@ -38,10 +38,13 @@ answers "401" until then.
 
 ## Findings
 
-- **FLUX.2 Klein 9B (int8 ConvRot)**: the only file without a public source. The Sakujo repo answers 401 since it went
-  private or was deleted. The user's copy matches the SHA256 that repo listed. Other int8 ConvRot builds exist under other
-  names and sizes (e.g. `obsxrver/ComfyUI-Native-INT8_ConvRot`, `Winnougan/Klein9b-Distilled-Base-INT8-Convrot`,
-  `wraps/FLUX.2-klein-9B-KV-INT8-ConvRot-ComfyUI`); none is the same file, and none has been tested with our workflow.
+- **FLUX.2 Klein 9B (int8 ConvRot)**: the old file (`flux-2-klein-9b-int8-ConvRot-comfyui.safetensors`, Sakujo repo) has
+  no public source any more (401). Since 2026-10-27 the plugin uses obsxrver's build instead
+  (`flux-2-klein-9b_int8_convrot.safetensors`, 9 439 894 544 bytes, SHA256 bd041cec…, the same on `main` and at commit
+  d225df1). It is a different conversion (425 instead of 429 tensors, BFL names, 112 int8 layers) but an A/B test with
+  the plugin's own workflows (`tests/live_flux2_file_compare.py`: Text to image, Edit, Refine, two seeds each) gave the
+  same pictures with small differences in fine detail (PSNR 27 to 41 dB) at the same speed. The old file can still be
+  used through the settings window (own file instead of the expected one, once that exists).
 - **DMD2 LoRA for MOSS**: the user's `lora_dmd2.safetensors` is the file of that name in
   `lodestones/MOSS-Image-Base-8-steps-dmd` (same SHA256, also in `lodestones/Kromoss`), not the `lora.safetensors` of
   the SFT repo that the manifest guessed before.

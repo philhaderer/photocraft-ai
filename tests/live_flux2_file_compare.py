@@ -26,8 +26,8 @@ from PIL import Image, ImageChops  # noqa: E402
 from pccomfy import models, workflows  # noqa: E402
 from pccomfy.comfy import ComfyUI  # noqa: E402
 
-FILE_A = "flux-2-klein-9b-int8-ConvRot-comfyui.safetensors"     # the user's copy (Sakujo, no public source any more)
-FILE_B = "flux-2-klein-9b_int8_convrot.safetensors"             # obsxrver/ComfyUI-Native-INT8_ConvRot, commit d225df1
+FILE_A = "flux-2-klein-9b-int8-ConvRot-comfyui.safetensors"     # the user's old copy (Sakujo, no public source any more)
+FILE_B = "flux-2-klein-9b_int8_convrot.safetensors"             # obsxrver/ComfyUI-Native-INT8_ConvRot (the workflows' file since 27.10.)
 SCENE = ROOT / "data" / "test_scene.png"
 SEEDS = (1234, 98765)
 
@@ -44,10 +44,10 @@ def build(wf: str, prompt: str, size, seed: int, image_name, unet: str) -> tuple
     tpl = workflows.bypass_prompt_writer(workflows.load_template(ROOT / "workflows" / wf), prompt)
     swapped = 0
     for node in tpl.values():
-        if isinstance(node, dict) and node.get("class_type") == "UNETLoader" and node["inputs"].get("unet_name") == FILE_A:
+        if isinstance(node, dict) and node.get("class_type") == "UNETLoader" and node["inputs"].get("unet_name") in (FILE_A, FILE_B):
             node["inputs"]["unet_name"] = unet
             swapped += 1
-    assert swapped == 1, f"{wf}: expected one UNETLoader with {FILE_A}, found {swapped}"
+    assert swapped == 1, f"{wf}: expected one UNETLoader with a Flux 2 Klein file, found {swapped}"
     p = workflows.GenParams(prompt=prompt, seed=seed, width=size[0], height=size[1])
     if "upscale" in wf:
         p.extra["megapixels"] = size[0] * size[1] / 1e6      # Refine: same size, as the plugin does
