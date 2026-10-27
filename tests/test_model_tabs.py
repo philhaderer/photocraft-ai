@@ -204,7 +204,7 @@ def main():
     mm = models.BY_KEY
     assert mm["qwen"].modes["txt2img"].workflow == "qwen-image-21-t2i.json" and mm["qwen"].modes["txt2img"].settings["enhance"] is True and mm["qwen"].modes["txt2img"].settings["turbo"] is False
     assert mm["qwen"].modes["remove"].settings["feather_pct"] == 10.0 and mm["fibo"].modes["inpaint"].settings["feather_pct"] == 10.0
-    assert mm["fibo"].modes["inpaint"].settings["layer_mask"] == "auto" == mm["qwen"].modes["inpaint"].settings["layer_mask"]   # live test 28.10.: soft blurred the outer edge of the fill
+    assert mm["fibo"].modes["inpaint"].settings["layer_mask"] == "soft" == mm["qwen"].modes["inpaint"].settings["layer_mask"]   # soft edge outside the selection (28.10.)
     assert mm["flux3"].modes["txt2img"].settings["enhance"] is False
     assert mm["qwen"].modes["inpaint"].prompt_tip == mm["fibo"].modes["inpaint"].prompt_tip == models.FILL_TIP   # the user's wording
     assert [p[0] for p in mm["flux2"].modes["refine"].prompts] == ["Default", "Neutral", "Studio portrait"]
