@@ -204,7 +204,7 @@ def main():
     mm = models.BY_KEY
     assert mm["qwen"].modes["txt2img"].workflow == "qwen-image-21-t2i.json" and mm["qwen"].modes["txt2img"].settings["enhance"] is True and mm["qwen"].modes["txt2img"].settings["turbo"] is False
     assert mm["qwen"].modes["remove"].settings["feather_pct"] == 10.0 and mm["fibo"].modes["inpaint"].settings["feather_pct"] == 10.0
-    assert mm["fibo"].modes["inpaint"].settings["layer_mask"] == "soft"
+    assert mm["fibo"].modes["inpaint"].settings["layer_mask"] == "auto" == mm["qwen"].modes["inpaint"].settings["layer_mask"]   # live test 28.10.: soft blurred the outer edge of the fill
     assert mm["flux3"].modes["txt2img"].settings["enhance"] is False
     assert [p[0] for p in mm["flux2"].modes["refine"].prompts] == ["Default", "Neutral", "Studio portrait"]
     assert mm["flux3"].modes["upscale"].prompts == () and mm["flux2"].modes["upscale"].prompts == ()   # Flux 3: the workflow's own prompt only

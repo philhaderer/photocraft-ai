@@ -83,7 +83,8 @@ QWEN = Model(
         "txt2img": Mode("qwen-image-21-t2i.json", dict(base_res=1024, turbo=False, layer_mask="none", enhance=True), prompt_tip=T2I_TIP),
         "edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=False, layer_mask="none"), prompt_tip=EDIT_TIP),
         "multi_edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=False, layer_mask="none"), prompt_tip=MULTI_TIP, run_as="edit"),
-        "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=False, feather_pct=4.0)),
+        "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=False, feather_pct=4.0,
+                                                        layer_mask="auto")),   # live test 28.10.: soft blurred the fill's outer edge
         "outpaint": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=False, layer_mask="auto")),
         "remove": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=False, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
     },
@@ -203,7 +204,7 @@ FIBO = Model(
         "edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=EDIT_TIP),
         "multi_edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=MULTI_TIP, run_as="edit"),
         "refine": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), FIBO_REFINE, run_as="edit"),
-        "inpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False)),
+        "inpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="auto", feather_pct=10.0, enhance=False)),   # as Qwen Fill
         "outpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="auto", enhance=False)),
         "remove": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
     },
