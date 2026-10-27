@@ -274,7 +274,7 @@ class SettingsMixin:
                 for f, found, level in row["files"]:
                     if found is not None:
                         add("    ✓ ", "ok")
-                        add(f.name + ("" if found == f.name else f"  (as {found})") + ("   optional" if level == "optional" else ""), "muted")
+                        add(f.name + ("" if found == f.name else f"  (your file: {found})") + ("   optional" if level == "optional" else ""), "muted")
                         add("   ", "")
                         add(PICK_TEXT, "pick", f.name)
                         add("\n", "")
@@ -374,17 +374,10 @@ class SettingsMixin:
         self._settings_win = win
         self._own_settings(win)
 
-        top = ttk.Frame(win)
-        top.pack(fill="x", padx=10, pady=(8, 4))
-        self.v_set_conn = tk.StringVar(value="")
-        f_conn, self.lbl_set_dot = conn_status(top)              # the same "ComfyUI ●" as in the footer
-        f_conn.pack(side="left")
-        b = ttk.Button(top, text="Refresh", command=self.refresh)
-        b.pack(side="right")
-        Tooltip(b, "Reads ComfyUI's installed model files and node classes again.")
+        # no ComfyUI dot and no Refresh here: the plugin's footer has both
 
         nb = ttk.Notebook(win)              # tab 1: the model files; tab 2: credits
-        nb.pack(fill="both", expand=True, padx=10, pady=(0, 8))
+        nb.pack(fill="both", expand=True, padx=10, pady=8)
         tab_models, tab_credits = ttk.Frame(nb), ttk.Frame(nb)
         nb.add(tab_models, text="Models")
         nb.add(tab_credits, text="Credits")
@@ -463,8 +456,6 @@ class SettingsMixin:
         t_credits = getattr(self, "t_credits", None)
         if t_credits is not None:
             self._fill_text(t_credits, self._credits_segments())
-        self.v_set_conn.set("ComfyUI connected" if self.inv is not None else "ComfyUI not connected")
-        set_dot(self.lbl_set_dot, self.inv is not None)
         exp, _lists = self._link_choices()
         self.cb_link_exp["values"] = exp
         if self.v_link_exp.get() not in exp:
@@ -567,7 +558,7 @@ class SettingsMixin:
 
     def _link_reset(self):
         if cfgmod.model_map() != self._map_start:
-            self._map_undo.append(cfgmod.model_map())
+            self._map_undo.clear()           # Undo takes back relinks only, not the reset (user, 27.10.)
             cfgmod.set_model_map(dict(self._map_start))
             self._after_link_change("The links are as they were at startup.")
 
