@@ -34,12 +34,12 @@ def main():
     app.v_model.set("qwen")
     app.v_mode.set("inpaint")
     app._on_model()
-    assert app.v_workflow.get() == "qwen-image-21-edit.json" and app.v_res.get() == 1024 and app.v_turbo.get() is True
+    assert app.v_workflow.get() == "qwen-image-21-edit.json" and app.v_res.get() == 1024 and app.v_turbo.get() is False    # Qwen: Turbo off by default (27.10.)
     assert app.rb_modes["edit"]["state"] == "normal" and app.rb_modes["upscale"]["state"] == "disabled"
     assert app.rb_modes["refine"]["state"] == "disabled"
 
     # the modes follow each other in the order text, edit, fill, remove, expand, reference, upscale, refine
-    assert [k for k, _ in gui.MODE_LABELS] == ["txt2img", "edit", "inpaint", "remove", "outpaint", "multi_edit", "upscale", "refine", "img2img"]
+    assert [k for k, _ in gui.MODE_LABELS] == ["txt2img", "outpaint", "inpaint", "remove", "edit", "multi_edit", "upscale", "refine", "img2img"]
 
     # MOSS: text to image, Generative fill, Expand (a test); the DMD2 LoRA is its own LoRA, Lenovo and SLG are switches
     app.v_model.set("moss")

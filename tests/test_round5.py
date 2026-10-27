@@ -172,7 +172,7 @@ def main():
     # Remove Selection: the text box is usable on every model that has the function
     for key in ("qwen", "flux2", "flux3", "fibo"):
         assert models.BY_KEY[key].modes["remove"].remove_text, key
-    assert [k for k, _ in gui.MODE_LABELS][:6] == ["txt2img", "edit", "inpaint", "remove", "outpaint", "multi_edit"]
+    assert [k for k, _ in gui.MODE_LABELS][:6] == ["txt2img", "outpaint", "inpaint", "remove", "edit", "multi_edit"]
 
     # Flux 3: 15 steps in every workflow (the SeedVR2 pre-stage keeps its one step); Upscale shows "x 1.5"; a line above "Prompt"
     for wf in ("flux3-klein-edit.json", "flux3-klein-t2i.json", "flux3-klein-upscale.json"):
@@ -212,12 +212,12 @@ def main():
     # Reset: back to the startup settings of this tab and function
     pick("qwen", "edit")
     app.v_seed.set(99); app.v_sharpen.set(0.5); app.v_detail.set(0.3)
-    app.t_prompt.insert("1.0", "something"); app.t_neg.insert("1.0", "ugly"); app.v_turbo.set(False)
+    app.t_prompt.insert("1.0", "something"); app.t_neg.insert("1.0", "ugly"); app.v_turbo.set(True)
     app._set_loras([["qwen\\style_a.safetensors", 0.6]])
     app.reset_settings()
     r = app._request()
     assert app.v_seed.get() == -1 and app.v_sharpen.get() == 0.0 and app.v_detail.get() == 1.0
-    assert app._prompt_text() == "" and app.t_neg.get("1.0", "end").strip() == "" and r.loras == [] and app.v_turbo.get() is True
+    assert app._prompt_text() == "" and app.t_neg.get("1.0", "end").strip() == "" and r.loras == [] and app.v_turbo.get() is False
     assert app.v_model.get() == "qwen" and app.v_mode.get() == "edit" and app.v_workflow.get() == "qwen-image-21-edit.json"
 
     # Flux 2 Klein (SamplerCustomAdvanced): steps, CFG, sampler and scheduler are usable and reach the graph
@@ -300,6 +300,9 @@ def main():
         app.lbl_sharpen._commit()
         assert abs(app.v_sharpen.get() - want) < 1e-9, (typed, app.v_sharpen.get())
     assert app.lbl_sharpen.cget("text") == "0 %"
+    ok = gui.ValueBox._typed_ok              # only numbers can be typed: digits and one decimal point or comma
+    assert ok("5", "5") and ok("3", "0.3") and ok(",", "0,") and ok("", "") and ok("12", "12")
+    assert not ok("a", "a") and not ok("%", "5%") and not ok(".", "0.5.") and not ok("-", "-") and not ok(" ", "5 ")
     app.w_feather.configure(state="normal")
     app.v_feather.set(4)
     app.lbl_feather.configure(text="hard edge")
