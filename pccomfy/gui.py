@@ -153,6 +153,9 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.f_adv = ttk.Frame(r)
         self.adv_body = ttk.Frame(self.f_adv)
         self.adv_body.columnconfigure(1, weight=1)
+        # the finishing options at the top of "Advanced settings": Sharpen, Match colours, Edge feather, Layer mask
+        self.f_post = ttk.Frame(self.adv_body)
+        self.f_post.grid(row=0, column=0, columnspan=2, sticky="ew")
         # Workflow and Preset are not shown: the model tabs choose the workflow and its settings (the widgets stay, the code
         # behind them is the same)
         self.cb_workflow = ttk.Combobox(self.adv_body, textvariable=self.v_workflow, state="readonly", width=8)
@@ -234,7 +237,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
             self.rb_modes[key] = rb
             self.tt_modes[key] = Tooltip(rb, MODE_TIPS[key])
 
-        ff = ttk.Frame(r)               # shown only while a soft layer mask is used (see _update_feather_state)
+        ff = ttk.Frame(self.f_post)     # shown only while a soft layer mask is used (see _update_feather_state)
         self.f_feather = ff
         self._slider_row(ff)
         lbl_f = ttk.Label(ff, text="Edge feather", style="Muted.TLabel")
@@ -278,8 +281,8 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         Tooltip(self.grip, "Drag to resize the prompt field.")
         self.lbl_hint = ttk.Label(r, text=EXPAND_HINT, style="Hint.TLabel", wraplength=self._px(MIN_W - 24), justify="left")   # Expand image, Upscale, Refine (see _update_prompt_hint)
         self.t_prompt.insert("1.0", self.state.get("prompt", ""))
-        self.f_sharp = ttk.Frame(r)     # a light sharpening of the finished result, always at hand
-        self.f_sharp.pack(fill="x", padx=10, pady=(6, 0))
+        self.f_sharp = ttk.Frame(self.f_post)     # a light sharpening of the finished result (under Advanced settings)
+        self.f_sharp.pack(fill="x")
         self._slider_row(self.f_sharp)
         lb_sharp = ttk.Label(self.f_sharp, text="Sharpen result", style="Muted.TLabel")
         lb_sharp.grid(row=0, column=0, sticky="w")
@@ -302,8 +305,8 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         Tooltip(self.w_match, "Pulls the new area's saturation back towards its surroundings. 0 = off.")
         self._on_match()
         self.f_neg = ttk.Frame(r)
-        self.f_neg.pack(fill="x", padx=10, pady=(6, 0), before=self.f_sharp)     # directly under the prompt
-        self.f_enh.pack(fill="x", padx=10, pady=(6, 0), before=self.f_sharp)
+        self.f_neg.pack(fill="x", padx=10, pady=(6, 0))     # directly under the prompt
+        self.f_enh.pack(fill="x", padx=10, pady=(6, 0))
         self.v_neg_open = tk.BooleanVar(value=bool(self.state.get("neg_open", False)))
         self.btn_neg = ttk.Button(self.f_neg, command=self._toggle_negative, style="Link.TButton")
         self.btn_neg.pack(anchor="w")
@@ -359,7 +362,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
 
         self.v_adv_open = tk.BooleanVar(value=bool(self.state.get("adv_open", False)))
         self.btn_adv = ttk.Button(self.f_adv, command=self._toggle_advanced, style="Link.TButton")
-        self.sep_adv = ttk.Frame(self.f_adv, style="Sep.TFrame", height=1)     # a light line above "Advanced"
+        self.sep_adv = ttk.Frame(self.f_adv, style="Sep.TFrame", height=1)     # a light line above "Advanced settings"
         self.sep_adv.pack(fill="x", pady=(0, 6))
         self.btn_adv.pack(anchor="w")
         self.f_adv.pack(fill="x", padx=10, pady=4)
@@ -407,9 +410,9 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.cb_fooocus = ttk.Checkbutton(self.f_img, text="Fooocus inpaint (SDXL, as in Krita AI Diffusion)", variable=self.v_fooocus)
         self.cb_fooocus.grid(row=2, column=0, columnspan=4, sticky="w", padx=6, pady=(0, 6))
         Tooltip(self.cb_fooocus, "Built-in SDXL inpaint graph only.")
-        lm = ttk.Frame(r)               # under the edge feather, outside Advanced
+        lm = ttk.Frame(self.f_post)     # under the edge feather (Advanced settings)
         self.f_lm = lm
-        lm.pack(fill="x", padx=10, pady=(2, 4), before=self.f_adv)
+        lm.pack(fill="x", pady=(2, 0))
         lb = ttk.Label(lm, text="Layer mask", style="Muted.TLabel")
         lb.pack(side="left")
         self.cb_lm = cb_lm = ttk.Combobox(lm, textvariable=self.v_lmask, values=list(LAYER_MASKS.values()), state="readonly", width=18)
