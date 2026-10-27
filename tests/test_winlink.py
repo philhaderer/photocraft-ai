@@ -118,6 +118,16 @@ far = (60, 800, 500, 880)                                                  # a w
 assert not winlink.menu_step({}, (300, 20), True, False, owner, far)["hidden"]
 st = winlink.menu_step({"hidden": True, "l": True}, (300, 20), True, False, owner, win)   # button held: no new click
 assert st["hidden"]
+up = (60, 0, 500, 650)                                                      # the bridge window lies over the menu bar:
+assert not winlink.menu_step({}, (300, 20), True, False, owner, up)["hidden"]   # a click on its own title bar is no menu click
+assert winlink.menu_step({}, (700, 20), True, False, owner, up)["hidden"]       # a click in the menu bar beside it still is
+
+# start position: first start top right inside PhotoCraft under the menu bar; a saved place in the menu bar moves down
+assert winlink.first_position((0, 0, 1600, 900), 380) == (1600 - 380 - 16, winlink.MENU_BAND + 16)
+assert winlink.first_position((100, 50, 1700, 950), 570, 1.5) == (1700 - 570 - 24, 50 + round(winlink.MENU_BAND * 1.5) + 24)
+assert winlink.below_menu_bar((40, 10), 380, (0, 0, 1600, 900)) == (40, winlink.MENU_BAND + 16)
+assert winlink.below_menu_bar((40, 300), 380, (0, 0, 1600, 900)) == (40, 300)          # below the band: stays
+assert winlink.below_menu_bar((1700, 10), 380, (0, 0, 1600, 900)) == (1700, 10)        # beside PhotoCraft: stays
 print("ALL OK (menu guard)")
 print("winlink ok")
 
