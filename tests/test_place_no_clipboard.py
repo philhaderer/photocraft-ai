@@ -52,11 +52,12 @@ def main():
             assert d.sel is not None and np.array_equal(np.asarray(d.sel), sel_before), (lm, variants, "selection changed")
             assert not d.channels, "the saved selection channel was left behind"
             assert not any(l.get("name", "").startswith("pccomfy-") for l in d.layers)
-            placed = [l for l in d.layers if l["id"] in res["layers"]]
-            assert len(placed) == len(res["layers"]) == variants, (lm, variants, res["layers"])
+            placed = [pc._layer(d, lid) for lid in res["layers"]]
+            assert len(placed) == variants, (lm, variants, res["layers"])
             assert all((l.get("mask") is not None) == (lm != "none") for l in placed), lm
-            # only the first variant is visible, it is the top layer
-            assert d.layers[-1]["id"] == res["layers"][0] and d.layers[-1]["visible"]
+            # only the first variant is visible, it is the top layer (of the group with several)
+            top = d.layers[-1]["members"] if variants > 1 else d.layers
+            assert top[-1]["id"] == res["layers"][0] and top[-1]["visible"]
             assert all(not l["visible"] for l in placed if l["id"] != res["layers"][0])
 
     # exact placement: the result's pixels sit on the region (green inside, nothing outside it)

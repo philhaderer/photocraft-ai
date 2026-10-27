@@ -84,6 +84,8 @@ class Request:
     label: str = ""                      # added to the layer names (a comparison run: "res 1024")
     preset: str = ""                     # name of the preset used: the layers are named "<preset> #<run_no>"
     run_no: int = 0                      # running number of this preset's runs (kept by the window)
+    group_name: str = ""                 # several results: the name of the layer group they go into ("Fill Selection 3");
+                                         # empty = "<mode> variants"
 
 
 PLACEHOLDER = "<DESCRIBE THE IMAGE>"
@@ -598,11 +600,16 @@ class Bridge:
             sel_small = mask.crop(region.pil()).resize(results[0][1][0].size, Image.NEAREST)
         items = [(label, i, im, len(ims)) for label, ims in results for i, im in enumerate(ims)]
         layers = []
-        if mode != "selection":     # the new layers go on top of the stack, whichever layer was active (else they can sit under it)
-            try:
-                self._try("layer.select", {"layer": self.pc.document()["layers"][0]["id"]})
-            except (KeyError, IndexError, TypeError, PhotoCraftError):
-                pass
+        # the new layers go on top of the stack, whichever layer was active (else they can sit under it); also with the hard
+        # mask, else after a run with variants (#1 active, inside its group) the next result went into that group.
+        # With a group on top PhotoCraft copies INTO it (live finding): the first result is moved out, above it.
+        above = None
+        try:
+            top = self.pc.document()["layers"][0]
+            self._try("layer.select", {"layer": top["id"]})
+            above = top["id"] if top.get("kind") == "Group" else None
+        except (KeyError, IndexError, TypeError, PhotoCraftError):
+            pass
         # last item first: #1 ends up on top, visible and active, the others hidden below it
         with self._keep_selection(tag, on=(mode == "soft" and layer_mask is not None)) as kept:
             for n, g in enumerate(reversed(range(len(items)))):
@@ -619,7 +626,8 @@ class Bridge:
                     name = (f"AI {mode_name}" + (f" [{label}]" if label else "") + f": {base} [{p.seed}]"
                             + (f" #{i + 1}" if count > 1 else ""))
                 layers.insert(0, self._import(orig, im, region, mode, name, tag, g, first=(n == 0), hidden=(g > 0),
-                                              layer_mask=layer_mask))
+                                              layer_mask=layer_mask, above=above if n == 0 else None))
+        group = self._group(layers, req.group_name or f"AI {mode_name} variants") if len(layers) > 1 else None
         if req.mode == "outpaint":
             self._last_expand = {"doc": orig_name, "size": (W, H), "keep": keep, "layers": list(layers)}
             if self.pc.document().get("hasSelection"):    # (PhotoCraft prints "no selection" in its status bar otherwise)
@@ -627,7 +635,8 @@ class Bridge:
         elif has_sel and not kept and mode == "selection":
             self._try("select.reselect")  # the layer mask used the selection up: it comes back, ready for another generation
         progress(1.0, f"Done (seed {p.seed})", phase="place")
-        return {"seed": p.seed, "vgl": self.last_vgl, "layers": layers, "region": region.__dict__, "size": [gw, gh], "pipeline": self.pipeline}
+        return {"seed": p.seed, "vgl": self.last_vgl, "layers": layers, "region": region.__dict__, "size": [gw, gh], "pipeline": self.pipeline,
+                "group": group}
 
     # ---------- cut-out (reference slots) ----------
 
@@ -841,11 +850,13 @@ class Bridge:
             raise BridgeError(f"PhotoCraft gave no layer for the result (answer: {json.dumps(res, default=str)[:200]})") from None
 
     def _import(self, orig: int, im: Image.Image, region: imaging.Box, mode: str, layer_name: str, tag: str, i: int,
-                first: bool = True, hidden: bool = False, layer_mask: Image.Image | None = None) -> int:
+                first: bool = True, hidden: bool = False, layer_mask: Image.Image | None = None, above: "int | None" = None) -> int:
         pc = self.pc
         if mode == "selection" and not first:   # the mask of the variant before used the selection up: bring it back
             pc.execute("select.reselect")
         layer = self._place_png(orig, im, region, tag, f"result{i}")
+        if above is not None:   # it went into a group (see _run): out of it, above it
+            self._try("layer.moveTo", {"layer": layer, "target": above, "position": "above"})
         if mode == "selection":
             pc.execute("layer.layerMask.revealSelection", {"layer": layer})
         elif mode == "soft" and layer_mask is not None:
@@ -865,6 +876,22 @@ class Bridge:
         if hidden:
             self._try("layer.hideLayers", {"layer": layer})
         return layer
+
+    def _group(self, layers: list, name: str) -> "int | None":
+        """Put the result layers (#1 first, on top) into one new layer group, in their order and with their visibility;
+        #1 is the active layer again afterwards. Best effort: when PhotoCraft refuses a step the layers stay loose, as
+        before (a half selection is never grouped)."""
+        pc = self.pc
+        try:
+            pc.execute("layer.select", {"layer": layers[0]})
+            for lid in layers[1:]:
+                pc.execute("layer.select", {"layer": lid, "mode": "add"})
+            res = pc.execute("layer.new.groupFromLayers", {"name": name})
+        except PhotoCraftError:
+            return None
+        finally:
+            self._try("layer.select", {"layer": layers[0]})
+        return res.get("layer") if isinstance(res, dict) else None
 
     @contextlib.contextmanager
     def _keep_selection(self, tag: str, on: bool):
