@@ -84,6 +84,7 @@ class RunMixin:
             runs = dict(self.state.get("runs", {}))
             req.run_no = int(runs.get(req.preset, 0)) + 1
             runs[req.preset] = req.run_no
+            req.group_name = f"{SHORT_MODES.get(self.v_mode.get(), self.v_mode.get())} {req.run_no}"   # "Fill Selection 3"
             self.state["runs"] = runs
         self._save_state(req)
         self.b_go.configure(state="disabled")

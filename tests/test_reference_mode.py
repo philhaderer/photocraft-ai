@@ -56,10 +56,14 @@ class FakePC:
 
     @staticmethod
     def composite(doc):
+        return FakePC._composite(doc.layers)
+
+    @staticmethod
+    def _composite(layers):
         out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        for l in doc.layers:
+        for l in layers:
             if l["visible"]:
-                im = l["img"]
+                im = FakePC._composite(l["members"]) if "members" in l else l["img"]
                 if l.get("mask") is not None:   # a layer mask (revealSelection): scales the layer's alpha
                     im = im.copy()
                     im.putalpha(Image.fromarray((np.asarray(im.getchannel("A"), dtype=np.uint16)
@@ -72,13 +76,14 @@ class FakePC:
 
     def document(self):
         d = self.doc
-        return {"width": W, "height": H, "hasSelection": d.sel is not None,
+        return {"width": W, "height": H, "hasSelection": d.sel is not None, "activeLayer": d.active,
                 "layers": [{"id": l["id"], "visible": l["visible"], "name": l.get("name", "Layer"), "hasMask": l.get("mask") is not None,
-                            **({"kind": "Group", "layers": l["children"]} if "children" in l else {})}
+                            **({"kind": "Group", "children": [{"id": m["id"], "name": m.get("name"), "visible": m["visible"]}
+                                                             for m in reversed(l["members"])]} if "members" in l else {})}
                            for l in reversed(d.layers)]}
 
     def _layer(self, d, lid):
-        lay = next((l for l in d.layers if l["id"] == lid), None)
+        lay = next((l for l in d.layers + [m for g in d.layers for m in g.get("members", [])] if l["id"] == lid), None)
         if lay is None:
             from pccomfy.photocraft import PhotoCraftError
             raise PhotoCraftError(f"no such layer {lid}")
@@ -113,7 +118,23 @@ class FakePC:
             d.active = d.layers[-1]["id"]
             return {"layer": d.active}
         elif cmd == "layer.select":
+            self._layer(d, params["layer"])
+            if params.get("mode") == "add":
+                d.selected = getattr(d, "selected", [d.active]) + [params["layer"]]
+            else:
+                d.selected = [params["layer"]]
             d.active = params["layer"]
+        elif cmd == "layer.new.groupFromLayers":
+            # like PhotoCraft: the selected layers move into a new group in their stack order, at the top one's place
+            sel = set(getattr(d, "selected", [d.active]))
+            members = [l for l in d.layers if l["id"] in sel]
+            assert len(members) == len(sel), "a layer to group is not at the top level"
+            at = max(k for k, l in enumerate(d.layers) if l["id"] in sel) - len(members) + 1
+            d.layers = [l for l in d.layers if l["id"] not in sel]
+            g = {"id": self._id(), "name": params.get("name", "Group"), "visible": True, "members": members}
+            d.layers.insert(at, g)
+            d.active, d.selected = g["id"], [g["id"]]
+            return {"layer": g["id"]}
         elif cmd == "edit.fill":
             lay = next(l for l in d.layers if l["id"] == d.active)
             color = {"white": (255, 255, 255, 255), "black": (0, 0, 0, 255)}[params["contents"]]
@@ -147,11 +168,27 @@ class FakePC:
             img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
             img.paste(src.raw, tuple(params.get("offset", (0, 0))))
             lay = {"id": self._id(), "img": img, "visible": True, "name": "Layer"}
-            at = next((k for k, l in enumerate(dst.layers) if l["id"] == dst.active), len(dst.layers) - 1)
-            dst.layers.insert(at + 1, lay)
+            stack = dst.layers
+            act = next((l for l in stack if l["id"] == dst.active), None)
+            home = next((g for g in stack if any(m["id"] == dst.active for m in g.get("members", []))), None)
+            if act is not None and "members" in act:   # like PhotoCraft: a group active = the copy goes INTO it, on top
+                act["members"].append(lay)
+            elif home is not None:                     # a layer inside a group active: the copy goes above it, in the group
+                home["members"].insert(next(k for k, m in enumerate(home["members"]) if m["id"] == dst.active) + 1, lay)
+            else:
+                at = next((k for k, l in enumerate(stack) if l["id"] == dst.active), len(stack) - 1)
+                stack.insert(at + 1, lay)
             dst.active = lay["id"]
             self.active = params["document"]
             return {"document": params["document"], "layers": [lay["id"]], "offset": params.get("offset", [0, 0])}
+        elif cmd == "layer.moveTo":     # only what the bridge uses: a layer out of a group, above a top-level layer
+            lay = self._layer(d, params["layer"])
+            for g in d.layers:
+                if lay in g.get("members", []):
+                    g["members"].remove(lay)
+            d.layers = [l for l in d.layers if l is not lay]
+            at = next(k for k, l in enumerate(d.layers) if l["id"] == params["target"])
+            d.layers.insert(at + 1 if params.get("position", "above") == "above" else at, lay)
         elif cmd == "layer.renameLayer":
             self._layer(d, params["layer"])["name"] = params["name"]
         elif cmd == "layer.hideLayers":
