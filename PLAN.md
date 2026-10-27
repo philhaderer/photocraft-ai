@@ -27,10 +27,10 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 
 **B. Wichtig**
 1. **Feste Startposition** (B.11): Das Plugin startet nach dem PhotoCraft-Start oft zu weit links oben; Drag and Drop nach unten lässt das Fenster dann kurz verschwinden. Zuerst mit dem User nachstellen, dann Optionen (feste Ecke im PhotoCraft-Fenster / letzte Position, auf den Bildschirm begrenzt).
-2. **Flux 2 Klein 9B ohne Quelle** (B.12): Keine der geprüften Dateien ist bytegleich mit der des Users. Entscheidung des Users offen: A Link leer lassen, B eine andere Fassung testen (Download ca. 9,4 GB nur mit Erlaubnis; der User hat eine im Browser begonnen), C beim Release selbst bereitstellen (Lizenz FLUX non-commercial).
+2. ~~**Flux 2 Klein 9B ohne Quelle** (B.12)~~: **erledigt 27.10.** Die obsxrver-Fassung (`flux-2-klein-9b_int8_convrot.safetensors`) liefert im A/B-Test gleichwertige Bilder bei gleichem Tempo; Workflows und Download-Liste nutzen jetzt sie (Entscheidung des Users: Option B). Die alte Datei bindet der User später über C.13 ein.
 
 **C. Neue Funktion**
-3. **Eigene Datei statt Modell** (C.13): Im Zahnrad-Fenster neben jeder Modell-Datei ein Knopf („Use my own file…“ empfohlen), Auswahl aus ComfyUIs Dateiliste des passenden Ordners.
+3. **Eigene Datei statt Modell** (C.13), als Nächstes: Im Zahnrad-Fenster neben jeder Modell-Datei ein Knopf („Use my own file…“ empfohlen), Auswahl aus ComfyUIs Dateiliste des passenden Ordners.
 
 **D. Recherche (nichts bauen, Ergebnis vorlegen)**
 4. **Funktionen zuerst, Modell darunter?** (D.15): Folgen für die UX, Optionen, Empfehlung.
