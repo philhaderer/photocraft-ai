@@ -104,7 +104,7 @@ Berührungspunkte nur über feste Schnittstellen: `models.py` (nur L2, danach nu
 
 Wortlaut des Users sinngemäß übernommen; Details, Befunde und Optionen stehen im Handoff, Abschnitt 6.
 
-**A. Kleine Verbesserungen (zuerst)**
+**A. Kleine Verbesserungen (zuerst)**: **erledigt 27.10., in `next`** (Branches `fix/layout-spacing`, `feat/footer-status`, `feat/slider-column`, `feat/advanced-settings`; Details im Handoff 6.A). Live-Test durch den User offen.
 1. Leerzeile unter den Drop-Slots weg (vor dem Befüllen; vermutlich der Platz, an dem nach dem Befüllen der Bild-Tag erscheint).
 2. Überflüssige Leerzeile nach „Advanced“ weg.
 3. Chevron bei „Advanced“ steht zu weit rechts.
@@ -118,7 +118,7 @@ Wortlaut des Users sinngemäß übernommen; Details, Befunde und Optionen stehen
 
 **B. Wichtig**
 11. Startposition: Das Plugin wird nach dem PhotoCraft-Start oft zu weit links oben gesetzt; Drag and Drop nach unten macht dann Probleme (das Fenster verschwindet kurz). Es soll an einer festen Position starten.
-12. Flux 2 Klein 9B: keine öffentliche Quelle mehr. Die vom User genannte Datei (`obsxrver/ComfyUI-Native-INT8_ConvRot`, `flux-2-klein-base-9b-int8-ConvRot.safetensors`) wurde am 27.10. geprüft: **nicht bytegleich** (anderer Inhalt, wohl das Base-Modell); Umbenennen geht nicht. Entscheidung des Users offen (siehe Handoff 6.B).
+12. Flux 2 Klein 9B: keine öffentliche Quelle mehr. Die vom User genannte Datei (`obsxrver/ComfyUI-Native-INT8_ConvRot`, `flux-2-klein-base-9b-int8-ConvRot.safetensors`) wurde am 27.10. geprüft: **nicht bytegleich** (anderer Inhalt, wohl das Base-Modell); Umbenennen geht nicht. Ebenso die Datei ohne „base“ (`flux-2-klein-9b_int8_convrot.safetensors`, Commit d225df1): **nicht bytegleich** (andere Größe, andere Tensor-Namen). Entscheidung des Users offen (siehe Handoff 6.B).
 
 **C. Neue Funktionen**
 13. Settings (Zahnrad): neben jeder Modell-Datei ein Knopf, mit dem der User sie gegen eine eigene Datei tauscht. Wortlaut vorschlagen (z. B. „Use my own file…“).
