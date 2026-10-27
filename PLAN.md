@@ -33,7 +33,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 3. ~~**Eigene Datei statt Modell** (C.13)~~: **erledigt 27.10.**, Link „Choose another file…“ neben jeder Datei (Wortlaut vom User gewählt). Ursprünglich: Im Zahnrad-Fenster neben jeder Modell-Datei ein Knopf („Use my own file…“ empfohlen), Auswahl aus ComfyUIs Dateiliste des passenden Ordners.
 
 **D. Recherche (nichts bauen, Ergebnis vorlegen)**
-4. **Funktionen zuerst, Modell darunter?** (D.15): Folgen für die UX, Optionen, Empfehlung.
+4. **Funktionen zuerst, Modell darunter?** (D.15): **Recherche fertig** (`docs/ux-funktion-zuerst.md`): Empfehlung A (Funktion oben, Modell-Dropdown darunter), vor dem Easy Mode; Entscheidung des Users offen.
 5. **UI-Fonts** (D.16): drei Vorschläge mit Lizenz, Windows-Verfügbarkeit, Tk-Tauglichkeit.
 6. **PhotoCraft-Befehle prüfen** (OpenFill T1): Tabelle „Befehl → gibt es ihn → Folge für uns“ (Feather-Vorschau, Snapshots als ein Undo, Gruppen für Varianten, Crop über den Rand). Gegen die PhotoCraft-Version prüfen, die der User nutzt (0.15.1; ein Starter für 0.16 liegt im Repo-Ordner, ungetrackt).
 
