@@ -1,6 +1,6 @@
 # UX-Frage D.15: Funktion zuerst, Modell darunter?
 
-Stand 2026-10-27. Recherche, nichts gebaut. Entscheidung des Users offen.
+Stand 2026-10-27. **Entschieden und gebaut am 27.10.:** Funktionen oben als große Buttons mit Symbol (Platzhalter, bis der User seine liefert), Modelle darunter als Umriss-Chips, alle sichtbar, unpassende grau, feste Reihenfolge; das beste Modell wählt später der Easy Mode. Beim Wechsel auf eine Funktion, die das Modell nicht kann, kommt das zuletzt dafür benutzte Modell (sonst das erste passende).
 
 ## Heute
 

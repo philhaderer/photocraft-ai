@@ -19,6 +19,7 @@ Stand 2026-10-27 (abends). Der Plan ist freigegeben. Abschnitt 3 ist die Arbeits
 - Remove: nur der Tipp unter dem Prompt, keine automatische Prompt-Ergänzung.
 - Tooltips bei jedem Start. Krea-Styles: bis 50 per Bildauswahl, Prompt-Templates per Klick. Tutorial-PSDs nur mit Testbild.
 - Strg+Z/Strg+Y bleiben wie heute (kein Plugin-Kürzel). Fast Mode gestrichen.
+- Fensterkopf (27.10.): Funktion zuerst, Modell darunter (Chips). Das Rechtsklick-Menü der Tabs (L3) gehört damit auf die Modell-Chips. Settings-Fenster mit Tabs „Models“ und „Credits“; weitere Settings-Tabs kommen später dazu.
 - Screenshots des Fensters nur, wenn der User etwas nicht selbst prüfen kann.
 
 ## 3. Arbeitsliste (Reihenfolge)
@@ -33,7 +34,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 3. ~~**Eigene Datei statt Modell** (C.13)~~: **erledigt 27.10.**, Link „Choose another file…“ neben jeder Datei (Wortlaut vom User gewählt). Ursprünglich: Im Zahnrad-Fenster neben jeder Modell-Datei ein Knopf („Use my own file…“ empfohlen), Auswahl aus ComfyUIs Dateiliste des passenden Ordners.
 
 **D. Recherche (nichts bauen, Ergebnis vorlegen)**
-4. **Funktionen zuerst, Modell darunter?** (D.15): **Recherche fertig** (`docs/ux-funktion-zuerst.md`): Empfehlung A (Funktion oben, Modell-Dropdown darunter), vor dem Easy Mode; Entscheidung des Users offen.
+4. ~~**Funktionen zuerst, Modell darunter?** (D.15)~~: **gebaut 27.10.** (`docs/ux-funktion-zuerst.md`). Entscheidung des Users: Funktionen oben als große Buttons mit Symbol, Modelle darunter als Umriss-Chips (alle sichtbar, unpassende grau), feste Reihenfolge; das beste Modell wählt später der Easy Mode. Offen: die Symbole des Users (`pccomfy/assets/functions/`, Platzhalter bis dahin).
 5. **UI-Fonts** (D.16): drei Vorschläge mit Lizenz, Windows-Verfügbarkeit, Tk-Tauglichkeit.
 6. **PhotoCraft-Befehle prüfen** (OpenFill T1): Tabelle „Befehl → gibt es ihn → Folge für uns“ (Feather-Vorschau, Snapshots als ein Undo, Gruppen für Varianten, Crop über den Rand). Gegen die PhotoCraft-Version prüfen, die der User nutzt (0.15.1; ein Starter für 0.16 liegt im Repo-Ordner, ungetrackt).
 
