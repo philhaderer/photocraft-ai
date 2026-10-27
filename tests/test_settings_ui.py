@@ -55,7 +55,7 @@ NODES = {n for tab in manifest.TABS.values() for s in tab.modes.values() for n i
 
 
 def test_start_state():
-    refresh = {"pc": "PhotoCraft \u25CF", "comfy": "ComfyUI \u25CF"}
+    refresh = {"comfy": True}
     full = lambda: inventory.Inventory(td.full_lists(), NODES)       # noqa: E731
     det = lambda inv: {"_detect": True, "_inv": inv, "_yaml": [], "_disk": {}}      # noqa: E731
 
@@ -220,7 +220,7 @@ def main():
     text = "".join(p for p, _tags in app.t_settings.parts)
     assert "Installed models" in text and "Credits" in text and "\u25C0" in text
     assert "\u2717 qwen_image_vae.safetensors" in text and "ComfyUI\\models\\vae" in text
-    assert app.v_set_conn.get() == "ComfyUI \u25CF"
+    assert app.v_set_conn.get() == "ComfyUI connected" and app.lbl_set_dot.cget("style") == "ConnOk.TLabel"
     app._settings_close()
     assert app._settings_win is None
 
@@ -251,7 +251,7 @@ def main():
     assert called == ["krea2", "", "krea2"]
     app.open_settings()
     text = "".join(p for p, _tags in app.t_settings.parts)
-    assert "ComfyUI could not be read." in text and "No connection to ComfyUI" in text and app.v_set_conn.get() == "ComfyUI \u25CB"
+    assert "ComfyUI could not be read." in text and "No connection to ComfyUI" in text and app.v_set_conn.get() == "ComfyUI not connected" and app.lbl_set_dot.cget("style") == "ConnBad.TLabel"
     app._settings_close()
 
     # the overlay text: downloads are links, a missing node names its pack, the credits are links
@@ -369,8 +369,10 @@ def main():
     assert app.preset_blocked({"workflow": "krea2-turbo-t2i.json", "mode": "txt2img"}) == ""
 
     # a normal PhotoCraft/ComfyUI refresh still goes through the old path
-    app._apply_refresh({"pc": "PhotoCraft \u25CF", "comfy": "ComfyUI \u25CF"})
-    assert app.v_conn.get() == "PhotoCraft \u25CF   ComfyUI \u25CF"
+    app._apply_refresh({"comfy": True})
+    assert app.v_conn.get() == "ComfyUI connected" and app.lbl_dot.cget("style") == "ConnOk.TLabel"
+    app._apply_refresh({"comfy": False})
+    assert app.v_conn.get() == "ComfyUI not connected" and app.lbl_dot.cget("style") == "ConnBad.TLabel"
     test_start_state()
     test_empty_view()
     print("ok")

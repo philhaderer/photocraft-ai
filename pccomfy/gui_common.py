@@ -226,6 +226,20 @@ def icon_image(root, kind: str, color: str):
     return img
 
 
+def conn_status(parent, name: str = "ComfyUI"):
+    """'ComfyUI' and a dot after it (footer and settings window): returns (frame, dot); set_dot colours the dot."""
+    f = ttk.Frame(parent)
+    ttk.Label(f, text=name, style="Muted.TLabel").pack(side="left")
+    dot = ttk.Label(f, text="●", style="ConnWait.TLabel")
+    dot.pack(side="left", padx=(3, 0))
+    return f, dot
+
+
+def set_dot(dot, ok: bool | None):
+    """Green = connected, red = not connected, grey = not known yet (before the first refresh)."""
+    dot.configure(style="ConnOk.TLabel" if ok else "ConnWait.TLabel" if ok is None else "ConnBad.TLabel")
+
+
 class Tooltip:
     """Small hover tooltip for any tk/ttk widget."""
 
@@ -586,6 +600,8 @@ __all__ = [
     "ERROR",
     "ERROR_TEXT",
     "DONE_GREEN",
+    "conn_status",
+    "set_dot",
     "_dpi_aware",
     "duration_text",
     "scale_text",

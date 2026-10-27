@@ -364,7 +364,8 @@ class SettingsMixin:
         top = ttk.Frame(win)
         top.pack(fill="x", padx=10, pady=(8, 4))
         self.v_set_conn = tk.StringVar(value="")
-        ttk.Label(top, textvariable=self.v_set_conn, style="Muted.TLabel").pack(side="left")
+        f_conn, self.lbl_set_dot = conn_status(top)              # the same "ComfyUI ●" as in the footer
+        f_conn.pack(side="left")
         b = ttk.Button(top, text="Refresh", command=self.refresh)
         b.pack(side="right")
         Tooltip(b, "Reads ComfyUI's installed model files and node classes again.")
@@ -451,8 +452,8 @@ class SettingsMixin:
             t.yview_moveto(top)
         except tk.TclError:
             pass
-        conn = "ComfyUI ●" if self.inv is not None else "ComfyUI ○"
-        self.v_set_conn.set(conn)
+        self.v_set_conn.set("ComfyUI connected" if self.inv is not None else "ComfyUI not connected")
+        set_dot(self.lbl_set_dot, self.inv is not None)
         exp, _lists = self._link_choices()
         self.cb_link_exp["values"] = exp
         if self.v_link_exp.get() not in exp:

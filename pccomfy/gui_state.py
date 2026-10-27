@@ -14,10 +14,8 @@ class StateMixin:
             try:
                 self.pc.close()
                 self.pc.ping()
-                info["pc"] = "PhotoCraft ●"
             except PhotoCraftError as e:
-                info["pc"] = "PhotoCraft ○"
-                info["err"] = str(e)
+                info["err"] = str(e)         # shown as a message; the footer has no PhotoCraft mark
             try:
                 info["ckpts"] = self.comfy.checkpoints()
                 info["samplers"] = self.comfy.samplers()
@@ -25,15 +23,16 @@ class StateMixin:
                 info["loras"] = self.comfy.loras()
                 info["scheds"] = self.comfy.schedulers()
                 info["fooocus"] = self.comfy.fooocus_inpaint()
-                info["comfy"] = "ComfyUI ●"
+                info["comfy"] = True
             except ComfyError as e:
-                info["comfy"] = "ComfyUI ○"
+                info["comfy"] = False
                 info.setdefault("err", str(e))
             self.events.put(("refresh", info))
         threading.Thread(target=work, daemon=True).start()
 
     def _apply_refresh(self, info):
-        self.v_conn.set(f"{info['pc']}   {info['comfy']}")
+        self.v_conn.set("ComfyUI connected" if info.get("comfy") else "ComfyUI not connected")
+        set_dot(self.lbl_dot, bool(info.get("comfy")))
         if info.get("ckpts") and self.v_ckpt.get() not in info["ckpts"]:
             self.v_ckpt.set(info["ckpts"][0])  # only used by the built-in graph; there is no picker any more
         if info.get("clips"):
