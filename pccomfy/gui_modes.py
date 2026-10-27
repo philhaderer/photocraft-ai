@@ -142,9 +142,12 @@ class ModeMixin:
         wf = self.v_workflow.get()
         keep = wf in m.workflows() and wf == spec.workflow
         s = {"match": 0.0, **spec.settings}      # the colour pull-back belongs to the model's mode, it does not travel to the next tab
+        # a mode without a Context of its own starts at the function's default, not at what the tab before had
+        # (Fibo Fill showed 0.4 after Qwen and 0.2 after Reset)
+        s.setdefault("context", FILL_CONTEXT if mode == "inpaint" else self._ctx_default)
         if not keep:
             s["workflow"] = spec.workflow
-        else:
+        elif not force:
             s.pop("enhance", None)       # same workflow: the "LLM prompt enhancement" checkbox keeps what you set (Expand ignores it)
         self._switch_context(mode)   # first: the context memory belongs to the mode, the defaults below overwrite its value
         self._apply_settings(s)
@@ -215,9 +218,13 @@ class ModeMixin:
             self._couple_workflow()
         self._on_mode_ui()
         self._on_workflow()
+        self._mode_denoise()
+
+    def _mode_denoise(self):
+        """The Denoise a function starts with (after the workflow's own value was read)."""
         mode = self.v_mode.get()
-        if mode in ("inpaint", "remove", "outpaint", "edit", "multi_edit"):
-            self.v_denoise.set(1.0)  # full denoise inside the mask; lower it to keep more of the original
+        if mode in ("inpaint", "remove", "outpaint", "edit", "multi_edit", "txt2img"):
+            self.v_denoise.set(1.0)  # full denoise inside the mask; lower it to keep more of the original (text to image: always 1.0)
         elif mode == "img2img" and self.v_denoise.get() >= 0.99 and not self._ignores_mask():
             self.v_denoise.set(0.6)   # not for Fibo-type editors: below 1.0 they produce a different, broken picture
 
@@ -233,7 +240,7 @@ class ModeMixin:
         self.v_blur.set(int(d["mask_blur"]))
         self.v_overlap.set(int(d["overlap"]))
         self.v_res.set(int(d["base_res"]))
-        self.v_denoise.set(float(d["denoise"]))
+        self.v_denoise.set(1.0)       # as a new window has it; the workflow's own value and the function's rule follow below
         self.v_sharpen.set(0.0)
         self.v_match.set(0.0)
         self.v_feather.set(2.0)
@@ -247,6 +254,15 @@ class ModeMixin:
             self.t_prompt.delete("1.0", "end")
         self._prompt_kept = ""
         self._set_loras([])
+        # what the tab's settings may leave as they were: back to a fresh start too (the panels you opened stay open)
+        self.v_enhance.set(True)
+        self.v_turbo.set(True)
+        self.v_fooocus.set(True)
+        self.v_clip.set(CLIP_DEFAULT)
+        self.v_pchoice.set("")
+        self.v_preset.set("")
+        self.v_lora_str.set(1.0)
+        self._lora_wf = None                     # the LoRA slider starts at the value the workflow ships with (else 1.0)
         self._ctx = {"inpaint": FILL_CONTEXT}
         self.v_context.set(self._ctx.get(self.v_mode.get(), d["context"]))
         self._ctx_mode = self.v_mode.get()
@@ -255,6 +271,7 @@ class ModeMixin:
             self._apply_model_mode(force=True)
         self._on_mode_ui()
         self._on_workflow()
+        self._mode_denoise()
         self._on_sharpen()
         self._on_match()
         self._on_feather()
