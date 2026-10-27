@@ -257,6 +257,10 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._on_feather()
         for w in (lbl_f, sc):
             Tooltip(w, "Softens the seam between the new area and your picture, in % of the selection's shorter side. 0 = hard edge.")
+        self.b_fprev = ttk.Button(ff, text="Show feather", style="Link.TButton", width=0, command=self.toggle_feather_preview)
+        self.b_fprev.grid(row=1, column=0, sticky="w")
+        Tooltip(self.b_fprev, "Shows in PhotoCraft (in red) where the result will blend in, with this soft edge. "
+                              "Click again, or Generate, to get your selection back.")
 
         self.sep_prompt = ttk.Frame(r, style="Sep.TFrame", height=1)     # a light line above "Prompt"
         self.sep_prompt.pack(fill="x", padx=10, pady=(6, 4))
@@ -609,6 +613,11 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         except Exception:
             pass
         self.bridge.cancel()
+        if self.bridge.feather_shown and not (self.worker and self.worker.is_alive()):
+            try:    # the user's selection comes back before the window goes
+                self.bridge.hide_feather()
+            except Exception:
+                pass
         self.root.destroy()
 
     def run(self):

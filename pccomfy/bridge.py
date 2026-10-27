@@ -166,6 +166,23 @@ def effective_layer_mask(choice: str, mode: str, editor: bool, has_sel: bool) ->
     return choice
 
 
+def soft_layer_mask(req: "Request", wf_paths: list, mask: "Image.Image", region: "imaging.Box",
+                    bbox: "imaging.Box | None") -> "Image.Image":
+    """The soft layer mask of a result, the size of `region` (the run and the feather preview use this one function)."""
+    if is_editor(wf_paths):
+        # an editor that regenerated the whole crop and never saw the mask (Fibo): feather by a share of
+        # the selection's size (a feather already set in PhotoCraft is kept as it is)
+        sel = bbox or region
+        return imaging.auto_feather(mask.crop(region.pil()), imaging.feather_radius(sel.w, sel.h, req.feather_pct))
+    # the same soft mask the model got: the result blends exactly where the model blended it
+    return imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
+
+
+def is_editor(wf_paths: list) -> bool:
+    """An instruction-based editor (Fibo) that never sees the mask."""
+    return bool(wf_paths[0]) and not any(mask_is_used(json.loads(Path(w).read_text(encoding="utf-8"))) for w in wf_paths)
+
+
 def _where(sel: "imaging.Box", crop: "imaging.Box") -> tuple[str, int]:
     """Where the selection lies inside the crop in words, and the share of the crop it covers in percent."""
     cx = (sel.center[0] - crop.x) / max(1, crop.w)
@@ -298,6 +315,7 @@ class Bridge:
         self._snap_error = ""
         self._redo: dict | None = None          # snapshot of the state before an undo, for "Redo AI edit"
         self._last_expand: dict | None = None   # the last Expand: document, canvas size, where the original lies, result layers
+        self._preview: dict | None = None       # the feather preview while it is shown: document, saved selection, mask
 
     def cancel(self) -> None:
         self._cancel.set()
@@ -421,6 +439,8 @@ class Bridge:
 
     def _run(self, req: Request, p: workflows.GenParams, tag: str, progress: Progress) -> dict:
         pc = self.pc.connect()
+        if self._preview:   # the feather preview is still shown: the user's own selection comes back before the run
+            self.hide_feather()
         sess = pc.session()
         orig = sess.get("active")
         if orig is None:
@@ -445,8 +465,7 @@ class Bridge:
         wf_paths = workflows.resolve(req.workflow) if req.workflow else [None]
         # an instruction-based editor (Fibo) never sees the mask: it gets the white margin as it is plus a sentence
         # saying what it is; a smeared edge fill would look finished to it and come back unchanged
-        editor = bool(wf_paths[0]) and not any(mask_is_used(json.loads(Path(w).read_text(encoding="utf-8")))
-                                               for w in wf_paths)
+        editor = is_editor(wf_paths)
 
         if req.mode == "edit" and not (wf_paths[0] and editor):
             raise BridgeError("Edit whole image needs an instruction-based edit workflow (Fibo, Qwen Image 2.1 Edit, Flux 2/3 Klein edit).")
@@ -585,15 +604,7 @@ class Bridge:
         layer_mask = None
         lm_mode = effective_layer_mask(req.layer_mask, req.mode, editor, has_sel)
         if lm_mode == "soft":
-            if wf_paths[0] and not any(mask_is_used(json.loads(Path(w).read_text(encoding="utf-8"))) for w in wf_paths):
-                # an editor that regenerated the whole crop and never saw the mask (Fibo): feather by a share of
-                # the selection's size (a feather already set in PhotoCraft is kept as it is)
-                sel = bbox or region
-                layer_mask = imaging.auto_feather(mask.crop(region.pil()),
-                                                  imaging.feather_radius(sel.w, sel.h, req.feather_pct))
-            else:
-                # the same soft mask the model got: the result blends exactly where the model blended it
-                layer_mask = imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
+            layer_mask = soft_layer_mask(req, wf_paths, mask, region, bbox)
         mode = lm_mode
         sel_small = None   # the new area in the size the model drew it, for "match colours"
         if req.match > 0 and req.mode in ("inpaint", "outpaint") and mask is not None and results and results[0][1]:
@@ -637,6 +648,101 @@ class Bridge:
         progress(1.0, f"Done (seed {p.seed})", phase="place")
         return {"seed": p.seed, "vgl": self.last_vgl, "layers": layers, "region": region.__dict__, "size": [gw, gh], "pipeline": self.pipeline,
                 "group": group}
+
+    # ---------- feather preview ----------
+
+    @property
+    def feather_shown(self) -> bool:
+        return self._preview is not None
+
+    def show_feather(self, req: Request) -> str:
+        """Feather preview: the layer mask the next run would give its result (the same computation), shown in PhotoCraft
+        in Quick Mask mode: red where the picture stays, the soft edge as a gradient. The user's selection is saved in a
+        channel first and comes back with hide_feather (also at the start of the next run). Called again while it is
+        shown (the slider moved), it only computes the mask anew: no second export."""
+        pc = self.pc.connect()
+        if req.mode == "remove":
+            req = dataclasses.replace(req, mode="inpaint", remove=True)
+        sess = pc.session()
+        orig = sess.get("active")
+        if orig is None:
+            raise BridgeError("Open a document in PhotoCraft first.")
+        name = sess["documents"][orig]["name"]
+        if self._preview and self._preview["doc"] != name:   # another document is active now: end the old preview
+            self.hide_feather()
+        tag = uuid.uuid4().hex[:8]
+        try:
+            if self._preview:
+                mask = self._preview["mask"]
+                pc.execute("select.editInQuickMaskMode", {"on": False})
+            else:
+                if not pc.document().get("hasSelection"):
+                    raise BridgeError("Select an area first: the preview shows the soft edge the result gets there.")
+                _, mask = self._export(orig, tag, need_mask=True)
+                if imaging.mask_bbox(mask) is None:
+                    raise BridgeError("The selection is empty.")
+                channel = f"pccomfy-preview-{tag}"
+                pc.execute("select.saveSelection", {"name": channel})
+                self._preview = {"doc": name, "channel": channel, "mask": mask}
+            W, H = mask.size
+            bbox = imaging.mask_bbox(mask)
+            region = imaging.grow_box(bbox, (W, H), req.context) if req.mode in ("inpaint", "outpaint") else bbox
+            wf_paths = workflows.resolve(req.workflow) if req.workflow else [None]
+            lm_mode = effective_layer_mask(req.layer_mask, req.mode, is_editor(wf_paths), True)
+            if lm_mode == "soft":
+                shown = soft_layer_mask(req, wf_paths, mask, region, bbox)
+            elif lm_mode == "selection":
+                shown = mask.crop(region.pil())
+            else:   # no layer mask: the result covers its whole rectangle
+                shown = Image.new("L", (region.w, region.h), 255)
+            helper_im = Image.new("RGBA", shown.size, (255, 255, 255, 0))
+            helper_im.putalpha(shown.convert("L"))
+            active = pc.document().get("activeLayer")
+            helper = self._place_png(orig, helper_im, region, tag, "feather")
+            try:
+                pc.execute("select.loadSelection", {"channel": "transparency", "layer": helper})
+            finally:
+                self._try("layer.delete", {"layer": helper})
+                if active is not None:
+                    self._try("layer.select", {"layer": active})
+            pc.execute("select.editInQuickMaskMode", {"on": True})
+        except Exception:
+            if self._preview:   # never leave the user with a changed selection
+                try:
+                    self.hide_feather()
+                except (BridgeError, PhotoCraftError):
+                    pass
+            raise
+        finally:
+            self._cleanup()
+        what = {"soft": "Soft edge", "selection": "Hard edge (layer mask: hard)", "none": "No layer mask: the whole rectangle"}
+        return f"{what.get(lm_mode, 'Edge')} shown in red in PhotoCraft. Hide feather or Generate brings your selection back."
+
+    def hide_feather(self) -> str:
+        """End the feather preview: Quick Mask off, the user's selection back from its channel, the channel deleted. The
+        document that is active stays active."""
+        prev, self._preview = self._preview, None
+        if not prev:
+            return ""
+        pc = self.pc.connect()
+        sess = pc.session()
+        current = sess.get("active")
+        doc = next((d["index"] for d in sess.get("documents", []) if d["name"] == prev["doc"]), None)
+        if doc is None:
+            return "Feather preview ended (its document was closed)."
+        if doc != current:
+            pc.activate(doc)
+        try:
+            self._try("select.editInQuickMaskMode", {"on": False})
+            try:
+                pc.execute("select.loadSelection", {"channel": prev["channel"]})
+            except PhotoCraftError as e:
+                raise BridgeError(f"Could not bring your selection back (channel {prev['channel']}): {e}") from None
+            self._try("channel.delete", {"channel": prev["channel"]})
+        finally:
+            if current is not None and doc != current:
+                pc.activate(current)
+        return "Feather preview off: your selection is back."
 
     # ---------- cut-out (reference slots) ----------
 

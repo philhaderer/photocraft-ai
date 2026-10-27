@@ -87,6 +87,12 @@ class RunMixin:
             req.group_name = f"{SHORT_MODES.get(self.v_mode.get(), self.v_mode.get())} {req.run_no}"   # "Fill Selection 3"
             self.state["runs"] = runs
         self._save_state(req)
+        if getattr(self, "_fprev_on", False):   # the run ends the feather preview first (Bridge._run): the button follows
+            if getattr(self, "_fprev_after", None):
+                self.root.after_cancel(self._fprev_after)
+                self._fprev_after = None
+            self._fprev_on, self._fprev_dirty = False, None
+            self.b_fprev.configure(text="Show feather")
         self.b_go.configure(state="disabled")
         self.b_undo.configure(state="disabled")
         self.b_redo.configure(state="disabled")
@@ -143,6 +149,53 @@ class RunMixin:
         self.worker = threading.Thread(target=work, daemon=True)
         self.worker.start()
 
+    # ---------- feather preview ----------
+
+    def toggle_feather_preview(self, show: bool | None = None):
+        """Show feather / Hide feather: the bridge shows the soft edge as Quick Mask in PhotoCraft and brings the user's
+        selection back afterwards. Runs in the worker like undo (PhotoCraft is busy for a moment)."""
+        show = (not getattr(self, "_fprev_on", False)) if show is None else show
+        if self.worker and self.worker.is_alive():
+            if getattr(self, "_fprev_on", False):
+                self._fprev_dirty = show   # a shown preview is busy: done once the worker is free (see _feather_done)
+            return
+        try:
+            req = self._request()
+        except (tk.TclError, ValueError) as e:
+            self._status(f"Invalid value: {e}", error=True)
+            return
+        self._fprev_dirty = None
+        self.b_fprev.configure(state="disabled")
+
+        def work():
+            try:
+                msg = self.bridge.show_feather(req) if show else self.bridge.hide_feather()
+                self.events.put(("feather", (self.bridge.feather_shown, msg, False)))
+            except (BridgeError, PhotoCraftError) as e:
+                self.events.put(("feather", (self.bridge.feather_shown, f"Error: {e}", True)))
+            except Exception as e:
+                self.events.put(("feather", (self.bridge.feather_shown, f"Unexpected error: {type(e).__name__}: {e}", True)))
+        self.worker = threading.Thread(target=work, daemon=True)
+        self.worker.start()
+
+    def _refresh_feather_preview(self):
+        """A setting changed while the preview is shown: show it anew, once the slider has stopped for a moment."""
+        if not getattr(self, "_fprev_on", False):
+            return
+        if getattr(self, "_fprev_after", None):
+            self.root.after_cancel(self._fprev_after)
+        self._fprev_after = self.root.after(400, lambda: (setattr(self, "_fprev_after", None),
+                                                          self.toggle_feather_preview(show=True)))
+
+    def _feather_done(self, shown: bool, msg: str, error: bool):
+        self._fprev_on = shown
+        self.b_fprev.configure(text="Hide feather" if shown else "Show feather", state="normal")
+        if msg:
+            self._status(msg, error=error)
+        pending, self._fprev_dirty = getattr(self, "_fprev_dirty", None), None
+        if pending is not None and shown:    # the slider moved (show anew) or Hide was clicked while it was busy
+            self.toggle_feather_preview(show=pending)
+
     def stop(self):
         if self.worker and self.worker.is_alive():
             self.bridge.cancel()
@@ -177,6 +230,8 @@ class RunMixin:
                     self.b_copy.configure(state="normal" if self._last_vgl.strip() else "disabled")
                 elif kind == "refresh":
                     self._apply_refresh(data)
+                elif kind == "feather":
+                    self._feather_done(*data)
         except queue.Empty:
             pass
         self.root.after(100, self._poll)
