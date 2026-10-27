@@ -43,7 +43,7 @@ assert "Expand" in by["flux3"].tip and "Expand" in by["krea2"].tip
 assert models.model_for_workflow("krea2-turbo-inpaint.json") is models.KREA2      # Krea 2 Expand uses it again
 
 
-# 4. footer: "PhotoCraft ●   ComfyUI ●", no document count
+# 4. footer: only "ComfyUI" and its dot (no PhotoCraft mark, no document count)
 class FakePC:
     def close(self): pass
     def ping(self): return {"documents": 3}
@@ -62,7 +62,7 @@ app = object.__new__(gui.App)
 app.pc, app.comfy, app.events = FakePC(), FakeComfy(), queue.Queue()
 app.refresh()
 kind, info = app.events.get(timeout=5)
-assert kind == "refresh" and info["pc"] == "PhotoCraft ●" and info["comfy"] == "ComfyUI ●" and "doc" not in info["pc"], info
+assert kind == "refresh" and info["comfy"] is True and "pc" not in info and "err" not in info, info
 import threading
 for t in threading.enumerate():      # the refresh thread of the fake must end before the interpreter does (a race made the run abort sometimes)
     if t is not threading.current_thread():

@@ -19,6 +19,8 @@ class ThemeMixin:
                     lightcolor=PANEL, darkcolor=PANEL, troughcolor=PANEL, focuscolor=ACCENT, font=(FONT, 10))
         s.configure("TLabel", background=BG, foreground=FG)
         s.configure("Muted.TLabel", foreground=MUTED, font=(FONT, 9))
+        for name, colour in (("ConnOk", DONE_GREEN), ("ConnBad", ERROR), ("ConnWait", MUTED)):     # the ComfyUI dot
+            s.configure(f"{name}.TLabel", foreground=colour, font=(FONT, 9))
         s.configure("Badge.TLabel", background=ERROR, foreground="white", font=(FONT, 10, "bold"))
         s.configure("Error.TLabel", foreground=ERROR_TEXT)
         s.configure("TLabelframe", background=BG, bordercolor="#454545")

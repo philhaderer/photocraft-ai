@@ -450,7 +450,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.lbl_status.pack(side="left", fill="x", expand=True)
         foot = ttk.Frame(self.root)
         foot.pack(fill="x", side="bottom", padx=10, pady=6)
-        self.lbl_conn = ttk.Label(foot, textvariable=self.v_conn, style="Muted.TLabel")
+        self.lbl_conn, self.lbl_dot = conn_status(foot)        # "ComfyUI ●": green = connected, red = not
         self.lbl_conn.pack(side="left")
         b_refresh = self.b_refresh = ttk.Button(foot, text="Refresh", command=self.refresh)
         b_refresh.pack(side="left", padx=(8, 0))
