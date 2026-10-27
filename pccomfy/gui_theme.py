@@ -18,16 +18,24 @@ class ThemeMixin:
     def _style(self):
         s = ttk.Style(self.root)
         s.theme_use("clam")
+        try:        # Tk's own fonts (menus, the list of a drop-down, entries without a font of their own): ours too
+            import tkinter.font as tkfont
+            family, size = font(9)[:2]
+            for name in ("TkDefaultFont", "TkTextFont", "TkMenuFont", "TkHeadingFont", "TkCaptionFont",
+                         "TkSmallCaptionFont", "TkIconFont", "TkTooltipFont"):
+                tkfont.nametofont(name, root=self.root).configure(family=family, size=size)
+        except Exception:
+            pass
         s.configure(".", background=BG, foreground=FG, fieldbackground=PANEL, bordercolor="#454545",
-                    lightcolor=PANEL, darkcolor=PANEL, troughcolor=PANEL, focuscolor=ACCENT, font=(FONT, 10))
+                    lightcolor=PANEL, darkcolor=PANEL, troughcolor=PANEL, focuscolor=ACCENT, font=font(10))
         s.configure("TLabel", background=BG, foreground=FG)
-        s.configure("Muted.TLabel", foreground=MUTED, font=(FONT, 9))
+        s.configure("Muted.TLabel", foreground=MUTED, font=font(9))
         s.configure("TNotebook", background=BG, borderwidth=0, tabmargins=(0, 4, 0, 0))     # the tabs of the settings window
         s.configure("TNotebook.Tab", background=PANEL, foreground=FG, padding=(14, 4), borderwidth=0)
         s.map("TNotebook.Tab", background=[("selected", ACCENT), ("active", "#5f5f5f")], foreground=[("selected", "#1b1b1b")])
         for name, colour in (("ConnOk", DONE_GREEN), ("ConnBad", ERROR), ("ConnWait", MUTED)):     # the ComfyUI dot
-            s.configure(f"{name}.TLabel", foreground=colour, font=(FONT, 9))
-        s.configure("Badge.TLabel", background=ERROR, foreground="white", font=(FONT, 10, "bold"))
+            s.configure(f"{name}.TLabel", foreground=colour, font=font(9))
+        s.configure("Badge.TLabel", background=ERROR, foreground="white", font=font(10, bold=True))
         s.configure("Error.TLabel", foreground=ERROR_TEXT)
         s.configure("TLabelframe", background=BG, bordercolor="#454545")
         s.configure("TLabelframe.Label", background=BG, foreground=MUTED)
@@ -40,7 +48,7 @@ class ThemeMixin:
         s.map("TButton", background=[("active", "#5f5f5f")])
         s.configure("Icon.TButton", padding=(6, 4))
         s.configure("Tab.Toolbutton", background=PANEL, foreground=FG, padding=(8, 5), anchor="w", relief="flat",
-                    borderwidth=0, font=(FONT, 10))
+                    borderwidth=0, font=font(10))
         s.map("Tab.Toolbutton", background=[("selected", ACCENT), ("active", "#5f5f5f")],
               foreground=[("selected", "#1b1b1b")])
         s.configure("Link.TButton", background=BG, foreground=MUTED, padding=(0, 2), borderwidth=0, relief="flat",
@@ -49,11 +57,11 @@ class ThemeMixin:
         # the model chips under the functions: outlined, no fill; chosen = orange outline and text (Tab.Toolbutton is the
         # filled look of the functions above them)
         s.configure("Chip.Toolbutton", background=BG, foreground=FG, padding=(2, 3), anchor="center", relief="solid",
-                    borderwidth=1, bordercolor="#686868", lightcolor=BG, darkcolor=BG, font=(FONT, 9))
+                    borderwidth=1, bordercolor="#686868", lightcolor=BG, darkcolor=BG, font=font(9))
         s.map("Chip.Toolbutton", foreground=[("disabled", DISABLED), ("selected", ACCENT)],
               bordercolor=[("disabled", "#4a4a4a"), ("selected", ACCENT)], background=[("active", "#5f5f5f")])
         s.configure("Missing.Chip.Toolbutton", foreground=NA_RED)
-        s.configure("Accent.TButton", background=ACCENT, foreground="#1b1b1b", font=(FONT, 10, "bold"))
+        s.configure("Accent.TButton", background=ACCENT, foreground="#1b1b1b", font=font(10, bold=True))
         s.map("Accent.TButton", background=[("active", "#ff9d3d"), ("disabled", "#6e6558")])
         s.configure("TCombobox", fieldbackground=PANEL, background=PANEL, foreground=FG, arrowcolor=FG)
         s.map("TCombobox", fieldbackground=[("readonly", PANEL)], foreground=[("readonly", FG)],
@@ -65,8 +73,8 @@ class ThemeMixin:
         s.configure("Grip.TFrame", background="#454545")
         s.configure("Hint.TLabel", foreground=ACCENT)
         s.configure("Sep.TFrame", background="#9a9a9a")
-        s.configure("Done.TLabel", foreground=DONE_GREEN, font=(FONT, 10, "bold"))      # the word "Done"
-        s.configure("DoneRest.TLabel", foreground=FG, font=(FONT, 10, "bold"))        # what follows it (seed, layers, time)
+        s.configure("Done.TLabel", foreground=DONE_GREEN, font=font(10, bold=True))      # the word "Done"
+        s.configure("DoneRest.TLabel", foreground=FG, font=font(10, bold=True))        # what follows it (seed, layers, time)
         # greyed out must be visible on the dark theme (clam keeps nearly the normal text colour)
         for w in ("TCheckbutton", "TRadiobutton", "TLabel"):
             s.map(w, foreground=[("disabled", DISABLED)])
@@ -78,7 +86,7 @@ class ThemeMixin:
         s.map("TCombobox", foreground=[("disabled", DISABLED), ("readonly", FG)], fieldbackground=[("disabled", BG), ("readonly", PANEL)],
               arrowcolor=[("disabled", DISABLED)])
         # the value of a slider (Slider, gui_common.py) sits in a small dark box on its right, as in PhotoCraft
-        s.configure("Value.TLabel", background=PANEL, foreground=FG, padding=(4, 1), font=(FONT, 9))
+        s.configure("Value.TLabel", background=PANEL, foreground=FG, padding=(4, 1), font=font(9))
         s.configure("Value.TEntry", fieldbackground=PANEL, foreground=FG, padding=(4, 1), bordercolor=PANEL,
                     lightcolor=PANEL, darkcolor=PANEL, insertcolor=FG)       # the same box, and you can type into it (ValueBox)
         s.map("Value.TEntry", bordercolor=[("focus", ACCENT)], lightcolor=[("focus", ACCENT)],
@@ -166,7 +174,7 @@ class ThemeMixin:
     def _text(self, parent, height):
         t = tk.Text(parent, height=height, width=10, wrap="word", bg=PANEL, fg=FG, insertbackground=FG,
                     relief="flat", highlightthickness=1, highlightbackground="#454545", highlightcolor=ACCENT,
-                    font=(FONT, 10), padx=6, pady=4, undo=True, maxundo=200)
+                    font=font(10), padx=6, pady=4, undo=True, maxundo=200)
         self._editor_keys(t)
         return t
 

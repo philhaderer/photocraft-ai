@@ -47,7 +47,7 @@ class SettingsMixin:
         self.b_gear = ttk.Button(foot, image=self._icon("gear"), style="Icon.TButton", command=self.open_settings)
         self.b_gear.pack(side="right")
         Tooltip(self.b_gear, "Settings: which model files ComfyUI has, links to get the missing ones, ComfyUI folders, credits.")
-        style.configure("Empty.TLabel", foreground=MUTED, font=(FONT, 11))
+        style.configure("Empty.TLabel", foreground=MUTED, font=font(11))
         self.v_empty = tk.StringVar(value="")
         self.lbl_empty = ttk.Label(self.root, textvariable=self.v_empty, style="Empty.TLabel", anchor="center", justify="center",
                                    wraplength=self._px(MIN_W - 40))
@@ -433,7 +433,7 @@ class SettingsMixin:
         sb = ttk.Scrollbar(body)
         sb.pack(side="right", fill="y")
         t = tk.Text(body, wrap="word", bg=PANEL, fg=FG, relief="flat", borderwidth=0, padx=8, pady=6,
-                    font=(FONT, 10), yscrollcommand=sb.set, cursor="arrow")
+                    font=font(10), yscrollcommand=sb.set, cursor="arrow")
         t.pack(side="left", fill="both", expand=True)
         sb.configure(command=t.yview)
         return t
@@ -477,7 +477,7 @@ class SettingsMixin:
             top = 0.0
         t.configure(state="normal")
         t.delete("1.0", "end")
-        t.tag_configure("head", font=(FONT, 10, "bold"), foreground=FG)
+        t.tag_configure("head", font=font(10, bold=True), foreground=FG)
         t.tag_configure("ok", foreground=DONE_GREEN)           # noqa: F405
         t.tag_configure("bad", foreground=ERROR_TEXT)          # noqa: F405
         t.tag_configure("note", foreground=ACCENT)

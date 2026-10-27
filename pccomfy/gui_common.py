@@ -15,7 +15,7 @@ from pathlib import Path
 from tkinter import messagebox, simpledialog, ttk
 
 from . import config as cfgmod
-from . import models, winlink
+from . import fonts, models, winlink
 from .bridge import Bridge, BridgeError, Request, mask_is_used, prompt_phase_nodes
 from .comfy import Cancelled, ComfyError, ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
@@ -261,7 +261,7 @@ class Tooltip:
         self.tip.wm_overrideredirect(True)
         self.tip.wm_geometry(f"+{x}+{y}")
         tk.Label(self.tip, text=self.text, justify="left", wraplength=340, background="#ffffe0", foreground="#000000",
-                 relief="solid", borderwidth=1, padx=6, pady=4, font=("Segoe UI" if os.name == "nt" else "Sans", 9)).pack()
+                 relief="solid", borderwidth=1, padx=6, pady=4, font=font(9)).pack()
 
     def _hide(self, _e=None):
         if self._job:
@@ -467,7 +467,7 @@ class ValueBox(ttk.Entry):
 
     def __init__(self, parent, slider, command, factor: float = 1.0):
         self._text = tk.StringVar(value="")
-        super().__init__(parent, textvariable=self._text, width=VALUE_W, style="Value.TEntry", justify="center", font=(FONT, 9))
+        super().__init__(parent, textvariable=self._text, width=VALUE_W, style="Value.TEntry", justify="center", font=font(9))
         self._slider, self._cmd, self._factor = slider, command, factor
         slider.box = self
         for ev in ("<Return>", "<KP_Enter>", "<FocusOut>"):
@@ -524,7 +524,16 @@ class ValueBox(ttk.Entry):
 ENHANCE_TIP = "On: a text model writes the detailed prompt from your short text. Off: your text is sent as typed."
 LORA_TIP = "The workflow's own LoRA: on/off, and its strength."
 STAGE_TIP = "A stage of the workflow you can switch off."
-FONT = "Segoe UI" if os.name == "nt" else "Sans"
+FONT = "Inter" if fonts.load() else ("Segoe UI" if os.name == "nt" else "Sans")   # Inter = PhotoCraft's font (fonts.py)
+
+
+def font(size: int, bold: bool = False) -> tuple:
+    """A Tk font at `size` pt (the Segoe UI size the layout was made for). Inter runs about 8 % wider, so it is set one
+    point smaller (9 pt -> 8 pt: 11 instead of 12 px at 100 %) and keeps the texts as wide as before; its bold is the
+    SemiBold file (only Regular and SemiBold are shipped)."""
+    if FONT == "Inter":
+        return ("Inter SemiBold" if bold else "Inter", size - 1)
+    return (FONT, size, "bold") if bold else (FONT, size)
 CLIP_DEFAULT = "(workflow default)"
 
 
@@ -656,6 +665,7 @@ __all__ = [
     "LORA_TIP",
     "STAGE_TIP",
     "FONT",
+    "font",
     "CLIP_DEFAULT",
     "preset_stem",
     "BG",
