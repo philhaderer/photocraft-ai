@@ -93,7 +93,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._vals_key = None                # (workflow, speed LoRA on) the steps / CFG / denoise fields were last read for
         self._wf_vals: dict = {}
         self._lora_wf = g("workflow", "")   # the workflow the LoRA strength slider was last set for
-        self.v_lmask = tk.StringVar(value=LAYER_MASKS.get(g("layer_mask", "auto"), LAYER_MASKS["auto"]))
+        self.v_lmask = tk.StringVar(value=LAYER_MASKS[layer_mask_key(g("layer_mask", "soft"))])
         self.v_status = tk.StringVar(value="Ready")
         self.v_conn = tk.StringVar(value="")
 
@@ -430,7 +430,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         cb_lm.pack(side="left", padx=6)
         cb_lm.bind("<<ComboboxSelected>>", lambda e: self._update_feather_state())
         for w in (lb, cb_lm):
-            Tooltip(w, "How the result is blended into your picture: auto (recommended), soft (feathered), hard (selection as is), none.")
+            Tooltip(w, "How the result is blended into your picture: soft (soft edge), hard (the selection as it is), none (the whole redrawn area).")
 
         bf = self.f_go = ttk.Frame(r)   # Generate, Cancel, Undo, Redo: above the line over "Prompt", under the functions
         bf.pack(fill="x", padx=10, pady=(6, 2), before=self.sep_prompt)

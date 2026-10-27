@@ -26,33 +26,27 @@ def main():
         app._update_feather_state()
         return app.w_feather["state"]
 
-    # auto: off for Fill / Expand with a Fibo-type editor, on for the built-in graph
-    assert state("fibo2-edit.json", "inpaint", "auto") == "disabled"
-    assert state("fibo2-edit.json", "outpaint", "auto") == "disabled"
-    assert state(gui.BUILTIN, "outpaint", "auto") == "disabled"       # Expand, Refine and Upscale have no edge feather at all
-    assert state(gui.BUILTIN, "refine", "soft") == "disabled" and state(gui.BUILTIN, "upscale", "soft") == "disabled"
-    assert state(gui.BUILTIN, "inpaint", "auto") == "normal"
-    # explicit choices: only "soft" uses the feather
+    # only "soft" uses the feather ("auto" left the menu 28.10.); Expand, Refine and Upscale have no edge feather at all
+    assert "auto" not in L
     assert state("fibo2-edit.json", "inpaint", "soft") == "normal"
+    assert state(gui.BUILTIN, "inpaint", "soft") == "normal"
     assert state("fibo2-edit.json", "inpaint", "selection") == "disabled"
-    assert state("fibo2-edit.json", "outpaint", "none") == "disabled"
-    # changing the mode / the layer mask choice / loading a preset refreshes it by itself
+    assert state("fibo2-edit.json", "inpaint", "none") == "disabled"
+    assert state("fibo2-edit.json", "outpaint", "soft") == "disabled" and state(gui.BUILTIN, "outpaint", "soft") == "disabled"
+    assert state(gui.BUILTIN, "refine", "soft") == "disabled" and state(gui.BUILTIN, "upscale", "soft") == "disabled"
+    # changing the mode / loading a preset refreshes it by itself; an old preset with "auto" opens as soft
     app.v_workflow.set("fibo2-edit.json")
-    app.v_lmask.set(L["auto"])
-    app.v_mode.set("inpaint")
-    app._on_mode_ui()
-    assert app.w_feather["state"] == "disabled"
+    app.v_lmask.set(L["soft"])
     app.v_mode.set("outpaint")
     app._on_mode_ui()
-    assert app.w_feather["state"] == "disabled"   # Fibo redraws the crop: no layer mask in Expand either
-    app.v_workflow.set(gui.BUILTIN)
+    assert app.w_feather["state"] == "disabled"
     app.v_mode.set("inpaint")
     app._on_mode_ui()
     assert app.w_feather["state"] == "normal"
-    app.v_workflow.set("fibo2-edit.json")
-    app.v_mode.set("inpaint")
-    app._apply_settings({"mode": "inpaint", "layer_mask": "soft"})
-    assert app.w_feather["state"] == "normal"
+    app._apply_settings({"mode": "inpaint", "layer_mask": "auto"})
+    assert app.v_lmask.get() == L["soft"] and app.w_feather["state"] == "normal"
+    app._apply_settings({"mode": "inpaint", "layer_mask": "none"})
+    assert app.w_feather["state"] == "disabled"
     shutil.rmtree(t.TMP, ignore_errors=True)
     print("ALL OK (feather state)")
 

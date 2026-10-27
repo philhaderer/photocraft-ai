@@ -245,7 +245,7 @@ class ModeMixin:
         self.v_match.set(0.0)
         self.v_feather.set(2.0)
         self.v_detail.set(1.0)
-        self.v_lmask.set(LAYER_MASKS["auto"])
+        self.v_lmask.set(LAYER_MASKS["soft"])       # the model's function sets its own below
         self.v_cmp_res.set("")
         self.v_cmp_ctx.set("")
         self.v_scale.set(scale_text(1.5))
@@ -280,16 +280,10 @@ class ModeMixin:
 
     def _uses_soft_mask(self) -> bool:
         """True when the new layer really gets the soft (feathered) layer mask, i.e. the feather has an effect."""
-        choice = {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto")
+        choice = layer_mask_key(self.v_lmask.get())
         if self.v_mode.get() == "txt2img":
             return False
-        if choice != "auto":
-            return choice == "soft"
-        if self.v_mode.get() == "upscale":
-            return False
-        if self.v_mode.get() not in ("inpaint", "remove", "outpaint"):
-            return True
-        return not self._ignores_mask()
+        return choice == "soft"
 
     def _ignores_mask(self) -> bool:
         """True when the selected workflow never uses the mask (a Fibo-type instruction editor)."""
