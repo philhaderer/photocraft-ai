@@ -170,10 +170,20 @@ def soft_layer_mask(req: "Request", wf_paths: list, mask: "Image.Image", region:
                     bbox: "imaging.Box | None") -> "Image.Image":
     """The soft layer mask of a result, the size of `region` (the run and the feather preview use this one function)."""
     if is_editor(wf_paths):
-        # an editor that regenerated the whole crop and never saw the mask (Fibo): feather by a share of
+        # an editor that regenerated the whole crop and never saw the mask (Qwen, Fibo): feather by a share of
         # the selection's size (a feather already set in PhotoCraft is kept as it is)
         sel = bbox or region
-        return imaging.auto_feather(mask.crop(region.pil()), imaging.feather_radius(sel.w, sel.h, req.feather_pct))
+        radius = imaging.feather_radius(sel.w, sel.h, req.feather_pct)
+        if req.mode == "inpaint" and not req.remove:
+            # Fill: the new object stays fully opaque up to the selection's edge, the soft edge lies outside it (live
+            # test 28.10.: a soft edge across the selection line made the fill's outer edge soft). It stops before
+            # the redrawn crop ends, else the crop's straight edge would show (not where the crop meets the canvas edge)
+            W, H = mask.size
+            room = [bbox.x - region.x if region.x > 0 else radius, bbox.y - region.y if region.y > 0 else radius,
+                    region.x + region.w - (bbox.x + bbox.w) if region.x + region.w < W else radius,
+                    region.y + region.h - (bbox.y + bbox.h) if region.y + region.h < H else radius] if bbox else [radius]
+            return imaging.outer_feather(mask.crop(region.pil()), min([radius] + room))
+        return imaging.auto_feather(mask.crop(region.pil()), radius)
     # the same soft mask the model got: the result blends exactly where the model blended it
     return imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
 

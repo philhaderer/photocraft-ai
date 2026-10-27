@@ -131,6 +131,19 @@ def auto_feather(mask: Image.Image, radius: int) -> Image.Image:
     return m.filter(ImageFilter.GaussianBlur(radius / 2.0))
 
 
+def outer_feather(mask: Image.Image, radius: int) -> Image.Image:
+    """Soften a hard selection mask OUTSIDE its edge: inside it stays fully opaque, around it the mask fades out over
+    about `radius` px (twice a Gaussian blur of half the radius, which is 1 at the edge and ~0.05 at `radius`). Used for
+    Fill with an instruction editor: the new object keeps its full outline, only the redrawn surroundings blend in.
+    A mask that is already soft is returned unchanged, as in auto_feather."""
+    m = mask.convert("L")
+    if radius <= 0 or is_soft(m):
+        return m
+    a = np.asarray(m, dtype=np.float32)
+    b = np.asarray(m.filter(ImageFilter.GaussianBlur(radius / 2.0)), dtype=np.float32) * 2.0
+    return Image.fromarray(np.maximum(a, np.minimum(255.0, b)).round().astype(np.uint8))
+
+
 def fill_transparent(img: Image.Image) -> Image.Image:
     """Fill transparent pixels with a blurred extension of the edges (pull–push).
 
