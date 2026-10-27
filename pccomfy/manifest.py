@@ -65,8 +65,10 @@ _LIST = [
     # diffusion models
     File("flux3-image-klein-int8-convrot.safetensors", "unet", _BFL3 + "diffusion_models/flux3-image-klein-int8-convrot.safetensors",
          _GATED_BFL, size=5827874779),
-    File("flux-2-klein-9b-int8-ConvRot-comfyui.safetensors", "unet", "",
-         "the source (Hugging Face, Sakujo/FLUX.2-Klein-9B-INT8-ConvRot) is no longer public (checked 2026-10-27)", size=9405846682),
+    File("flux-2-klein-9b_int8_convrot.safetensors", "unet",
+         _HF + "obsxrver/ComfyUI-Native-INT8_ConvRot/resolve/main/diffusion_models/flux-2-klein-9b_int8_convrot.safetensors",
+         "licence: FLUX non-commercial (" + _NC + "); obsxrver's int8 build, A/B-tested against the old Sakujo file (2026-10-27)",
+         size=9439894544),
     File("qwen_image_2.1_int8_convrot.safetensors", "unet", _QWEN21 + "diffusion_models/qwen_image_2.1_int8_convrot.safetensors",
          "licence: Qwen research licence", size=7256783064),
     File("fibo2_edit_turbo_int8_convrot.safetensors", "unet",
@@ -149,7 +151,7 @@ TABS: dict[str, TabSpec] = {
                                 nodes=_FLUX3_UP_NODES),
         }),
     "flux2": TabSpec(
-        required=("flux-2-klein-9b-int8-ConvRot-comfyui.safetensors", "qwen_3_8b_fp8mixed.safetensors", _UPS),
+        required=("flux-2-klein-9b_int8_convrot.safetensors", "qwen_3_8b_fp8mixed.safetensors", _UPS),
         modes={
             "txt2img": ModeSpec(optional=(_UPSAMPLER,)),
             "upscale": ModeSpec(requires=_ULTRA),

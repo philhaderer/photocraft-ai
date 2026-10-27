@@ -114,7 +114,7 @@ FLUX2 = Model(
         "refine": Mode("flux2-klein-upscale.json", dict(turbo=True, context=0.0), FLUX2_DEFAULT, FLUX2_REFINE_PROMPTS, DESCRIBE_TIP),
     },
     requires=(
-        "flux-2-klein-9b-int8-ConvRot-comfyui.safetensors",
+        "flux-2-klein-9b_int8_convrot.safetensors",
         "qwen_3_8b_fp8mixed.safetensors",
         "flux2-vae.safetensors",
     ),   # the model files this tab needs (details per mode: manifest.py)
