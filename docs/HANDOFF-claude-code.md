@@ -1,114 +1,113 @@
-# Handoff: PhotoCraft x ComfyUI Plugin (Stand 2026-10-26, 22:15)
+# Handoff: PhotoCraft x ComfyUI Plugin (Stand 2026-10-27)
 
-Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiterzuarbeiten. Lies zusätzlich `CLAUDE.md` (Arbeitsweise, Regeln) und `PLAN.md` (Plan, Lanes). Die Sitzung vom 26.10. abends (Claude Code, Opus 5.5) hat diesen Stand geschrieben; die Aufgabenliste für den nächsten Chat steht in **Abschnitt 6**.
+Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiterzuarbeiten. Lies zusätzlich `CLAUDE.md` (Arbeitsweise, Regeln) und `PLAN.md` (Plan, Lanes; **Abschnitt 8 = aktuelle Aufgabenliste des Nutzers**). Die Sitzung vom 26./27.10. (Claude Code, Opus 5.5) hat diesen Stand geschrieben; die Aufgaben für den nächsten Chat stehen in **Abschnitt 6**.
 
 ## 1. Rolle und Regeln des Nutzers (immer)
 - Rolle: App-Programmierer, UI-Designer und ComfyUI-Experte. Der Nutzer schreibt Deutsch; erklärt wird in einfachem Deutsch, ohne Git-Jargon.
-- Schreibt er **Englisch**: zuerst seine Nachricht in korrektem Englisch zurückgeben („Corrected version of your message:“ + Zitat), dann antworten.
+- Schreibt er **Englisch** (auch nur eine Zeile): zuerst seine Nachricht in korrektem Englisch zurückgeben („Corrected version of your message:“ + Zitat), dann antworten.
 - **An Entscheidungspunkten die Optionen nennen** (Empfehlung zuerst), nie still wählen. Bei Wortlaut/Tooltips/Design im Zweifel fragen.
 - Nebenwirkungen (Downloads, Neustarts, Löschungen, GPU-Läufe, Installationen) nur mit Erlaubnis. ComfyUI und Plugin startet er selbst neu.
-- **Git nach Standard und nachvollziehbar** (Details `CLAUDE.md`): je Änderung ein Branch aus `next` (`feat/`, `fix/`, `docs/`, `test/`, `refactor/`, `chore/`), nie direkt auf `next`; Tests grün, dann `git merge --no-ff` in `next`; nie pushen, nie Verlauf umschreiben. Conventional Commits (`typ: Zusammenfassung`, Body mit Was und Warum), Trailer mit dem Modell der laufenden Sitzung. Nach jedem Git-Schritt auf Deutsch sagen, was passiert ist. **Vor jedem Löschen eines Branches fragen** (Entscheidung 26.10.).
-- In PowerShell mehrzeilige Commit-Nachrichten mit `git commit -F <datei>` (Datei im Scratchpad); Here-Strings mit Anführungszeichen haben einmal die Argumente zerlegt.
+- **Git nach Standard und nachvollziehbar** (Details `CLAUDE.md`): je Änderung ein Branch aus `next` (`feat/`, `fix/`, `docs/`, `test/`, `refactor/`, `chore/`), **vor der ersten Änderung anlegen**, nie direkt auf `next`; Tests grün, dann `git merge --no-ff` in `next`; nie pushen, nie Verlauf umschreiben. Conventional Commits (`typ: Zusammenfassung`, Body mit Was und Warum), Trailer mit dem Modell der laufenden Sitzung. Nach jedem Git-Schritt auf Deutsch sagen, was passiert ist. **Vor jedem Löschen eines Branches fragen.**
+- In PowerShell mehrzeilige Commit-Nachrichten mit `git commit -F <datei>` (Datei im Scratchpad).
 - Keine README-Politur. `README.pl.md` ist Upstream und bleibt. `photocraft-ai 0.15.1.bat` ist sein Starter: nie löschen.
 - Checkpoint-Graph und Fooocus-Code bleiben vorerst. Keine automatische Prompt-Ergänzung bei „remove …“ (nur Tipp unter dem Prompt).
-- Sein Bildton: Fenster 380 px fest breit, Titelleiste `#404040`; Flächen `#282828` (`PANEL`), Fenstergrau `#535353` (`BG`), Akzent Orange `#f28c28`.
+- Sein Bildton: Fenster 380 px fest breit, Titelleiste `#404040`; Flächen `#282828` (`PANEL`), Fenstergrau `#535353` (`BG`), Akzent Orange `#f28c28`; PhotoCrafts Slider-Spur (dunkler Teil) `#686868`.
 - „Perfekt“ (nicht ohne Nachfrage anfassen): Qwen 2.1 Edit/Fill/Expand/Remove; Flux 2 und Flux 3 Edit; Flux 3 Upscale; Flux 3 Text to image; MOSS Text to image und Expand; Fibo Edit whole image; Fensterkopf und Schärfe des Fensters.
+- Rechtzeitig sagen, wenn ein Chat zu lang wird (`PLAN.md`, Abschnitt 6).
 
 ## 2. Repo und Git-Stand
 - Pfad `C:\programs\photocraft-comfyui-bridge`, Fork von Peszemeszek/photocraft-comfyui-bridge. Nur lokal, nichts gepusht.
 - Branches: `main` (Upstream), `windows-fibo` (abgenommener Stand 6aff33a), `refactor/split-gui` (Phase 0, in `next`), **`next` = Integrationsstand, den der Nutzer testet**.
-- Sonst keine Branches: alle Arbeits-Branches der Sitzung vom 26.10. sind gemergt und mit Erlaubnis des Nutzers gelöscht (die Commits stecken in `next`). Künftig: Löschen nur nach Rückfrage.
-- Tags: `backup-2026-10-26` (6df02df, vor Phase 0), **`vor-claude-code`** (65e955f, letzter Stand vor dem Umstieg auf Claude Code).
-- Lane-Klone `lanes/L1`, `lanes/L2` sind Altlast (per `.git/info/exclude` ignoriert, vollständig gemergt). Archiv der Lane-Fragen: `docs/archiv-lanes/`.
-- Tests: `python tests/run_all.py` (39 Dateien, alle grün unter Windows, ca. 16 s). Python des Nutzers: Pfad in `data/python.txt`.
-- Diagnose: `data/exchange/last-graph.json` (zuletzt gesendeter Graph), `data/exchange/runs.jsonl` (eine Zeile je Lauf). ComfyUI-Historie ist lokal über `http://127.0.0.1:8188/history` lesbar (so wurde der Seed-Befund unten gefunden).
+- Arbeits-Branches vom 26./27.10., alle in `next` gemergt und **noch nicht gelöscht** (Löschen nur nach Rückfrage): `feat/prompt-clear-and-t2i-tip`, `feat/generate-row-above-prompt`, `fix/one-empty-slot`, `fix/add-file-dialog-parent`, `feat/drop-replaces-slot`, `feat/window-icons`, `feat/photocraft-sliders`, `feat/model-download-links`, `docs/handoff-2026-10-27`.
+- Tags: `backup-2026-10-26` (6df02df, vor Phase 0), `vor-claude-code` (65e955f).
+- Lane-Klone `lanes/L1`, `lanes/L2` sind Altlast (per `.git/info/exclude` ignoriert). Archiv: `docs/archiv-lanes/`.
+- Tests: `python tests/run_all.py` (39 Dateien, alle grün, ca. 16 s). Python des Nutzers: Pfad in `data/python.txt`.
+- Diagnose: `data/exchange/last-graph.json`, `data/exchange/runs.jsonl`; ComfyUI-Historie über `http://127.0.0.1:8188/history`.
 
 ## 3. Umgebung
-- ComfyUI: `C:\programs\ComfyUI-Easy-Install Cuda13\ComfyUI` (0.42.0), Modelle in `C:\AI_Models` und `D:\AI_Models`. RTX 4070 Ti Super (16 GB), 64 GB RAM. Release 1 nur 16 GB.
+- ComfyUI: `C:\programs\ComfyUI-Easy-Install Cuda13\ComfyUI` (0.42.0), Modelle in `C:\AI_Models` (diffusion_models, clip, vae) und `D:\AI_Models\Lora`. RTX 4070 Ti Super (16 GB), 64 GB RAM. Release 1 nur 16 GB.
 - PhotoCraft 0.15.1 portable unter `C:\programs\photocraft-0.15.1-windows-x64-portable`.
-- Hintergrund-Dokumente im Claude-Projekt: `shipping-photocraft-comfyui-plugin.md`, `shipping-addendum-1-ausboss-folders-downloads.md` (Modell-Downloadlinks, Ordner-Erkennung, AusBoss), `plugin-erfahrungen*.md`. Im Repo: `ideas.md` (OpenFill-Ideen T1 bis T4).
-- Echtes Tk lässt sich lokal prüfen: ein Skript, das `tk.Tk.__init__` mit `withdraw()` umhüllt, `PCCOMFY_HOME` auf einen Temp-Ordner setzt und `gui.App(cfgmod.load())` baut, kann Höhen messen; mit `PIL.ImageGrab` lässt sich das sichtbare Fenster fotografieren (`gui.winlink.available = lambda: False` vorher, sonst hängt es sich an PhotoCraft).
+- **Echtes Fenster prüfen ohne PhotoCraft** (bewährt): ein Skript im Scratchpad setzt `PCCOMFY_HOME` auf einen Temp-Ordner, `gui.winlink.available = lambda: False`, baut `gui.App(cfgmod.load())`, wählt Tab/Modus und macht nach **8 s** (`root.after(8000, …)`, sonst läuft das Start-Refresh noch und setzt das Modell zurück) mit `PIL.ImageGrab` einen Screenshot des Fensters. Rote Meldung „Can't connect to PhotoCraft“ ist dabei normal.
+- Python des Nutzers hat veraltete Zertifikate für Civitai (SSL-Fehler): Civitai-API per PowerShell `Invoke-RestMethod` abfragen; Hugging Face geht auch aus Python.
 
 ## 4. Was gebaut und in `next` ist
-**Phase 0, L1, L2** wie im Plan (Mixins, `clipboard.py`, Modell-Erkennung mit Zahnrad und Preflight, Multi Image Edit mit Slots, Tags je Modell, Freistellen, Beschreiben). Details: `docs/entscheidungen-L1.md`, `docs/entscheidungen-L2.md`, `docs/prompt-aufbau.md`, `docs/prompting-multi-image.md`.
+**Phase 0, L1, L2** wie im Plan. Details: `docs/entscheidungen-L1.md`, `docs/entscheidungen-L2.md`, `docs/prompt-aufbau.md`, `docs/prompting-multi-image.md`.
 
-**Sitzung 26.10. abends (Claude Code):**
-- Doku: Conventional Commits und Branch-Ablauf in `CLAUDE.md`; Arbeitsweise „eine Sitzung, Branch für Branch“ (statt Lane-Chats).
-- Tests laufen unter Windows (Workflows/Presets der Tests in Temp-Ordner umgeleitet, `owner_present` im Winlink-Test vorgetäuscht, Runner liest UTF-8).
-- `undo.png` liegt in `pccomfy/assets/undo.png` (package-data); `ideas.md` getrackt.
-- Slots: „Max. images: x“ steht in der Kopfzeile neben „Reference images (n/x)“.
-- Beschreiben schreibt `<image2>: …` **sichtbar** ans Ende des Prompt-Felds; erneutes Beschreiben ersetzt die unveränderte Zeile; eine von Hand geänderte oder gelöschte Zeile bleibt, das Fenster sagt es. Gesendet wird das Feld, wie es dasteht (`RefSlots.put_description`).
-- Neue Slot-Icons als Vektorformen: `pccomfy/icons.py` (24er-Raster, Strich 2, runde Enden, Lucide-Stil, ISC: **in den Release-Credits nennen**), 8-fach gezeichnet und auf die echte Pixelgröße verkleinert; unter der Maus orange. `ICON_PX = 24` in `refslots.py`. Vom Nutzer gelobt („super, sehr schön“).
-- Starter `photocraft-ai neuer-nutzer.bat`: eigener Datenordner `data\neuer-nutzer` (`PCCOMFY_HOME`), Menü 1 bis 4 (erster/weiterer Start, mit/ohne Modelle; „ohne Modelle“ = `PCCOMFY_SIMULATE_NO_MODELS=1` in `inventory.fetch`). PhotoCraft vorher schließen. Noch nicht vom Nutzer benutzt.
-- Expand für **Flux 3** und **Krea 2** wieder eingeschaltet (zum Testen).
-- Dünner Scrollbalken: alles unter den Tabs liegt in einem Canvas (`f_scrollbox`, `cv_body`, `f_body`); `_fit_height` begrenzt das Fenster auf den Platz bis zum Bildschirmrand (`_max_height`), sonst erscheint `ThinScrollbar` (gui_common.py, 6 px, Griff `#808080`). Mausrad scrollt, Textfelder/Listen nicht. Generate liegt im gescrollten Teil.
-- Masken-Analyse (nur Befund, nichts geändert): Bei Fill/Remove ohne Masken-Workflow (Qwen, Flux 2/3 Remove, Fibo) ist die Ebenenmaske an der Auswahlkante nur ca. 50 % deckend (`auto_feather` blurt ohne vorheriges Wachsen) → Geister-Umriss bei Remove. Option A (empfohlen, offen): erst um den Feather-Radius wachsen, dann blurren (OpenFill-Art), nur Flux 2/3 Remove und Fibo Fill/Remove; Qwen nur mit OK.
+**Sitzung 26.10. abends** (Kurzfassung): Conventional Commits, Tests unter Windows, `undo.png`, „Max. images“ in der Slot-Kopfzeile, Beschreiben schreibt sichtbar ins Prompt-Feld, Slot-Icons als Vektoren (`pccomfy/icons.py`, Lucide-Stil, ISC: **in den Release-Credits nennen**), Starter `photocraft-ai neuer-nutzer.bat`, Expand für Flux 3 und Krea 2 wieder an, dünner Scrollbalken, Masken-Analyse (Option A offen).
+
+**Sitzung 26./27.10. (diese):**
+- **Papierkorb** rechts neben „Prompt“: leert das Feld, Strg+Z im Feld holt den Text zurück (`_clear_prompt`, gui_prompt.py); flach, ohne Kasten.
+- **Tipp bei Text to image** (alle Modelle): „Text to image: a completely new image is added to the canvas as a new layer.“ (`models.T2I_TIP`, vom Nutzer abgenommen).
+- **Knopfzeile Generate/Cancel/Undo/Redo** steht jetzt über „Prompt“ (unter den Funktionen); Fortschrittsbalken und Status bleiben unten.
+- **Slots:** nur gefüllte Slots plus genau ein leerer (`_refs_visible`); „Add file“-Dialog mit `parent` und pausiertem Winlink-Watchdog (`App._dialog`); Drop auf ein gefülltes Slot-Bild ersetzt es (erstes Bild ersetzt, Rest wird angehängt; `RefSlots.put`, `add_files(at=)`).
+- **Icons** (20 px, `ThemeMixin._icon`, ICON_PX in gui_theme.py; Slot-Icons bleiben 24 px): Plus, Zahnrad, Undo/Redo, Chevrons (Negative prompt, Advanced, LoRA-Zeile), X, Kopieren, Speichern, Papierkorb; unter der Maus orange, gesperrt grau. Spinbox-Pfeile als schmale Chevrons (14 px, eigenes ttk-Element, `_spin_arrows`). Vorschaublatt: `data/icon-preview.png`.
+- **Slider im PhotoCraft-Look:** neues Widget `Slider` (gui_common.py, Canvas: dünne Spur, links hell `#e6e6e6`, rechts dunkel `#2a2a2a` → **muss `#686868` werden**, weißer Knopf mit Pillow geglättet); Wert rechts in einem Kästchen (`Value.TLabel`, Breite `VALUE_W = 9`). `_scale_clicks` und der TScale-Stil sind weg.
+- **Downloadlinks:** `manifest.py` hat für 23 von 24 Dateien direkte Links (HF `resolve/main`, Civitai-Download-API), Größe (`File.size`, `size_text`) und Lizenz-/Gated-Hinweis; geprüft per Größe und (wo nötig) SHA256 gegen die Kopien des Nutzers, jeder Link per HEAD. Tabelle: `docs/model-downloads.md`. Das Zahnrad-Fenster zeigt die Größe neben „download“.
 
 ## 5. Entscheidungen des Nutzers (komplett)
 - Release 1 nur 16 GB, 8-GB-Empfehlungen nur Doku. Fast Mode gestrichen.
-- Krea 2 Expand und Flux 3 Expand: am 26.10. abends wieder an zum Testen. **Ergebnis:** Flux 3 Expand funktioniert (vermutlich wegen mehr Steps, im Fenster 15); Krea 2 Expand nur einseitig brauchbar (siehe 6.10). Endgültige Entscheidung steht aus.
-- Qwen-Slotzahl: **8 bleibt** (Test mit 2/4/8 ok).
+- Krea 2 Expand und Flux 3 Expand: zum Testen an. Flux 3 Expand funktioniert; Krea 2 Expand nur einseitig brauchbar (alt 6.10). Endgültige Entscheidung steht aus.
+- Qwen-Slotzahl: 8 bleibt.
 - Veröffentlichung: neues Repo ohne Upstream-Verlauf, Credits Pflicht, erst kurz vor dem Release; bis dahin `windows-fibo`.
-- Reihenfolge: Easy Mode zuletzt (braucht L1, L2, Hide/Show aus L3). Easy-Mode-Ranking Fill: Qwen, Fibo; Expand: MOSS, Flux 2, Fibo, Qwen; `easymode.py`, Favorit aus dem Rechtsklick überschreibt.
-- Rechtsklick auf Modell-Tab: Favorit, Tab ausblenden, Workflow-JSON speichern.
-- Minimize = Einklappen zur Titelleiste (hide/show). Undo/Redo mit seiner `undo.png` (Redo gespiegelt).
-- Krea-Styles bis 50 per Bildauswahl, Prompt-Templates per Klick; Tutorial-PSDs mit Testbild; Tooltips bei jedem Start.
-- OpenFill-Ideen (`ideas.md`): T1 PhotoCraft-Befehle prüfen, T2 Seam-Korrektur als A/B, T3a Live-Vorschau, T3b Verlauf der letzten 20 Läufe, T4 Modell-Manager vergleichen; kein Varianten-Picker.
-- Masken-Vergleichsbild gesehen; Umsetzung (Option A) noch nicht freigegeben.
+- Reihenfolge: **kleine Verbesserungen zuerst** (PLAN.md 8.A), dann weiter nach Plan; Easy Mode zuletzt. Easy-Mode-Ranking Fill: Qwen, Fibo; Expand: MOSS, Flux 2, Fibo, Qwen.
+- Rechtsklick auf Modell-Tab: Favorit, Tab ausblenden, Workflow-JSON speichern. Minimize = Einklappen (hide/show).
+- Krea-Styles bis 50 per Bildauswahl; Tutorial-PSDs mit Testbild; Tooltips bei jedem Start.
+- Tipp-Wortlaut Text to image: abgenommen. Icons: 20 px (Slot-Icons 24 px). Drop auf mehrere Bilder: erstes ersetzt, Rest anhängen.
 - Branches: vor jedem Löschen fragen.
 
-## 6. Aufgaben für den nächsten Chat (Rückmeldung des Nutzers vom 26.10., 22:00)
-Jede Aufgabe auf eigenem Branch, Optionen vorher nennen, wo Design oder Wortlaut zu wählen ist. Screenshot des Fensters liegt dem Nutzer vor (er kann ihn erneut einfügen).
+## 6. Aufgaben für den nächsten Chat (Liste des Nutzers vom 27.10., auch in PLAN.md 8)
+Jede Aufgabe auf eigenem Branch, Optionen vorher nennen, wo Design oder Wortlaut zu wählen ist. **Reihenfolge: A zuerst, dann B, C, D, dann E.**
 
-1. **Icons im ganzen Fenster** (mit `icons.py`, gleicher Stil wie die Slot-Icons; nicht zu groß, aber deutlich größer als jetzt; erst ein Vorschaublatt zeigen):
-   - „+ Add“ bei *Extra LoRAs*: ein schönes Plus-Icon.
-   - Zahnrad (Settings, Fußzeile rechts): „hässlich“, ein richtiges Zahnrad.
-   - Undo/Redo neben Generate: schönere Pfeile (seine `undo.png` als Vorlage oder Vektor, Redo gespiegelt).
-   - Auf/Ab-Pfeile der Zahlenfelder (Spinboxen: Seed, Variants, Steps, CFG, Denoise, Base res., Context, Mask grow/blur).
-   - Ausklapp-Dreiecke bei *Negative prompt*, *Advanced* und überall, wo derselbe vorkommt (Chevron).
-   - Alle übrigen Icons durchsehen: Kopier-Icon neben *LLM prompt enhancement*, Speichern/Papierkorb (`icon_image` in `gui_common.py`, noch 16-px-Pixel-Art).
-2. **Slider wie in PhotoCraft** (Screenshot „Helligkeit“): dünne Spur, links hell gefüllt, rechts dunkel, runder weißer Knopf, Wert rechts in einem Kästchen. Heute: ttk-Scale mit gestreiftem orangem Griff („nicht ordentlich“). Betrifft *Sharpen result* und alle anderen Regler (Mix, LoRA-Stärke, Feather, Match …).
-3. **Design-Vorschläge für minimale Verbesserungen** (Vorschläge des Vor-Chats, mit dem Nutzer abstimmen):
-   - Prompt-Feld: dicke Windows-Scrollleiste mit Pfeilen → `ThinScrollbar` wie beim Fenster.
-   - Radiobuttons (Funktionen) sind winzige Punkte → runde Radios im PhotoCraft-Look, etwas größer; gesperrte Funktionen grau wie jetzt.
-   - Checkbox *LLM prompt enhancement* zeigt `☒`/`□` als Zeichen → echte Checkbox im gleichen Stil.
-   - Spinboxen: schmale Chevron-Pfeile statt der großen Doppelpfeile; Mausrad ändert den Wert.
-   - Gesperrte Felder (Context, Mask grow/blur bei Edit, Denoise) ausblenden statt grau zeigen, oder einheitlich ausgegraut mit Tooltip „gilt nur für Fill/Remove“ (Option).
-   - *Image and mask* hat als einzige Gruppe einen Rahmen → einheitlich (Trennlinie mit Überschrift wie bei *Advanced*).
-   - Oranger Tipp-Text unter dem Prompt sehr präsent → gedämpft (MUTED) mit kleinem Info-Icon; Orange nur für Aktionen/Fehler.
-   - Fortschrittsbalken bleibt nach „Done“ voll orange → nach Abschluss dünn/neutral oder ausblenden.
-   - Einheitliche Abstände (Raster 4/8 px), gleiche Höhe für Combobox und Spinbox.
-   - Fußzeile: siehe 6.7.
-4. **Drop auf ein gefülltes Slot-Bild ersetzt es** (kein neuer Slot). Heute ist nur `f_refs` als Ganzes Drop-Ziel (`_refs_setup_dnd`, `_refs_on_drop` → `_refs_add_paths`). Lösung: jeden Slot (`box`) als eigenes Drop-Ziel registrieren; Drop auf Slot k → `refslots.replace(k, bild)`; Drop auf den leeren Slot/Rest → hinzufügen. Gilt auch für mehrere Dateien (erste ersetzt, Rest hängt an? → Nutzer fragen).
-5. **Kein leerer „free“-Platzhalter**: Es soll nur gefüllte Slots und genau einen leeren mit „Drop a picture or Ctrl+V“ geben. Ursache: `_refs_visible` zeigt bei Modellen mit ≤ 3 Slots immer alle (`return rs.max_refs`); richtig ist `min(max_refs, len(items) + 1)` für alle Modelle (Zeilen bleiben bei 3 je Reihe). Test in `test_refslots_gui.py` anpassen.
-6. **„Add file“ zeigt das Plugin kurz doppelt/verstümmelt**: `_refs_add_file` ruft `filedialog.askopenfilenames` ohne `parent`. Das Fenster gehört per Winlink zu PhotoCraft (owned window), der Dialog hängt am falschen Besitzer, Tk zeichnet neu. Erst nachstellen, dann `parent=self.root` setzen; falls nötig Winlink-Watchdog während des Dialogs pausieren (`_link_job`) und danach `_try_link`.
-7. **Refresh und Reset**: kleiner machen und klarer benennen. Heute: *Refresh* liest PhotoCraft/ComfyUI neu (Verbindung, LoRAs, Sampler, Workflows); *Reset* setzt Tab und Funktion auf die Startwerte. Zwei verschiedene Dinge, darum nicht einfach vereinen. Vorschläge (Nutzer wählt):
-   - A (empfohlen): *Refresh* wird ein kleines ⟳-Icon direkt neben den Status-Punkten „PhotoCraft ● ComfyUI ●“ (Tooltip „Reconnect and reload models“); *Reset* wird ein kleiner Text-Button „Defaults“ (Tooltip „Back to this function's start settings“).
-   - B: ein Menü-Knopf „⋯“ mit beiden Einträgen.
-   - C: beide als kleine Icons (⟳ und ↺) mit Tooltips.
-   - Reset ins Zahnrad-Menü verschieben wäre D.
-8. **Strg+Z / Strg+Y bzw. Strg+Shift+Z** wie Undo/Redo-Button (Photoshop-Belegung: Strg+Z Undo, Strg+Shift+Z Redo). Achtung: im Prompt-Feld hat Strg+Z heute die Text-Rückgängig-Funktion von Tk. Optionen: A (empfohlen) im Textfeld bleibt Strg+Z Text-Undo, sonst Plugin-Undo; B immer Plugin-Undo. Binden an `self.root` mit Prüfung des Fokus-Widgets (wie `_refs_ctrl_v`).
-9. **Alle Direktlinks zu den Modellen finden (WICHTIG)**: `manifest.py` hat 24 Dateien, 17 mit Link, 7 ohne. Für jede Datei den direkten Download-Link (Hugging Face `resolve/main/...` bzw. Civitai-Download-URL), Lizenz, Größe, ob gated. Quellen: Shipping-Addendum im Claude-Projekt, Hugging Face, Civitai. Ergebnis in `manifest.py` (Feld `url`) und als Tabelle in `docs/`. Recherche per Web; keine Downloads ohne Erlaubnis.
-10. **Krea 2 Expand auf zwei Seiten liefert Sprünge und fremde Inhalte**, einseitig ok. Befund: `krea2-turbo-inpaint.json` ist ein reines Text-zu-Bild-Modell (Turbo, 8 Steps, CFG 1) mit `SetLatentNoiseMask` + `DifferentialDiffusion` bei Denoise 1; es bekommt das Original nur über die Rauschmaske, nicht als Bild-Bedingung (kein ReferenceLatent/Inpaint-Conditioning). Bei zwei Seiten ist die neue Fläche ein großes L mit wenig zusammenhängendem Kontext; ein destilliertes 8-Step-Modell hält das nicht zusammen. Also: für mehrseitiges Expand nicht geeignet. Optionen: A (empfohlen) Expand bei Krea 2 nur einseitig erlauben, mehrseitig automatisch in Runden (eine Seite nach der anderen, gleicher Seed); B wieder abschalten; C Hinweis im Tooltip, sonst nichts.
-11. **Flux 3 Expand** funktioniert jetzt (Nutzer vermutet die höheren Steps, Fenster zeigte 15). Prüfen, mit welchen Steps es lief (`runs.jsonl`, `last-graph.json`), und den Startwert für Flux 3 Expand in `models.py` passend setzen; Entscheidung des Nutzers, ob es an bleibt.
-12. **Masken-Option A** (siehe Abschnitt 4) und **Seam-Korrektur T2** warten auf Freigabe.
+### A. Kleine Verbesserungen (zuerst; können gebündelt auf wenigen Branches laufen)
+1. **Leerzeile unter den Drop-Slots** (vor dem Befüllen) weg. Vermutung des Nutzers: Platz für den Bild-Tag. Befund im Code: im leeren Slot packt `_refs_redraw` (refslots.py) ein leeres `ttk.Label(cell, text="")` als Platzhalter unter die Box; dazu kommt `lbl_refnames` („Add a picture, then name it in your text.“). Den leeren Platzhalter entfernen; prüfen, dass die Zeilen beim Befüllen nicht springen.
+2. **Leerzeile nach „Advanced“** weg (gui.py: `f_adv`/`adv_body`, Abstände `pady`; im Screenshot vom 27.10. sichtbar unter dem geschlossenen „Advanced“).
+3. **Chevron bei „Advanced“ zu weit rechts:** Link.TButton mit `compound="left"` zentriert Bild+Text bzw. hat Innenabstand; links bündig machen (`anchor="w"`/Padding 0) wie bei „Negative prompt“, beide gleich.
+4. **„Extra LoRAs (style, detail ...)“ → „Custom LoRAs:“**, „+ Add“ ganz nach rechts (`pack(side="right")`), Leerzeile danach weg (gui.py, `f_xl`/`head`).
+5. **Text „PhotoCraft“ unten links weg.** Was er heute bringt: `v_conn` zeigt „PhotoCraft ●/○“ = ob der PhotoCraft-Steuerport (127.0.0.1:7878) erreichbar ist (gui_state.py `refresh`). Ohne ihn fehlt diese Anzeige; da das Plugin ohne PhotoCraft nicht arbeiten kann und Fehler ohnehin als Meldung kommen, ist er verzichtbar. Mit dem Nutzer bestätigen, dann entfernen (und Tests anpassen).
+6. **ComfyUI-Punkt:** rot, wenn nicht verbunden, grün, wenn verbunden (der Nutzer schrieb „grün, wenn nicht“: offensichtlich verschrieben). Heute nur Zeichen ●/○ im Text; farbiger Punkt braucht ein eigenes Label/Canvas (`DONE_GREEN`/`ERROR` aus gui_common). Das Zahnrad-Fenster zeigt den Punkt ebenfalls (ui_settings.py Zeile ~454): dort einheitlich.
+7. **Slider-Farbe:** dunkler Teil der Spur `#686868` (PhotoCraft) statt `#2a2a2a` (`Slider.REST`). Hellen Teil und Knopf mit PhotoCraft vergleichen lassen.
+8. **Slider überall rechts, gleich breit, fest:** alle Slider in einer rechten Spalte mit fester Breite; auch die Workflow-LoRA (heute unter dem Haken „LoRA“, gui.py `f_lora` in Zeile 2) und die Stage-LoRAs (heute `length=110`) rechts neben ihrem Text. Gemeinsame Breite als Konstante (z. B. in gui_theme.py), Wert-Kästchen gleich breit.
+9. **Werte eintippbar:** das Wert-Kästchen wird ein Eingabefeld (ttk.Entry im Kästchen-Stil); Enter/Fokusverlust übernimmt, Werte werden auf den Bereich begrenzt; Anzeige-Format wie heute (%, 0.00, „hard edge“ = 0). Feather nimmt 0 an und zeigt „hard edge“. Option zuerst mit dem Nutzer klären: Feld immer editierbar (empfohlen) oder erst per Doppelklick.
+10. **Unter „Advanced“ verschieben:** „Sharpen result“, „Match colours“, „Edge feather“ und das Dropdown „Layer mask“; „Advanced“ heißt neu **„Advanced settings“**. Achtung: Feather und Layer mask werden heute je Modus ein-/ausgeblendet (`_update_feather_state`, gui_modes.py; `f_lm`, `_sharp_widgets`, `_match_widgets`): die Logik muss im neuen Eltern-Frame (`adv_body`) weiter stimmen. Tests in `test_feather_state.py`, `test_round5.py` prüfen das.
+
+### B. Wichtig
+11. **Feste Startposition:** Nach dem PhotoCraft-Start wird das Plugin oft zu weit links oben gesetzt; Drag and Drop nach unten lässt das Fenster dann kurz verschwinden. Es soll an einer festen Position starten. Zuerst nachstellen (mit PhotoCraft, nur mit dem Nutzer). Ansatz: Position beim Start selbst setzen (`root.geometry("+x+y")`, z. B. rechts im PhotoCraft-Fenster oder gespeicherte letzte Position, auf den Bildschirm begrenzt), bevor `winlink.link` das Fenster an PhotoCraft hängt. Prüfen, ob Winlink/`_fit_height` die Position verschiebt. Optionen nennen (feste Ecke vs. letzte Position).
+12. **Flux 2 Klein 9B ohne Quelle:** Sakujo-Repo nicht mehr öffentlich (401). Die vom Nutzer genannte Datei `obsxrver/ComfyUI-Native-INT8_ConvRot` → `flux-2-klein-base-9b-int8-ConvRot.safetensors` (Commit 1ddfc10) wurde am 27.10. per Range-Read verglichen: **nicht bytegleich** (9 405 841 414 statt 9 405 846 682 Byte, SHA256 66462911… statt ff4d4314…; gleiche 429 Tensoren, aber 114 Quantisierungs-Einträge und die Gewichtsdaten unterscheiden sich; „base“ = wohl das nicht destillierte Base-Modell). **Umbenennen geht nicht.** Optionen für den Nutzer: A Link leer lassen (heute), B die destillierte Fassung eines anderen Uploaders testen (`obsxrver/…/flux-2-klein-9b_int8_convrot.safetensors`, `Winnougan/…`, `wraps/…`, je ca. 9,4 GB, Download nur mit Erlaubnis), C eigene Fassung beim Release anders bereitstellen (Lizenz: FLUX non-commercial beachten).
+
+### C. Neue Funktionen
+13. **Eigene Datei statt Modell (Settings):** neben jeder Modell-Datei im Zahnrad-Fenster ein Knopf, mit dem der User eine eigene Datei wählt, die statt der erwarteten benutzt wird. Wortlaut vorschlagen, Nutzer wählt; Vorschläge: „Use my own file…“ (empfohlen), „Replace with my file…“, „Choose another file…“. Technik: die Zuordnung (erwarteter Name → eigener Name aus ComfyUIs Liste) in config speichern; `fix_lora_names`/Graph-Anpassung (workflows.py) setzt beim Senden den eigenen Namen ein; Erkennung (inventory.py) zählt die Datei als vorhanden. Auswahl aus ComfyUIs Dateiliste des passenden Ordners (nicht freier Dateidialog, ComfyUI kennt nur seine Ordner).
+14. **Strg+Z / Strg+Y:** Die Notiz des Nutzers ist abgebrochen: „STRG+Z: hier war gemeint, dass man mit STRG“. **Beim Nutzer nachfragen**, was gemeint war. Bisheriger Plan (alt 6.8): Strg+Z/Strg+Shift+Z wie Undo/Redo-Knöpfe, im Prompt-Feld bleibt Text-Undo (Option A) oder immer Plugin-Undo (Option B).
+
+### D. Recherche und Entscheidungen (nichts bauen, Ergebnis vorlegen)
+15. **Funktionen zuerst, Modell darunter?** Der Nutzer überlegt, die Funktionen (Text to image, Edit, Fill …) als erste Wahl oben zu setzen und das Modell darunter, weil Nutzer eher ihre Aufgabe wählen. Folgen für die UX aufschreiben: was passiert mit gesperrten Kombinationen (heute: Funktion grau je Modell → künftig Modell grau je Funktion), Start-/Leerzustände (`start_state`, ui_settings.py), Easy-Mode-Ranking (wählt dann automatisch das beste Modell je Funktion: passt gut zusammen), Rechtsklick-Favoriten, Presets/gespeicherter Zustand, Platzbedarf bei 380 px, Tooltips je Modell. Optionen nennen (z. B. A Funktion oben + Modell-Dropdown, B Funktion oben + Modell-Tabs, C bleibt), Empfehlung.
+16. **UI-Fonts:** state of the art recherchieren und drei vorschlagen (z. B. Inter, Segoe UI Variable, IBM Plex Sans / Geist / Noto Sans prüfen): Lizenz (mitlieferbar?), auf Windows vorhanden oder einzubetten, wie Tk eine mitgelieferte Schrift lädt (Tk kann keine Font-Datei direkt laden: `AddFontResourceEx` per ctypes vor dem Start), Lesbarkeit bei 9/10 pt und 150 %. Heute: `FONT = "Segoe UI"` (gui_common.py).
+
+### E. Danach laut Plan (offen aus der alten Liste)
+- **Refresh/Reset** kleiner und klarer (alt 6.7): A ⟳-Icon neben den Status-Punkten + „Defaults“ als Text-Knopf (empfohlen), B Menü „⋯“, C zwei Icons, D Reset ins Zahnrad. Hängt mit A.5/A.6 zusammen (Fußzeile).
+- **Krea 2 Expand** mehrseitig (alt 6.10): A nur einseitig, mehrseitig in Runden (empfohlen), B abschalten, C nur Tooltip.
+- **Flux 3 Expand:** Steps prüfen (`runs.jsonl`, `last-graph.json`) und Startwert in `models.py` setzen; Entscheidung, ob es an bleibt (alt 6.11).
+- **Masken-Option A** und **Seam-Korrektur T2** warten auf Freigabe (alt 6.12).
+- Restliche Design-Vorschläge (alt 6.3): Prompt-Feld mit `ThinScrollbar`, runde Radios und echte Checkbox im PhotoCraft-Look, gesperrte Felder ausblenden oder einheitlich grau, „Image and mask“ ohne Rahmen, Tipp-Text gedämpft mit Info-Icon (Icon liegt im Vorschaublatt), Fortschrittsbalken nach „Done“ neutral, Raster 4/8 px. Teilweise überholt durch A.10.
 
 ## 7. Befunde zum Weitergeben
-- **Gleicher Seed, anderes Bild (Flux 2, Flux2Scheduler):** Die zwei Läufe um 21:42 hatten denselben Graphen; nur das Eingangsbild war anders. Edit schickt das sichtbare Dokument, und nach Lauf 1 lag dessen Ergebnis als sichtbare Ebene obenauf. Gegenprobe für den Nutzer: Generieren, Undo, gleicher Seed noch einmal. Flux2Scheduler ist laut Nutzer der beste der drei getesteten.
-- **Branches löschen** ändert nichts am Code: Ein Branch ist nur ein Namensschild für einen Stand. Nach dem Merge steckt alles in `next`; ohne Löschen wird nur die Liste länger. `git branch -d` verweigert das Löschen, solange etwas nicht gemergt ist.
+- **Gleicher Seed, anderes Bild (Flux 2):** Edit schickt das sichtbare Dokument; nach Lauf 1 lag dessen Ergebnis obenauf. Gegenprobe: Generieren, Undo, gleicher Seed noch einmal.
+- **Branches löschen** ändert nichts am Code: Ein Branch ist nur ein Namensschild; nach dem Merge steckt alles in `next`.
+- **flux2-vae:** die Kopie in `Comfy-Org/Flux-2-Dev` ist bytegleich mit der des Nutzers; die in den Klein/MOSS/Fibo-Repos sind 2264 Byte kleiner (anderer Dateikopf) und laden genauso.
+- **Lizenzen für den Release:** Fibo 2.0 (CC BY-NC) und die FLUX.2-Dateien nur nicht-kommerziell; Lenovo UltraReal (Civitai) verlangt Nennung von Danrisi; Lucide-Icons (ISC) nennen.
 
 ## 8. Live-Tests, die noch offen sind
-- Neuer Nutzer: `photocraft-ai neuer-nutzer.bat`, Varianten 1 bis 4 (Startzustände, Einstellungen ohne Modelle).
+- **Neu aus dieser Sitzung:** Papierkorb + Strg+Z; Knopfzeile über dem Prompt; nur ein leerer Slot; „Add file“ mit PhotoCraft daneben (kein Doppelbild mehr?); Bild auf ein gefülltes Slot-Bild ziehen (auch mehrere); Icons unter der Maus orange, gesperrt grau; Spinbox-Chevrons klickbar; Slider ziehen/klicken, gesperrt grau; alles bei 150 %.
+- Neuer Nutzer: `photocraft-ai neuer-nutzer.bat`, Varianten 1 bis 4.
 - Flux 2 Text-to-Image mit und ohne Enhancer.
 - Scrollbalken im echten Betrieb (Advanced offen, Qwen mit vielen Slots, 150 %).
 - Beschreiben: erste Zeile, Ersetzen, von Hand geänderte Zeile bleibt.
-- Flux-3- und Krea-2-Expand nach den Änderungen aus 6.10/6.11.
-Bestätigt: Slot-Icons, Tags beim Modellwechsel, Qwen 2/4/8, Zahnrad/Fußzeile bei 380 px, Tab-Farben, Einstellungsfenster beim Schließen von PhotoCraft, 150 % Skalierung, Tipp-Text, zentrierter Tag, Flux-2-Scheduler-Auswahl.
+- Flux-3- und Krea-2-Expand nach den Änderungen aus E.
+Bestätigt: Slot-Icons, Tags beim Modellwechsel, Qwen 2/4/8, Zahnrad/Fußzeile bei 380 px, Tab-Farben, Einstellungsfenster beim Schließen von PhotoCraft, 150 % Skalierung, Tipp-Text, zentrierter Tag, Flux-2-Scheduler-Auswahl, Tipp-Wortlaut Text to image.
 
 ## 9. Danach (Plan)
-1. Aufgaben aus Abschnitt 6 (Reihenfolge mit dem Nutzer klären; Vorschlag: 5, 6, 4, 9, dann 1–3 als ein UI-Durchgang, dann 7, 8, 10, 11).
-2. **L3 Fenster-Politur**: Hide/Show (Einklappen zur Titelleiste), Rechtsklick-Menü auf Tabs (Favorit, ausblenden, Workflow-JSON speichern), „Copy canvas to clipboard“, alten Knopf „Insert reference image“ entfernen (prüfen, ob noch sichtbar). Icons und Slider aus 6.1/6.2 gehören dazu.
+1. Aufgaben aus Abschnitt 6 in der Reihenfolge A, B, C, D, E.
+2. **L3 Fenster-Politur**: Hide/Show (Einklappen zur Titelleiste), Rechtsklick-Menü auf Tabs (Favorit, ausblenden, Workflow-JSON speichern), „Copy canvas to clipboard“, alten Knopf „Insert reference image“ entfernen (prüfen, ob noch sichtbar).
 3. OpenFill-Ideen (T1 PhotoCraft-Befehle, T3a Live-Vorschau, T3b Verlauf, T2 Seam-Korrektur).
 4. Flux-3-Boxen (Entscheidung offen: A Textlauf von `Flux3LayoutPrompt` zuerst, B Knoten in den Workflow, C nur von Hand; Notizen `docs/flux3-bbox-workflow-notes.md`).
 5. L4 Inhalte (Krea-Styles, Tipps, Tutorial-PSDs), dann **Easy Mode** zuletzt.
-6. Vor dem Release: neues Repo, Credits (Upstream, Lucide-Icons, Modelle), README-Windows, Release-Prüfung auf 16 GB. Offen: `photocraft-ai.bat` auf 0.15.1 angleichen?
+6. Vor dem Release: neues Repo, Credits (Upstream, Lucide-Icons, Modelle, Danrisi), README-Windows, Release-Prüfung auf 16 GB. Offen: `photocraft-ai.bat` auf 0.15.1 angleichen?
