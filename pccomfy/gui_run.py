@@ -29,7 +29,7 @@ class RunMixin:
         spec = m.modes.get(self.v_mode.get()) if m else None
         target = p.prompt if (self.v_mode.get() == "remove" and spec is not None and spec.remove_text) else ""
         return Request(mode=self._run_mode(), params=p, remove_target=target, workflow=wf_path, base_res=int(self.v_res.get()),
-                       context=float(self.v_context.get()), mask_grow=int(self.v_grow.get()),
+                       context=min(1.0, max(0.0, round(float(self.v_context.get()) * 20) / 20)),   # the slider's range and steps (an old saved 2.0 too) mask_grow=int(self.v_grow.get()),
                        mask_blur=int(self.v_blur.get()),
                        overlap=int(self.v_overlap.get()), variants=int(self.v_variants.get()),
                        fooocus=bool(self.v_fooocus.get()), enhance=bool(self.v_enhance.get()) and self.v_mode.get() != "outpaint",

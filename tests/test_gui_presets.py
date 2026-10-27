@@ -22,12 +22,18 @@ class TclError(Exception):
 class Var:
     def __init__(self, master=None, value=None, **k):
         self._v = value
+        self._traces = []
 
     def get(self):
         return self._v
 
     def set(self, v):
         self._v = v
+        for cb in list(getattr(self, "_traces", [])):
+            cb("", "", "write")
+
+    def trace_add(self, mode, cb):
+        self._traces.append(cb)
 
 
 class IntVar(Var):

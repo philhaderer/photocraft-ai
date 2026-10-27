@@ -368,6 +368,25 @@ class ModeMixin:
         st = self._stages()
         return st[0]["label"] if st else ""
 
+    def _on_context(self, _value=None):
+        """The Context slider moved: it goes in steps of 0.05."""
+        try:
+            v = float(self.v_context.get())
+        except (tk.TclError, ValueError):
+            return
+        snapped = min(1.0, max(0.0, round(v * 20) / 20))
+        if abs(snapped - v) > 1e-9:
+            self.v_context.set(snapped)
+        self._show_context()
+
+    def _show_context(self):
+        box = getattr(self, "lbl_context", None)
+        if box is not None:
+            try:
+                box.configure(text=f"{float(self.v_context.get()):.2f}")
+            except (tk.TclError, ValueError):
+                pass
+
     def _on_feather(self, _value=None):
         v = round(float(self.v_feather.get()) * 2) / 2
         self.lbl_feather.configure(text="hard edge" if v <= 0 else f"{v:g} %")
