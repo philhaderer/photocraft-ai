@@ -51,7 +51,16 @@ MODE_TIPS = {      # for a workflow of your own (no model tab); the tabs show th
 EXPAND_HINT = "Try removing the prompt for expanding"
 BUILTIN = "Built-in (checkpoint)"
 PROMPT_LINES = 5     # height of the prompt field in lines (it can be dragged taller or smaller)
-LAYER_MASKS = {"auto": "auto (recommended)", "soft": "soft", "selection": "hard (from selection)", "none": "none"}
+LAYER_MASKS = {"soft": "soft", "selection": "hard (from selection)", "none": "none"}
+# "auto" left the menu (28.10., the user's choice: each model's function starts with its own value); a preset or saved
+# state that still says "auto" opens as soft
+
+
+def layer_mask_key(shown_or_key: str) -> str:
+    """The layer mask's key ("soft", "selection", "none") from what the menu shows or what was saved."""
+    if shown_or_key in LAYER_MASKS:
+        return shown_or_key
+    return {v: k for k, v in LAYER_MASKS.items()}.get(shown_or_key, "soft")
 
 def word_left(before: str) -> int:
     """How many characters Ctrl+Left moves back, as in an editor: over spaces/punctuation/line breaks, then over the word."""
@@ -655,6 +664,7 @@ __all__ = [
     "BUILTIN",
     "PROMPT_LINES",
     "LAYER_MASKS",
+    "layer_mask_key",
     "word_left",
     "word_right",
     "_arrow_icon",

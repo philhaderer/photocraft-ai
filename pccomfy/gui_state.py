@@ -82,7 +82,7 @@ class StateMixin:
             "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
             "turbo": bool(self.v_turbo.get()), "stage_on": bool(self.v_stage.get()), "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "stage_strengths": [round(float(v.get()), 2) for v in self.v_sstr], "loras": self._loras(), "sharpen": round(float(self.v_sharpen.get()), 2), "match": round(float(self.v_match.get()), 2), "detail": round(float(self.v_detail.get()), 2),
             "lora_strength": round(float(self.v_lora_str.get()), 2),
-            "layer_mask": {v: k for k, v in LAYER_MASKS.items()}.get(self.v_lmask.get(), "auto"),
+            "layer_mask": layer_mask_key(self.v_lmask.get()),
             "feather_pct": round(float(self.v_feather.get()), 1),
             "prompt": self._prompt_text(), "negative": self.t_neg.get("1.0", "end").strip(),
         }
@@ -160,7 +160,7 @@ class StateMixin:
         put(self.v_feather, "feather_pct", float)
         self._on_feather()
         if "layer_mask" in s:
-            self.v_lmask.set(LAYER_MASKS.get(s["layer_mask"], LAYER_MASKS["auto"]))
+            self.v_lmask.set(LAYER_MASKS[layer_mask_key(s["layer_mask"])])
         self._update_feather_state()
         for widget, key in ((self.t_prompt, "prompt"), (self.t_neg, "negative")):
             # an empty prompt in a preset means "not part of the preset": never wipe what was typed

@@ -206,6 +206,16 @@ def main():
     assert mm["qwen"].modes["remove"].settings["feather_pct"] == 10.0 and mm["fibo"].modes["inpaint"].settings["feather_pct"] == 10.0
     assert mm["fibo"].modes["inpaint"].settings["layer_mask"] == "soft" == mm["qwen"].modes["inpaint"].settings["layer_mask"]   # soft edge outside the selection (28.10.)
     assert mm["flux3"].modes["txt2img"].settings["enhance"] is False
+    # "auto" left the menu (28.10.): no mode uses it, and Expand keeps exactly what "auto" gave it before
+    from pccomfy.bridge import effective_layer_mask, is_editor
+    from pccomfy import workflows as _wfs
+    for m in models.MODELS:
+        for key, spec in m.modes.items():
+            assert spec.settings.get("layer_mask") != "auto", (m.key, key)
+        if "outpaint" in m.modes:
+            spec = m.modes["outpaint"]
+            ed = is_editor(_wfs.resolve(str(t.ROOT / "workflows" / spec.workflow)))
+            assert spec.settings["layer_mask"] == effective_layer_mask("auto", "outpaint", ed, True), m.key
     assert mm["qwen"].modes["inpaint"].prompt_tip == mm["fibo"].modes["inpaint"].prompt_tip == models.FILL_TIP   # the user's wording
     assert [p[0] for p in mm["flux2"].modes["refine"].prompts] == ["Default", "Neutral", "Studio portrait"]
     assert mm["flux3"].modes["upscale"].prompts == () and mm["flux2"].modes["upscale"].prompts == ()   # Flux 3: the workflow's own prompt only
