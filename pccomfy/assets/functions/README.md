@@ -1,7 +1,7 @@
 # Function symbols
 
-One PNG per function button, named after the function's key. Until a file is here, the button shows a placeholder
-(a rounded square).
+Optional: one PNG per function button, named after the function's key. Without a file the button shows its built-in
+symbol (`fn-<key>` in pccomfy/icons.py; Image → image, only for a workflow of your own, shows a rounded square).
 
 | File | Button |
 |---|---|
