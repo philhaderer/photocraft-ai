@@ -71,7 +71,7 @@ class LoraMixin:
                 box = ttk.Frame(self.f_xl_rows)
                 lb = tk.Listbox(box, height=8, exportselection=False, activestyle="none", bg=PANEL, fg=FG,
                                 selectbackground=ACCENT, selectforeground="#1b1b1b", relief="flat", highlightthickness=1,
-                                highlightbackground="#454545", font=(FONT, 9))
+                                highlightbackground="#454545", font=font(9))
                 sb = ttk.Scrollbar(box, orient="vertical", command=lb.yview)
                 lb.configure(yscrollcommand=sb.set)
                 sb.pack(side="right", fill="y")
