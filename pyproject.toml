@@ -21,4 +21,4 @@ build-backend = "setuptools.build_meta"
 packages = ["pccomfy"]
 
 [tool.setuptools.package-data]
-pccomfy = ["assets/*.png"]     # button icons (undo.png; redo is the mirrored undo)
+pccomfy = ["assets/*.png", "assets/functions/*.png"]     # button icons (undo.png; redo is the mirrored undo)

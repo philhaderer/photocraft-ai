@@ -67,27 +67,59 @@ class ModeMixin:
     def _model(self):
         return models.BY_KEY.get(self.v_model.get())
 
+    def _custom_workflow(self) -> bool:
+        """A workflow of your own is chosen (no model): every function is offered as it is."""
+        return not self.v_model.get() and self.v_workflow.get() not in ("", BUILTIN)
+
     def _update_mode_radios(self):
-        """Only what the chosen model does well can be picked (the rest is greyed out in its place); a model-less workflow
-        of your own keeps everything. The buttons follow each other without gaps, two per row."""
+        """The functions are always there (two per row); "Image -> image" only for a workflow of your own. Below them, a
+        model that cannot do the chosen function is greyed out in its place (_update_model_chips)."""
         m = self._model()
         shown = []
         for key, _label in MODE_LABELS:
             rb = self.rb_modes[key]
-            if key == "img2img" and m is not None:
-                rb.grid_remove()           # nothing in the tabs uses it
+            if key == "img2img" and not self._custom_workflow():
+                rb.grid_remove()           # no model uses it
                 continue
-            rb.configure(state="normal" if (m is None or key in m.modes) else "disabled")
+            rb.configure(state="normal")
             self.tt_modes[key].text = (m.mode_tips.get(key) if m is not None else None) or MODE_TIPS[key]
             shown.append(key)
         for i, key in enumerate(shown):
-            self.rb_modes[key].grid(row=i // 2, column=i % 2, sticky="w", padx=(0, 16), pady=1)
+            self.rb_modes[key].grid(row=i // 2, column=i % 2, sticky="ew", padx=2, pady=2)
+        self._update_model_chips()
+
+    def _update_model_chips(self):
+        mode = self.v_mode.get()
+        for m in models.MODELS:
+            rb = self.rb_tabs.get(m.key)
+            if rb is not None:
+                rb.configure(state="normal" if (mode in m.modes or self._custom_workflow()) else "disabled")
+
+    def _model_for_mode(self, mode: str) -> str:
+        """The model a function opens with when the chosen one cannot do it: the one last used for it, else the first in
+        the fixed order (Easy Mode will choose the best one later). A model whose files are missing comes last."""
+        usable = [m.key for m in models.MODELS if mode in m.modes]
+        if not usable:
+            return ""
+        last = self.__dict__.setdefault("_mode_model", dict(self.state.get("model_by_mode") or {})).get(mode)
+        ok = getattr(self, "_model_usable", lambda key, mode: True)
+        for key in ([last] if last in usable else []) + usable:
+            if ok(key, mode):
+                return key
+        return usable[0]
+
+    def _remember_model_for_mode(self):
+        key, mode = self.v_model.get(), self.v_mode.get()
+        if key and not getattr(self, "_booting", False):
+            mm = self.__dict__.setdefault("_mode_model", dict(self.state.get("model_by_mode") or {}))
+            mm[mode] = key
 
     def _on_model(self):
-        """A tab was clicked: keep the mode when the model has it, else its first one; start with the model's settings."""
+        """A model was clicked: keep the function when the model has it, else its first one; start with the model's settings."""
         m = self._model()
         if m is None:
             return
+        self._remember_model_for_mode()
         self._reset_detail()
         if self.v_mode.get() not in m.modes:
             self.v_mode.set(next(iter(m.modes)))
@@ -165,6 +197,17 @@ class ModeMixin:
             self._on_detail()
 
     def _on_mode(self):
+        """A function was clicked. When the chosen model cannot do it (or none is chosen yet), the function picks its model
+        (_model_for_mode) and opens with that model's settings; otherwise the model stays."""
+        m = self._model()
+        mode = self.v_mode.get()
+        if not getattr(self, "_booting", False) and not self._custom_workflow() and (m is None or mode not in m.modes):
+            key = self._model_for_mode(mode)
+            if key:
+                self.v_model.set(key)
+                self._on_model()
+                return
+        self._remember_model_for_mode()
         self._reset_detail()
         if self.v_model.get():
             self._apply_model_mode()

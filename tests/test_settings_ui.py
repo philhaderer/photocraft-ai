@@ -132,7 +132,7 @@ def test_empty_view():
     all_foot = {"lbl_conn", "b_refresh", "b_reset"}
 
     app._apply_start_state()
-    assert on() == {"f_tabs", "lbl_empty"} | all_foot and app.v_empty.get() == "Choose a model"       # tabs + one sentence + footer, no body
+    assert on() == {"f_tabs", "lbl_empty"} | all_foot and app.v_empty.get() == "Choose a function"       # tabs + one sentence + footer, no body
     app._apply_refresh(det(inventory.Inventory({})))
     assert on() == {"lbl_empty"} and app.v_empty.get() == "Link your model in the settings"          # nothing linked: sentence + gear only
     app._apply_refresh(det(inventory.Inventory(td.full_lists(), NODES)))
@@ -150,7 +150,7 @@ def test_empty_view():
     app.v_workflow.set(gui.BUILTIN)
     assert app.start_state() == "choose"
     app.generate()
-    assert called == [] and app.v_status.get() == "Choose a model first."
+    assert called == [] and app.v_status.get() == "Choose a function first."
     print("ok empty view")
 
 
@@ -185,20 +185,24 @@ def main():
     app.v_mode.set("edit")
     app._on_model()
     assert app.v_model.get() == "flux3" and app._last_model == "flux3"
-    assert [k for k in models.FLUX3.modes if app.rb_modes[k]["state"] == "normal"] == list(models.FLUX3.modes)    # nothing read yet: nothing greyed
+    assert all(app.rb_modes[k]["state"] == "normal" for k in models.FLUX3.modes)    # functions are never greyed
+    assert [k for k, rb in app.rb_tabs.items() if rb["state"] == "normal"] == [m.key for m in models.MODELS if "edit" in m.modes]   # models that cannot edit are
 
     # a full install: nothing is grey, no extra tooltip text
     app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(td.full_lists(), NODES), "_yaml": [], "_disk": {}})
-    assert all(rb["style"] == "Tab.Toolbutton" for rb in app.rb_tabs.values())
+    assert all(rb["style"] == "Chip.Toolbutton" for rb in app.rb_tabs.values())
     assert app.tt_tabs["flux3"].text == models.FLUX3.tip
     assert app.comfy.name_fixer is not None
     assert app._preflight() == []
 
-    # SeedVR2 missing: Flux 3 stays a normal tab, only Upscale is greyed and says why
+    # SeedVR2 missing: Flux 3 stays a normal chip for Edit; for Upscale its chip turns red, the tooltip says why
     inv = inventory.Inventory(lists_without(unet="seedvr2_3b_int8_convrot.safetensors"), NODES)
     app._apply_refresh({"_detect": True, "_inv": inv, "_yaml": [], "_disk": {}})
-    assert app.rb_tabs["flux3"]["style"] == "Tab.Toolbutton"
-    assert app.rb_modes["upscale"]["state"] == "disabled" and app.rb_modes["edit"]["state"] == "normal"
+    assert app.rb_tabs["flux3"]["style"] == "Chip.Toolbutton"
+    assert app.rb_modes["upscale"]["state"] == "normal" and app.rb_modes["edit"]["state"] == "normal"
+    app.v_mode.set("upscale"); app._update_mode_radios()
+    assert app.rb_tabs["flux3"]["style"] == "Missing.Chip.Toolbutton" and app.rb_tabs["qwen"]["state"] == "disabled"
+    app.v_mode.set("edit"); app._update_mode_radios()
     assert "Missing for Upscale (new file): seedvr2_3b_int8_convrot.safetensors. Set in settings" in app.tt_modes["upscale"].text
     assert app.tt_modes["upscale"].text.startswith(models.FLUX3.mode_tips["upscale"])
     assert "Missing for Upscale" in app.tt_tabs["flux3"].text and app.tt_tabs["flux3"].text.startswith(models.FLUX3.tip)
@@ -208,7 +212,7 @@ def main():
     # Krea 2's VAE missing: the tab is grey, its tooltip says what; the Flux 3 tab is still the selected one
     inv = inventory.Inventory(lists_without(vae="qwen_image_vae.safetensors"), NODES)
     app._apply_refresh({"_detect": True, "_inv": inv, "_yaml": [], "_disk": {}})
-    assert app.rb_tabs["krea2"]["style"] == "Missing.Tab.Toolbutton" and app.rb_tabs["flux3"]["style"] == "Tab.Toolbutton"
+    assert app.rb_tabs["krea2"]["style"] == "Missing.Chip.Toolbutton" and app.rb_tabs["flux3"]["style"] == "Chip.Toolbutton"
     assert app.tt_tabs["krea2"].text == models.KREA2.tip + "\n\nMissing: qwen_image_vae.safetensors. Set in settings (gear)."
     assert app.rb_modes["upscale"]["state"] == "normal"            # the SeedVR2 problem is gone with the new reading
 
@@ -239,14 +243,14 @@ def main():
     # the cached reading is old: the file was copied and ComfyUI restarted. One fresh look lets the run through
     app.comfy = td.FakeComfy(td.full_lists())
     app.generate()
-    assert called == ["krea2"] and app.rb_tabs["krea2"]["style"] == "Tab.Toolbutton" and app.inv.tab_status("krea2").state == "ready"
+    assert called == ["krea2"] and app.rb_tabs["krea2"]["style"] == "Chip.Toolbutton" and app.inv.tab_status("krea2").state == "ready"
 
     # a workflow of your own (no tab) and an unreachable ComfyUI never stop a run
     app.v_model.set("")
     app.generate()
     assert called == ["krea2", ""]
     app._apply_refresh({"_detect": True, "_inv": None, "_inv_error": "No connection to ComfyUI", "_yaml": [], "_disk": {}})
-    assert app.inv is None and app.comfy.name_fixer is None and all(rb["style"] == "Tab.Toolbutton" for rb in app.rb_tabs.values())
+    assert app.inv is None and app.comfy.name_fixer is None and all(rb["style"] == "Chip.Toolbutton" for rb in app.rb_tabs.values())
     app.v_model.set("krea2")
     app.generate()
     assert called == ["krea2", "", "krea2"]
@@ -271,7 +275,7 @@ def main():
     lists["vae"].remove("flux2-vae.safetensors")
     lists["vae"].append("my_vae.safetensors")
     app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists, NODES), "_yaml": [], "_disk": {}})
-    assert app.rb_tabs["flux3"]["style"] == "Missing.Tab.Toolbutton" and app.rb_tabs["fibo"]["style"] == "Missing.Tab.Toolbutton"
+    assert app.rb_tabs["flux3"]["style"] == "Missing.Chip.Toolbutton" and app.rb_tabs["fibo"]["style"] == "Missing.Chip.Toolbutton"
     app.open_settings()
     exp, avail = app._link_choices()
     assert "flux2-vae.safetensors" in exp and "my_vae.safetensors" in avail["vae"]
@@ -301,14 +305,14 @@ def main():
     app._link_models()
     assert cfgmod.model_map() == {"flux2-vae.safetensors": "my_vae.safetensors"}
     assert "flux2-vae.safetensors  (your file: my_vae.safetensors)" in "".join(s for s, _st, _u in app._settings_segments())
-    assert app.rb_tabs["flux3"]["style"] == "Tab.Toolbutton" and app.inv.tab_status("flux3").state == "ready"
+    assert app.rb_tabs["flux3"]["style"] == "Chip.Toolbutton" and app.inv.tab_status("flux3").state == "ready"
     g = {"1": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae.safetensors"}}}
     app.comfy.name_fixer(g)
     assert g["1"]["inputs"]["vae_name"] == "my_vae.safetensors"
     assert "flux2-vae.safetensors  \u2192  my_vae.safetensors" in "".join(s for s, _st, _u in app._settings_segments())
     app.v_link_exp.set("flux2-vae.safetensors")
     app._unlink_model()
-    assert cfgmod.model_map() == {} and app.rb_tabs["flux3"]["style"] == "Missing.Tab.Toolbutton"
+    assert cfgmod.model_map() == {} and app.rb_tabs["flux3"]["style"] == "Missing.Chip.Toolbutton"
     app._link_models()          # nothing chosen below: nothing happens
     app._settings_close()
 

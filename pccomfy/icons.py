@@ -75,6 +75,7 @@ _UNDO = [[(9, 14), (4, 9), (9, 4)], [(4, 9), (14.5, 9)] + _arc(14.5, 14.5, 5.5, 
 _SAVE = [[(5, 3), (15.2, 3), (21, 8.8), (21, 19)] + _arc(19, 19, 2, 0, 90) + [(5, 21)] + _arc(5, 19, 2, 90, 180)
          + [(3, 5)] + _arc(5, 5, 2, 180, 270)]
 SHAPES.update({
+    "placeholder": [_rrect(4, 4, 16, 16, 3)],      # a function symbol until the user delivers his own (assets/functions)
     "plus": [[(5, 12), (19, 12)], [(12, 5), (12, 19)]],
     "gear": _gear(),
     "undo": _UNDO,
@@ -103,6 +104,21 @@ def render(kind: str, color: str, px: int) -> Image.Image:
         for x, y in pts:                     # round ends and joins
             d.ellipse([x - w / 2, y - w / 2, x + w / 2, y + w / 2], fill=color)
     return im.resize((px, px), Image.LANCZOS)
+
+
+def from_file(path, color: str, px: int) -> Image.Image:
+    """A picture file of the user (a function symbol, pccomfy/assets/functions/<key>.png) as an icon in `color`: its
+    shape is taken from the alpha channel (or, without transparency, from the dark pixels) and filled with the colour."""
+    src = Image.open(path).convert("RGBA")
+    alpha = src.getchannel("A")
+    if alpha.getextrema() == (255, 255):            # no transparency: dark pixels are the shape
+        alpha = src.convert("L").point(lambda v: 255 - v)
+    src.thumbnail((px, px), Image.LANCZOS)
+    alpha = alpha.resize(src.size, Image.LANCZOS)
+    out = Image.new("RGBA", (px, px), (0, 0, 0, 0))
+    fill = Image.new("RGBA", src.size, color)
+    out.paste(fill, ((px - src.width) // 2, (px - src.height) // 2), alpha)
+    return out
 
 
 def spin_arrow(up: bool, color: str, px: int) -> Image.Image:

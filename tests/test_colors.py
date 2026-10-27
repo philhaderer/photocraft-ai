@@ -52,7 +52,7 @@ def main():
     gui.App(cfgmod.load())
     s = RecStyle.seen
     assert s["Tab.Toolbutton"]["background"] == gui.PANEL
-    assert s["Missing.Tab.Toolbutton"] == {"foreground": gui.NA_RED}, s["Missing.Tab.Toolbutton"]
+    assert s["Missing.Chip.Toolbutton"] == {"foreground": gui.NA_RED}, s["Missing.Chip.Toolbutton"]
     print("ok")
 
 
