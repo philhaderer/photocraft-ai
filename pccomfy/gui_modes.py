@@ -296,6 +296,11 @@ class ModeMixin:
                 self.f_feather.pack(fill="x", pady=(2, 0))
         elif not on and shown:
             self.f_feather.pack_forget()
+        if getattr(self, "_fprev_on", False):    # the feather preview follows: new settings shown, or ended with the slider
+            if on:
+                self._refresh_feather_preview()
+            else:
+                self.toggle_feather_preview(show=False)
         if on != shown and getattr(self, "_sized", False):
             self._fit_height()
 
@@ -355,6 +360,7 @@ class ModeMixin:
     def _on_feather(self, _value=None):
         v = round(float(self.v_feather.get()) * 2) / 2
         self.lbl_feather.configure(text="hard edge" if v <= 0 else f"{v:g} %")
+        self._refresh_feather_preview()
 
     def _wf_has_upscale(self, name: str) -> bool:
         if name == BUILTIN:

@@ -34,6 +34,7 @@ class Doc:
     def __init__(self, name, layers, sel=None):
         self.name, self.layers, self.sel, self.active = name, layers, sel, None  # layers: bottom first {id, img, visible}
         self.last_sel, self.channels, self.raw = None, {}, None   # select.reselect, saved selections, an opened file's own pixels
+        self.quick = None   # Quick Mask mode: the selection it shows (PhotoCraft reports no selection meanwhile)
 
 
 class FakePC:
@@ -76,7 +77,7 @@ class FakePC:
 
     def document(self):
         d = self.doc
-        return {"width": W, "height": H, "hasSelection": d.sel is not None, "activeLayer": d.active,
+        return {"width": W, "height": H, "hasSelection": d.sel is not None, "activeLayer": d.active, "quickMask": d.quick is not None,
                 "layers": [{"id": l["id"], "visible": l["visible"], "name": l.get("name", "Layer"), "hasMask": l.get("mask") is not None,
                             **({"kind": "Group", "children": [{"id": m["id"], "name": m.get("name"), "visible": m["visible"]}
                                                              for m in reversed(l["members"])]} if "members" in l else {})}
@@ -152,6 +153,13 @@ class FakePC:
             else:
                 d.sel = d.channels[params["channel"]].copy()
             return {"selected": True}
+        elif cmd == "select.editInQuickMaskMode":    # like PhotoCraft: on = the selection becomes the red overlay, off = back
+            on = params.get("on", d.quick is None)
+            if on and d.quick is None:
+                d.quick, d.sel = (d.sel.copy() if d.sel is not None else Image.new("L", (W, H), 0)), None
+            elif not on and d.quick is not None:
+                d.sel, d.quick = d.quick, None
+            return {"quickMask": d.quick is not None}
         elif cmd == "channel.delete":
             del d.channels[params["channel"]]
         elif cmd == "layer.layerMask.revealSelection":   # like PhotoCraft: the selection becomes the mask and is gone
