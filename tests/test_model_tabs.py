@@ -195,7 +195,7 @@ def main():
     app.v_model.set("qwen")
     app.v_mode.set("inpaint")
     app._on_model()
-    assert app.t_prompt["highlightbackground"] != gui.ACCENT     # Fill has no tip: the plain frame
+    assert app._hint_text == models.FILL_TIP and app.t_prompt["highlightbackground"] == gui.ACCENT   # Fill: the tip under the prompt (28.10.)
     app.v_model.set("flux2")
     app.v_mode.set("txt2img")
     app._on_model()
@@ -206,6 +206,7 @@ def main():
     assert mm["qwen"].modes["remove"].settings["feather_pct"] == 10.0 and mm["fibo"].modes["inpaint"].settings["feather_pct"] == 10.0
     assert mm["fibo"].modes["inpaint"].settings["layer_mask"] == "auto" == mm["qwen"].modes["inpaint"].settings["layer_mask"]   # live test 28.10.: soft blurred the outer edge of the fill
     assert mm["flux3"].modes["txt2img"].settings["enhance"] is False
+    assert mm["qwen"].modes["inpaint"].prompt_tip == mm["fibo"].modes["inpaint"].prompt_tip == models.FILL_TIP   # the user's wording
     assert [p[0] for p in mm["flux2"].modes["refine"].prompts] == ["Default", "Neutral", "Studio portrait"]
     assert mm["flux3"].modes["upscale"].prompts == () and mm["flux2"].modes["upscale"].prompts == ()   # Flux 3: the workflow's own prompt only
     # the prompt a refine starts with is the one the workflow sends by default
