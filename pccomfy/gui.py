@@ -376,7 +376,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.f_scale.columnconfigure(0, weight=1)
         self.f_detail = ttk.Frame(r)      # Upscale and Refine
         self._slider_row(self.f_detail)
-        ttk.Label(self.f_detail, text="Mix source image/new image", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(self.f_detail, text="Mix Source/New Image", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
         self.w_detail = Slider(self.f_detail, scale=self.ui, from_=0.0, to=1.0, variable=self.v_detail, command=self._on_detail,
                                length=self._px(SLIDER_W))
         self.w_detail.grid(row=0, column=1, sticky="e", padx=8)

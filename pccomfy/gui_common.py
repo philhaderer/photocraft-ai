@@ -26,10 +26,10 @@ FILL_CONTEXT = 0.2   # Context (margin) that Fill Selection starts with
 
 MODE_LABELS = [
     ("txt2img", "Text to image"),
-    ("edit", "Edit whole image"),
+    ("outpaint", "Expand image"),
     ("inpaint", "Fill Selection"),
     ("remove", "Remove Selection"),
-    ("outpaint", "Expand image"),
+    ("edit", "Edit whole image"),
     ("multi_edit", "Multi Image Edit"),
     ("upscale", "Upscale (new file)"),
     ("refine", "Refine (same size)"),
@@ -461,8 +461,8 @@ SLIDER_W = 140     # px (before the display scaling) of every slider: all of the
 
 class ValueBox(ttk.Entry):
     """The value of a slider in a small dark box on its right (as in PhotoCraft), and you can type into it: Enter or
-    leaving the box takes the number (a % sign, a comma and "hard edge" are understood), kept inside the slider's range;
-    anything else puts the shown value back. `factor`: shown = value * factor (100 for the % sliders). `command` shows the
+    leaving the box takes the number, kept inside the slider's range (only digits and one decimal point or comma can be
+    typed; a click selects the whole value, so typing replaces it). `factor`: shown = value * factor (100 for the % sliders). `command` shows the
     value in its format, as after a drag. configure(text=...) shows a value, as the label it stands in for did."""
 
     def __init__(self, parent, slider, command, factor: float = 1.0):
@@ -472,6 +472,11 @@ class ValueBox(ttk.Entry):
         slider.box = self
         for ev in ("<Return>", "<KP_Enter>", "<FocusOut>"):
             self.bind(ev, self._commit)
+        self.bind("<FocusIn>", lambda e: self.after_idle(self._select_all))
+        try:
+            self.configure(validate="key", validatecommand=(self.register(self._typed_ok), "%S", "%P"))
+        except (AttributeError, tk.TclError):
+            pass
         self.bind("<Escape>", lambda e: self._cmd())
 
     def configure(self, cnf=None, **kw):
@@ -485,6 +490,24 @@ class ValueBox(ttk.Entry):
 
     def cget(self, key):
         return self._text.get() if key == "text" else super().cget(key)
+
+    def _select_all(self):
+        try:
+            self.selection_range(0, "end")
+            self.icursor("end")
+        except tk.TclError:
+            pass
+
+    @staticmethod
+    def _typed_ok(typed: str, after: str) -> bool:
+        """Only numbers: digits and one decimal point (or comma). The shown "4 %" / "hard edge" are set by the window, not
+        typed, and are replaced as a whole on the first key."""
+        if not typed:
+            return True                  # deleting is always fine
+        if any(c not in "0123456789.," for c in typed):
+            return False
+        num = "".join(c for c in after if c in "0123456789.,")
+        return sum(num.count(c) for c in ".,") <= 1
 
     def _commit(self, _e=None):
         s = self._slider

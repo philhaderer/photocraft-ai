@@ -16,7 +16,7 @@ gui, cfgmod = t.gui, t.cfgmod
 def main():
     keys = [k for k, _ in gui.MODE_LABELS]
     assert ("multi_edit", "Multi Image Edit") in gui.MODE_LABELS and "reference" not in keys
-    assert keys.index("multi_edit") == keys.index("outpaint") + 1        # where "Insert reference image" stood
+    assert keys.index("multi_edit") == keys.index("edit") + 1        # right of "Edit whole image" (Expand and Edit swapped 27.10.)
     app = gui.App(cfgmod.load())
     wfdir = Path(app.workflows_dir)
     wfdir.mkdir(parents=True, exist_ok=True)
