@@ -1,6 +1,6 @@
 # Handoff: PhotoCraft x ComfyUI Plugin (Stand 2026-10-27)
 
-Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiterzuarbeiten. Lies zusätzlich `CLAUDE.md` (Arbeitsweise, Regeln) und `PLAN.md` (Plan, Lanes; **Abschnitt 8 = aktuelle Aufgabenliste des Nutzers**). Die Sitzung vom 26./27.10. (Claude Code, Opus 5.5) hat diesen Stand geschrieben; die Aufgaben für den nächsten Chat stehen in **Abschnitt 6**.
+Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiterzuarbeiten. Lies zusätzlich `CLAUDE.md` (Arbeitsweise, Regeln) und `PLAN.md` (**Abschnitt 3 = die Arbeitsliste in ihrer Reihenfolge**; OpenFill-Ideen im Detail in `ideas.md`). Abschnitt 6 hier hält die Befunde und Optionen zu den Punkten der Liste vom 27.10.
 
 ## 1. Rolle und Regeln des Nutzers (immer)
 - Rolle: App-Programmierer, UI-Designer und ComfyUI-Experte. Der Nutzer schreibt Deutsch; erklärt wird in einfachem Deutsch, ohne Git-Jargon.
@@ -18,7 +18,7 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 ## 2. Repo und Git-Stand
 - Pfad `C:\programs\photocraft-comfyui-bridge`, Fork von Peszemeszek/photocraft-comfyui-bridge. Nur lokal, nichts gepusht.
 - Branches: `main` (Upstream), `windows-fibo` (abgenommener Stand 6aff33a), `refactor/split-gui` (Phase 0, in `next`), **`next` = Integrationsstand, den der Nutzer testet**.
-- Arbeits-Branches vom 26./27.10., alle in `next` gemergt und **noch nicht gelöscht** (Löschen nur nach Rückfrage): `feat/prompt-clear-and-t2i-tip`, `feat/generate-row-above-prompt`, `fix/one-empty-slot`, `fix/add-file-dialog-parent`, `feat/drop-replaces-slot`, `feat/window-icons`, `feat/photocraft-sliders`, `feat/model-download-links`, `docs/handoff-2026-10-27`, `docs/handoff-decisions`.
+- Arbeits-Branches vom 26./27.10., alle in `next` gemergt und **noch nicht gelöscht** (Löschen nur nach Rückfrage): `feat/prompt-clear-and-t2i-tip`, `feat/generate-row-above-prompt`, `fix/one-empty-slot`, `fix/add-file-dialog-parent`, `feat/drop-replaces-slot`, `feat/window-icons`, `feat/photocraft-sliders`, `feat/model-download-links`, `docs/handoff-2026-10-27`, `docs/handoff-decisions`; dazu aus der zweiten Sitzung 27.10.: `fix/layout-spacing`, `feat/footer-status`, `feat/slider-column`, `feat/advanced-settings`, `docs/list-a-done`, `fix/paste-above-adjustment-layer`, `feat/small-tweaks-2`, `fix/lora-row-gap`, `feat/refine-default-prompt`, `chore/shorter-lora-labels`, `docs/plan-cleanup`.
 - Tags: `backup-2026-10-26` (6df02df, vor Phase 0), `vor-claude-code` (65e955f).
 - Lane-Klone `lanes/L1`, `lanes/L2` sind Altlast (per `.git/info/exclude` ignoriert). Archiv: `docs/archiv-lanes/`.
 - Tests: `python tests/run_all.py` (39 Dateien, alle grün, ca. 16 s). Python des Nutzers: Pfad in `data/python.txt`.
@@ -26,8 +26,8 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 
 ## 3. Umgebung
 - ComfyUI: `C:\programs\ComfyUI-Easy-Install Cuda13\ComfyUI` (0.42.0), Modelle in `C:\AI_Models` (diffusion_models, clip, vae) und `D:\AI_Models\Lora`. RTX 4070 Ti Super (16 GB), 64 GB RAM. Release 1 nur 16 GB.
-- PhotoCraft 0.15.1 portable unter `C:\programs\photocraft-0.15.1-windows-x64-portable`.
-- **Echtes Fenster prüfen ohne PhotoCraft** (bewährt): ein Skript im Scratchpad setzt `PCCOMFY_HOME` auf einen Temp-Ordner, `gui.winlink.available = lambda: False`, baut `gui.App(cfgmod.load())`, wählt Tab/Modus und macht nach **8 s** (`root.after(8000, …)`, sonst läuft das Start-Refresh noch und setzt das Modell zurück) mit `PIL.ImageGrab` einen Screenshot des Fensters. Rote Meldung „Can't connect to PhotoCraft“ ist dabei normal.
+- PhotoCraft 0.15.1 portable unter `C:\programs\photocraft-0.15.1-windows-x64-portable`. Der Nutzer hat einen Starter `photocraft-ai 0.16.bat` (zeigt auf `photocraft-0.16.0-windows-x64-portable`) in den Repo-Ordner gelegt, ungetrackt: nicht anfassen, vor dem Einchecken fragen.
+- **Echtes Fenster prüfen ohne PhotoCraft** (nur, wenn der Nutzer es nicht selbst prüfen kann; Screenshots dauern ihm zu lange): ein Skript im Scratchpad setzt `PCCOMFY_HOME` auf einen Temp-Ordner, `gui.winlink.available = lambda: False`, baut `gui.App(cfgmod.load())`, wählt Tab/Modus und macht nach **8 s** (`root.after(8000, …)`, sonst läuft das Start-Refresh noch und setzt das Modell zurück) mit `PIL.ImageGrab` einen Screenshot des Fensters. Rote Meldung „Can't connect to PhotoCraft“ ist dabei normal.
 - Python des Nutzers hat veraltete Zertifikate für Civitai (SSL-Fehler): Civitai-API per PowerShell `Invoke-RestMethod` abfragen; Hugging Face geht auch aus Python.
 
 ## 4. Was gebaut und in `next` ist
@@ -44,6 +44,11 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 - **Slider im PhotoCraft-Look:** neues Widget `Slider` (gui_common.py, Canvas: dünne Spur, links hell `#e6e6e6`, rechts dunkel `#2a2a2a` → **muss `#686868` werden**, weißer Knopf mit Pillow geglättet); Wert rechts in einem Kästchen (`Value.TLabel`, Breite `VALUE_W = 9`). `_scale_clicks` und der TScale-Stil sind weg.
 - **Downloadlinks:** `manifest.py` hat für 23 von 24 Dateien direkte Links (HF `resolve/main`, Civitai-Download-API), Größe (`File.size`, `size_text`) und Lizenz-/Gated-Hinweis; geprüft per Größe und (wo nötig) SHA256 gegen die Kopien des Nutzers, jeder Link per HEAD. Tabelle: `docs/model-downloads.md`. Das Zahnrad-Fenster zeigt die Größe neben „download“.
 
+**Zweite Sitzung 27.10.:**
+- Liste A komplett (Abschnitt 6.A). Slider-Spur jetzt `#686868`; alle Slider `SLIDER_W` = 140 px rechts mit `ValueBox` (eintippbar, nur Ziffern und ein Komma/Punkt, Klick markiert alles).
+- **Korrekturebene oben:** Vor jedem Einfügen legt `_pixel_target` (bridge.py) eine leere Ebene `pccomfy-target-<tag>` an, das Ergebnis kommt darüber, die Hilfsebene wird gelöscht (vorher landete es in der Maske der Korrekturebene). Vom Nutzer live bestätigt.
+- **Flux 2 Refine** setzt beim Wählen immer „Default“ (ein Undo-Schritt im Feld). **Qwen:** Turbo in allen Funktionen anfangs aus. **Funktionen:** „Expand image“ und „Edit whole image“ getauscht (`MODE_LABELS`). Leere Zeile nach dem letzten Custom LoRA weg. Texte: „Mix Source/New Image“, „DMD2 LoRA (8 steps)“, „UltraReal LoRA“.
+
 ## 5. Entscheidungen des Nutzers (komplett)
 - Release 1 nur 16 GB, 8-GB-Empfehlungen nur Doku. Fast Mode gestrichen.
 - Krea 2 Expand und Flux 3 Expand: zum Testen an. Flux 3 Expand funktioniert; Krea 2 Expand nur einseitig brauchbar (alt 6.10). Endgültige Entscheidung steht aus.
@@ -54,6 +59,7 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 - Krea-Styles bis 50 per Bildauswahl; Tutorial-PSDs mit Testbild; Tooltips bei jedem Start.
 - Tipp-Wortlaut Text to image: abgenommen. Icons: 20 px (Slot-Icons 24 px). Drop auf mehrere Bilder: erstes ersetzt, Rest anhängen.
 - Strg+Z/Strg+Y: bleibt wie heute, keine Plugin-Tastenkürzel (27.10.). ComfyUI-Punkt: rot = nicht verbunden, grün = verbunden (27.10.).
+- 27.10. (zweite Sitzung): „PhotoCraft“ unten weg; Slider 140 px, Werte immer eintippbar, nur Ziffern; Qwen ohne Turbo; Expand/Edit getauscht; Flux 2 Refine startet auf „Default“; Screenshots nur, wenn der Nutzer etwas nicht selbst prüfen kann.
 - Branches: vor jedem Löschen fragen.
 
 ## 6. Aufgaben für den nächsten Chat (Liste des Nutzers vom 27.10., auch in PLAN.md 8)
@@ -100,7 +106,8 @@ Ursprüngliche Aufgaben:
 - **Lizenzen für den Release:** Fibo 2.0 (CC BY-NC) und die FLUX.2-Dateien nur nicht-kommerziell; Lenovo UltraReal (Civitai) verlangt Nennung von Danrisi; Lucide-Icons (ISC) nennen.
 
 ## 8. Live-Tests, die noch offen sind
-- **Neu aus dieser Sitzung:** Papierkorb + Strg+Z; Knopfzeile über dem Prompt; nur ein leerer Slot; „Add file“ mit PhotoCraft daneben (kein Doppelbild mehr?); Bild auf ein gefülltes Slot-Bild ziehen (auch mehrere); Icons unter der Maus orange, gesperrt grau; Spinbox-Chevrons klickbar; Slider ziehen/klicken, gesperrt grau; alles bei 150 %.
+- **Aus der zweiten Sitzung 27.10.:** Wert-Kästchen tippen (Enter, Wegklicken, nur Ziffern), Slider-Spalte bei 150 %, „Advanced settings“ mit Sharpen/Feather/Layer mask je Funktion, ComfyUI-Punkt grün/rot (ComfyUI beenden), Flux 2 Refine → „Default“ und Strg+Z, LoRA löschen ohne Leerzeile, Qwen ohne Turbo (Laufzeit, Qualität).
+- **Aus der ersten Sitzung 26./27.10.:** Papierkorb + Strg+Z; Knopfzeile über dem Prompt; nur ein leerer Slot; „Add file“ mit PhotoCraft daneben (kein Doppelbild mehr?); Bild auf ein gefülltes Slot-Bild ziehen (auch mehrere); Icons unter der Maus orange, gesperrt grau; Spinbox-Chevrons klickbar; Slider ziehen/klicken, gesperrt grau; alles bei 150 %.
 - Neuer Nutzer: `photocraft-ai neuer-nutzer.bat`, Varianten 1 bis 4.
 - Flux 2 Text-to-Image mit und ohne Enhancer.
 - Scrollbalken im echten Betrieb (Advanced offen, Qwen mit vielen Slots, 150 %).
@@ -109,9 +116,4 @@ Ursprüngliche Aufgaben:
 Bestätigt: Slot-Icons, Tags beim Modellwechsel, Qwen 2/4/8, Zahnrad/Fußzeile bei 380 px, Tab-Farben, Einstellungsfenster beim Schließen von PhotoCraft, 150 % Skalierung, Tipp-Text, zentrierter Tag, Flux-2-Scheduler-Auswahl, Tipp-Wortlaut Text to image.
 
 ## 9. Danach (Plan)
-1. Aufgaben aus Abschnitt 6 in der Reihenfolge A, B, C, D, E.
-2. **L3 Fenster-Politur**: Hide/Show (Einklappen zur Titelleiste), Rechtsklick-Menü auf Tabs (Favorit, ausblenden, Workflow-JSON speichern), „Copy canvas to clipboard“, alten Knopf „Insert reference image“ entfernen (prüfen, ob noch sichtbar).
-3. OpenFill-Ideen (T1 PhotoCraft-Befehle, T3a Live-Vorschau, T3b Verlauf, T2 Seam-Korrektur).
-4. Flux-3-Boxen (Entscheidung offen: A Textlauf von `Flux3LayoutPrompt` zuerst, B Knoten in den Workflow, C nur von Hand; Notizen `docs/flux3-bbox-workflow-notes.md`).
-5. L4 Inhalte (Krea-Styles, Tipps, Tutorial-PSDs), dann **Easy Mode** zuletzt.
-6. Vor dem Release: neues Repo, Credits (Upstream, Lucide-Icons, Modelle, Danrisi), README-Windows, Release-Prüfung auf 16 GB. Offen: `photocraft-ai.bat` auf 0.15.1 angleichen?
+Die Reihenfolge steht nur noch in `PLAN.md`, Abschnitt 3 (dort sind auch die OpenFill-Ideen aus `ideas.md` eingeplant). Als Nächstes: B.11 feste Startposition (zuerst mit dem Nutzer nachstellen).
