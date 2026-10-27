@@ -41,7 +41,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 
 **D. Recherche (nichts bauen, Ergebnis vorlegen)**
 4. ~~**Funktionen zuerst, Modell darunter?** (D.15)~~: **gebaut 27.10.** (`docs/ux-funktion-zuerst.md`). Entscheidung des Users: Funktionen oben als große Buttons mit Symbol, Modelle darunter als Umriss-Chips (alle sichtbar, unpassende grau), feste Reihenfolge; das beste Modell wählt später der Easy Mode. Offen: die Symbole des Users (`pccomfy/assets/functions/`, Platzhalter bis dahin).
-5. **UI-Fonts** (D.16): drei Vorschläge mit Lizenz, Windows-Verfügbarkeit, Tk-Tauglichkeit.
+5. **UI-Fonts** (D.16): **Recherche fertig 27.10.** (`docs/ui-schriften.md`, Vergleichsblatt `docs/ui-schriften.png`; Befund: PhotoCraft benutzt Inter). Entscheidung des Users offen: A Inter mitliefern (empfohlen), B Segoe UI Variable, C IBM Plex Sans, D Segoe UI bleibt.
 6. **PhotoCraft-Befehle prüfen** (OpenFill T1): Tabelle „Befehl → gibt es ihn → Folge für uns“ (Feather-Vorschau, Snapshots als ein Undo, Gruppen für Varianten, Crop über den Rand). Gegen die PhotoCraft-Version prüfen, die der User nutzt (0.15.1; ein Starter für 0.16 liegt im Repo-Ordner, ungetrackt).
 
 **E. Offen aus der alten Liste**
