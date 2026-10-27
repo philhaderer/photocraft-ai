@@ -400,14 +400,14 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.f_img.grid(row=7, column=0, columnspan=2, sticky="ew", pady=(8, 0))
         tips = {
             "Base res.": "Size (px) the model works at. Higher = more detail, slower.",
-            "Context": "Surroundings the model sees, as a fraction of the selection's longer side.",
+            "Context": "How much of the surroundings the model sees around your selection, as a share of the selection's "
+                       "longer side (0.4 = 40 % on each side). More often fits the new part better, but it takes longer.",
             "Mask grow": "Grows the model's mask by this many px (mask workflows only).",
             "Mask blur": "Softens the model's mask edge (mask workflows only).",
         }
         self.w_adv = {}
         self.l_adv = {}
         for i, (lbl, var, lo, hi, inc) in enumerate((("Base res.", self.v_res, 256, 2048, 64),
-                                                    ("Context", self.v_context, 0, 2, 0.1),
                                                     ("Mask grow", self.v_grow, 0, 128, 2),
                                                     ("Mask blur", self.v_blur, 0, 128, 2))):
             lb = ttk.Label(self.f_img, text=lbl, style="Muted.TLabel")
@@ -418,8 +418,27 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
             self.l_adv[lbl] = lb
             Tooltip(lb, tips[lbl])
             Tooltip(sp, tips[lbl])
+        # Context: a slider like the others (0 to 1 in steps of 0.05, the user's choice 28.10.), under the three boxes
+        fc = ttk.Frame(self.f_img)
+        fc.grid(row=2, column=0, columnspan=3, sticky="ew", padx=6, pady=(0, 6))
+        self._slider_row(fc)
+        lb = ttk.Label(fc, text="Context", style="Muted.TLabel")
+        lb.grid(row=0, column=0, sticky="w")
+        sc = Slider(fc, scale=self.ui, from_=0.0, to=1.0, variable=self.v_context, command=self._on_context,
+                    length=self._px(SLIDER_W))
+        sc.grid(row=0, column=1, sticky="e", padx=8)
+        self.lbl_context = ValueBox(fc, sc, self._on_context)
+        self.lbl_context.grid(row=0, column=2, sticky="e")
+        self.w_adv["Context"], self.l_adv["Context"] = sc, fc      # shown, hidden and greyed with the boxes above
+        for w in (lb, sc):
+            Tooltip(w, tips["Context"])
+        try:
+            self.v_context.trace_add("write", lambda *a: self._show_context())   # also after Reset, presets, a tab change
+        except (AttributeError, tk.TclError):
+            pass
+        self._show_context()
         self.cb_fooocus = ttk.Checkbutton(self.f_img, text="Fooocus inpaint (SDXL, as in Krita AI Diffusion)", variable=self.v_fooocus)
-        self.cb_fooocus.grid(row=2, column=0, columnspan=4, sticky="w", padx=6, pady=(0, 6))
+        self.cb_fooocus.grid(row=3, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 6))
         Tooltip(self.cb_fooocus, "Built-in SDXL inpaint graph only.")
         lm = ttk.Frame(self.f_post)     # under the edge feather (Advanced settings)
         self.f_lm = lm
