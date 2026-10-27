@@ -1,6 +1,6 @@
 # PLAN: PhotoCraft x ComfyUI plugin, release 1
 
-Stand 2026-10-27 (Ende der zweiten Sitzung). Der Plan ist freigegeben. Abschnitt 3 ist die Arbeitsliste in ihrer Reihenfolge: von oben nach unten abarbeiten. Gesamtstand, Befunde und Optionen im Detail: `docs/HANDOFF-claude-code.md`. Die OpenFill-Ideen stehen ausführlich in `ideas.md` (Aufgaben T1 bis T4); hier sind sie eingeplant. Backup: Tag `backup-2026-10-26` (6df02df) und das ZIP des Users.
+Stand 2026-10-27 (dritte Sitzung). Der Plan ist freigegeben. Abschnitt 3 ist die Arbeitsliste in ihrer Reihenfolge: von oben nach unten abarbeiten. Gesamtstand, Befunde und Optionen im Detail: `docs/HANDOFF-claude-code.md`. Die OpenFill-Ideen stehen ausführlich in `ideas.md` (Aufgaben T1 bis T4); hier sind sie eingeplant. Backup: Tag `backup-2026-10-26` (6df02df) und das ZIP des Users.
 
 ## 1. Erledigt (in `next`)
 
@@ -8,6 +8,7 @@ Stand 2026-10-27 (Ende der zweiten Sitzung). Der Plan ist freigegeben. Abschnitt
 - UI-Runde 26./27.10.: Icons, PhotoCraft-Slider, Undo/Redo-Knöpfe, Papierkorb am Prompt, Knopfzeile über dem Prompt, Downloadlinks im Zahnrad-Fenster.
 - Liste A vom 27.10. (Abstände, Chevron, „Custom LoRAs:“, ComfyUI-Punkt grün/rot, Slider rechts in einer Spalte und eintippbar, „Advanced settings“) und die Nachrunde: Ergebnis über einer Korrekturebene (vom User bestätigt), Flux 2 Refine startet auf „Default“, Leerzeile nach dem letzten LoRA weg, Qwen ohne Turbo, Expand/Edit getauscht, kürzere Slider-Texte.
 - Zweite Sitzung 27.10., danach: feste Startposition, Flux 2 Klein über die obsxrver-Datei (alle 24 Dateien mit Link), „Choose another file…“ mit Relink/Undo/Reset, Settings-Tabs „Models“/„Credits“, Fensterkopf „Funktion zuerst“ (Funktions-Buttons, Modell-Chips).
+- Dritte Sitzung 27.10.: Funktions-Symbole (`fn-<key>` in `icons.py`), Funktions-Buttons linksbündig (Entscheidung des Users). Live bestätigt vom User: neuer Fensterkopf (Chips, Namen, Höhe, 150 %), Startposition, Flux-2-Lauf mit der obsxrver-Datei.
 - Einzelheiten: `git log next` und Handoff, Abschnitt 4.
 
 ## 2. Entscheidungen des Users (gelten weiter)
@@ -28,10 +29,11 @@ Stand 2026-10-27 (Ende der zweiten Sitzung). Der Plan ist freigegeben. Abschnitt
 Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher Optionen nennen. Details und Optionen je Punkt: Handoff, Abschnitt 6.
 
 **Als Nächstes (neuer Chat)**
-0. **Funktions-Symbole einbauen** (vom User freigegeben, Entwurf aus einem anderen Chat): Bauanleitung und Formen in `docs/icons/icon-set-final.md`, Vorschau `docs/icons/icon-set-final.png`. Formen als `fn-<key>` in `pccomfy/icons.py` (der Name `remove` ist dort schon das X der Entfernen-Knöpfe), `_function_icon` (gui_theme.py) nimmt `fn-<key>` statt des Platzhalters; eigene PNGs in `pccomfy/assets/functions/` behalten Vorrang. `img2img` behält den Platzhalter. Lucide-Herkunft (`images`, `scaling`, `focus`, `sparkles`, ISC) in den Kopfkommentar von `icons.py` und in die Release-Credits. Offen, den User fragen: In der Vorschau stehen Symbol und Text **linksbündig**, im Plugin heute **zentriert** (`Tab.Toolbutton`, `anchor="center"`). Test: jeder Schlüssel aus `MODE_LABELS` außer `img2img` hat eine Form; Live-Prüfung durch den User bei 100 % und 150 %, normal, gewählt (orange), grau.
+0. ~~**Funktions-Symbole einbauen**~~: **gebaut 27.10.** (Formen aus `docs/icons/icon-set-final.md`, `img2img` behält den Platzhalter, eigene PNGs haben Vorrang; Symbol und Text linksbündig, Entscheidung des Users). Live-Prüfung durch den User offen: 100 % und 150 %, normal, gewählt (orange), grau.
+   Noch genauer zu testen (Aussage des Users): Zahnrad-Fenster, „Choose another file…“ → Relink, Undo, Reset to startup.
 
 **B. Wichtig**
-1. ~~**Feste Startposition** (B.11)~~: **gebaut 27.10.** (Option A des Users: letzte Position merken, beim ersten Start rechts oben in PhotoCraft unter der Menüleiste; Klicks auf das Plugin selbst lösen den Menü-Wächter nicht mehr aus). Live-Test durch den User offen.
+1. ~~**Feste Startposition** (B.11)~~: **gebaut 27.10.** (Option A des Users: letzte Position merken, beim ersten Start rechts oben in PhotoCraft unter der Menüleiste; Klicks auf das Plugin selbst lösen den Menü-Wächter nicht mehr aus). Vom User live bestätigt.
 2. ~~**Flux 2 Klein 9B ohne Quelle** (B.12)~~: **erledigt 27.10.** Die obsxrver-Fassung (`flux-2-klein-9b_int8_convrot.safetensors`) liefert im A/B-Test gleichwertige Bilder bei gleichem Tempo; Workflows und Download-Liste nutzen jetzt sie (Entscheidung des Users: Option B). Die alte Datei bindet der User später über C.13 ein.
 
 **C. Neue Funktion**

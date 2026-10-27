@@ -18,11 +18,11 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 ## 2. Repo und Git-Stand
 - Pfad `C:\programs\photocraft-comfyui-bridge`, Fork von Peszemeszek/photocraft-comfyui-bridge. Nur lokal, nichts gepusht.
 - Branches: `main` (Upstream), `windows-fibo` (abgenommener Stand 6aff33a), `refactor/split-gui` (Phase 0, in `next`), **`next` = Integrationsstand, den der Nutzer testet**.
-- Arbeits-Branches vom 26./27.10., alle in `next` gemergt und **noch nicht gelöscht** (Löschen nur nach Rückfrage): `feat/prompt-clear-and-t2i-tip`, `feat/generate-row-above-prompt`, `fix/one-empty-slot`, `fix/add-file-dialog-parent`, `feat/drop-replaces-slot`, `feat/window-icons`, `feat/photocraft-sliders`, `feat/model-download-links`, `docs/handoff-2026-10-27`, `docs/handoff-decisions`; dazu aus der zweiten Sitzung 27.10.: `fix/layout-spacing`, `feat/footer-status`, `feat/slider-column`, `feat/advanced-settings`, `docs/list-a-done`, `fix/paste-above-adjustment-layer`, `feat/small-tweaks-2`, `fix/lora-row-gap`, `feat/refine-default-prompt`, `chore/shorter-lora-labels`, `docs/plan-cleanup`, `feat/start-position`, `test/flux2-file-compare`, `feat/flux2-obsxrver-file`, `feat/choose-another-file`, `feat/settings-relink-tabs`, `docs/ux-function-first`, `fix/settings-wording-undo`, `feat/function-first`, `docs/handoff-function-icons`.
+- Arbeits-Branches vom 26./27.10., alle in `next` gemergt und **noch nicht gelöscht** (Löschen nur nach Rückfrage): `feat/prompt-clear-and-t2i-tip`, `feat/generate-row-above-prompt`, `fix/one-empty-slot`, `fix/add-file-dialog-parent`, `feat/drop-replaces-slot`, `feat/window-icons`, `feat/photocraft-sliders`, `feat/model-download-links`, `docs/handoff-2026-10-27`, `docs/handoff-decisions`; dazu aus der zweiten Sitzung 27.10.: `fix/layout-spacing`, `feat/footer-status`, `feat/slider-column`, `feat/advanced-settings`, `docs/list-a-done`, `fix/paste-above-adjustment-layer`, `feat/small-tweaks-2`, `fix/lora-row-gap`, `feat/refine-default-prompt`, `chore/shorter-lora-labels`, `docs/plan-cleanup`, `feat/start-position`, `test/flux2-file-compare`, `feat/flux2-obsxrver-file`, `feat/choose-another-file`, `feat/settings-relink-tabs`, `docs/ux-function-first`, `fix/settings-wording-undo`, `feat/function-first`, `docs/handoff-function-icons`; dritte Sitzung: `feat/function-icons`, `docs/function-icons-done`.
 - Ungetrackt im Repo-Ordner: `photocraft-ai 0.16.bat` (Starter des Nutzers für PhotoCraft 0.16): nicht anfassen, vor dem Einchecken fragen.
 - Tags: `backup-2026-10-26` (6df02df, vor Phase 0), `vor-claude-code` (65e955f).
 - Lane-Klone `lanes/L1`, `lanes/L2` sind Altlast (per `.git/info/exclude` ignoriert). Archiv: `docs/archiv-lanes/`.
-- Tests: `python tests/run_all.py` (39 Dateien, alle grün, ca. 16 s). Python des Nutzers: Pfad in `data/python.txt`.
+- Tests: `python tests/run_all.py` (40 Dateien, alle grün, ca. 16 s). Python des Nutzers: Pfad in `data/python.txt`.
 - Diagnose: `data/exchange/last-graph.json`, `data/exchange/runs.jsonl`; ComfyUI-Historie über `http://127.0.0.1:8188/history`.
 
 ## 3. Umgebung
@@ -111,7 +111,8 @@ Ursprüngliche Aufgaben:
 - **Lizenzen für den Release:** Fibo 2.0 (CC BY-NC) und die FLUX.2-Dateien nur nicht-kommerziell; Lenovo UltraReal (Civitai) verlangt Nennung von Danrisi; Lucide-Icons (ISC) nennen.
 
 ## 8. Live-Tests, die noch offen sind
-- **Aus der zweiten Sitzung 27.10., Ende:** neuer Fensterkopf (Chips gut abgesetzt? Namen passen? Fensterhöhe? 150 %), Funktion wechseln wählt das richtige Modell, rote/graue Chips; Zahnrad: Choose another file → Relink, Undo, Reset to startup, Tabs; Startposition (erster Start mit `photocraft-ai neuer-nutzer.bat`, Ziehen an der Titelleiste); ein Flux-2-Lauf mit der obsxrver-Datei aus dem Plugin.
+- **Aus der dritten Sitzung 27.10.:** Funktions-Symbole bei 100 % und 150 %, normal, gewählt (orange), grau; Symbol und Text linksbündig.
+- **Aus der zweiten Sitzung 27.10., Ende:** Funktion wechseln wählt das richtige Modell, rote/graue Chips; Zahnrad: Choose another file → Relink, Undo, Reset to startup, Tabs (laut User „noch genauer zu testen“). Bestätigt: neuer Fensterkopf (Chips, Namen, Höhe, 150 %), Startposition, Flux-2-Lauf mit der obsxrver-Datei.
 - **Aus der zweiten Sitzung 27.10.:** Wert-Kästchen tippen (Enter, Wegklicken, nur Ziffern), Slider-Spalte bei 150 %, „Advanced settings“ mit Sharpen/Feather/Layer mask je Funktion, ComfyUI-Punkt grün/rot (ComfyUI beenden), Flux 2 Refine → „Default“ und Strg+Z, LoRA löschen ohne Leerzeile, Qwen ohne Turbo (Laufzeit, Qualität).
 - **Aus der ersten Sitzung 26./27.10.:** Papierkorb + Strg+Z; Knopfzeile über dem Prompt; nur ein leerer Slot; „Add file“ mit PhotoCraft daneben (kein Doppelbild mehr?); Bild auf ein gefülltes Slot-Bild ziehen (auch mehrere); Icons unter der Maus orange, gesperrt grau; Spinbox-Chevrons klickbar; Slider ziehen/klicken, gesperrt grau; alles bei 150 %.
 - Neuer Nutzer: `photocraft-ai neuer-nutzer.bat`, Varianten 1 bis 4.
@@ -122,4 +123,4 @@ Ursprüngliche Aufgaben:
 Bestätigt: Slot-Icons, Tags beim Modellwechsel, Qwen 2/4/8, Zahnrad/Fußzeile bei 380 px, Tab-Farben, Einstellungsfenster beim Schließen von PhotoCraft, 150 % Skalierung, Tipp-Text, zentrierter Tag, Flux-2-Scheduler-Auswahl, Tipp-Wortlaut Text to image.
 
 ## 9. Danach (Plan)
-Die Reihenfolge steht nur noch in `PLAN.md`, Abschnitt 3 (dort sind auch die OpenFill-Ideen aus `ideas.md` eingeplant). Als Nächstes: **Punkt 0, Funktions-Symbole einbauen** (`docs/icons/icon-set-final.md`), dann D.16 (UI-Schriften), D.6 (PhotoCraft-Befehle), E, L3 (Rechtsklick-Menü jetzt auf den Modell-Chips).
+Die Reihenfolge steht nur noch in `PLAN.md`, Abschnitt 3 (dort sind auch die OpenFill-Ideen aus `ideas.md` eingeplant). Punkt 0 (Funktions-Symbole) ist gebaut. Als Nächstes: D.16 (UI-Schriften), D.6 (PhotoCraft-Befehle), E, L3 (Rechtsklick-Menü jetzt auf den Modell-Chips).
