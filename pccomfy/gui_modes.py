@@ -118,7 +118,14 @@ class ModeMixin:
         self._apply_settings(s)
         t = self.t_prompt
         cur = t.get("1.0", "end").strip() if str(t.cget("state")) != "disabled" else ""
-        if (cur == "" or cur in models.STOCK_PROMPTS) and str(t.cget("state")) != "disabled":   # an unedited stock text is replaced
+        first = spec.prompts[0] if spec.prompts else None      # Flux 2 Refine: always starts on its "Default" prompt
+        if first is not None and str(t.cget("state")) != "disabled":
+            t.edit_separator()                  # one undo step: Ctrl+Z in the field brings your own text back
+            t.delete("1.0", "end")
+            t.insert("1.0", first[1])
+            t.edit_separator()
+            self.v_pchoice.set(first[0])
+        elif (cur == "" or cur in models.STOCK_PROMPTS) and str(t.cget("state")) != "disabled":   # an unedited stock text is replaced
             t.delete("1.0", "end")
             if spec.prompt_hint:
                 t.insert("1.0", spec.prompt_hint)
