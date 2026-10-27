@@ -134,6 +134,10 @@ class LoraMixin:
             self.lora_rows.remove(rec)
             self._lora_hide(rec)
             rec["frame"].destroy()
+            if not self.lora_rows:
+                # Tk keeps the height of a frame whose last packed child is gone: the empty line stayed. A new
+                # height makes it shrink (1 px, nothing visible).
+                self.f_xl_rows.configure(height=1)
         self.b_addlora.configure(state="normal")
         self._fit_height()
 
