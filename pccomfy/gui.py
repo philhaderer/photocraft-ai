@@ -315,10 +315,10 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.lora_rows: list[dict] = []
         head = ttk.Frame(self.f_xl)
         head.pack(fill="x")
-        ttk.Label(head, text="Extra LoRAs (style, detail ...)", style="Muted.TLabel").pack(side="left")
+        ttk.Label(head, text="Custom LoRAs:", style="Muted.TLabel").pack(side="left")
         self.b_addlora = ttk.Button(head, text="Add", image=self._icon("plus", MUTED), compound="left", style="Link.TButton",
                                     command=self._add_lora_row)
-        self.b_addlora.pack(side="left", padx=8)
+        self.b_addlora.pack(side="right")
         Tooltip(self.b_addlora, "Adds an extra LoRA (strength 0 to 1.5).")
         self.f_xl_rows = ttk.Frame(self.f_xl)
         self.f_xl_rows.pack(fill="x")
@@ -327,7 +327,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.f_sf = sf
         mf.pack(fill="x", padx=10, pady=4, after=self.f_neg)     # the LoRA / stage box: directly under the negative prompt
         af = ttk.Frame(self.adv_body)
-        af.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
+        af.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(2, 0))
         items = [("Seed (-1 random)", self._spin(sf, self.v_seed, -1, 2**31 - 1, 1, 11)),
                  ("Variants", self._spin(sf, self.v_variants, 1, 8, 1, 4)),
                  ("Steps", self._spin(af, self.v_steps, 1, 150, 1, 5)),
@@ -433,8 +433,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.v_pl = tk.StringVar(value="")
         row = ttk.Frame(r)
         row.pack(fill="x", padx=10, pady=(6, 0))
-        top = ttk.Frame(row)                                  # above the bar, text on the left: never covered by it
-        top.pack(fill="x")
+        top = self.f_pl_top = ttk.Frame(row)                  # above the bar, text on the left: shown only while it has text
         self.lbl_pl = ttk.Label(top, textvariable=self.v_pl, style="Muted.TLabel", anchor="w", justify="left")    # the step, or the green word "Done"
         self.lbl_pl.pack(side="left")
         self.v_pl_rest = tk.StringVar(value="")
@@ -442,6 +441,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.lbl_pl_rest.pack(side="left")
         self.pb = ttk.Progressbar(row, mode="determinate", maximum=1.0)
         self.pb.pack(fill="x", pady=(2, 0))
+        self._show_pl_line()
         self._bar_value = 0.0
         st = self.f_status = ttk.Frame(self.root)
         st.pack(fill="x", padx=10, pady=(4, 0))

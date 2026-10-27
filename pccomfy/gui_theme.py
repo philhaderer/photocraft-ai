@@ -35,7 +35,8 @@ class ThemeMixin:
                     borderwidth=0, font=(FONT, 10))
         s.map("Tab.Toolbutton", background=[("selected", ACCENT), ("active", "#5f5f5f")],
               foreground=[("selected", "#1b1b1b")])
-        s.configure("Link.TButton", background=BG, foreground=MUTED, padding=(0, 2), borderwidth=0, relief="flat")
+        s.configure("Link.TButton", background=BG, foreground=MUTED, padding=(0, 2), borderwidth=0, relief="flat",
+                    width=0)   # as wide as its text: clam's minimum width would centre "Advanced" and push it right
         s.map("Link.TButton", foreground=[("active", FG)], background=[("active", BG)])
         s.configure("Accent.TButton", background=ACCENT, foreground="#1b1b1b", font=(FONT, 10, "bold"))
         s.map("Accent.TButton", background=[("active", "#ff9d3d"), ("disabled", "#6e6558")])

@@ -17,7 +17,7 @@ names = [n for m in mixins + (gui.App,) for n in vars(m) if callable(vars(m)[n])
 dup = sorted({n for n in names if names.count(n) > 1})
 assert not (set(vars(gui.RefSlotsMixin)) & set(names) - {"_on_mode_ui", "_request"}), "RefSlotsMixin wraps only these two (with super())"
 assert not dup, f"defined twice: {dup}"
-assert len(names) == 111, len(names)      # 106 methods of the old App (without __init__), + _on_body_size and _max_height (scroll bar), + _clear_prompt, + _dialog, + _icon and _spin_arrows, - _scale_clicks (Slider)
+assert len(names) == 112, len(names)      # 106 methods of the old App (without __init__), + _on_body_size and _max_height (scroll bar), + _clear_prompt, + _dialog, + _icon and _spin_arrows, - _scale_clicks (Slider), + _show_pl_line
 
 # 2. what the other tests and callers read from gui.py is still there
 for name in ("BUILTIN", "MODE_LABELS", "SHORT_MODES", "LAYER_MASKS", "CLIP_DEFAULT", "ACCENT", "PROMPT_LINES", "FILL_CONTEXT",
