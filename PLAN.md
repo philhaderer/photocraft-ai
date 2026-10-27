@@ -42,7 +42,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 **D. Recherche (nichts bauen, Ergebnis vorlegen)**
 4. ~~**Funktionen zuerst, Modell darunter?** (D.15)~~: **gebaut 27.10.** (`docs/ux-funktion-zuerst.md`). Entscheidung des Users: Funktionen oben als große Buttons mit Symbol, Modelle darunter als Umriss-Chips (alle sichtbar, unpassende grau), feste Reihenfolge; das beste Modell wählt später der Easy Mode. Offen: die Symbole des Users (`pccomfy/assets/functions/`, Platzhalter bis dahin).
 5. **UI-Fonts** (D.16): **Recherche fertig 27.10.** (`docs/ui-schriften.md`, Vergleichsblatt `docs/ui-schriften.png`; Befund: PhotoCraft benutzt Inter). **Gebaut 27.10.:** Option A des Users, Inter wird mitgeliefert (Kopie der Windows-Dateien, Inter 3.019, Regular und SemiBold), eine Stufe kleiner als die alten Segoe-Größen. Live-Prüfung durch den User offen (100 % und 150 %, Chips, Slider-Texte, Zahnrad-Fenster, Tooltips; Vergleich mit `PCCOMFY_NO_INTER=1`).
-6. **PhotoCraft-Befehle prüfen** (OpenFill T1): Tabelle „Befehl → gibt es ihn → Folge für uns“ (Feather-Vorschau, Snapshots als ein Undo, Gruppen für Varianten, Crop über den Rand). Gegen die PhotoCraft-Version prüfen, die der User nutzt (0.15.1; ein Starter für 0.16 liegt im Repo-Ordner, ungetrackt).
+6. ~~**PhotoCraft-Befehle prüfen** (OpenFill T1)~~: **erledigt 27.10.** (`docs/photocraft-befehle.md`). Alle gesuchten Befehle gibt es in 0.15.1 und 0.16 (Feather, Expand, Gruppe, Crop über den Rand, copyToDocument); nur „mehrere Schritte = ein Strg+Z“ gibt es nicht. 0.16 ändert nur `edit.paste` (neuer Parameter `clampToCanvas`, für uns heute ohne Folge). Vorschläge daraus (Feather-Vorschau, Varianten-Gruppe, Expand per Crop) warten auf die Entscheidung des Users.
 
 **E. Offen aus der alten Liste**
 7. **Refresh/Reset** kleiner und klarer: A ⟳-Icon neben dem ComfyUI-Punkt + „Defaults“ als Textknopf (empfohlen), B Menü „⋯“, C zwei Icons, D Reset ins Zahnrad.
@@ -79,7 +79,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 - Krea-Style-Explorer: Lizenz des Repos und der Bilder vor dem Mitliefern klären.
 - Lizenzen für den Release: Fibo 2.0 (CC BY-NC) und die FLUX.2-Dateien nur nicht-kommerziell; Lenovo UltraReal verlangt Nennung von Danrisi; Lucide-Icons (ISC) nennen; Inter (SIL OFL 1.1) liegt mit `OFL-Inter.txt` bei.
 - Scribble/Sketch, Remove-Prompt, Encoder-Tausch, Steps-Prüfung: Recherche- und Testaufgaben ohne Code (`docs/tests/`).
-- PhotoCraft 0.16: Wenn du umsteigst, die Befehle aus Punkt 6 und den Start (`photocraft-ai 0.16.bat`) einmal gegen 0.16 prüfen.
+- PhotoCraft 0.16: Befehle geprüft (Punkt 6, nur `edit.paste` geändert); beim Umstieg noch den Start (`photocraft-ai 0.16.bat`) und je Funktion einen Lauf live prüfen.
 
 ## 6. Wann ein neuer Chat sinnvoll ist
 
