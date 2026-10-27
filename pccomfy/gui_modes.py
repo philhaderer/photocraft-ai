@@ -281,7 +281,10 @@ class ModeMixin:
             st = stages[i] if i < len(stages) else None
             if st is None or st.get("strength") is None:
                 sf.grid_remove()
+                if st is not None:
+                    self.stage_cbs[i].grid_configure(columnspan=2)     # no slider: its text may use the slider's room
                 continue
+            self.stage_cbs[i].grid_configure(columnspan=1)
             if reset:
                 self.v_sstr[i].set(min(1.0, st["strength"]))
             sf.grid()
