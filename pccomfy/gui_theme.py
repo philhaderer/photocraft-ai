@@ -43,6 +43,13 @@ class ThemeMixin:
         s.configure("Link.TButton", background=BG, foreground=MUTED, padding=(0, 2), borderwidth=0, relief="flat",
                     width=0)   # as wide as its text: clam's minimum width would centre "Advanced" and push it right
         s.map("Link.TButton", foreground=[("active", FG)], background=[("active", BG)])
+        # the model chips under the functions: outlined, no fill; chosen = orange outline and text (Tab.Toolbutton is the
+        # filled look of the functions above them)
+        s.configure("Chip.Toolbutton", background=BG, foreground=FG, padding=(2, 3), anchor="center", relief="solid",
+                    borderwidth=1, bordercolor="#686868", lightcolor=BG, darkcolor=BG, font=(FONT, 9))
+        s.map("Chip.Toolbutton", foreground=[("disabled", DISABLED), ("selected", ACCENT)],
+              bordercolor=[("disabled", "#4a4a4a"), ("selected", ACCENT)], background=[("active", "#5f5f5f")])
+        s.configure("Missing.Chip.Toolbutton", foreground=NA_RED)
         s.configure("Accent.TButton", background=ACCENT, foreground="#1b1b1b", font=(FONT, 10, "bold"))
         s.map("Accent.TButton", background=[("active", "#ff9d3d"), ("disabled", "#6e6558")])
         s.configure("TCombobox", fieldbackground=PANEL, background=PANEL, foreground=FG, arrowcolor=FG)
@@ -108,6 +115,27 @@ class ThemeMixin:
                 cache[(kind, c, px)] = icons.photo(self.root, kind, c, self._px(px))
             return cache[(kind, c, px)]
         return (img(color), "disabled", img(DISABLED), "active", img(ACCENT))
+
+    def _function_icon(self, key: str):
+        """The symbol of a function button: the user's picture pccomfy/assets/functions/<key>.png when it is there, else a
+        placeholder. Light on the dark button, dark on the orange (selected) one, grey when greyed out."""
+        from pathlib import Path
+        path = Path(__file__).resolve().parent / "assets" / "functions" / f"{key}.png"
+        cache = self.__dict__.setdefault("_icon_cache", {})
+
+        def img(c):
+            k = ("fn", key, c)
+            if k not in cache:
+                px = self._px(ICON_PX)
+                pic = None
+                if path.exists():
+                    try:
+                        pic = icons.from_file(path, c, px)
+                    except OSError:
+                        pic = None
+                cache[k] = icons.photo(self.root, "placeholder", c, px, image=pic)
+            return cache[k]
+        return (img(FG), "selected", img("#1b1b1b"), "disabled", img(DISABLED))
 
     def _slider_row(self, frame):
         """Sharpen, Match colours, Edge feather and Mix source/new share one layout: the label takes the room on the left,

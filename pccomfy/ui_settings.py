@@ -19,7 +19,7 @@ from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
 
 _LABELS = dict(MODE_LABELS)      # noqa: F405
-EMPTY_TEXT = {"choose": "Choose a model", "none_linked": "Link your model in the settings"}
+EMPTY_TEXT = {"choose": "Choose a function", "none_linked": "Link your model in the settings"}
 PICK_TEXT = "Choose another file…"     # next to every file in the settings window (C.13, wording chosen by the user)
 STATE_TEXT = {"ready": "ready", "partial": "some functions need files", "missing": "files missing"}
 
@@ -120,21 +120,29 @@ class SettingsMixin:
             if rb is None:
                 continue
             st = self.inv.tab_status(m.key) if self.inv is not None else None
-            rb.configure(style="Missing.Tab.Toolbutton" if (st is not None and st.state == "missing") else "Tab.Toolbutton")
+            rb.configure(style="Missing.Chip.Toolbutton" if not self._model_usable(m.key, self.v_mode.get()) else "Chip.Toolbutton")
             tt = tts.get(m.key)
             if tt is not None:
                 extra = self._tab_extra(st) if st is not None else ""
                 tt.text = m.tip + (("\n\n" + extra) if extra else "")
 
+    def _model_usable(self, key: str, mode: str) -> bool:
+        """Has ComfyUI the files this model needs for this function (for the whole model when it cannot do the function)?"""
+        if self.inv is None:
+            return True
+        m = models.BY_KEY.get(key)
+        st = self.inv.mode_status(key, mode) if (m is not None and mode in m.modes) else self.inv.tab_status(key)
+        return st.state != "missing"
+
     def _update_mode_radios(self):
         super()._update_mode_radios()
+        self._update_tabs()                 # a model chip turns red when its files for the chosen function are missing
         m = self._model()
         if m is None or self.inv is None:
             return
-        for key in m.modes:
+        for key in m.modes:                 # the function stays clickable; its tooltip says what the chosen model misses for it
             s = self.inv.mode_status(m.key, key)
             if s.state == "missing":
-                self.rb_modes[key].configure(state="disabled")
                 self.tt_modes[key].text += "\n\n" + inventory.tooltip_text(s, _LABELS.get(key, key))
 
     # ---------- no model chosen ----------
@@ -244,7 +252,7 @@ class SettingsMixin:
 
     def generate(self):
         if self.start_state():
-            self._status("Choose a model first.")      # Ctrl+Enter must not run with nothing chosen
+            self._status("Choose a function first.")      # Ctrl+Enter must not run with nothing chosen
             return
         lines = self._preflight()
         if lines:

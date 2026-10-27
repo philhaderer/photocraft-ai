@@ -117,15 +117,30 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         r = self.root
         pad = {"padx": 10, "pady": 4}
 
-        self.f_tabs = ttk.Frame(r)      # one tab per model, two rows
+        # the head: the functions first (big buttons with a symbol, two per row), the models below them (small outlined
+        # chips, three per row; a model that cannot do the chosen function is greyed out). See docs/ux-funktion-zuerst.md.
+        self.f_tabs = ttk.Frame(r)
         self.f_tabs.pack(fill="x", padx=10, pady=(8, 2))
-        cols = 2                        # never more than two side by side (the window stays narrow, however many models)
+        f_fn = self.f_modes = ttk.Frame(self.f_tabs)
+        f_fn.pack(fill="x")
+        for c in range(2):
+            f_fn.columnconfigure(c, weight=1, uniform="fn")
+        self.rb_modes = {}
+        self.tt_modes = {}              # the tooltip of each function: the text of the selected model (see _update_mode_radios)
+        for key, label in MODE_LABELS:
+            rb = ttk.Radiobutton(f_fn, text=label, value=key, variable=self.v_mode, style="Tab.Toolbutton",
+                                 image=self._function_icon(key), compound="left", command=self._on_mode)
+            self.rb_modes[key] = rb
+            self.tt_modes[key] = Tooltip(rb, MODE_TIPS[key])
+        f_md = self.f_models = ttk.Frame(self.f_tabs)
+        f_md.pack(fill="x", pady=(6, 0))
+        cols = 3
         for c in range(cols):
-            self.f_tabs.columnconfigure(c, weight=1, uniform="tab")
+            f_md.columnconfigure(c, weight=1, uniform="model")
         self.rb_tabs = {}
-        self.tt_tabs = {}               # the tooltip of each tab (the settings add what is missing, see ui_settings.py)
+        self.tt_tabs = {}               # the tooltip of each model (the settings add what is missing, see ui_settings.py)
         for i, m in enumerate(models.MODELS):
-            rb = ttk.Radiobutton(self.f_tabs, text=m.label, value=m.key, variable=self.v_model, style="Tab.Toolbutton",
+            rb = ttk.Radiobutton(f_md, text=m.label, value=m.key, variable=self.v_model, style="Chip.Toolbutton",
                                  command=self._on_model)
             rb.grid(row=i // cols, column=i % cols, sticky="ew", padx=2, pady=2)
             self.tt_tabs[m.key] = Tooltip(rb, m.tip)
@@ -227,17 +242,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
             cb.grid_remove()
         self._on_lora_str()
 
-        modes = ttk.Frame(r)
-        modes.pack(fill="x", **pad)
-        self.f_modes = modes
         self.f_opts = mf                # LoRA and stage switches of the workflow: shown only when it has some (_update_options_box)
-        self.rb_modes = {}
-        self.tt_modes = {}              # the tooltip of each mode button: the text of the selected model (see _update_mode_radios)
-        for i, (key, label) in enumerate(MODE_LABELS):
-            rb = ttk.Radiobutton(modes, text=label, value=key, variable=self.v_mode, command=self._on_mode)
-            rb.grid(row=i // 2, column=i % 2, sticky="w", padx=(0, 16), pady=1)
-            self.rb_modes[key] = rb
-            self.tt_modes[key] = Tooltip(rb, MODE_TIPS[key])
 
         ff = ttk.Frame(self.f_post)     # shown only while a soft layer mask is used (see _update_feather_state)
         self.f_feather = ff

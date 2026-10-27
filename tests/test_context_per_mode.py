@@ -13,6 +13,7 @@ gui, cfgmod = t.gui, t.cfgmod
 
 def main():
     app = gui.App(cfgmod.load())
+    app.v_model.set(""); app.v_workflow.set("my_own_workflow.json")   # a workflow of your own: no model sets the context
     app.v_mode.set("inpaint"); app._on_mode()
     app.v_context.set(0.3)                                   # the user changes it in Generative fill
     app.v_mode.set("remove"); app._on_mode()

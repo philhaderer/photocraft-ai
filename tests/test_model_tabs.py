@@ -35,8 +35,16 @@ def main():
     app.v_mode.set("inpaint")
     app._on_model()
     assert app.v_workflow.get() == "qwen-image-21-edit.json" and app.v_res.get() == 1024 and app.v_turbo.get() is False    # Qwen: Turbo off by default (27.10.)
-    assert app.rb_modes["edit"]["state"] == "normal" and app.rb_modes["upscale"]["state"] == "disabled"
-    assert app.rb_modes["refine"]["state"] == "disabled"
+    assert app.rb_modes["edit"]["state"] == "normal" and app.rb_modes["upscale"]["state"] == "normal"     # functions: never grey
+    assert [k for k, rb in app.rb_tabs.items() if rb["state"] == "normal"] == ["qwen", "fibo"]          # models that can fill
+    # a function the model cannot do picks a model that can (the fixed order: Flux 3 first); Qwen comes back for Fill
+    app.v_mode.set("upscale"); app._on_mode()
+    assert app.v_model.get() == "flux3" and app.v_workflow.get() == "flux3-klein-upscale.json"
+    app.v_mode.set("inpaint"); app._on_mode()
+    assert app.v_model.get() == "qwen"                                                                   # the last model of Fill
+    app.v_mode.set("txt2img"); app._on_mode()
+    assert app.v_model.get() == "qwen"                                                                   # Qwen can do it: stays
+    app.v_mode.set("inpaint"); app._on_mode()
 
     # the modes follow each other in the order text, edit, fill, remove, expand, reference, upscale, refine
     assert [k for k, _ in gui.MODE_LABELS] == ["txt2img", "outpaint", "inpaint", "remove", "edit", "multi_edit", "upscale", "refine", "img2img"]
@@ -49,7 +57,7 @@ def main():
     assert app.v_enhance.get() is False and "Qwen 3.5 9B" in app.tt_enhance.text      # which text model writes the prompt (starts off)
     assert app.cb_enhance["text"] == "LLM prompt enhancement (Qwen 3.5 9B)"
     assert app.v_turbo.get() is True and app.cb_turbo["text"].startswith("DMD2") and app.v_lora_str.get() == 1.0
-    assert [k for k, rb in app.rb_modes.items() if rb["state"] == "normal"] == ["txt2img", "outpaint"]   # Generative fill is off again (not good enough)
+    assert list(models.MOSS.modes) == ["txt2img", "outpaint"]                                           # Generative fill is off again (not good enough)
     assert [c["text"] for c in app.stage_cbs] == ["UltraReal LoRA", "Skip-layer guidance (SLG)", "Stage"]
     assert app.v_stage.get() and app.v_stage2.get()                                    # Lenovo on, SLG on
     r = app._request()
@@ -99,7 +107,7 @@ def main():
     app.v_mode.set("upscale")
     app._on_mode()
     assert app.v_workflow.get() == "flux3-klein-upscale.json" and app.t_prompt.get("1.0", "end").strip() == "make it night"  # typed text stays
-    assert "refine" not in models.BY_KEY["flux3"].modes and app.rb_modes["refine"]["state"] == "disabled"   # Flux 3 Refine is off
+    assert "refine" not in models.BY_KEY["flux3"].modes                                  # Flux 3 Refine is off
 
     # a model without the current mode: the first one it has
     app.v_model.set("flux2")
