@@ -254,6 +254,16 @@ def main():
     assert models.ranking_text("edit") == "Ranking: not set yet." and models.ranking_text("img2img") == ""
     assert app.tt_modes["remove"].text.startswith("Ranking: 1. Fibo, 2. Qwen")
     assert all(k in models.SHORT for k in models.BY_KEY) and all(k in models.BY_KEY for r in models.RANKING.values() for k in r)
+    # Fibo Refine starts with Sharpen 30 %, Fibo Text to image with 20 % (user 28.10.); the box shows the percent
+    for mode, want in (("refine", 0.3), ("txt2img", 0.2)):
+        app.v_sharpen.set(0.0)
+        app.v_model.set("fibo")
+        app.v_mode.set(mode)
+        app._on_model()
+        assert app.v_sharpen.get() == want and app.lbl_sharpen.cget("text") == f"{round(want * 100)} %", (mode, app.v_sharpen.get())
+        app.v_sharpen.set(0.0)
+        app.reset_settings()
+        assert app.v_sharpen.get() == want and app.lbl_sharpen.cget("text") == f"{round(want * 100)} %", (mode, "reset")
     # Fibo: text to image has its own workflow (no image inputs), Refine runs as a whole-image edit with a ready prompt
     assert mm["fibo"].modes["txt2img"].workflow == "fibo2-t2i.json" and mm["fibo"].modes["refine"].run_as == "edit"
     assert mm["fibo"].modes["refine"].prompt_hint == models.FIBO_REFINE == "relight the scene to natural lighting"
