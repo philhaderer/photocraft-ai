@@ -108,6 +108,29 @@ def bridge_checks():
     b.hide_feather()
     assert pc.active == 1 and np.array_equal(np.asarray(pc.docs[0].sel), np.asarray(sel0)) and pc.docs[0].quick is None
 
+    # two open documents with the same name ("Untitled-1"), the preview in the second one: Generate still runs, the
+    # selection comes back in the right document and no saved channel stays behind (live bug 28.10.)
+    pc, _, b = T.make(tempfile.mkdtemp())
+    pc.docs[0].name = "Untitled-1"
+    second = T.Doc("Untitled-1", [{"id": 500, "img": Image.new("RGBA", (T.W, T.H), (30, 60, 200, 255)), "visible": True}],
+                   pc.docs[0].sel.copy())
+    second.active = 500
+    pc.docs.append(second)
+    pc.active = 1
+    sel0 = second.sel.copy()
+    b.show_feather(req())
+    assert second.quick is not None and len(second.channels) == 1 and not pc.docs[0].channels
+    b.comfy = T.FakeComfy()
+    res = b.run(req())
+    assert res["layers"] and pc.active == 1 and not b.feather_shown
+    assert second.quick is None and not second.channels and not pc.docs[0].channels
+    assert any(l["id"] in res["layers"] for l in second.layers), "the result went into the other document"
+    # the same with Hide feather while the first document is active
+    b.show_feather(req())
+    pc.active = 0
+    b.hide_feather()
+    assert pc.active == 0 and second.quick is None and not second.channels and np.array_equal(np.asarray(second.sel), np.asarray(sel0))
+
     # it breaks off half way: never a lost selection
     pc, _, b = T.make(tempfile.mkdtemp())
     sel0 = pc.docs[0].sel.copy()

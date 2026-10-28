@@ -678,8 +678,8 @@ class Bridge:
         if orig is None:
             raise BridgeError("Open a document in PhotoCraft first.")
         name = sess["documents"][orig]["name"]
-        if self._preview and self._preview["doc"] != name:   # another document is active now: end the old preview
-            self.hide_feather()
+        if self._preview and (self._preview["doc"], self._preview.get("index")) != (name, orig):
+            self.hide_feather()      # another document is active now (two may share a name): end the old preview
         tag = uuid.uuid4().hex[:8]
         try:
             if self._preview:
@@ -693,7 +693,7 @@ class Bridge:
                     raise BridgeError("The selection is empty.")
                 channel = f"pccomfy-preview-{tag}"
                 pc.execute("select.saveSelection", {"name": channel})
-                self._preview = {"doc": name, "channel": channel, "mask": mask}
+                self._preview = {"doc": name, "index": orig, "channel": channel, "mask": mask}
             W, H = mask.size
             bbox = imaging.mask_bbox(mask)
             region = imaging.grow_box(bbox, (W, H), req.context) if req.mode in ("inpaint", "outpaint") else bbox
@@ -737,11 +737,26 @@ class Bridge:
         pc = self.pc.connect()
         sess = pc.session()
         current = sess.get("active")
-        doc = next((d["index"] for d in sess.get("documents", []) if d["name"] == prev["doc"]), None)
+        # the document by its place first, then by name; several open documents may share a name ("Untitled-1"):
+        # the one that really holds the saved selection is it (live finding 28.10.: the first one was taken, the run
+        # broke off and the saved selection stayed behind as a channel)
+        same = [d["index"] for d in sess.get("documents", []) if d["name"] == prev["doc"]]
+        order = ([prev["index"]] if prev.get("index") in same else []) + [i for i in same if i != prev.get("index")]
+        doc = None
+        for i in order:
+            if i != current:
+                pc.activate(i)
+            try:
+                names = [c.get("name") for c in pc.document().get("channels", {}).get("alpha", []) if isinstance(c, dict)]
+            except (PhotoCraftError, AttributeError, TypeError):
+                names = []
+            if prev["channel"] in names:
+                doc = i
+                break
+            if i != current:
+                pc.activate(current)
         if doc is None:
             return "Feather preview ended (its document was closed)."
-        if doc != current:
-            pc.activate(doc)
         try:
             self._try("select.editInQuickMaskMode", {"on": False})
             try:
