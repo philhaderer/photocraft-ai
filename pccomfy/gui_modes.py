@@ -23,7 +23,7 @@ class ModeMixin:
             self.f_scale.pack(fill="x", padx=10, pady=4, after=self.f_neg)      # at the top of the block, above the LoRA
         else:
             self.f_scale.pack_forget()
-        if self._run_mode() in SCALE_MODES:
+        if mode in SCALE_MODES:              # also Fibo Refine, which runs as Edit (user 28.10.)
             self._pack_post(self.f_detail)
         else:
             self.f_detail.pack_forget()
