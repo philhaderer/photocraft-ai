@@ -87,7 +87,13 @@ def main():
     app._save_state(app._request())
     assert json.loads((Path(t.TMP) / "state.json").read_text(encoding="utf-8"))["sharpen"] == 0.4   # ... and not forgotten
     pick("fibo", "edit")
-    assert app._request().sharpen == 0.4
+    assert app._request().sharpen == 0.0                       # a function without its own value starts at 0 % (user 28.10.)
+    app.v_sharpen.set(0.25)
+    pick("fibo", "refine")
+    assert app._request().sharpen == 0.3                       # Fibo Refine's own value
+    pick("qwen", "edit")
+    assert app._request().sharpen == 0.0
+    pick("fibo", "edit")
     # Expand sends no prompt enhancement even when the checkbox is on
     app.v_enhance.set(True)
     app.v_mode.set("outpaint")
