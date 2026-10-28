@@ -85,6 +85,15 @@ def main():
         assert bridge.outpaint_prompt("", enh, k, (300, 100)).startswith("Replace white (The white margin")
         b = bridge.outpaint_prompt("a landscape, Replace white", enh, k, (300, 100))
         assert b.startswith("a landscape, Replace white (The white margin") and b.lower().count("replace white") == 1, b
+        # Qwen and Flux keep that wording (Qwen Expand is "perfect"); Fibo has its own sentence (A/B test 28.10.)
+        for wf in ("qwen-image-21-edit.json", "flux2-klein-edit.json", "flux3-klein-edit.json"):
+            assert bridge.outpaint_prompt("", enh, k, (300, 100), wf).startswith("Replace white (The white margin")
+        fibo = "C:/x/workflows/fibo2-edit.json"
+        assert bridge.outpaint_prompt("", enh, k, (300, 100), fibo) == (
+            "Replace the white area on the right with a seamless continuation of the scene. Keep the existing picture unchanged.")
+        assert bridge.outpaint_prompt(" a forest path. ", enh, imaging.Box(50, 50, 200, 100), (300, 200), fibo) == (
+            "Replace the white area on the left, top, right and bottom with a seamless continuation of the scene, a forest path. "
+            "Keep the existing picture unchanged.")
 
     rect = imaging.new_area_rect
     # right only: overlap on the right edge of the original, none on the other sides
