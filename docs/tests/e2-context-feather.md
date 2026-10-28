@@ -59,3 +59,12 @@ Flux 2 / Flux 3 Remove lasse ich weg (laut Tooltip „works only sometimes“); 
 
 1. Welche Werte werden die neuen Startwerte? (Ich schlage sie aus deinen Urteilen vor, du bestätigst.)
 2. Runde Auswahl: genügt ein Tooltip („Rechteck: das Plugin macht den weichen Rand; runde Auswahl / Lasso: schon weich, Edge feather wirkt kaum“), oder soll es eigene Startwerte bzw. einen eigenen Modus geben?
+
+## Ergebnis (User, 28.10.)
+
+- **Qwen Fill:** Rechteck: Standardwerte am besten (Context 0.4, 4 %). Runde Auswahl: kein klarer Gewinner, Standardwerte bleiben.
+- **Fibo Fill:** Rechteck und rund: kein klarer Gewinner, aber Context 0.4 besser als 0.2. **Neuer Startwert Context 0.4.**
+- **Remove:** Qwen und Fibo bleiben bei 0.4 / 10 %.
+- Fibo ist insgesamt besser: im Easy Mode bei Fill und Remove zuerst. Kein eigener Modus für Rechteck und Lasso.
+- Befunde: die Maske einer Rechteck-Auswahl hatte harte Ecken (behoben: Abstand statt Unschärfe); Qwen Fill macht Objekte kleiner als Fibo Fill (offen).
+- Remove wiederholte sich bis zu 3-mal von selbst; jetzt ein Lauf, Tipp/Tooltip bei Fibo schlägt einen zweiten Versuch von Hand vor.
