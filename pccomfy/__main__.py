@@ -198,6 +198,8 @@ def main(argv=None) -> int:
                    help="for N seconds print every window that appears (open a PhotoCraft menu meanwhile)")
     c = sub.add_parser("commands", help="debug: list PhotoCraft commands matching a pattern")
     c.add_argument("pattern", nargs="?", default="history|undo|group|transaction|step")
+    au = sub.add_parser("autostart", help="Windows: start the bridge window with PhotoCraft, without a starter .bat")
+    au.add_argument("action", choices=("install", "uninstall", "status"), nargs="?", default="status")
     sub.add_parser("layers", help="debug: print the layers of the active document as PhotoCraft reports them")
     sub.add_parser("viewtest", help="debug: find the call that sets zoom and position")
     pr = sub.add_parser("probe", help="debug: print what PhotoCraft answers on the control channel")
@@ -238,6 +240,9 @@ def main(argv=None) -> int:
         else:
             print(winlink.describe())
         return 0
+    if a.cmd == "autostart":
+        from . import autostart
+        return autostart.main(a.action, cfg)
     if a.cmd == "viewtest":
         return cmd_viewtest(cfg)
     if a.cmd == "layers":

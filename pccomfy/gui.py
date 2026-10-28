@@ -684,6 +684,9 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
 
 
 def run_gui(cfg: dict) -> int:
+    from . import autostart
+    # held while the window is open: the autostart watcher does not open a second one (a .bat started this one)
+    _mutex = autostart.hold_mutex(autostart.GUI_MUTEX)  # noqa: F841  (kept for the life of the window)
     try:
         App(cfg).run()
     except tk.TclError as e:
