@@ -12,7 +12,7 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 - Keine README-Politur. `README.pl.md` ist Upstream und bleibt. `photocraft-ai 0.15.1.bat` ist sein Starter: nie löschen.
 - Checkpoint-Graph und Fooocus-Code bleiben vorerst. Keine automatische Prompt-Ergänzung bei „remove …“ (nur Tipp unter dem Prompt).
 - Sein Bildton: Fenster 380 px fest breit, Titelleiste `#404040`; Flächen `#282828` (`PANEL`), Fenstergrau `#535353` (`BG`), Akzent Orange `#f28c28`; PhotoCrafts Slider-Spur (dunkler Teil) `#686868`.
-- „Perfekt“ (nicht ohne Nachfrage anfassen): Qwen 2.1 Edit/Fill/Expand/Remove; Flux 2 und Flux 3 Edit; Flux 3 Upscale; Flux 3 Text to image; MOSS Text to image und Expand; Fibo Edit whole image; Fensterkopf und Schärfe des Fensters.
+- „Perfekt“ (nicht ohne Nachfrage anfassen): Qwen 2.1 Edit/Fill/Expand/Remove; Flux 2 und Flux 3 Edit; Flux 3 Upscale; Flux 3 Text to image; MOSS Text to image; Fibo Edit whole image; Fensterkopf und Schärfe des Fensters.
 - Rechtzeitig sagen, wenn ein Chat zu lang wird (`PLAN.md`, Abschnitt 6).
 
 ## 2. Repo und Git-Stand
