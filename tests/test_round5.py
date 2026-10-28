@@ -205,6 +205,16 @@ def main():
         lm2.clear()
         pick(key, mode)
         assert lm2, (key, mode, "no layer mask in Upscale / Refine")
+    # Mix source/new image: under Advanced settings, directly above "Sharpen result", only where it was shown before
+    # (Upscale and Refine of Flux 2 / 3; not Fibo Refine, which runs as an edit) (user 28.10.)
+    on, off = rec(app.f_detail, "pack"), rec(app.f_detail, "pack_forget")
+    app.f_sharp.winfo_manager = lambda: "pack"
+    for key, mode, shown in (("flux2", "refine", True), ("flux3", "upscale", True), ("fibo", "refine", False), ("qwen", "edit", False)):
+        on.clear(); off.clear()
+        pick(key, mode)
+        assert bool(on) == shown and bool(off) != shown, (key, mode)
+        assert not shown or on[-1][1].get("before") is app.f_sharp, on
+    del app.f_sharp.winfo_manager, app.f_detail.pack, app.f_detail.pack_forget
     # one progress line: the success text sits above the bar, nothing is set below it
     app._reset_progress(done=True, text="Done · seed 5 · 1 layer")
     assert app.v_pl.get() == "Done" and app.v_pl_rest.get() == " · seed 5 · 1 layer" and app._bar_value == 1.0      # only "Done" is green
