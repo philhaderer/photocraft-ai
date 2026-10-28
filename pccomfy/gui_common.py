@@ -492,8 +492,9 @@ def number_typed_ok(action: str, typed: str, after: str) -> bool:
 class ValueBox(ttk.Entry):
     """The value of a slider in a small dark box on its right (as in PhotoCraft), and you can type into it: Enter or
     leaving the box takes the number, kept inside the slider's range (only digits and one decimal point or comma can be
-    typed). While you are in the box it holds the bare number ("4 %" -> "4"): a click puts the cursor where you clicked,
-    a double-click selects the number, Tab selects it all, Up/Down step the value (0.05 for a 0..1 value, 1 for %).
+    typed). The unit stays while you type (else the number shifts, user 28.10.): a click puts the cursor where you
+    clicked, a double-click or Tab selects the number without the unit, Up/Down step the value (0.05 for a 0..1 value,
+    1 for %).
     `factor`: shown = value * factor (100 for the % sliders). `command` shows the value in its format, as after a drag.
     configure(text=...) shows a value, as the label it stands in for did."""
 
@@ -538,41 +539,38 @@ class ValueBox(ttk.Entry):
     _typed_ok = staticmethod(number_typed_ok)
 
     @staticmethod
-    def _bare(text: str) -> str:
-        """The number without its unit: "4 %" -> "4", "hard edge" -> "0"."""
-        t = text.strip().lower()
-        return "0" if t.startswith("hard") else "".join(c for c in t if c in "0123456789.,-")
+    def _number_span(text: str) -> tuple:
+        """Where the number stands in the shown text ("30 %" -> 0, 2); the whole text when there is none."""
+        idx = [i for i, c in enumerate(text) if c in "0123456789.,-"]
+        return (idx[0], idx[-1] + 1) if idx else (0, len(text))
+
+    def _select_number_part(self):
+        a, b = self._number_span(self._text.get())
+        try:
+            self.selection_range(a, b)
+            self.icursor(b)
+        except tk.TclError:
+            pass
 
     def _press(self, _e=None):
-        self._clicked = True         # Tk's own binding puts the cursor where you clicked; Tab still selects all
+        self._clicked = True         # Tk's own binding puts the cursor where you clicked
 
     def _start_edit(self):
+        """Tab into the box selects the number (typing replaces it, the unit stays); a click keeps the cursor."""
         clicked, self._clicked = self._clicked, False
-        text = self._text.get()
-        bare = self._bare(text)
-        if bare != text:
-            try:
-                pos = int(self.index("insert"))
-            except (tk.TclError, TypeError, ValueError):
-                pos = len(bare)
-            self._text.set(bare)
-            try:
-                self.icursor(min(pos, len(bare)))
-            except tk.TclError:
-                pass
         if not clicked:
-            self._select_all()
+            self._select_number_part()
 
     def _select_number(self, _e=None):
         """Double-click: the whole number (Tk's word selection stops at the decimal point), never the unit."""
-        if self._text.get() != self._bare(self._text.get()):
-            self._text.set(self._bare(self._text.get()))
-        self._select_all()
+        self._select_number_part()
         return "break"
 
     def _typed_value(self) -> "float | None":
         t = self._text.get().strip().lower()
-        v = 0.0 if t.startswith("hard") else parse_number(t)
+        v = parse_number(t)
+        if v is None and t.startswith("hard"):
+            v = 0.0
         return None if v is None else v / self._factor
 
     def _step(self, sign: int):
@@ -588,8 +586,7 @@ class ValueBox(ttk.Entry):
         s._var.set(min(s._hi, max(s._lo, v)))
         s._draw()
         self._cmd()
-        self._text.set(self._bare(self._text.get()))       # still in the box: the bare number, selected
-        self._select_all()
+        self._select_number_part()          # still in the box: the number selected, the unit stays
         return "break"
 
     def _commit(self, _e=None):
