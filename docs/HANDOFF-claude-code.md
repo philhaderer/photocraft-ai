@@ -22,7 +22,7 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 - Ungetrackt im Repo-Ordner: `photocraft-ai 0.16.bat` (Starter des Nutzers für PhotoCraft 0.16, seit 28.10. seine Hauptversion): nicht anfassen, vor dem Einchecken fragen.
 - Tags: `backup-2026-10-26` (6df02df, vor Phase 0), `vor-claude-code` (65e955f).
 - Lane-Klone `lanes/L1`, `lanes/L2` sind Altlast (per `.git/info/exclude` ignoriert). Archiv: `docs/archiv-lanes/`.
-- Tests: `python tests/run_all.py` (47 Dateien, alle grün, ca. 25 s). Python des Nutzers: Pfad in `data/python.txt`.
+- Tests: `python tests/run_all.py` (48 Dateien, alle grün, ca. 26 s). Python des Nutzers: Pfad in `data/python.txt`.
 - Diagnose: `data/exchange/last-graph.json`, `data/exchange/runs.jsonl`; ComfyUI-Historie über `http://127.0.0.1:8188/history`.
 
 ## 3. Umgebung
@@ -60,7 +60,7 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 - Krea 2 Expand und Flux 3 Expand: zum Testen an. Flux 3 Expand funktioniert; Krea 2 Expand nur einseitig brauchbar (alt 6.10). Endgültige Entscheidung steht aus.
 - Qwen-Slotzahl: 8 bleibt.
 - Veröffentlichung: neues Repo ohne Upstream-Verlauf, Credits Pflicht, erst kurz vor dem Release; bis dahin `windows-fibo`.
-- Reihenfolge: **kleine Verbesserungen zuerst** (PLAN.md 8.A), dann weiter nach Plan; Easy Mode zuletzt. Easy-Mode-Ranking Fill: Qwen, Fibo; Expand: MOSS, Flux 2, Fibo, Qwen.
+- Reihenfolge: **kleine Verbesserungen zuerst** (PLAN.md 8.A), dann weiter nach Plan; Easy Mode zuletzt. Easy-Mode-Ranking Fill und Remove: Fibo, Qwen (seit 28.10.); Expand: MOSS, Flux 2, Fibo, Qwen.
 - Rechtsklick auf Modell-Tab: Favorit, Tab ausblenden, Workflow-JSON speichern. Minimize = Einklappen (hide/show).
 - Krea-Styles bis 50 per Bildauswahl; Tutorial-PSDs mit Testbild; Tooltips bei jedem Start.
 - Tipp-Wortlaut Text to image: abgenommen. Icons: 20 px (Slot-Icons 24 px). Drop auf mehrere Bilder: erstes ersetzt, Rest anhängen.
@@ -68,6 +68,7 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 - 27.10. (zweite Sitzung): „PhotoCraft“ unten weg; Slider 140 px, Werte immer eintippbar, nur Ziffern; Qwen ohne Turbo; Expand/Edit getauscht; Flux 2 Refine startet auf „Default“; Screenshots nur, wenn der Nutzer etwas nicht selbst prüfen kann.
 - Branches: vor jedem Löschen fragen.
 - 28.10.: Ergebnis ohne Zwischenablage; Varianten in einer Gruppe „<Funktion> <Lauf-Nr.>“ (z. B. „Fill Selection 3“); Feather-Vorschau als Quick Mask mit Knopf an/aus; Expand per Crop abgelehnt (Expand bleibt wie bisher). Fill Qwen/Fibo: Layer mask „soft“ = Auswahl voll deckend, weicher Rand nur außen (Breite = Edge feather), „passt gut, lassen wir so“. „auto“ aus dem Layer-mask-Menü entfernt. Context = Regler 0 bis 1, Schritt 0.05. Reihenfolge der Regler: Sharpen, Match colours, Context, Edge feather, dann Layer mask mit dem Knopf „Show feather“ daneben (dunkler Knopf). Sektion „Image and mask“ ausgeblendet. Reset setzt alles zurück außer aufgeklappten Bereichen und der Checkpoint-Datei. Fill-Tipp: „Draw a selection and prompt e.g. “a red flower”.“ Fibo mit glatter Auswahl bleibt wie es ist; Referenz: Fibo, Rechteck, soft, 6,5 % Feather ist gut. Die zwei alten Vorschau-Kanäle in seinem Dokument bleiben (nicht löschen). PhotoCraft 0.16 ist die Hauptversion.
+- 28.10. (E2-Testrunde): Fibo Fill startet mit Context 0.4, sonst bleiben die Startwerte; Remove läuft nur einmal (keine automatischen Wiederholungen), Tipp/Tooltip bei Fibo Remove „If the first try didn't work, try removing it a second time.“; kein eigener Modus für Rechteck und Lasso; Easy Mode: Fibo vor Qwen bei Fill und Remove.
 
 ## 6. Liste des Nutzers vom 27.10. (Stand 28.10.)
 **Erledigt:** A (alles), B.11, B.12, C.13, C.14 (gestrichen), D.15, D.16. **Offen:** E (Refresh/Reset, Expand-Entscheidungen, Masken-Option A und Seam-Korrektur, restliche Design-Vorschläge). Die laufende Reihenfolge steht nur in `PLAN.md`, Abschnitt 3; die Texte unten sind die ursprüngliche Beschreibung und der Befund von damals.
@@ -142,4 +143,4 @@ Die Reihenfolge steht nur noch in `PLAN.md`, Abschnitt 3 (dort sind auch die Ope
 
 **Beim Nutzer:** zwei alte Kanäle `pccomfy-preview-…` im zweiten „Untitled-1“ bleiben (sein Wunsch).
 
-**Als Nächstes (PLAN E2):** Context und Edge feather je Modell abstimmen; runde und eckige Auswahl vergleichen (Tooltips, eventuell eigene Modi); danach die Seam-Korrektur T2 als A/B-Test (vorgezogen 28.10.).
+**Als Nächstes (PLAN E2):** Context/Feather-Testrunde erledigt (Ergebnis in `docs/tests/e2-context-feather.md`); offen: Tooltip zur runden Auswahl, Befund „Qwen Fill macht Objekte kleiner“, dann die Seam-Korrektur T2 als A/B-Test (vorgezogen 28.10.).
