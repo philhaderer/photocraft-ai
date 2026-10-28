@@ -124,3 +124,11 @@ Bestätigt: Slot-Icons, Tags beim Modellwechsel, Qwen 2/4/8, Zahnrad/Fußzeile b
 
 ## 9. Danach (Plan)
 Die Reihenfolge steht nur noch in `PLAN.md`, Abschnitt 3 (dort sind auch die OpenFill-Ideen aus `ideas.md` eingeplant). Punkt 0 (Funktions-Symbole), D.16 (Schrift Inter) und D.6 (PhotoCraft-Befehle, `docs/photocraft-befehle.md`; Befehlsliste per `photocraft-cli commands --json`, Kopflos-Test per `photocraft-cli run --new …`) sind erledigt. Aus D.6 gebaut (27.10., Entscheidung des Users): Feather-Vorschau (`Bridge.show_feather`/`hide_feather`, Knopf `b_fprev`, gui_run.py), Varianten-Gruppe (`Bridge._group`, `Request.group_name`) und Ergebnis ohne Zwischenablage (`Bridge._place_png`, `_keep_selection`); Expand per Crop abgelehnt. Live-Test durch den User offen. Als Nächstes: E, L3 (Rechtsklick-Menü jetzt auf den Modell-Chips).
+
+## 10. Stand 28.10. abends (Ende der langen Sitzung)
+Gebaut und in `next`: Feather-Vorschau (Quick Mask), Varianten-Gruppe, Ergebnis ohne Zwischenablage (`layer.copyToDocument`), Fill Qwen/Fibo mit weichem Rand nur außerhalb der Auswahl (`imaging.outer_feather`, `bridge.soft_layer_mask`), Layer mask ohne „auto“, Context als Regler unter Edge feather, „Image and mask“ ausgeblendet, vollständiger Reset (`tests/test_reset_all.py`), Fill-Tipp unter dem Prompt.
+Live-Test offen: Context-Regler-Platz, ausgeblendete Sektion, „Show feather“ dann Generate (auch mit zwei Dokumenten „Untitled-1“), Hide feather, Reset.
+Aufräumen beim User: im zweiten Dokument „Untitled-1“ liegen zwei Kanäle `pccomfy-preview-…` aus dem alten Fehler (seine gesicherte Auswahl); nur mit seinem OK löschen, er kann sie auch selbst im Kanäle-Bedienfeld löschen.
+Prüfmittel ohne GPU: kopfloses PhotoCraft per `photocraft-cli serve --port <p> --control-token-file <f> --automation-read-root <x> --automation-write-root <x>` und `PhotoCraft(port=p, token_file=f, headless=True)` mit einem nachgemachten ComfyUI (`tests/test_reference_mode.FakeComfy`); das echte Fenster versteckt mit eigenem `PCCOMFY_HOME`.
+Als Nächstes (PLAN E2): Context und Edge feather je Modell abstimmen; runde und eckige Auswahl vergleichen (Tooltips, evtl. eigene Modi; `imaging.is_soft` lässt geglättete Auswahlen ohne Plugin-Rand).
+
