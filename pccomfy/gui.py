@@ -257,10 +257,6 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._on_feather()
         for w in (lbl_f, sc):
             Tooltip(w, "Softens the seam between the new area and your picture, in % of the selection's shorter side. 0 = hard edge.")
-        self.b_fprev = ttk.Button(ff, text="Show feather", style="SmallLink.TButton", width=0, command=self.toggle_feather_preview)
-        self.b_fprev.grid(row=1, column=0, sticky="w")
-        Tooltip(self.b_fprev, "Shows in PhotoCraft (in red) where the result will blend in, with this soft edge. "
-                              "Click again, or Generate, to get your selection back.")
 
         self.sep_prompt = ttk.Frame(r, style="Sep.TFrame", height=1)     # a light line above "Prompt"
         self.sep_prompt.pack(fill="x", padx=10, pady=(6, 4))
@@ -419,8 +415,8 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
             self.l_adv[lbl] = lb
             Tooltip(lb, tips[lbl])
             Tooltip(sp, tips[lbl])
-        # Context: a slider like the others (0 to 1 in steps of 0.05), right under Edge feather (the user's choice, 28.10.);
-        # shown for Fill, Remove and Expand only (see _update_availability)
+        # Context: a slider like the others (0 to 1 in steps of 0.05), between Match colours and Edge feather (the user's
+        # order, 28.10.); shown for Fill, Remove and Expand only (see _update_availability)
         fc = ttk.Frame(self.f_post)
         self.f_ctx = fc
         fc.pack(fill="x", pady=(2, 0))
@@ -443,7 +439,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.cb_fooocus = ttk.Checkbutton(self.f_img, text="Fooocus inpaint (SDXL, as in Krita AI Diffusion)", variable=self.v_fooocus)
         self.cb_fooocus.grid(row=3, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 6))
         Tooltip(self.cb_fooocus, "Built-in SDXL inpaint graph only.")
-        lm = ttk.Frame(self.f_post)     # under the edge feather (Advanced settings)
+        lm = ttk.Frame(self.f_post)     # the last row of the finishing options (Advanced settings)
         self.f_lm = lm
         lm.pack(fill="x", pady=(2, 0))
         lb = ttk.Label(lm, text="Layer mask", style="Muted.TLabel")
@@ -451,6 +447,10 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.cb_lm = cb_lm = ttk.Combobox(lm, textvariable=self.v_lmask, values=list(LAYER_MASKS.values()), state="readonly", width=18)
         cb_lm.pack(side="left", padx=6)
         cb_lm.bind("<<ComboboxSelected>>", lambda e: self._update_feather_state())
+        # beside the menu, with the dark background of a button; shown with Edge feather (see _update_feather_state)
+        self.b_fprev = ttk.Button(lm, text="Show feather", style="Small.TButton", command=self.toggle_feather_preview)
+        Tooltip(self.b_fprev, "Shows in PhotoCraft (in red) where the result will blend in, with this soft edge. "
+                              "Click again, or Generate, to get your selection back.")
         for w in (lb, cb_lm):
             Tooltip(w, "How the result is blended into your picture: soft (soft edge), hard (the selection as it is), none (the whole redrawn area).")
 
