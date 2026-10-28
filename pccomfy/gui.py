@@ -139,7 +139,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
             rb = ttk.Radiobutton(f_fn, text=label, value=key, variable=self.v_mode, style="Tab.Toolbutton",
                                  image=self._function_icon(key), compound="left", command=self._on_mode)
             self.rb_modes[key] = rb
-            self.tt_modes[key] = Tooltip(rb, MODE_TIPS[key])
+            self.tt_modes[key] = Tooltip(rb, models.function_tip(key, MODE_TIPS[key]))
         f_md = self.f_models = ttk.Frame(self.f_tabs)
         f_md.pack(fill="x", pady=(6, 0))
         cols = 3
