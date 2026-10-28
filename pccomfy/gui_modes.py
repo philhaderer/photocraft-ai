@@ -43,6 +43,10 @@ class ModeMixin:
                 w.grid_remove()
             else:
                 w.grid()
+        if expand:        # the frame would keep its height with nothing in it: a gap above Context (live finding 28.10.)
+            self.f_sharp.pack_forget()
+        else:
+            self._pack_post(self.f_sharp)
         self._show_enhance_box(not expand)
         self._update_prompt_hint()
         self._sync_prompt_field(mode)
@@ -279,11 +283,11 @@ class ModeMixin:
         self._status("Reset to the startup settings.")
 
     def _pack_post(self, frame):
-        """Show one of the rows at the end of the finishing options in its place: Edge feather, Context, Layer mask."""
+        """Show one of the finishing rows in its place: Sharpen and Match colours, Context, Edge feather, Layer mask."""
         shown = (lambda f: bool(f.winfo_manager())) if hasattr(frame, "winfo_manager") else (lambda f: False)
         if shown(frame):
             return
-        order = [f for f in (getattr(self, n, None) for n in ("f_feather", "f_ctx", "f_lm")) if f is not None]
+        order = [f for f in (getattr(self, n, None) for n in ("f_sharp", "f_ctx", "f_feather", "f_lm")) if f is not None]
         later = [f for f in order[order.index(frame) + 1:] if shown(f)] if frame in order else []
         frame.pack(fill="x", pady=(2, 0), **({"before": later[0]} if later else {}))
 
@@ -313,6 +317,12 @@ class ModeMixin:
             self._pack_post(self.f_feather)
         elif not on and shown:
             self.f_feather.pack_forget()
+        b = getattr(self, "b_fprev", None)
+        if b is not None and hasattr(b, "winfo_manager"):
+            if on and not b.winfo_manager():
+                b.pack(side="left")
+            elif not on and b.winfo_manager():
+                b.pack_forget()
         if getattr(self, "_fprev_on", False):    # the feather preview follows: new settings shown, or ended with the slider
             if on:
                 self._refresh_feather_preview()
