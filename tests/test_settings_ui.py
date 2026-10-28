@@ -258,6 +258,19 @@ def main():
     text = "".join(p for p, _tags in app.t_settings.parts)
     assert "ComfyUI could not be read." in text and "No connection to ComfyUI" in text
     app._settings_close()
+    # the gear toggles: a click opens the window, the next one closes it (user 28.10.)
+    assert app.b_gear["command"] == app.toggle_settings and app._settings_win is None
+    app.toggle_settings()
+    win = app._settings_win
+    assert win is not None
+    closed = []
+    win.destroy = lambda: closed.append(True)
+    win.winfo_exists = lambda: 1
+    app.toggle_settings()
+    assert closed == [True] and app._settings_win is None
+    app.toggle_settings()
+    assert app._settings_win is not None and app._settings_win is not win
+    app._settings_close()
 
     # the overlay text: downloads are links, a missing node names its pack, the credits are links
     inv = inventory.Inventory(lists_without(unet="seedvr2_3b_int8_convrot.safetensors"), {"SeedVR2Preprocess"})

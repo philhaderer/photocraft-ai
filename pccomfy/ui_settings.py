@@ -44,7 +44,7 @@ class SettingsMixin:
         self._map_undo: list[dict] = []            # the links before each change ("Undo")
         style = ttk.Style()
         style.configure("Missing.Tab.Toolbutton", foreground=NA_RED)      # a tab that is not available: red text, the background of an inactive tab
-        self.b_gear = ttk.Button(foot, image=self._icon("gear"), style="Icon.TButton", command=self.open_settings)
+        self.b_gear = ttk.Button(foot, image=self._icon("gear"), style="Icon.TButton", command=self.toggle_settings)
         self.b_gear.pack(side="right")
         Tooltip(self.b_gear, "Settings: which model files ComfyUI has, links to get the missing ones, ComfyUI folders, credits.")
         style.configure("Empty.TLabel", foreground=MUTED, font=font(11))
@@ -359,6 +359,20 @@ class SettingsMixin:
         return names, self.inv.lists
 
     # ---------- the overlay window ----------
+
+    def toggle_settings(self):
+        """The gear: opens the settings window, or closes it when it is open (user 28.10.)."""
+        win = self._settings_win
+        if win is not None:
+            try:
+                alive = bool(win.winfo_exists())
+            except tk.TclError:
+                alive = False
+            if alive:
+                self._settings_close()
+                return
+            self._settings_win = None
+        self.open_settings()
 
     def open_settings(self, focus: str | None = None):
         self._settings_focus = focus
