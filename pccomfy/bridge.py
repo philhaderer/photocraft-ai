@@ -70,6 +70,7 @@ class Request:
     layer_mask: str = "auto"             # "auto" = none for Fill with an editor that ignores the mask, else soft;
                                          # "soft" = same mask the model got, "selection" = hard selection, "none"
     feather_pct: float = 2.0             # soft layer mask for editors that ignore the mask: % of the selection's shorter side
+    mask_density: int = 100              # density of the soft layer mask in PhotoCraft, 0..100 (PhotoCraft 0.17+)
     scale: float = 2.0                   # Upscale: factor per side (Refine always runs at 1.0)
     lora_strength: float | None = None   # strength of the workflow's pc:lora loader (None = what the workflow has)
     stage_on: bool = True                # workflows with a switchable stage (pc_stage_off, e.g. SeedVR2): False = skip the first one
@@ -626,6 +627,9 @@ class Bridge:
         if lm_mode == "soft":
             layer_mask = soft_layer_mask(req, wf_paths, mask, region, bbox)
         mode = lm_mode
+        # the soft mask's density in PhotoCraft (Fill starts at 5 %: the soft edge cut off the fill's edge and its shadow,
+        # user 28.10.); 100 % = the mask as it is, nothing to set
+        density = int(req.mask_density) if (layer_mask is not None and req.mask_density < 100) else None
         sel_small = None   # the new area in the size the model drew it, for "match colours"
         if req.match > 0 and req.mode in ("inpaint", "outpaint") and mask is not None and results and results[0][1]:
             sel_small = mask.crop(region.pil()).resize(results[0][1][0].size, Image.NEAREST)
@@ -657,7 +661,7 @@ class Bridge:
                     name = (f"AI {mode_name}" + (f" [{label}]" if label else "") + f": {base} [{p.seed}]"
                             + (f" #{i + 1}" if count > 1 else ""))
                 layers.insert(0, self._import(orig, im, region, mode, name, tag, g, first=(n == 0), hidden=(g > 0),
-                                              layer_mask=layer_mask, above=above if n == 0 else None))
+                                              layer_mask=layer_mask, above=above if n == 0 else None, density=density))
         group = self._group(layers, req.group_name or f"AI {mode_name} variants") if len(layers) > 1 else None
         if req.mode == "outpaint":
             self._last_expand = {"doc": orig_name, "size": (W, H), "keep": keep, "layers": list(layers)}
@@ -991,7 +995,8 @@ class Bridge:
             raise BridgeError(f"PhotoCraft gave no layer for the result (answer: {json.dumps(res, default=str)[:200]})") from None
 
     def _import(self, orig: int, im: Image.Image, region: imaging.Box, mode: str, layer_name: str, tag: str, i: int,
-                first: bool = True, hidden: bool = False, layer_mask: Image.Image | None = None, above: "int | None" = None) -> int:
+                first: bool = True, hidden: bool = False, layer_mask: Image.Image | None = None, above: "int | None" = None,
+                density: "int | None" = None) -> int:
         pc = self.pc
         if mode == "selection" and not first:   # the mask of the variant before used the selection up: bring it back
             pc.execute("select.reselect")
@@ -1012,6 +1017,8 @@ class Bridge:
             finally:
                 self._try("layer.delete", {"layer": helper})
             pc.execute("layer.layerMask.revealSelection", {"layer": layer})
+            if density is not None:     # PhotoCraft 0.17+; an older one keeps the mask at full density
+                self._try("layer.layerMask.edit", {"layer": layer, "density": density})
         self._try("layer.select", {"layer": layer})     # the next variant goes on top of this one, not on the layer below
         self._try("layer.renameLayer", {"layer": layer, "name": layer_name})
         if hidden:

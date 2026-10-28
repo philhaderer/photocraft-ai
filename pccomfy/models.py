@@ -86,7 +86,7 @@ QWEN = Model(
         "edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=False, layer_mask="none"), prompt_tip=EDIT_TIP),
         "multi_edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=False, layer_mask="none"), prompt_tip=MULTI_TIP, run_as="edit"),
         # soft: the soft edge lies outside the selection (Bridge: soft_layer_mask), the fill keeps its outline (28.10.)
-        "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=False, feather_pct=4.0), prompt_tip=FILL_TIP),
+        "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=False, feather_pct=4.0, mask_density=5), prompt_tip=FILL_TIP),
         "outpaint": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=False, layer_mask="none")),   # = the old "auto"
         "remove": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=False, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
     },
@@ -206,7 +206,7 @@ FIBO = Model(
         "edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=EDIT_TIP),
         "multi_edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=MULTI_TIP, run_as="edit"),
         "refine": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), FIBO_REFINE, run_as="edit"),
-        "inpaint": Mode("fibo2-edit.json", dict(base_res=1024, context=0.4, layer_mask="soft", feather_pct=10.0, enhance=False), prompt_tip=FILL_TIP),   # as Qwen Fill; Context 0.4 from the test round 28.10.
+        "inpaint": Mode("fibo2-edit.json", dict(base_res=1024, context=0.4, layer_mask="soft", feather_pct=10.0, mask_density=5, enhance=False), prompt_tip=FILL_TIP),   # as Qwen Fill; Context 0.4 from the test round 28.10.
         "outpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False)),
         "remove": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False), prompt_tip=REMOVE_NAME_TIP + " " + REMOVE_AGAIN, remove_text=True),
     },

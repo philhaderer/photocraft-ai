@@ -149,6 +149,7 @@ class ModeMixin:
         # a mode without a Context of its own starts at the function's default, not at what the tab before had
         # (Fibo Fill showed 0.4 after Qwen and 0.2 after Reset)
         s.setdefault("context", FILL_CONTEXT if mode == "inpaint" else self._ctx_default)
+        s.setdefault("mask_density", 100)      # likewise: Fill's 5 % does not travel to the next function
         if not keep:
             s["workflow"] = spec.workflow
         elif not force:
@@ -248,6 +249,7 @@ class ModeMixin:
         self.v_sharpen.set(0.0)
         self.v_match.set(0.0)
         self.v_feather.set(2.0)
+        self.v_density.set(100)
         self.v_detail.set(1.0)
         self.v_lmask.set(LAYER_MASKS["soft"])       # the model's function sets its own below
         self.v_cmp_res.set("")
@@ -279,6 +281,7 @@ class ModeMixin:
         self._on_sharpen()
         self._on_match()
         self._on_feather()
+        self._on_density()
         self._fit_height()
         self._status("Reset to the startup settings.")
 
@@ -287,7 +290,7 @@ class ModeMixin:
         shown = (lambda f: bool(f.winfo_manager())) if hasattr(frame, "winfo_manager") else (lambda f: False)
         if shown(frame):
             return
-        order = [f for f in (getattr(self, n, None) for n in ("f_sharp", "f_ctx", "f_feather", "f_lm")) if f is not None]
+        order = [f for f in (getattr(self, n, None) for n in ("f_sharp", "f_ctx", "f_feather", "f_density", "f_lm")) if f is not None]
         later = [f for f in order[order.index(frame) + 1:] if shown(f)] if frame in order else []
         frame.pack(fill="x", pady=(2, 0), **({"before": later[0]} if later else {}))
 
@@ -317,6 +320,14 @@ class ModeMixin:
             self._pack_post(self.f_feather)
         elif not on and shown:
             self.f_feather.pack_forget()
+        fd = getattr(self, "f_density", None)    # Mask density goes with it
+        if fd is not None:
+            self.w_density.configure(state="normal" if on else "disabled")
+            if hasattr(fd, "winfo_manager"):
+                if on and not fd.winfo_manager():
+                    self._pack_post(fd)
+                elif not on and fd.winfo_manager():
+                    fd.pack_forget()
         b = getattr(self, "b_fprev", None)
         if b is not None and hasattr(b, "winfo_manager"):
             if on and not b.winfo_manager():
@@ -402,6 +413,12 @@ class ModeMixin:
                 box.configure(text=f"{float(self.v_context.get()):.2f}")
             except (tk.TclError, ValueError):
                 pass
+
+    def _on_density(self, _value=None):
+        v = int(round(float(self.v_density.get())))
+        if v != self.v_density.get():
+            self.v_density.set(v)
+        self.lbl_density.configure(text=f"{v} %")
 
     def _on_feather(self, _value=None):
         v = round(float(self.v_feather.get()) * 2) / 2

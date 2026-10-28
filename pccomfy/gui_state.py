@@ -84,6 +84,7 @@ class StateMixin:
             "lora_strength": round(float(self.v_lora_str.get()), 2),
             "layer_mask": layer_mask_key(self.v_lmask.get()),
             "feather_pct": round(float(self.v_feather.get()), 1),
+            "mask_density": int(self.v_density.get()),
             "prompt": self._prompt_text(), "negative": self.t_neg.get("1.0", "end").strip(),
         }
 
@@ -159,6 +160,8 @@ class StateMixin:
         self._on_detail()
         put(self.v_feather, "feather_pct", float)
         self._on_feather()
+        put(self.v_density, "mask_density", int)
+        self._on_density()
         if "layer_mask" in s:
             self.v_lmask.set(LAYER_MASKS[layer_mask_key(s["layer_mask"])])
         self._update_feather_state()
@@ -252,7 +255,7 @@ class StateMixin:
             "negative": p.negative, "steps": p.steps, "cfg": p.cfg, "denoise": self.v_denoise.get(),
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
-            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "prompt_h": self._prompt_lines(), "fooocus": req.fooocus, "enhance": bool(self.v_enhance.get()), "turbo": req.turbo, "layer_mask": req.layer_mask,
+            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "prompt_h": self._prompt_lines(), "fooocus": req.fooocus, "enhance": bool(self.v_enhance.get()), "turbo": req.turbo, "layer_mask": req.layer_mask, "mask_density": req.mask_density,
             "stage_on": req.stage_on, "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "stage_strengths": [round(float(v.get()), 2) for v in self.v_sstr], "detail": req.detail, "sharpen": round(float(self.v_sharpen.get()), 2), "match": req.match, "loras": [list(x) for x in req.loras], "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
             "runs": dict(self.state.get("runs", {})),
             "model_by_mode": dict(getattr(self, "_mode_model", None) or self.state.get("model_by_mode") or {}),

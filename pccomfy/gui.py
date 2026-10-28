@@ -71,6 +71,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.v_scale = tk.StringVar(value=scale_text(g("scale", 1.5)))
         self.v_top = tk.BooleanVar(value=True)      # the window always belongs to PhotoCraft (no switch any more)
         self.v_feather = tk.DoubleVar(value=2.0)    # the function's own value is set after the build (see below)
+        self.v_density = tk.IntVar(value=100)       # the same
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
         self.v_enhance = tk.BooleanVar(value=g("enhance", True))
         self.v_turbo = tk.BooleanVar(value=g("turbo", True))
@@ -107,6 +108,8 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         spec = self._model().modes.get(self.v_mode.get()) if self._model() else None
         self.v_feather.set(float(spec.settings.get("feather_pct", 2.0)) if spec else 2.0)
         self._on_feather()
+        self.v_density.set(int(spec.settings.get("mask_density", 100)) if spec else 100)
+        self._on_density()
         self._on_top()
         self._fit_height(self._px(MIN_W))
         self._place_window()
@@ -262,6 +265,22 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._on_feather()
         for w in (lbl_f, sc):
             Tooltip(w, "Softens the seam between the new area and your picture, in % of the selection's shorter side. 0 = hard edge.")
+
+        fd = ttk.Frame(self.f_post)     # shown with Edge feather (see _update_feather_state)
+        self.f_density = fd
+        self._slider_row(fd)
+        lbl_d = ttk.Label(fd, text="Mask density", style="Muted.TLabel")
+        lbl_d.grid(row=0, column=0, sticky="w")
+        self.w_density = sc = Slider(fd, scale=self.ui, from_=0, to=100, variable=self.v_density, command=self._on_density,
+                                     length=self._px(SLIDER_W))
+        sc.grid(row=0, column=1, sticky="e", padx=8)
+        self.lbl_density = ValueBox(fd, sc, self._on_density)
+        self.lbl_density.grid(row=0, column=2, sticky="e")
+        self._on_density()
+        for w in (lbl_d, sc):
+            Tooltip(w, "How strongly the soft layer mask hides the redrawn area around your selection. "
+                       "0 % = the whole redrawn area shows, 100 % = only the selection with its soft edge. "
+                       "You can change it later in PhotoCraft's layer mask properties.")
 
         self.sep_prompt = ttk.Frame(r, style="Sep.TFrame", height=1)     # a light line above "Prompt"
         self.sep_prompt.pack(fill="x", padx=10, pady=(6, 4))
