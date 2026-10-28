@@ -78,6 +78,7 @@ class FakePC:
     def document(self):
         d = self.doc
         return {"width": W, "height": H, "hasSelection": d.sel is not None, "activeLayer": d.active, "quickMask": d.quick is not None,
+                "channels": {"alpha": [{"name": n} for n in d.channels]},
                 "layers": [{"id": l["id"], "visible": l["visible"], "name": l.get("name", "Layer"), "hasMask": l.get("mask") is not None,
                             **({"kind": "Group", "children": [{"id": m["id"], "name": m.get("name"), "visible": m["visible"]}
                                                              for m in reversed(l["members"])]} if "members" in l else {})}
