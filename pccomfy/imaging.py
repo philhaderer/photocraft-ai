@@ -131,16 +131,42 @@ def auto_feather(mask: Image.Image, radius: int) -> Image.Image:
     return m.filter(ImageFilter.GaussianBlur(radius / 2.0))
 
 
+def _outside_distance(inside: np.ndarray, limit: int) -> np.ndarray:
+    """Euclidean distance in px from each pixel to the nearest `inside` pixel (0 inside), capped at `limit` + 1.
+    Two passes: the distance along each column, then the nearest column within `limit` px (numpy only, no SciPy)."""
+    h, w = inside.shape
+    cap = float(limit + 1)
+    col = np.where(inside, 0.0, cap).astype(np.float32)
+    for y in range(1, h):                      # down, then up: distance to the nearest inside pixel in the same column
+        np.minimum(col[y], col[y - 1] + 1, out=col[y])
+    for y in range(h - 2, -1, -1):
+        np.minimum(col[y], col[y + 1] + 1, out=col[y])
+    g2 = np.minimum(col, cap) ** 2
+    d2 = g2.copy()
+    for dx in range(1, min(limit, w - 1) + 1):  # then the nearest of the columns beside it
+        np.minimum(d2[:, dx:], g2[:, :-dx] + dx * dx, out=d2[:, dx:])
+        np.minimum(d2[:, :-dx], g2[:, dx:] + dx * dx, out=d2[:, :-dx])
+    return np.sqrt(d2)
+
+
 def outer_feather(mask: Image.Image, radius: int) -> Image.Image:
     """Soften a hard selection mask OUTSIDE its edge: inside it stays fully opaque, around it the mask fades out over
-    about `radius` px (twice a Gaussian blur of half the radius, which is 1 at the edge and ~0.05 at `radius`). Used for
-    Fill with an instruction editor: the new object keeps its full outline, only the redrawn surroundings blend in.
-    A mask that is already soft is returned unchanged, as in auto_feather."""
+    about `radius` px (1 at the edge, ~0.05 at `radius`: the profile twice a Gaussian blur of half the radius gives a
+    straight edge). Used for Fill with an instruction editor: the new object keeps its full outline, only the redrawn
+    surroundings blend in. The fade follows the distance to the selection, so a corner fades as wide as an edge
+    (the blur alone gave a rectangle hard corners, live test 28.10.). A mask that is already soft is returned
+    unchanged, as in auto_feather."""
     m = mask.convert("L")
     if radius <= 0 or is_soft(m):
         return m
     a = np.asarray(m, dtype=np.float32)
-    b = np.asarray(m.filter(ImageFilter.GaussianBlur(radius / 2.0)), dtype=np.float32) * 2.0
+    limit = int(math.ceil(radius * 1.5))       # beyond 1.5 × radius the fade is below 1/255
+    d = _outside_distance(a > 127, limit)
+    sigma = radius / 2.0
+    xs = np.arange(0, limit + 2, 0.25)
+    table = np.array([1.0 - math.erf(x / (sigma * math.sqrt(2.0))) for x in xs])   # = 2 × (1 - Phi(x / sigma))
+    b = np.interp(np.maximum(d - 0.5, 0.0), xs, table) * 255.0   # measured from the pixel's edge, as the blur was
+    b[d > limit] = 0.0
     return Image.fromarray(np.maximum(a, np.minimum(255.0, b)).round().astype(np.uint8))
 
 
