@@ -26,7 +26,7 @@ class LoraMixin:
         row = ttk.Frame(self.f_xl_rows)
         row.pack(fill="x", pady=1)
         row.columnconfigure(0, weight=1)
-        v_name, v_str = tk.StringVar(value=name), tk.DoubleVar(value=strength)
+        v_name, v_str = tk.StringVar(value=name), tk.StringVar(value=f"{float(strength):g}")   # text: "0,2" can be typed
         rec = {"frame": row, "name": v_name, "strength": v_str, "list": None, "box": None}
         ent = ttk.Entry(row, textvariable=v_name)
         ent.grid(row=0, column=0, sticky="ew")
@@ -36,6 +36,12 @@ class LoraMixin:
         rec["btn"] = btn
         sp = ttk.Spinbox(row, textvariable=v_str, from_=0.0, to=1.5, increment=0.05, width=5)
         sp.grid(row=0, column=2, padx=4)
+        try:      # numbers only, comma or point (user 28.10.); the arrows and Up/Down step from the typed value
+            sp.configure(validate="key", validatecommand=(sp.register(number_typed_ok), "%d", "%S", "%P"))
+        except (AttributeError, tk.TclError):
+            pass
+        for ev in ("<FocusOut>", "<Return>", "<Up>", "<Down>", "<ButtonPress-1>"):
+            sp.bind(ev, lambda e, r=rec: self._lora_strength_text(r), add="+")
         rm = ttk.Button(row, image=self._icon("remove", MUTED), style="Link.TButton", command=lambda: self._remove_lora_row(rec))
         rm.grid(row=0, column=3)
         # typing opens a list under the row that narrows with every key; a click (or Down, Enter) takes the entry
@@ -147,11 +153,22 @@ class LoraMixin:
         for r in self.lora_rows:
             n = r["name"].get().strip()
             if n:
-                try:
-                    out.append([n, round(float(r["strength"].get()), 2)])
-                except (tk.TclError, ValueError):
-                    out.append([n, 1.0])
+                out.append([n, self._lora_strength(r)])
         return out
+
+    @staticmethod
+    def _lora_strength(rec: dict) -> float:
+        """A LoRA row's strength: comma or point, kept in 0..1.5; nothing usable typed = 1.0."""
+        v = parse_number(rec["strength"].get())
+        return 1.0 if v is None else round(min(1.5, max(0.0, v)), 2)
+
+    def _lora_strength_text(self, rec: dict):
+        """The strength field shows the number as the spin arrows read it ("0,2" -> "0.2")."""
+        text = rec["strength"].get()
+        if parse_number(text) is not None or not text.strip():
+            v = f"{self._lora_strength(rec):g}"
+            if v != text:
+                rec["strength"].set(v)
 
     def _set_loras(self, items):
         for r in list(self.lora_rows):
