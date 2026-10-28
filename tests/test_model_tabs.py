@@ -250,7 +250,7 @@ def main():
     # every function's tooltip starts with the ranking (user 28.10.); a function without one says so
     assert models.ranking_text("inpaint") == "Ranking: 1. Fibo, 2. Qwen."
     assert models.ranking_text("remove") == "Ranking: 1. Fibo, 2. Qwen (not ranked: Flux 3, Flux 2)."
-    assert models.ranking_text("outpaint") == "Ranking: 1. MOSS, 2. Flux 2, 3. Fibo, 4. Qwen (not ranked: Flux 3, Krea 2)."
+    assert models.ranking_text("outpaint") == "Ranking: 1. Flux 2, 2. Flux 3, 3. Qwen, 4. Fibo, 5. Krea 2, 6. MOSS."
     assert models.ranking_text("edit") == "Ranking: not set yet." and models.ranking_text("img2img") == ""
     assert app.tt_modes["remove"].text.startswith("Ranking: 1. Fibo, 2. Qwen")
     assert all(k in models.SHORT for k in models.BY_KEY) and all(k in models.BY_KEY for r in models.RANKING.values() for k in r)
