@@ -151,6 +151,19 @@ def main():
     app.root.clipboard_append = lambda t: copied.append(t)
     app._refs_copy_text(0)
     assert copied == ["A red square."]
+    # a click on a slot picture opens the larger view; a second click on it, the X or a redraw of the slots closes it
+    for name, v in (("winfo_rootx", 1500), ("winfo_rooty", 100), ("winfo_width", 380), ("winfo_height", 900),
+                    ("winfo_vrootx", 0), ("winfo_vrootwidth", 2560)):
+        setattr(app.root, name, lambda v=v: v)
+    app._refs_preview(0)
+    assert app._ref_preview is not None and app._ref_preview[0] == 0
+    app._refs_preview(0)
+    assert app._ref_preview is None
+    app._refs_preview(0)
+    app._refs_redraw()
+    assert app._ref_preview is None
+    app._refs_preview(5)                                                   # no picture in that slot: nothing opens
+    assert app._ref_preview is None
     app.refslots.clear()
     app.refslots.add(img, "a b.png")
 

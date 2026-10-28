@@ -208,6 +208,17 @@ def main():
     assert rs.put_description("hat on dog\n<image3>: a dog\nmore", 1, old="a dog") == "hat on dog\n<image3>: a brown dog\nmore"
     assert rs.put_description("hat on dog\n<image3>: my own words", 1, old="a dog") == "hat on dog\n<image3>: my own words"   # edited: kept
     assert rs.put_description("hat on dog", 1, old="a dog") == "hat on dog"                                                   # deleted: kept
+
+    # the larger view: 500 % of the slot picture, at most twice the plugin's width and its height, proportions kept
+    ps = refslots.preview_size
+    assert ps((1000, 500), 80, 760, 900) == (400, 200)          # slot shows 80x40 -> 400x200
+    assert ps((40, 30), 80, 760, 900) == (200, 150)             # a small picture is shown at its own size in the slot: x5 of that
+    assert ps((1000, 4000), 160, 760, 600) == (150, 600)        # too tall: the plugin's height is the limit
+    assert ps((4000, 1000), 200, 760, 900) == (760, 190)        # too wide: twice the plugin's width is the limit
+    pp = refslots.preview_position
+    assert pp((1500, 100, 380, 900), (400, 200), 0, 2560) == (1092, 100)   # left of the plugin, level with its top
+    assert pp((100, 100, 380, 900), (400, 200), 0, 2560) == (488, 100)     # no room on the left: on the right
+    assert pp((100, 100, 380, 900), (760, 200), 0, 1000) == (0, 100)       # room on neither side: at the screen's left edge
     print("ALL OK (refslots)")
 
 

@@ -254,6 +254,32 @@ def thumbnail_png(image: Image.Image, size: int, background=(0x28, 0x28, 0x28)) 
     return buf.getvalue()
 
 
+PREVIEW_ZOOM = 5    # the larger view is 500 % of the slot picture (user 28.10.)
+
+
+def preview_size(image_size: tuple[int, int], thumb_px: int, max_w: int, max_h: int) -> tuple[int, int]:
+    """Size of the larger view: the picture at PREVIEW_ZOOM times its size in the slot (whose longer side is `thumb_px`, or
+    less for a small picture), shrunk to fit max_w x max_h (user 28.10.: at most twice as wide as the plugin and as tall as it)."""
+    w, h = max(1, image_size[0]), max(1, image_size[1])
+    s = min(1.0, thumb_px / max(w, h)) * PREVIEW_ZOOM
+    s = min(s, max_w / w, max_h / h)
+    return max(1, round(w * s)), max(1, round(h * s))
+
+
+def preview_position(win: tuple[int, int, int, int], size: tuple[int, int], screen_left: int, screen_right: int,
+                     gap: int = 8) -> tuple[int, int]:
+    """Top left corner of the larger view: beside the plugin window (x, y, w, h), level with its top; on the left when it
+    fits on the screen there (the plugin usually sits at PhotoCraft's right edge), else on the right, else at the screen's
+    left edge."""
+    x, y, w, _ = win
+    left = x - gap - size[0]
+    if left >= screen_left:
+        return left, y
+    if x + w + gap + size[0] <= screen_right:
+        return x + w + gap, y
+    return screen_left, y
+
+
 
 # ======================================================================================================================
 # The window part (Tk): one hook in gui.py puts RefSlotsMixin in front of the window's other mixins
@@ -379,6 +405,7 @@ class RefSlotsMixin:
         from .gui_common import ACCENT, FG, MUTED, PANEL, Tooltip
         for w in (self.f_refgrid.winfo_children() or []):
             w.destroy()
+        self._refs_preview_close()   # the slots change: an open larger view may show a picture that is gone
         self._ref_photos = []
         rs = self.refslots
         s = self._px(self.SLOT)
@@ -399,6 +426,8 @@ class RefSlotsMixin:
                 self._ref_photos.append(photo)
                 lbl = tk.Label(box, image=photo, bg=PANEL, bd=0)
                 lbl.pack(expand=True, side="left")
+                lbl.configure(cursor="hand2")
+                lbl.bind("<Button-1>", lambda e, k=k: self._refs_preview(k))   # a larger view (500 %)
                 if self._refs_dnd:      # a drop onto a filled slot replaces its picture (the rest of the frame adds)
                     self._refs_slot_drop(box, k)
                     self._refs_slot_drop(lbl, k)
@@ -473,6 +502,71 @@ class RefSlotsMixin:
                 lb.bind("<Enter>", lambda e, l=lb, k=kind: l.configure(image=self._refs_icon(k, ACCENT)), add="+")
                 lb.bind("<Leave>", lambda e, l=lb, k=kind: l.configure(image=self._refs_icon(k, FG)), add="+")
             Tooltip(lb, f"{word}: {tip}")
+
+    def _refs_preview(self, k: int):
+        """A click on a slot picture: a larger view (500 %, at most twice as wide as the plugin and as tall as it) in a borderless
+        window beside the plugin. The X, Esc, a click on the picture or a click elsewhere closes it; a click on the same
+        slot again too."""
+        import tkinter as tk
+        from .gui_common import ACCENT, FG, PANEL
+        was = getattr(self, "_ref_preview", None)
+        self._refs_preview_close()
+        if was is not None and was[0] == k:
+            return
+        rs = self.refslots
+        if k >= len(rs.items):
+            return
+        it = rs.items[k]
+        root = self.root
+        root.update_idletasks()
+        win = (root.winfo_rootx(), root.winfo_rooty(), root.winfo_width(), root.winfo_height())
+        thumb = self._px(self.SLOT) - 4 - self._px(self._bar_px())
+        w, h = preview_size(it.image.size, thumb, 2 * win[2], win[3])
+        vx = root.winfo_vrootx()
+        x, y = preview_position(win, (w, h), vx, vx + root.winfo_vrootwidth())
+        top = tk.Toplevel(root)
+        top.wm_overrideredirect(True)
+        top.configure(bg=PANEL, highlightthickness=1, highlightbackground="#5c5c5c")
+        top.wm_geometry(f"+{x}+{y}")
+        im = flatten(it.image, (0x28, 0x28, 0x28)).resize((w, h), Image.LANCZOS)
+        import io
+        buf = io.BytesIO()
+        im.save(buf, "PNG")
+        photo = tk.PhotoImage(data=_b64(buf.getvalue()))
+        pic = tk.Label(top, image=photo, bg=PANEL, bd=0)
+        pic.image = photo
+        pic.pack()
+        close = tk.Label(top, image=self._refs_icon("remove", FG), bg=PANEL, bd=0, cursor="hand2")
+        close.place(relx=1.0, x=-self._px(4), y=self._px(4), anchor="ne")
+        close.bind("<Enter>", lambda e: close.configure(image=self._refs_icon("remove", ACCENT)))
+        close.bind("<Leave>", lambda e: close.configure(image=self._refs_icon("remove", FG)))
+        for wd in (close, pic):
+            wd.bind("<Button-1>", lambda e: self._refs_preview_close())
+        top.bind("<Escape>", lambda e: self._refs_preview_close())
+        top.bind("<FocusOut>", lambda e: root.after(150, self._refs_preview_lost_focus))
+        self._ref_preview = (k, top)
+        top.focus_force()
+
+    def _refs_preview_lost_focus(self):
+        """A click elsewhere closes the larger view, except a click on the slot picture itself (that one toggles it)."""
+        p = getattr(self, "_ref_preview", None)
+        if p is None:
+            return
+        try:
+            if p[1].focus_displayof() is not None:
+                return
+        except Exception:
+            pass
+        self._refs_preview_close()
+
+    def _refs_preview_close(self):
+        p = getattr(self, "_ref_preview", None)
+        self._ref_preview = None
+        if p is not None:
+            try:
+                p[1].destroy()
+            except Exception:
+                pass
 
     def _refs_copy_text(self, k: int):
         items = self.refslots.items
