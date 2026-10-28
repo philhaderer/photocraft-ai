@@ -257,7 +257,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._on_feather()
         for w in (lbl_f, sc):
             Tooltip(w, "Softens the seam between the new area and your picture, in % of the selection's shorter side. 0 = hard edge.")
-        self.b_fprev = ttk.Button(ff, text="Show feather", style="Link.TButton", width=0, command=self.toggle_feather_preview)
+        self.b_fprev = ttk.Button(ff, text="Show feather", style="SmallLink.TButton", width=0, command=self.toggle_feather_preview)
         self.b_fprev.grid(row=1, column=0, sticky="w")
         Tooltip(self.b_fprev, "Shows in PhotoCraft (in red) where the result will blend in, with this soft edge. "
                               "Click again, or Generate, to get your selection back.")
@@ -396,8 +396,9 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         Tooltip(self.w_detail, "100 % = only the new image; less mixes in the plain scaled original (tames over-sharp results).")
         self._on_detail()
 
+        # "Image and mask" (Base res., Mask grow, Mask blur, Fooocus) is not shown (the user's choice, 28.10.): each model's
+        # function sets these values; the widgets stay, so presets, Reset and the requests work as before
         self.f_img = ttk.LabelFrame(self.adv_body, text="Image and mask")
-        self.f_img.grid(row=7, column=0, columnspan=2, sticky="ew", pady=(8, 0))
         tips = {
             "Base res.": "Size (px) the model works at. Higher = more detail, slower.",
             "Context": "How much of the surroundings the model sees around your selection, as a share of the selection's "
@@ -418,9 +419,11 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
             self.l_adv[lbl] = lb
             Tooltip(lb, tips[lbl])
             Tooltip(sp, tips[lbl])
-        # Context: a slider like the others (0 to 1 in steps of 0.05, the user's choice 28.10.), under the three boxes
-        fc = ttk.Frame(self.f_img)
-        fc.grid(row=2, column=0, columnspan=3, sticky="ew", padx=6, pady=(0, 6))
+        # Context: a slider like the others (0 to 1 in steps of 0.05), right under Edge feather (the user's choice, 28.10.);
+        # shown for Fill, Remove and Expand only (see _update_availability)
+        fc = ttk.Frame(self.f_post)
+        self.f_ctx = fc
+        fc.pack(fill="x", pady=(2, 0))
         self._slider_row(fc)
         lb = ttk.Label(fc, text="Context", style="Muted.TLabel")
         lb.grid(row=0, column=0, sticky="w")
@@ -429,7 +432,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         sc.grid(row=0, column=1, sticky="e", padx=8)
         self.lbl_context = ValueBox(fc, sc, self._on_context)
         self.lbl_context.grid(row=0, column=2, sticky="e")
-        self.w_adv["Context"], self.l_adv["Context"] = sc, fc      # shown, hidden and greyed with the boxes above
+        self.w_adv["Context"], self.l_adv["Context"] = sc, lb
         for w in (lb, sc):
             Tooltip(w, tips["Context"])
         try:
