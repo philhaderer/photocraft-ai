@@ -82,6 +82,28 @@ def new_area_rect(keep: Box, canvas: tuple[int, int], overlap: int) -> tuple[int
     return x0, y0, x1, y1
 
 
+def outpaint_mask(keep: Box, canvas: tuple[int, int], overlap: int) -> Image.Image:
+    """The Expand mask: white on the new canvas plus `overlap` px onto the original, soft only across that inner edge
+    (about as wide as PhotoCraft's feather of overlap/2 was there: 2 x overlap, centred on the edge), black on the rest
+    of the original right up to the canvas edge where no canvas was added."""
+    W, H = canvas
+    x0, y0, x1, y1 = new_area_rect(keep, canvas, overlap)
+    half = max(1, int(overlap))
+
+    def inside(n: int, lo: int, hi: int, size: int) -> np.ndarray:
+        """1 inside [lo, hi), ramping over 2 x half px across an edge that lies inside the canvas, hard at its border."""
+        p = np.arange(n) + 0.5
+        a = np.clip((p - lo + half) / (2 * half), 0, 1) if lo > 0 else np.ones(n)
+        b = np.clip((hi - p + half) / (2 * half), 0, 1) if hi < size else np.ones(n)
+        t = np.minimum(a, b)
+        return t * t * (3 - 2 * t)          # smoothstep: no hard start or end of the ramp
+
+    if x1 <= x0 or y1 <= y0:
+        return Image.new("L", (W, H), 255)
+    keep_soft = np.outer(inside(H, y0, y1, H), inside(W, x0, x1, W))
+    return Image.fromarray(np.round(255 * (1 - keep_soft)).astype(np.uint8), "L")
+
+
 def grow_box(b: Box, canvas: tuple[int, int], context: float, min_px: int = 32) -> Box:
     """Grow the box by context (fraction of the longer side, at least min_px), clipped to the canvas."""
     W, H = canvas
