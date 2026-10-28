@@ -228,6 +228,7 @@ def main():
     assert wf3["24"]["_meta"]["pc_default_prompt"] == models.FLUX3_DEFAULT == mm["flux3"].modes["upscale"].prompt_hint
     assert wf3["159"]["inputs"]["text"] == ["24", 0] and "158" not in wf3
     assert mm["flux2"].modes["refine"].prompt_tip == mm["flux3"].modes["upscale"].prompt_tip == models.DESCRIBE_TIP
+    assert models.DESCRIBE_TIP == "Add a short description of your image in front of this text."   # user 28.10.
     # Remove (a test) for Flux 2 and 3: the Qwen way, soft mask with 10 % feather
     for k in ("flux2", "flux3"):
         assert mm[k].modes["remove"].settings["feather_pct"] == 10.0 and mm[k].modes["remove"].settings["layer_mask"] == "soft"
