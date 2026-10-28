@@ -32,7 +32,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 
 **Als Nächstes (neuer Chat)**
 0. ~~**Funktions-Symbole einbauen**~~: **gebaut 27.10.** (Formen aus `docs/icons/icon-set-final.md`, `img2img` behält den Platzhalter, eigene PNGs haben Vorrang; Symbol und Text linksbündig, Entscheidung des Users). Vom User live bestätigt (28.10.).
-   Noch genauer zu testen (Aussage des Users, am 28.10. weiter offen): Zahnrad-Fenster, „Choose another file…“ → Relink, Undo, Reset to startup.
+   Zahnrad-Fenster („Choose another file…“ → Relink, Undo, Reset to startup): Test durch den User später, eingeplant unter „Danach“ (Punkt 15a).
 
 **B. Wichtig**
 1. ~~**Feste Startposition** (B.11)~~: **gebaut 27.10.** (Option A des Users: letzte Position merken, beim ersten Start rechts oben in PhotoCraft unter der Menüleiste; Klicks auf das Plugin selbst lösen den Menü-Wächter nicht mehr aus). Vom User live bestätigt.
@@ -56,8 +56,9 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 11. Hide/Show (Einklappen zur Titelleiste), Rechtsklick-Menü auf Tabs (Favorit, ausblenden, Workflow-JSON speichern), „Copy canvas to clipboard“, alten Knopf „Insert reference image“ entfernen, falls noch sichtbar.
 
 **E2. Aus dem Live-Test 28.10.**
-- ~~Option B für Fill (Qwen, Fibo)~~: **gebaut 28.10.** Layer mask „soft“ = Auswahl voll deckend, weicher Rand nur außen, Breite = Edge feather; „auto“ aus dem Menü entfernt (Expand behält genau, was „auto“ ergab); Context ist ein Regler 0–1 (Schritt 0.05); Reset setzt alles zurück (Ausnahme: aufgeklappte Bereiche, Checkpoint-Datei des eingebauten Graphen). Fill Qwen/Fibo vom User bestätigt („passt gut, lassen wir so“). Danach: Context-Regler unter Edge feather (nur Fill, Remove, Expand), Sektion „Image and mask“ ausgeblendet, Fix „Show feather“ + Generate bei zwei gleichnamigen Dokumenten (Ursache: Suche nach Namen); vom User bestätigt. Danach neue Reihenfolge: Sharpen, Match colours, Context, Edge feather, Layer mask mit „Show feather“ daneben; bei Expand kein Abstand mehr vor Context. Live-Test dieser Reihenfolge offen.
-- **Context und Maske genauer abstimmen** (User: „müssen wir uns noch genauer kümmern“): größerer Context gibt bei Qwen bessere, genauer passende Ergebnisse. Startwerte für Context und Edge feather je Modell mit der Feather-Vorschau festlegen.
+- ~~Option B für Fill (Qwen, Fibo)~~: **gebaut 28.10.** Layer mask „soft“ = Auswahl voll deckend, weicher Rand nur außen, Breite = Edge feather; „auto“ aus dem Menü entfernt (Expand behält genau, was „auto“ ergab); Context ist ein Regler 0–1 (Schritt 0.05); Reset setzt alles zurück (Ausnahme: aufgeklappte Bereiche, Checkpoint-Datei des eingebauten Graphen). Fill Qwen/Fibo vom User bestätigt („passt gut, lassen wir so“). Danach: Context-Regler unter Edge feather (nur Fill, Remove, Expand), Sektion „Image and mask“ ausgeblendet, Fix „Show feather“ + Generate bei zwei gleichnamigen Dokumenten (Ursache: Suche nach Namen); vom User bestätigt. Danach neue Reihenfolge: Sharpen, Match colours, Context, Edge feather, Layer mask mit „Show feather“ daneben; bei Expand kein Abstand mehr vor Context. Vom User live bestätigt (28.10.).
+- ~~Bug: Edge feather beim Start immer 2 %~~ (wirkte bei Fibo/Qwen Fill hart, bis die Funktion neu gewählt wurde): **behoben 28.10.**, jeder Start setzt den Startwert der Funktion (Option B des Users, kein Merken des letzten Werts). Vom User bestätigt.
+- **Context und Maske genauer abstimmen** (User: „müssen wir uns noch genauer kümmern“): größerer Context gibt bei Qwen bessere, genauer passende Ergebnisse. Startwerte für Context und Edge feather je Modell mit der Feather-Vorschau festlegen. **Läuft (Option A des Users, 28.10.):** zusammen mit dem nächsten Punkt in einer Testrunde, Liste `docs/tests/e2-context-feather.md`; der User macht die Läufe, danach werden die Werte in `models.py` eingetragen.
 - **Runde (gezeichnete) und eckige Auswahl vergleichen**, dazu Tooltips, wie man sie verwendet; eventuell je ein Modus für rechteckige und runde Auswahlen. Bekannt: eine geglättete Auswahl (Ellipse, Lasso) gilt als „schon weich“ und bekommt keinen weichen Rand vom Plugin (`imaging.is_soft`). Referenz des Users: Fibo, Rechteck, soft, 6,5 % Feather ist gut.
 
 **F. OpenFill-Ideen (aus `ideas.md`)**
@@ -66,6 +67,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 14. **Modell-Manager von OpenFill vergleichen** (T4): sobald der User das Repo geladen hat; Ergebnis als Gegenüberstellung mit Empfehlung (übernehmen / anpassen / weglassen).
 
 **Danach**
+15a. **Zahnrad-Fenster live testen** (User, später): „Choose another file…“ → Relink, Undo, Reset to startup, Tabs „Models“/„Credits“.
 15. **Flux-3-Boxen** (Entscheidung offen: A Textlauf von `Flux3LayoutPrompt` zuerst, B Knoten in den Workflow, C nur von Hand; Notizen `docs/flux3-bbox-workflow-notes.md`).
 16. **L4 Inhalte:** Krea-Style-Chooser, Tipps, tägliche Tooltips, Tutorial-PSDs.
 17. **Easy Mode** (`easymode.py`), braucht Hide/Show aus L3.

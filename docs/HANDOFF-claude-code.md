@@ -22,7 +22,7 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 - Ungetrackt im Repo-Ordner: `photocraft-ai 0.16.bat` (Starter des Nutzers für PhotoCraft 0.16, seit 28.10. seine Hauptversion): nicht anfassen, vor dem Einchecken fragen.
 - Tags: `backup-2026-10-26` (6df02df, vor Phase 0), `vor-claude-code` (65e955f).
 - Lane-Klone `lanes/L1`, `lanes/L2` sind Altlast (per `.git/info/exclude` ignoriert). Archiv: `docs/archiv-lanes/`.
-- Tests: `python tests/run_all.py` (46 Dateien, alle grün, ca. 27 s). Python des Nutzers: Pfad in `data/python.txt`.
+- Tests: `python tests/run_all.py` (47 Dateien, alle grün, ca. 25 s). Python des Nutzers: Pfad in `data/python.txt`.
 - Diagnose: `data/exchange/last-graph.json`, `data/exchange/runs.jsonl`; ComfyUI-Historie über `http://127.0.0.1:8188/history`.
 
 ## 3. Umgebung
@@ -113,8 +113,8 @@ Ursprüngliche Aufgaben (alle erledigt):
 - **Lizenzen für den Release:** Fibo 2.0 (CC BY-NC) und die FLUX.2-Dateien nur nicht-kommerziell; Lenovo UltraReal (Civitai) verlangt Nennung von Danrisi; Lucide-Icons (ISC) nennen; Inter (SIL OFL 1.1, `pccomfy/assets/fonts/OFL-Inter.txt`).
 
 ## 8. Live-Tests, die noch offen sind
-- **Aus der Sitzung 27./28.10.:** neue Reihenfolge der Regler (Sharpen, Match colours, Context, Edge feather, Layer mask + „Show feather“ daneben), kein Abstand mehr vor Context bei Expand. Bestätigt am 28.10.: Feather-Vorschau, Varianten-Gruppe, Zwischenablage bleibt erhalten, Fill Qwen/Fibo mit Rand außen, „Image and mask“ ausgeblendet, Show feather + Generate, Hide feather, Reset, Funktions-Symbole und Inter-Schrift.
-- **Aus der zweiten Sitzung 27.10., Ende:** Funktion wechseln wählt das richtige Modell, rote/graue Chips; Zahnrad: Choose another file → Relink, Undo, Reset to startup, Tabs (laut User am 28.10. weiter offen). Bestätigt: neuer Fensterkopf (Chips, Namen, Höhe, 150 %), Startposition, Flux-2-Lauf mit der obsxrver-Datei.
+- **Aus der Sitzung 27./28.10.:** alles bestätigt. Am 28.10. (später): neue Reihenfolge der Regler (Sharpen, Match colours, Context, Edge feather, Layer mask + „Show feather“ daneben), kein Abstand mehr vor Context bei Expand, Edge feather beim Start mit dem Wert der Funktion (Fix `fix/feather-start-value`). Davor bestätigt: Feather-Vorschau, Varianten-Gruppe, Zwischenablage bleibt erhalten, Fill Qwen/Fibo mit Rand außen, „Image and mask“ ausgeblendet, Show feather + Generate, Hide feather, Reset, Funktions-Symbole und Inter-Schrift.
+- **Aus der zweiten Sitzung 27.10., Ende:** Funktion wechseln wählt das richtige Modell, rote/graue Chips; Zahnrad: Choose another file → Relink, Undo, Reset to startup, Tabs (testet der User später, PLAN Punkt 15a). Bestätigt: neuer Fensterkopf (Chips, Namen, Höhe, 150 %), Startposition, Flux-2-Lauf mit der obsxrver-Datei.
 - **Aus der zweiten Sitzung 27.10.:** Wert-Kästchen tippen (Enter, Wegklicken, nur Ziffern), Slider-Spalte bei 150 %, „Advanced settings“ mit Sharpen/Feather/Layer mask je Funktion, ComfyUI-Punkt grün/rot (ComfyUI beenden), Flux 2 Refine → „Default“ und Strg+Z, LoRA löschen ohne Leerzeile, Qwen ohne Turbo (Laufzeit, Qualität).
 - **Aus der ersten Sitzung 26./27.10.:** Papierkorb + Strg+Z; Knopfzeile über dem Prompt; nur ein leerer Slot; „Add file“ mit PhotoCraft daneben (kein Doppelbild mehr?); Bild auf ein gefülltes Slot-Bild ziehen (auch mehrere); Icons unter der Maus orange, gesperrt grau; Spinbox-Chevrons klickbar; Slider ziehen/klicken, gesperrt grau; alles bei 150 %.
 - Neuer Nutzer: `photocraft-ai neuer-nutzer.bat`, Varianten 1 bis 4.
@@ -138,7 +138,7 @@ Die Reihenfolge steht nur noch in `PLAN.md`, Abschnitt 3 (dort sind auch die Ope
 - **Reset:** `reset_settings` setzt alles zurück, was ein neues Fenster hat (auch Enhance, Turbo, LoRA-Stärke, CLIP, Fooocus, Denoise über `_mode_denoise`); Context je Funktion fest (`FILL_CONTEXT` 0.2 für Fill ohne eigenen Wert, Qwen Fill 0.4). Test: `tests/test_reset_all.py`.
 - **Fill-Tipp** `models.FILL_TIP` unter dem Prompt.
 
-**Live-Test offen:** neue Regler-Reihenfolge mit „Show feather“ neben Layer mask; Expand ohne Abstand vor Context; Zahnrad-Fenster (Choose another file, Relink, Undo, Reset to startup).
+**Live-Test:** Regler-Reihenfolge und Expand ohne Abstand bestätigt (28.10.); Zahnrad-Fenster testet der User später (PLAN 15a). Als Nächstes läuft die Testrunde `docs/tests/e2-context-feather.md`.
 
 **Beim Nutzer:** zwei alte Kanäle `pccomfy-preview-…` im zweiten „Untitled-1“ bleiben (sein Wunsch).
 
