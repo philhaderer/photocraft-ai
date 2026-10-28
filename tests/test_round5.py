@@ -22,6 +22,28 @@ def rec(widget, name):
 
 
 def main():
+    # Denoise is not shown (user 28.10.): no label, its box is never placed; the value still goes into the request
+    texts, gridded = [], []
+
+    class RecLabel(t.Widget):
+        def __init__(self, master=None, **k):
+            super().__init__(master, **k)
+            texts.append(k.get("text"))
+
+    class RecSpin(t.Widget):
+        def grid(self, *a, **k):
+            gridded.append(self)
+
+    plain = (t.ttk.Label, t.ttk.Spinbox)
+    t.ttk.Label, t.ttk.Spinbox = RecLabel, RecSpin
+    probe = gui.App(cfgmod.load())
+    t.ttk.Label, t.ttk.Spinbox = plain
+    assert "Denoise" not in texts and "Steps" in texts and probe.w_denoise not in gridded and probe.w_steps in gridded
+    probe.v_mode.set("img2img")
+    probe.v_denoise.set(0.55)
+    assert probe._request().params.denoise == 0.55
+    del probe
+
     app = gui.App(cfgmod.load())
     wfdir = Path(app.workflows_dir)
     wfdir.mkdir(parents=True, exist_ok=True)

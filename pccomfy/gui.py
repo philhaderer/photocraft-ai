@@ -370,7 +370,11 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
                  ("Steps", self._spin(af, self.v_steps, 1, 150, 1, 5)),
                  ("CFG", self._spin(af, self.v_cfg, 1, 30, 0.5, 5)),
                  ("Denoise", self._spin(af, self.v_denoise, 0.05, 1.0, 0.05, 5))]
+        # Denoise is not shown (the user, 28.10.: "there is no use for it"): the widget stays ungridded, so the workflow's /
+        # the function's value, presets, Reset and the requests work as before
         for i, (lbl, w) in enumerate(items):
+            if lbl == "Denoise":
+                continue
             parent = sf if i < 2 else af
             col = i if i < 2 else i - 2
             ttk.Label(parent, text=lbl, style="Muted.TLabel").grid(row=0, column=col, sticky="w", padx=(0, 6))
