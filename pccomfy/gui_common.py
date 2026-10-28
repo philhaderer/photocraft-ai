@@ -37,17 +37,7 @@ MODE_LABELS = [
 ]
 SHORT_MODES = {"txt2img": "Text", "edit": "Edit", "inpaint": "Fill Selection", "outpaint": "Expand", "multi_edit": "Multi Edit",
                "remove": "Remove Selection", "upscale": "Upscale", "refine": "Refine", "img2img": "Img2img"}   # layer names
-MODE_TIPS = {      # for a workflow of your own (no model tab); the tabs show the tips of their model (models.Model.mode_tips)
-    "inpaint": "Select an area, type what should appear there, then Generate.",
-    "remove": "Select the object (whole object inside), then Generate.",
-    "multi_edit": "Changes the whole picture from your text and the reference images in the slots. A selection is ignored.",
-    "outpaint": "Extend the canvas with the Crop tool (Enter) and fill the new area white, then Generate.",
-    "edit": "Changes the whole picture from your text. A selection is ignored.",
-    "img2img": "Reworks the picture (or selection) from your text.",
-    "upscale": "Enlarges the picture (or selection) into a NEW document. Needs an upscale workflow.",
-    "refine": "Cleans up the picture (or selection) at the same size. Needs an upscale workflow.",
-    "txt2img": "New picture from text only, as a new layer. A selection is ignored.",
-}
+MODE_TIPS = models.FUNCTION_TIPS    # the tooltips of the function buttons, the same for every model (user 28.10.)
 EXPAND_HINT = "Try removing the prompt for expanding"
 BUILTIN = "Built-in (checkpoint)"
 PROMPT_LINES = 5     # height of the prompt field in lines (it can be dragged taller or smaller)

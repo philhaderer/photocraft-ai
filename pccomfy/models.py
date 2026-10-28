@@ -28,7 +28,6 @@ class Model:
     label: str
     tip: str
     modes: dict                     # mode key -> Mode (a mode that is not here is greyed out)
-    mode_tips: dict = field(default_factory=dict)   # mode key -> the tooltip of that mode's radio button (this model only)
     max_refs: int = 0               # Multi Image Edit: how many reference-image slots this model takes (0 = none)
     tag_style: str = ""             # Multi Image Edit: how this model names an image in the prompt; {n} counts from 1 (the picture
                                     # is image 1, the first reference image 2), {i} from 0 ("" = no names)
@@ -68,15 +67,22 @@ T2I_TIP = "Text to image: a completely new image is added to the canvas as a new
 FLUX3_DEFAULT_OLD = "Restore the photo: remove blur, noise and compression artifacts and recover sharp, natural detail, keeping the same composition, people and colors."
 STOCK_PROMPTS = {FLUX2_DEFAULT_PREV, FLUX2_DEFAULT_OLD, FLUX3_DEFAULT_OLD, PLACEHOLDER, FLUX2_DEFAULT, FLUX3_DEFAULT, RELIGHT_NEUTRAL, RELIGHT_STUDIO, FIBO_REFINE}   # texts the window may replace when the mode changes
 
-# The tooltips of the mode buttons are written per model: each tab shows only what is true for its own model.
-_TXT = "New picture from text only, as a new layer. A selection is ignored."
-_EDIT = "Changes the whole picture from your text (\"make it night\"). A selection is ignored."
-_EXPAND = ("Extend the canvas with the Crop tool (Enter) and fill the new area white, then Generate.\n"
-           "Text is optional; an empty prompt often works best. Expand large areas in small steps.")
-_REMOVE = "Select the object (whole object inside), then Generate. Text is optional: name what to remove (\"the dog\")."
-_MULTI = ("Edit the picture with reference images in the slots below (drop, paste or add files). "
-          "Name them in the text by their tags. The whole picture changes; a selection is ignored.")
-_UP = "Enlarges the picture (or selection) into a NEW document. Describe the picture before the prompt text. Max 24 MP."
+# The tooltips of the function buttons: one general text per function, the same for every model (user 28.10.); what
+# holds for one model only goes into its tip under the prompt (Mode.prompt_tip). The ranking goes in front (function_tip).
+FUNCTION_TIPS = {
+    "inpaint": "Select an area, type what should appear there, then Generate.",
+    "remove": "Select the object (whole object inside), then Generate. Text is optional: name what to remove (\"the dog\").",
+    "multi_edit": ("Edit the picture with reference images in the slots below (drop, paste or add files). "
+                   "Name them in the text by their tags. The whole picture changes; a selection is ignored."),
+    "outpaint": ("Extend the canvas with the Crop tool (Enter) and fill the new area white, then Generate.\n"
+                 "Text is optional; an empty prompt often works best. Expand large areas in small steps."),
+    "edit": "Changes the whole picture from your text (\"make it night\"). A selection is ignored.",
+    "img2img": "Reworks the picture (or selection) from your text.",
+    "upscale": "Enlarges the picture (or selection) into a NEW document, up to 24 MP.",
+    "refine": "Cleans up the picture (or selection) at the same size, as a new layer.",
+    "txt2img": "New picture from text only, as a new layer. A selection is ignored.",
+}
+EDIT_AGAIN = "Nothing happens? Generate again or word it more fully."     # Flux 2 and 3 Edit (was in their tooltip)
 
 QWEN = Model(
     "qwen", "Qwen 2.1 Edit",
@@ -94,14 +100,6 @@ QWEN = Model(
         "qwen_image_2.1_int8_convrot.safetensors",
         "qwen_image_2.1_vae_bf16.safetensors",
     ),   # the model files this tab needs (details per mode: manifest.py)
-    mode_tips={
-        "txt2img": _TXT,
-        "edit": _EDIT,
-        "multi_edit": _MULTI,
-        "inpaint": "Select an area, type what should appear there, then Generate.",
-        "outpaint": _EXPAND,
-        "remove": _REMOVE,
-    },
     max_refs=8, tag_style="<image{n}>")
 
 FLUX2 = Model(
@@ -109,9 +107,9 @@ FLUX2 = Model(
     "FLUX.2 Klein 9B: text to image, whole-image edits, Remove Selection, Expand, Upscale, Refine.",
     {
         "txt2img": Mode("flux2-klein-t2i.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=T2I_TIP),
-        "edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none"), prompt_tip=EDIT_TIP),
+        "edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none"), prompt_tip=EDIT_TIP + " " + EDIT_AGAIN),
         "multi_edit": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none"), prompt_tip=MULTI_TIP, run_as="edit"),
-        "remove": Mode("flux2-klein-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
+        "remove": Mode("flux2-klein-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP + " " + REMOVE_AGAIN, remove_text=True),
         "outpaint": Mode("flux2-klein-edit.json", dict(base_res=1024, layer_mask="none")),
         "upscale": Mode("flux2-klein-upscale.json", dict(scale=1.5, turbo=True, context=0.0), FLUX2_DEFAULT, prompt_tip=DESCRIBE_TIP),
         "refine": Mode("flux2-klein-upscale.json", dict(turbo=True, context=0.0), FLUX2_DEFAULT, FLUX2_REFINE_PROMPTS, DESCRIBE_TIP),
@@ -121,15 +119,6 @@ FLUX2 = Model(
         "qwen_3_8b_fp8mixed.safetensors",
         "flux2-vae.safetensors",
     ),   # the model files this tab needs (details per mode: manifest.py)
-    mode_tips={
-        "txt2img": _TXT + " The checkbox lets the prompt upsampler write the long prompt.",
-        "edit": _EDIT + " Nothing happens? Generate again or word it more fully.",
-        "multi_edit": _MULTI,
-        "remove": _REMOVE + " Works only sometimes: generate again.",
-        "outpaint": _EXPAND,
-        "upscale": _UP,
-        "refine": "Cleans up the picture (or selection) at the same size, as a new layer. Describe the picture before the prompt text.",
-    },
     max_refs=3, tag_style="image {n}")
 
 FLUX3 = Model(
@@ -137,7 +126,7 @@ FLUX3 = Model(
     "FLUX.3 Klein: text to image, whole-image edits, Remove Selection, Expand, Upscale.",
     {
         "txt2img": Mode("flux3-klein-t2i.json", dict(base_res=1536, layer_mask="none", enhance=False), prompt_tip=T2I_TIP),
-        "edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none"), prompt_tip=EDIT_TIP),
+        "edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none"), prompt_tip=EDIT_TIP + " " + EDIT_AGAIN),
         "multi_edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none"), prompt_tip=MULTI_TIP, run_as="edit"),
         "remove": Mode("flux3-klein-edit.json", dict(_SOFT, base_res=1536, context=0.4, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
         "outpaint": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none")),     # back on for a new test (26.10.)
@@ -148,14 +137,6 @@ FLUX3 = Model(
         "qwen3vl_4b_int8_convrot.safetensors",
         "flux2-vae.safetensors",
     ),   # the model files this tab needs (details per mode: manifest.py)
-    mode_tips={
-        "txt2img": _TXT + " The checkbox lets the prompt upsampler write the long prompt.",
-        "edit": _EDIT + " Nothing happens? Generate again or word it more fully.",
-        "multi_edit": _MULTI,
-        "remove": _REMOVE,
-        "outpaint": _EXPAND,
-        "upscale": "Enlarges into a NEW document: SeedVR2 cleans, Flux 3 redraws in tiles. Describe the picture before the prompt text. Max 24 MP.",
-    },
     max_refs=3, tag_style="<ref_image_{i}>")
 
 # MOSS: the DMD2 speed LoRA (8 steps, CFG 1.5) is the model's own LoRA; the Lenovo UltraReal LoRA and the skip-layer
@@ -172,11 +153,7 @@ MOSS = Model(
         "moss_image_sft_int8_convrot.safetensors",
         "qwen3.5_9b_w4a8_gptq.safetensors",
         "flux2-vae_small.safetensors",
-    ),   # the model files this tab needs (details per mode: manifest.py)
-    mode_tips={
-        "txt2img": _TXT + " The checkbox lets MOSS's own enhancer write the prompt.",
-        "outpaint": _EXPAND,
-    })
+    ))   # the model files this tab needs (details per mode: manifest.py)
 
 # Krea-2 Turbo: a fast distilled text-to-image model (8 steps, CFG 1). Text to image has the model's own prompt enhancer
 # (starts off, like the other models'); Expand redraws the new area with the same mask recipe as MOSS (back on for a
@@ -192,11 +169,7 @@ KREA2 = Model(
         "krea2_turbo_int8_convrot.safetensors",
         "qwen3vl_4b_fp8_scaled.safetensors",
         "qwen_image_vae.safetensors",
-    ),   # the model files this tab needs (details per mode: manifest.py)
-    mode_tips={
-        "txt2img": _TXT + " The checkbox lets Krea's own enhancer write the prompt.",
-        "outpaint": _EXPAND,
-    })
+    ))   # the model files this tab needs (details per mode: manifest.py)
 
 FIBO = Model(
     "fibo", "Fibo 2.0 Edit",
@@ -205,7 +178,8 @@ FIBO = Model(
         "txt2img": Mode("fibo2-t2i.json", dict(base_res=1224, layer_mask="none", enhance=False, sharpen=0.2), prompt_tip=T2I_TIP),   # Sharpen 20 % (user 28.10.)
         "edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=EDIT_TIP),
         "multi_edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=MULTI_TIP, run_as="edit"),
-        "refine": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False, sharpen=0.3), FLUX2_DEFAULT, run_as="edit"),   # Sharpen 30 % (user 28.10.)
+        "refine": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False, sharpen=0.3), FLUX2_DEFAULT, run_as="edit",
+                       prompt_tip=DESCRIBE_TIP + " Change the prompt for other edits."),   # Sharpen 30 % (user 28.10.)
         "inpaint": Mode("fibo2-edit.json", dict(base_res=1024, context=0.4, layer_mask="soft", feather_pct=10.0, mask_density=5, enhance=False), prompt_tip=FILL_TIP),   # as Qwen Fill; Context 0.4 from the test round 28.10.
         "outpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False)),
         "remove": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False), prompt_tip=REMOVE_NAME_TIP + " " + REMOVE_AGAIN, remove_text=True),
@@ -215,15 +189,6 @@ FIBO = Model(
         "qwen3vl_4b_int8_convrot.safetensors",
         "flux2-vae.safetensors",
     ),   # the model files this tab needs (details per mode: manifest.py)
-    mode_tips={
-        "txt2img": _TXT,
-        "edit": _EDIT,
-        "multi_edit": _MULTI,
-        "refine": "Relights the whole picture as a new layer at the same size. Change the prompt for other edits.",
-        "inpaint": "Select an area, type what should appear there (text required), then Generate. To take something away use Remove Selection.",
-        "outpaint": _EXPAND,
-        "remove": _REMOVE + " " + REMOVE_AGAIN,
-    },
     max_refs=2, tag_style="<image_{n}>")
 
 MODELS = [FLUX3, FLUX2, QWEN, FIBO, KREA2, MOSS]      # the order of the tabs
