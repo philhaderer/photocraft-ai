@@ -178,6 +178,7 @@ def main():
     for wf in ("flux3-klein-edit.json", "flux3-klein-t2i.json", "flux3-klein-upscale.json"):
         assert workflows.sampler_values(workflows.load_template(t.ROOT / "workflows" / wf))["steps"] == 15, wf
     assert app.sep_prompt is not None and gui.scale_text(1.5) == "x 1.5" and gui.scale_text("2.0") == "x 2"
+    assert app.sep_status["style"] == app.sep_prompt["style"] == "Sep.TFrame" and app.sep_status["height"] == 1   # the same light line above the progress line
 
     # defaults: Flux 3 upscale starts without SeedVR2 and with the Restore LoRA at 50 %; Qwen text to image: no Turbo, enhancer on
     assert models.BY_KEY["flux3"].modes["upscale"].settings["stage_on"] is False

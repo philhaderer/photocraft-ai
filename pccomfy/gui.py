@@ -495,6 +495,8 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
 
         # one bar for the whole run (prompt, then image) with the current step written next to it
         self.v_pl = tk.StringVar(value="")
+        self.sep_status = ttk.Frame(r, style="Sep.TFrame", height=1)     # a light line above the progress line, as above "Prompt"
+        self.sep_status.pack(fill="x", padx=10, pady=(6, 0))
         row = ttk.Frame(r)
         row.pack(fill="x", padx=10, pady=(6, 0))
         top = self.f_pl_top = ttk.Frame(row)                  # above the bar, text on the left: shown only while it has text
