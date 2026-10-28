@@ -80,16 +80,19 @@ def main():
             assert not diff, (m.key, mode, diff)
 
     # the Context a function starts with does not come from the tab before
+    # (Fibo Fill has its own 0.4 since the test round 28.10.; Fill without one starts at FILL_CONTEXT)
+    fibo_fill = models.BY_KEY["fibo"].modes["inpaint"].settings["context"]
     for before in ("qwen", "flux3"):
         app = make()
         go(app, before, "inpaint" if "inpaint" in models.BY_KEY[before].modes else "edit")
+        app.v_context.set(0.9)
         go(app, "fibo", "inpaint")
-        assert app.v_context.get() == gui.FILL_CONTEXT, (before, app.v_context.get())
+        assert app.v_context.get() == fibo_fill, (before, app.v_context.get())
     app = make()
     go(app, "fibo", "inpaint")
     app.v_context.set(0.9)
     app.reset_settings()
-    assert app.v_context.get() == gui.FILL_CONTEXT
+    assert app.v_context.get() == fibo_fill
     go(app, "qwen", "inpaint")
     app.v_context.set(0.9)
     app.reset_settings()
@@ -101,8 +104,10 @@ def main():
     assert app.v_context.get() == 0.35 and app.lbl_context.cget("text") == "0.35"
     app.reset_settings()
     assert app.lbl_context.cget("text") == "0.40"
+    app.v_context.set(0.75)
+    app._on_context()
     go(app, "fibo", "inpaint")
-    assert app.lbl_context.cget("text") == "0.20"
+    assert app.lbl_context.cget("text") == "0.40"
     app.v_context.set(1.6)                     # an old saved value beyond the slider
     assert app._request().context == 1.0
     shutil.rmtree(t.TMP, ignore_errors=True)

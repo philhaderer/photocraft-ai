@@ -60,6 +60,7 @@ FLUX2_REFINE_PROMPTS = (
 FIBO_REFINE = "relight the scene to natural lighting"
 FILL_TIP = "Draw a selection and prompt e.g. “a red flower”."   # wording from the user (28.10.)
 REMOVE_NAME_TIP = "Optional: name what to remove (\"the dog\")."
+REMOVE_AGAIN = "If the first try didn't work, try removing it a second time."   # Fibo Remove, idea of the user (28.10.)
 MULTI_TIP = "You can start with a white image and use the reference images below to place them on the canvas."
 EDIT_TIP = "To remove something, say what replaces it: \u201cRemove the dog and paint the wall behind him\u201d"
 DESCRIBE_TIP = "Describe the image before this text."
@@ -205,9 +206,9 @@ FIBO = Model(
         "edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=EDIT_TIP),
         "multi_edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=MULTI_TIP, run_as="edit"),
         "refine": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), FIBO_REFINE, run_as="edit"),
-        "inpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False), prompt_tip=FILL_TIP),   # as Qwen Fill
+        "inpaint": Mode("fibo2-edit.json", dict(base_res=1024, context=0.4, layer_mask="soft", feather_pct=10.0, enhance=False), prompt_tip=FILL_TIP),   # as Qwen Fill; Context 0.4 from the test round 28.10.
         "outpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False)),
-        "remove": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
+        "remove": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False), prompt_tip=REMOVE_NAME_TIP + " " + REMOVE_AGAIN, remove_text=True),
     },
     requires=(
         "fibo2_edit_turbo_int8_convrot.safetensors",
@@ -221,7 +222,7 @@ FIBO = Model(
         "refine": "Relights the whole picture as a new layer at the same size. Change the prompt for other edits.",
         "inpaint": "Select an area, type what should appear there (text required), then Generate. To take something away use Remove Selection.",
         "outpaint": _EXPAND,
-        "remove": _REMOVE + " Retries up to 3 times if the object stays.",
+        "remove": _REMOVE + " " + REMOVE_AGAIN,
     },
     max_refs=2, tag_style="<image_{n}>")
 
