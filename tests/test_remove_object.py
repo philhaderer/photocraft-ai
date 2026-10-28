@@ -58,7 +58,9 @@ def main():
     b, _ = run("fibo2-edit.json", enhance=True, mode="remove")
     assert prompt_of(b.comfy.graphs[0]) == bridge.REMOVE_PROMPT.format(shape="rectangle")
 
-    # Remove object tries again (new seed) while the area is unchanged, and stops when it worked
+    # Remove runs once by default (decision 28.10.: no automatic retries, the user generates again by hand)
+    assert Request(mode="remove").remove_tries == 1
+    # with more tries allowed it tries again (new seed) while the area is unchanged, and stops when it worked
     class Unchanged(t.FakeComfy):
         def __init__(self, ok_on):
             super().__init__()
@@ -73,7 +75,7 @@ def main():
         tmp = tempfile.mkdtemp()
         pc, _, b = t.make(tmp, layers=2)
         b.comfy = Unchanged(ok_on)
-        req = Request(mode="remove", workflow=str(ROOT / "workflows" / "fibo2-edit.json"), enhance=False)
+        req = Request(mode="remove", workflow=str(ROOT / "workflows" / "fibo2-edit.json"), enhance=False, remove_tries=3)
         req.params = workflows.GenParams(prompt="", seed=7)
         b.run(req)
         seeds = [next(n["inputs"]["seed"] for n in g.values() if n["class_type"] == "KSampler") for g in b.comfy.graphs]
@@ -81,6 +83,15 @@ def main():
         prompts = [prompt_of(g) for g in b.comfy.graphs]
         want = [bridge.REMOVE_PROMPT, bridge.REMOVE_PROMPT_ALT, bridge.REMOVE_PROMPT][:expect]
         assert prompts == [w.format(shape="rectangle") for w in want], prompts   # the tries alternate the wording
+
+    # the default: one run, also when the object is still there
+    tmp = tempfile.mkdtemp()
+    pc, _, b = t.make(tmp, layers=2)
+    b.comfy = Unchanged(9)
+    req = Request(mode="remove", workflow=str(ROOT / "workflows" / "fibo2-edit.json"), enhance=False)
+    req.params = workflows.GenParams(prompt="", seed=7)
+    b.run(req)
+    assert len(b.comfy.graphs) == 1
 
     # removal_done: unchanged / outline left = not done; area replaced = done
     before = Image.new("RGB", (200, 200), (40, 90, 40))

@@ -62,7 +62,8 @@ class Request:
     variants: int = 1
     fooocus: bool = True                 # inpaint/outpaint: Fooocus patch (SDXL) when the server has it
     remove: bool = False                 # "Remove" (the bridge runs it as an inpaint with the removal instruction)
-    remove_tries: int = 3                # tries (new seed each) until the object is really gone
+    remove_tries: int = 1                # tries (new seed each) until the object is really gone; 1 = never again by
+    #                                      itself (decision of the user 28.10.: generate again by hand, see REMOVE_AGAIN)
     remove_target: str = ""              # Remove Selection (Flux Klein): the name of what to remove ("the dog"); empty = the whole selection
     enhance: bool = True                 # text-model workflows: let the text model write the prompt (off = typed text as is)
     turbo: bool = True                   # workflows with a speed (turbo) LoRA, nodes titled pc:lora: off = cut it out, full steps
