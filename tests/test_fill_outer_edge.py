@@ -1,4 +1,5 @@
-"""Fill with an instruction editor (Qwen, Fibo), layer mask soft: the fill is fully opaque over the selection, then fades out to the redrawn crop's sides (a shadow below the selection stays); Remove keeps its
+"""Fill with an instruction editor (Qwen, Fibo), layer mask soft: the fill is fully opaque over the selection and the edge
+feather around it, then fades out to the redrawn crop's sides (a shadow below the selection stays); Remove keeps its
 feather across the edge.
 
     python tests/test_fill_outer_edge.py
@@ -43,12 +44,15 @@ def main():
         m = layer_mask(sel_mask(), wf)
         assert m[sel].min() == 255, "the fill must be fully opaque inside the selection"
         row = m[400]                        # a line through the middle: left edge at x = 300
-        # opaque up to the selection, then a fade that ends exactly at the crop's side
-        assert row[299] == 255 and row[280] > 200 and 60 < row[240] < 200 and row[region.x] == 0 and row[region.x - 1] == 0, row[175:305]
+        # opaque over the edge feather (30 px), then a fade that ends exactly at the crop's side
+        assert row[300 - 30] >= 250 and 60 < row[240] < 200 and row[region.x] == 0 and row[region.x - 1] == 0, row[175:305]
         assert abs(int(m[400, 599 + 30]) - int(row[300 - 30])) <= 2      # the same on the right side
         assert m[640, 450] > 0 and m[region.y + region.h - 1, 450] == 0   # below the selection: a shadow there stays
-    # the edge feather is not used for Fill (its slider is hidden there, user 28.10.)
-    assert np.array_equal(layer_mask(sel_mask(), pct=0.0), layer_mask(sel_mask(), pct=20.0))
+    # 0 % = the fade starts right at the selection
+    m0 = layer_mask(sel_mask(), pct=0.0)
+    assert m0[sel].min() == 255 and m0[400, 280] < 250 and m0[400, 240] > 60
+    # a wider feather keeps more of the surroundings
+    assert layer_mask(sel_mask(), pct=20.0)[400, 300 - 50] > layer_mask(sel_mask(), pct=10.0)[400, 300 - 50]
     # a small Context: still 0 at the crop's side (its straight edge would show)
     m = layer_mask(sel_mask(), pct=50.0, context=0.05)
     region = imaging.grow_box(bbox, (W, H), 0.05)

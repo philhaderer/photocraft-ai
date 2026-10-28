@@ -176,12 +176,12 @@ def soft_layer_mask(req: "Request", wf_paths: list, mask: "Image.Image", region:
         sel = bbox or region
         radius = imaging.feather_radius(sel.w, sel.h, req.feather_pct)
         if req.mode == "inpaint" and not req.remove:
-            # Fill: the new object stays fully opaque up to the selection's edge, then the mask fades out to the
-            # redrawn crop's sides (live test 28.10.: a narrow soft edge cut off the object's edge and its shadow).
-            # No fade where the crop meets the canvas edge. The edge feather is not used (hidden for Fill, user 28.10.)
+            # Fill: the new object stays fully opaque up to the selection's edge and the edge feather around it, then
+            # the mask fades out to the redrawn crop's sides (live test 28.10.: a narrow soft edge cut off the
+            # object's edge and its shadow). No fade where the crop meets the canvas edge.
             W, H = mask.size
             inner = (region.x > 0, region.y > 0, region.x + region.w < W, region.y + region.h < H)
-            return imaging.crop_fade(mask.crop(region.pil()), 0, inner)
+            return imaging.crop_fade(mask.crop(region.pil()), radius, inner)
         return imaging.auto_feather(mask.crop(region.pil()), radius)
     # the same soft mask the model got: the result blends exactly where the model blended it
     return imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
