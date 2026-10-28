@@ -309,8 +309,11 @@ class ModeMixin:
             return False
 
     def _update_feather_state(self):
-        """The edge feather is shown only while it has an effect (a soft layer mask is used)."""
-        on = self._uses_soft_mask() and self.v_mode.get() not in ("outpaint", "upscale", "refine")
+        """The edge feather is shown only while it has an effect (a soft layer mask is used). Fill with an editor that
+        ignores the mask (Qwen, Fibo) fades out to the crop's edge instead (user 28.10.: the feather made little
+        difference there), so only Show feather stays."""
+        preview = self._uses_soft_mask() and self.v_mode.get() not in ("outpaint", "upscale", "refine")
+        on = preview and not (self.v_mode.get() == "inpaint" and self._ignores_mask())
         self.w_feather.configure(state="normal" if on else "disabled")
         shown = bool(self.f_feather.winfo_manager()) if hasattr(self.f_feather, "winfo_manager") else False
         if on and not shown:
@@ -319,12 +322,12 @@ class ModeMixin:
             self.f_feather.pack_forget()
         b = getattr(self, "b_fprev", None)
         if b is not None and hasattr(b, "winfo_manager"):
-            if on and not b.winfo_manager():
+            if preview and not b.winfo_manager():
                 b.pack(side="left")
-            elif not on and b.winfo_manager():
+            elif not preview and b.winfo_manager():
                 b.pack_forget()
         if getattr(self, "_fprev_on", False):    # the feather preview follows: new settings shown, or ended with the slider
-            if on:
+            if preview:
                 self._refresh_feather_preview()
             else:
                 self.toggle_feather_preview(show=False)
