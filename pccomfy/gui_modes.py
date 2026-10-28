@@ -31,8 +31,8 @@ class ModeMixin:
         expand = mode == "outpaint"        # Expand image: the plugin's own defaults, none of the finishing options
         if self._run_mode() in ("txt2img", "edit") + SCALE_MODES or expand:    # nothing to blend into / a new document / the whole picture: no layer mask
             self.f_lm.pack_forget()
-        elif not self.f_lm.winfo_manager():
-            self.f_lm.pack(fill="x", pady=(2, 0))      # the last row of the finishing options
+        else:
+            self._pack_post(self.f_lm)                 # the last row of the finishing options
         for w in self._match_widgets:      # pulling colours back only makes sense where a new area meets the old picture
             if mode == "inpaint":
                 w.grid()
@@ -278,6 +278,15 @@ class ModeMixin:
         self._fit_height()
         self._status("Reset to the startup settings.")
 
+    def _pack_post(self, frame):
+        """Show one of the rows at the end of the finishing options in its place: Edge feather, Context, Layer mask."""
+        shown = (lambda f: bool(f.winfo_manager())) if hasattr(frame, "winfo_manager") else (lambda f: False)
+        if shown(frame):
+            return
+        order = [f for f in (getattr(self, n, None) for n in ("f_feather", "f_ctx", "f_lm")) if f is not None]
+        later = [f for f in order[order.index(frame) + 1:] if shown(f)] if frame in order else []
+        frame.pack(fill="x", pady=(2, 0), **({"before": later[0]} if later else {}))
+
     def _uses_soft_mask(self) -> bool:
         """True when the new layer really gets the soft (feathered) layer mask, i.e. the feather has an effect."""
         choice = layer_mask_key(self.v_lmask.get())
@@ -301,10 +310,7 @@ class ModeMixin:
         self.w_feather.configure(state="normal" if on else "disabled")
         shown = bool(self.f_feather.winfo_manager()) if hasattr(self.f_feather, "winfo_manager") else False
         if on and not shown:
-            if self.f_lm.winfo_manager():
-                self.f_feather.pack(fill="x", pady=(2, 0), before=self.f_lm)
-            else:
-                self.f_feather.pack(fill="x", pady=(2, 0))
+            self._pack_post(self.f_feather)
         elif not on and shown:
             self.f_feather.pack_forget()
         if getattr(self, "_fprev_on", False):    # the feather preview follows: new settings shown, or ended with the slider
@@ -470,6 +476,10 @@ class ModeMixin:
                 else:
                     w.grid()
         on(self.w_adv["Context"], masked)
+        if masked:                         # Context (under Edge feather) only where there is a selection around which to look
+            self._pack_post(self.f_ctx)
+        elif hasattr(self.f_ctx, "pack_forget"):
+            self.f_ctx.pack_forget()
         on(self.w_adv["Mask grow"], masked and not editor)
         on(self.w_adv["Mask blur"], masked and not editor)
         on(self.cb_lm, mode != "upscale", "readonly")        # Upscale opens a new document: no layer to mask
