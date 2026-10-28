@@ -70,7 +70,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.v_overlap = tk.IntVar(value=g("overlap", d["overlap"]))
         self.v_scale = tk.StringVar(value=scale_text(g("scale", 1.5)))
         self.v_top = tk.BooleanVar(value=True)      # the window always belongs to PhotoCraft (no switch any more)
-        self.v_feather = tk.DoubleVar(value=g("feather_pct", 2.0))
+        self.v_feather = tk.DoubleVar(value=2.0)    # the function's own value is set after the build (see below)
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
         self.v_enhance = tk.BooleanVar(value=g("enhance", True))
         self.v_turbo = tk.BooleanVar(value=g("turbo", True))
@@ -102,6 +102,11 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._booting = True    # the saved window state is shown as it was: the model's starting settings are not applied
         self._on_mode()
         self._booting = False
+        # the edge feather is not kept from the last time: every start has the function's own value (decision of the
+        # user 28.10.; before, every start showed 2 % and Fibo Fill / Qwen Fill looked hard until the function was chosen again)
+        spec = self._model().modes.get(self.v_mode.get()) if self._model() else None
+        self.v_feather.set(float(spec.settings.get("feather_pct", 2.0)) if spec else 2.0)
+        self._on_feather()
         self._on_top()
         self._fit_height(self._px(MIN_W))
         self._place_window()
