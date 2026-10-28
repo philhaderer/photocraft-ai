@@ -57,7 +57,7 @@ FLUX2_REFINE_PROMPTS = (
     ("Neutral", RELIGHT_NEUTRAL, "Relight: soft, even, neutral light without harsh shadows, true-to-life colours."),
     ("Studio portrait", RELIGHT_STUDIO, "Relight: a professionally lit studio portrait with soft, diffused light."),
 )
-FIBO_REFINE = "relight the scene to natural lighting"
+FIBO_REFINE = "relight the scene to natural lighting"   # Fibo Refine's old prompt (now FLUX2_DEFAULT, user 28.10.); kept as a stock text
 FILL_TIP = "Draw a selection and prompt e.g. “a red flower”."   # wording from the user (28.10.)
 REMOVE_NAME_TIP = "Optional: name what to remove (\"the dog\")."
 REMOVE_AGAIN = "If the first try didn't work, try removing it a second time."   # Fibo Remove, idea of the user (28.10.)
@@ -205,7 +205,7 @@ FIBO = Model(
         "txt2img": Mode("fibo2-t2i.json", dict(base_res=1224, layer_mask="none", enhance=False, sharpen=0.2), prompt_tip=T2I_TIP),   # Sharpen 20 % (user 28.10.)
         "edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=EDIT_TIP),
         "multi_edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=MULTI_TIP, run_as="edit"),
-        "refine": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False, sharpen=0.3), FIBO_REFINE, run_as="edit"),   # Sharpen 30 % (user 28.10.)
+        "refine": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False, sharpen=0.3), FLUX2_DEFAULT, run_as="edit"),   # Sharpen 30 % (user 28.10.)
         "inpaint": Mode("fibo2-edit.json", dict(base_res=1024, context=0.4, layer_mask="soft", feather_pct=10.0, mask_density=5, enhance=False), prompt_tip=FILL_TIP),   # as Qwen Fill; Context 0.4 from the test round 28.10.
         "outpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False)),
         "remove": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="soft", feather_pct=10.0, enhance=False), prompt_tip=REMOVE_NAME_TIP + " " + REMOVE_AGAIN, remove_text=True),
