@@ -145,7 +145,9 @@ class ModeMixin:
         spec = m.modes[mode]
         wf = self.v_workflow.get()
         keep = wf in m.workflows() and wf == spec.workflow
-        s = {"match": 0.0, **spec.settings}      # the colour pull-back belongs to the model's mode, it does not travel to the next tab
+        # the colour pull-back and the sharpening belong to the model's mode, they do not travel to the next tab
+        # (sharpen: user 28.10., a function without its own value starts at 0 %)
+        s = {"match": 0.0, "sharpen": 0.0, **spec.settings}
         # a mode without a Context of its own starts at the function's default, not at what the tab before had
         # (Fibo Fill showed 0.4 after Qwen and 0.2 after Reset)
         s.setdefault("context", FILL_CONTEXT if mode == "inpaint" else self._ctx_default)
