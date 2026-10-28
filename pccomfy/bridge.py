@@ -611,8 +611,9 @@ class Bridge:
                 ims, p.seed = best[1], best[2]
             results.append((label, ims))
 
-        if req.mode in SCALE_MODES and req.detail < 0.999:
-            # tame an over-sharp result: mix it with the plainly (Lanczos) scaled original
+        if req.mode in SCALE_MODES + ("edit",) and req.detail < 0.999:
+            # tame an over-sharp result: mix it with the plainly (Lanczos) scaled original (Edit: Fibo Refine runs as one;
+            # the window sends a mix only for Upscale and Refine)
             plain = imaging.to_rgb(crop_full)
             results = [(lb, [Image.blend(plain.resize(im.size, Image.LANCZOS), im.convert("RGB"), max(0.0, req.detail)) for im in ims])
                        for lb, ims in results]
