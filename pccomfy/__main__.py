@@ -198,6 +198,9 @@ def main(argv=None) -> int:
                    help="for N seconds print every window that appears (open a PhotoCraft menu meanwhile)")
     c = sub.add_parser("commands", help="debug: list PhotoCraft commands matching a pattern")
     c.add_argument("pattern", nargs="?", default="history|undo|group|transaction|step")
+    sc = sub.add_parser("shortcut", help="Windows: a desktop shortcut that starts PhotoCraft and the bridge window (no console)")
+    sc.add_argument("--photocraft", required=True, help="path to photocraft.exe")
+    sc.add_argument("--name", default="PhotoCraft AI", help="name of the shortcut")
     au = sub.add_parser("autostart", help="Windows: start the bridge window with PhotoCraft, without a starter .bat")
     au.add_argument("action", choices=("install", "uninstall", "status"), nargs="?", default="status")
     sub.add_parser("layers", help="debug: print the layers of the active document as PhotoCraft reports them")
@@ -240,6 +243,9 @@ def main(argv=None) -> int:
         else:
             print(winlink.describe())
         return 0
+    if a.cmd == "shortcut":
+        from . import launcher
+        return launcher.main_shortcut(a.photocraft, a.name)
     if a.cmd == "autostart":
         from . import autostart
         return autostart.main(a.action, cfg)
