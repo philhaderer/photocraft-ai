@@ -229,6 +229,35 @@ FIBO = Model(
 MODELS = [FLUX3, FLUX2, QWEN, FIBO, KREA2, MOSS]      # the order of the tabs
 BY_KEY = {m.key: m for m in MODELS}
 
+# The user's ranking of the models per function (best first), shown at the start of each function's tooltip while
+# testing (user 28.10.: "keep the ranking in view"); the user tells changes. Also the order for Easy Mode (PLAN.md).
+# A function missing here has no ranking yet.
+RANKING = {
+    "inpaint": ("fibo", "qwen"),            # E2 test round 28.10.: "Fibo is better overall"
+    "remove": ("fibo", "qwen"),
+    "outpaint": ("moss", "flux2", "fibo", "qwen"),
+}
+SHORT = {"flux3": "Flux 3", "flux2": "Flux 2", "qwen": "Qwen", "fibo": "Fibo", "krea2": "Krea 2", "moss": "MOSS"}
+
+
+def ranking_text(mode: str) -> str:
+    """'Ranking: 1. Fibo, 2. Qwen (not ranked: Flux 3, Flux 2).' for a function's tooltip; '' when no model offers it."""
+    offered = [m.key for m in MODELS if mode in m.modes]
+    if not offered:
+        return ""
+    ranked = [k for k in RANKING.get(mode, ()) if k in offered]
+    rest = [SHORT[k] for k in offered if k not in ranked]
+    if not ranked:
+        return "Ranking: not set yet."
+    text = "Ranking: " + ", ".join(f"{i}. {SHORT[k]}" for i, k in enumerate(ranked, 1))
+    return text + (f" (not ranked: {', '.join(rest)})." if rest else ".")
+
+
+def function_tip(mode: str, text: str) -> str:
+    """A function's tooltip with the ranking in front."""
+    r = ranking_text(mode)
+    return f"{r}\n{text}" if r else text
+
 
 def model_for_workflow(name: str) -> Model | None:
     """The model a workflow file belongs to (None for a workflow of your own)."""

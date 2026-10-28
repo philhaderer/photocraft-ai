@@ -60,7 +60,7 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 - Krea 2 Expand und Flux 3 Expand: zum Testen an. Flux 3 Expand funktioniert; Krea 2 Expand nur einseitig brauchbar (alt 6.10). Endgültige Entscheidung steht aus.
 - Qwen-Slotzahl: 8 bleibt.
 - Veröffentlichung: neues Repo ohne Upstream-Verlauf, Credits Pflicht, erst kurz vor dem Release; bis dahin `windows-fibo`.
-- Reihenfolge: **kleine Verbesserungen zuerst** (PLAN.md 8.A), dann weiter nach Plan; Easy Mode zuletzt. Easy-Mode-Ranking Fill und Remove: Fibo, Qwen (seit 28.10.); Expand: MOSS, Flux 2, Fibo, Qwen.
+- Reihenfolge: **kleine Verbesserungen zuerst** (PLAN.md 8.A), dann weiter nach Plan; Easy Mode zuletzt. Easy-Mode-Ranking Fill und Remove: Fibo, Qwen (seit 28.10.); Expand: MOSS, Flux 2, Fibo, Qwen. Sie steht in `models.RANKING` und vorn in jedem Funktions-Tooltip (`models.function_tip`).
 - Rechtsklick auf Modell-Tab: Favorit, Tab ausblenden, Workflow-JSON speichern. Minimize = Einklappen (hide/show).
 - Krea-Styles bis 50 per Bildauswahl; Tutorial-PSDs mit Testbild; Tooltips bei jedem Start.
 - Tipp-Wortlaut Text to image: abgenommen. Icons: 20 px (Slot-Icons 24 px). Drop auf mehrere Bilder: erstes ersetzt, Rest anhängen.

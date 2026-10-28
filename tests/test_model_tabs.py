@@ -245,7 +245,15 @@ def main():
     app.v_model.set("fibo")
     app.v_mode.set("inpaint")
     app._on_model()
-    assert app.tt_modes["remove"].text != q_tip and "Qwen" not in app.tt_modes["remove"].text
+    own = app.tt_modes["remove"].text.split("\n", 1)[1]     # below the ranking line (which names Qwen)
+    assert app.tt_modes["remove"].text != q_tip and "Qwen" not in own
+    # every function's tooltip starts with the ranking (user 28.10.); a function without one says so
+    assert models.ranking_text("inpaint") == "Ranking: 1. Fibo, 2. Qwen."
+    assert models.ranking_text("remove") == "Ranking: 1. Fibo, 2. Qwen (not ranked: Flux 3, Flux 2)."
+    assert models.ranking_text("outpaint") == "Ranking: 1. MOSS, 2. Flux 2, 3. Fibo, 4. Qwen (not ranked: Flux 3, Krea 2)."
+    assert models.ranking_text("edit") == "Ranking: not set yet." and models.ranking_text("img2img") == ""
+    assert app.tt_modes["remove"].text.startswith("Ranking: 1. Fibo, 2. Qwen")
+    assert all(k in models.SHORT for k in models.BY_KEY) and all(k in models.BY_KEY for r in models.RANKING.values() for k in r)
     # Fibo: text to image has its own workflow (no image inputs), Refine runs as a whole-image edit with a ready prompt
     assert mm["fibo"].modes["txt2img"].workflow == "fibo2-t2i.json" and mm["fibo"].modes["refine"].run_as == "edit"
     assert mm["fibo"].modes["refine"].prompt_hint == models.FIBO_REFINE == "relight the scene to natural lighting"
