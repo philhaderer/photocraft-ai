@@ -58,7 +58,7 @@ FLUX2_REFINE_PROMPTS = (
     ("Studio portrait", RELIGHT_STUDIO, "Relight: a professionally lit studio portrait with soft, diffused light."),
 )
 FIBO_REFINE = "relight the scene to natural lighting"   # Fibo Refine's old prompt (now FLUX2_DEFAULT, user 28.10.); kept as a stock text
-FILL_TIP = "Draw a selection and prompt e.g. “a red flower”."   # wording from the user (28.10.)
+FILL_TIP = "Draw a selection and prompt e.g. “a red flower”. Hide layers from previous results before running again."   # wording from the user (28.10.)
 REMOVE_NAME_TIP = "Optional: name what to remove (\"the dog\")."
 REMOVE_AGAIN = "If the first try didn't work, try removing it a second time."   # Fibo Remove, idea of the user (28.10.)
 MULTI_TIP = "You can start with a white image and use the reference images below to place them on the canvas."

@@ -217,6 +217,7 @@ def main():
             ed = is_editor(_wfs.resolve(str(t.ROOT / "workflows" / spec.workflow)))
             assert spec.settings["layer_mask"] == effective_layer_mask("auto", "outpaint", ed, True), m.key
     assert mm["qwen"].modes["inpaint"].prompt_tip == mm["fibo"].modes["inpaint"].prompt_tip == models.FILL_TIP   # the user's wording
+    assert models.FILL_TIP == "Draw a selection and prompt e.g. “a red flower”. Hide layers from previous results before running again."
     assert [p[0] for p in mm["flux2"].modes["refine"].prompts] == ["Default", "Neutral", "Studio portrait"]
     assert mm["flux3"].modes["upscale"].prompts == () and mm["flux2"].modes["upscale"].prompts == ()   # Flux 3: the workflow's own prompt only
     # the prompt a refine starts with is the one the workflow sends by default
