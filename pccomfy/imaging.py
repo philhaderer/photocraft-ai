@@ -160,7 +160,7 @@ def outer_feather(mask: Image.Image, radius: int) -> Image.Image:
     if radius <= 0 or is_soft(m):
         return m
     a = np.asarray(m, dtype=np.float32)
-    limit = int(math.ceil(radius * 1.5))       # beyond 1.5 × radius the fade is below 1/255
+    limit = int(radius * 1.3)                  # cut off beyond 1.3 × radius (below 1 %), where the blur ended too
     d = _outside_distance(a > 127, limit)
     sigma = radius / 2.0
     xs = np.arange(0, limit + 2, 0.25)
