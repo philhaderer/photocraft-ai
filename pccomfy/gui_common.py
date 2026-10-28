@@ -468,22 +468,50 @@ VALUE_W = 9        # characters of a slider's value box: "hard edge" fits, so ev
 SLIDER_W = 140     # px (before the display scaling) of every slider: all of them sit in one column on the right
 
 
+def parse_number(text: str) -> "float | None":
+    """A typed number: comma or point as the decimal sign ("0,2" = 0.2), a unit or spaces around it ignored
+    ("35 %"); None when there is no number in it."""
+    raw = "".join(c for c in str(text).replace(",", ".") if c in "0123456789.-")
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def number_typed_ok(action: str, typed: str, after: str) -> bool:
+    """Key check of a number field (Tk's %d, %S, %P): digits and one decimal point or comma can be typed; deleting is
+    always fine (live bug 28.10.: the check also ran on deleting, so "%", the space and "hard edge" could not be
+    deleted)."""
+    if action != "1":
+        return True
+    if any(c not in "0123456789.," for c in typed):
+        return False
+    return sum(after.count(c) for c in ".,") <= 1
+
+
 class ValueBox(ttk.Entry):
     """The value of a slider in a small dark box on its right (as in PhotoCraft), and you can type into it: Enter or
     leaving the box takes the number, kept inside the slider's range (only digits and one decimal point or comma can be
-    typed; a click selects the whole value, so typing replaces it). `factor`: shown = value * factor (100 for the % sliders). `command` shows the
-    value in its format, as after a drag. configure(text=...) shows a value, as the label it stands in for did."""
+    typed). While you are in the box it holds the bare number ("4 %" -> "4"): a click puts the cursor where you clicked,
+    a double-click selects the number, Tab selects it all, Up/Down step the value (0.05 for a 0..1 value, 1 for %).
+    `factor`: shown = value * factor (100 for the % sliders). `command` shows the value in its format, as after a drag.
+    configure(text=...) shows a value, as the label it stands in for did."""
 
     def __init__(self, parent, slider, command, factor: float = 1.0):
         self._text = tk.StringVar(value="")
         super().__init__(parent, textvariable=self._text, width=VALUE_W, style="Value.TEntry", justify="center", font=font(9))
         self._slider, self._cmd, self._factor = slider, command, factor
+        self._clicked = False
         slider.box = self
         for ev in ("<Return>", "<KP_Enter>", "<FocusOut>"):
             self.bind(ev, self._commit)
-        self.bind("<FocusIn>", lambda e: self.after_idle(self._select_all))
+        self.bind("<ButtonPress-1>", self._press, add="+")
+        self.bind("<FocusIn>", lambda e: self.after_idle(self._start_edit))
+        self.bind("<Double-Button-1>", self._select_number)
+        self.bind("<Up>", lambda e: self._step(1))
+        self.bind("<Down>", lambda e: self._step(-1))
         try:
-            self.configure(validate="key", validatecommand=(self.register(self._typed_ok), "%S", "%P"))
+            self.configure(validate="key", validatecommand=(self.register(number_typed_ok), "%d", "%S", "%P"))
         except (AttributeError, tk.TclError):
             pass
         self.bind("<Escape>", lambda e: self._cmd())
@@ -507,24 +535,66 @@ class ValueBox(ttk.Entry):
         except tk.TclError:
             pass
 
+    _typed_ok = staticmethod(number_typed_ok)
+
     @staticmethod
-    def _typed_ok(typed: str, after: str) -> bool:
-        """Only numbers: digits and one decimal point (or comma). The shown "4 %" / "hard edge" are set by the window, not
-        typed, and are replaced as a whole on the first key."""
-        if not typed:
-            return True                  # deleting is always fine
-        if any(c not in "0123456789.," for c in typed):
-            return False
-        num = "".join(c for c in after if c in "0123456789.,")
-        return sum(num.count(c) for c in ".,") <= 1
+    def _bare(text: str) -> str:
+        """The number without its unit: "4 %" -> "4", "hard edge" -> "0"."""
+        t = text.strip().lower()
+        return "0" if t.startswith("hard") else "".join(c for c in t if c in "0123456789.,-")
+
+    def _press(self, _e=None):
+        self._clicked = True         # Tk's own binding puts the cursor where you clicked; Tab still selects all
+
+    def _start_edit(self):
+        clicked, self._clicked = self._clicked, False
+        text = self._text.get()
+        bare = self._bare(text)
+        if bare != text:
+            try:
+                pos = int(self.index("insert"))
+            except (tk.TclError, TypeError, ValueError):
+                pos = len(bare)
+            self._text.set(bare)
+            try:
+                self.icursor(min(pos, len(bare)))
+            except tk.TclError:
+                pass
+        if not clicked:
+            self._select_all()
+
+    def _select_number(self, _e=None):
+        """Double-click: the whole number (Tk's word selection stops at the decimal point), never the unit."""
+        if self._text.get() != self._bare(self._text.get()):
+            self._text.set(self._bare(self._text.get()))
+        self._select_all()
+        return "break"
+
+    def _typed_value(self) -> "float | None":
+        t = self._text.get().strip().lower()
+        v = 0.0 if t.startswith("hard") else parse_number(t)
+        return None if v is None else v / self._factor
+
+    def _step(self, sign: int):
+        """Up/Down: one step up or down, from what is typed (else the slider's value), kept in range."""
+        s = self._slider
+        if s._var is None or not s._on():
+            return "break"
+        shown_step = 1.0 if (self._factor != 1 or s._hi > 1.5) else 0.05
+        step = shown_step / self._factor
+        v = self._typed_value()
+        v = s._value() if v is None else v
+        v = round(round(v / step) * step + sign * step, 6)
+        s._var.set(min(s._hi, max(s._lo, v)))
+        s._draw()
+        self._cmd()
+        self._text.set(self._bare(self._text.get()))       # still in the box: the bare number, selected
+        self._select_all()
+        return "break"
 
     def _commit(self, _e=None):
         s = self._slider
-        raw = self._text.get().strip().lower().replace(",", ".").replace("%", "").strip()
-        try:
-            v = 0.0 if raw.startswith("hard") else float(raw) / self._factor
-        except ValueError:
-            v = None
+        v = self._typed_value()
         if v is not None and s._var is not None and s._on():
             s._var.set(min(s._hi, max(s._lo, v)))
             s._draw()
@@ -640,6 +710,8 @@ __all__ = [
     "VALUE_W",
     "SLIDER_W",
     "ValueBox",
+    "parse_number",
+    "number_typed_ok",
     "workflows_tags",
     "FLUX2_SCHEDULER",
     "GenParams",

@@ -338,9 +338,9 @@ def main():
     app.t_prompt.delete("1.0", "end"); app.t_prompt.insert("1.0", "my own text")
     app.v_mode.set("refine"); app._on_mode()
     assert app._prompt_text() == models.FLUX2_DEFAULT and app.v_pchoice.get() == "Default", (app._prompt_text(), app.v_pchoice.get())
-    ok = gui.ValueBox._typed_ok              # only numbers can be typed: digits and one decimal point or comma
-    assert ok("5", "5") and ok("3", "0.3") and ok(",", "0,") and ok("", "") and ok("12", "12")
-    assert not ok("a", "a") and not ok("%", "5%") and not ok(".", "0.5.") and not ok("-", "-") and not ok(" ", "5 ")
+    ok = gui.ValueBox._typed_ok              # only numbers can be typed: digits and one decimal point or comma (more: test_number_fields)
+    assert ok("1", "5", "5") and ok("1", "3", "0.3") and ok("1", ",", "0,") and ok("0", "", "") and ok("1", "12", "12")
+    assert not ok("1", "a", "a") and not ok("1", "%", "5%") and not ok("1", ".", "0.5.") and not ok("1", "-", "-") and not ok("1", " ", "5 ")
     app.w_feather.configure(state="normal")
     app.v_feather.set(4)
     app.lbl_feather.configure(text="hard edge")
