@@ -259,8 +259,17 @@ FILL_PROMPT = ("{text}. Place it only inside the red {shape}, scaled to fit it a
                "Also remove the red {shape} itself.")
 
 
-def fill_prompt(text: str, mask: "Image.Image") -> str:
-    return FILL_PROMPT.format(text=text.strip().rstrip(".!"), shape=_shape(mask))
+# Qwen Image 2.1 Edit read "scaled to fit it" as "small enough to fit": in the test round of 28.10. its boat and shark
+# came out at a realistic size far inside the outline, where Fibo filled it. Qwen gets its own first sentence.
+FILL_PROMPT_LARGE = ("{text}. Make it as large as the red {shape}, filling it from edge to edge, and blend it into "
+                     "the scene (light, shadows, perspective). Do not change anything outside the red {shape}. "
+                     "Also remove the red {shape} itself.")
+
+
+def fill_prompt(text: str, mask: "Image.Image", workflow: str | None = None) -> str:
+    """The instruction for Fill with an instruction editor; Qwen's workflows get the wording that asks for the full size."""
+    large = bool(workflow) and Path(workflow).name.startswith("qwen-image")
+    return (FILL_PROMPT_LARGE if large else FILL_PROMPT).format(text=text.strip().rstrip(".!"), shape=_shape(mask))
 
 
 def outline_width(gen_w: int, gen_h: int) -> int:
@@ -567,7 +576,7 @@ class Bridge:
             elif fill:    # marked area + fixed wrapper around the typed text; goes through the text model only when the
                 #           workflow has one and "Enhance" is on (live test: the same placement, ~25 s slower, fewer
                 #           doubled objects in 1 of 5 pictures), otherwise it is sent as it is
-                gp = dataclasses.replace(p, prompt=fill_prompt(p.prompt, mask.crop(region.pil())))
+                gp = dataclasses.replace(p, prompt=fill_prompt(p.prompt, mask.crop(region.pil()), wf))
             if hint and wf and req.enhance and not removal and not fill and prompt_phase_nodes(workflows.load_template(wf)):
                 gp = dataclasses.replace(p, prompt=p.prompt.strip() + hint)  # text-model workflows only
             start, span = 0.15 + 0.75 * k / n_wf, 0.75 / n_wf

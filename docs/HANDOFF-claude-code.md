@@ -22,7 +22,7 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 - Ungetrackt im Repo-Ordner: `photocraft-ai 0.16.bat` (Starter des Nutzers für PhotoCraft 0.16, seit 28.10. seine Hauptversion): nicht anfassen, vor dem Einchecken fragen.
 - Tags: `backup-2026-10-26` (6df02df, vor Phase 0), `vor-claude-code` (65e955f).
 - Lane-Klone `lanes/L1`, `lanes/L2` sind Altlast (per `.git/info/exclude` ignoriert). Archiv: `docs/archiv-lanes/`.
-- Tests: `python tests/run_all.py` (48 Dateien, alle grün, ca. 26 s). Python des Nutzers: Pfad in `data/python.txt`.
+- Tests: `python tests/run_all.py` (49 Dateien, alle grün, ca. 26 s). Python des Nutzers: Pfad in `data/python.txt`.
 - Diagnose: `data/exchange/last-graph.json`, `data/exchange/runs.jsonl`; ComfyUI-Historie über `http://127.0.0.1:8188/history`.
 
 ## 3. Umgebung
@@ -143,4 +143,4 @@ Die Reihenfolge steht nur noch in `PLAN.md`, Abschnitt 3 (dort sind auch die Ope
 
 **Beim Nutzer:** zwei alte Kanäle `pccomfy-preview-…` im zweiten „Untitled-1“ bleiben (sein Wunsch).
 
-**Als Nächstes (PLAN E2):** Context/Feather-Testrunde erledigt (Ergebnis in `docs/tests/e2-context-feather.md`); offen: Tooltip zur runden Auswahl, Befund „Qwen Fill macht Objekte kleiner“, dann die Seam-Korrektur T2 als A/B-Test (vorgezogen 28.10.).
+**Als Nächstes (PLAN E2):** Context/Feather-Testrunde erledigt (Ergebnis in `docs/tests/e2-context-feather.md`); offen: Tooltip zur runden Auswahl, Live-Test der eigenen Qwen-Fill-Formulierung (gegen „Objekte zu klein“), dann die Seam-Korrektur T2 als A/B-Test (vorgezogen 28.10.).
