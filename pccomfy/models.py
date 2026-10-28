@@ -235,7 +235,7 @@ BY_KEY = {m.key: m for m in MODELS}
 RANKING = {
     "inpaint": ("fibo", "qwen"),            # E2 test round 28.10.: "Fibo is better overall"
     "remove": ("fibo", "qwen"),
-    "outpaint": ("moss", "flux2", "fibo", "qwen"),
+    "outpaint": ("flux2", "flux3", "qwen", "fibo", "krea2", "moss"),   # user 28.10.: Flux 2 very good, Flux 3 and Qwen too
 }
 SHORT = {"flux3": "Flux 3", "flux2": "Flux 2", "qwen": "Qwen", "fibo": "Fibo", "krea2": "Krea 2", "moss": "MOSS"}
 
