@@ -266,12 +266,13 @@ def main():
         assert app.v_sharpen.get() == want and app.lbl_sharpen.cget("text") == f"{round(want * 100)} %", (mode, "reset")
     # Fibo: text to image has its own workflow (no image inputs), Refine runs as a whole-image edit with a ready prompt
     assert mm["fibo"].modes["txt2img"].workflow == "fibo2-t2i.json" and mm["fibo"].modes["refine"].run_as == "edit"
-    assert mm["fibo"].modes["refine"].prompt_hint == models.FIBO_REFINE == "relight the scene to natural lighting"
+    assert mm["fibo"].modes["refine"].prompt_hint == models.FLUX2_DEFAULT      # the Flux 2 Refine default (user 28.10.)
+    assert models.FIBO_REFINE in models.STOCK_PROMPTS     # the old Fibo Refine text in a saved field is still replaced
     app.v_model.set("fibo")
     app.v_mode.set("refine")
     app._on_model()
     assert app.v_workflow.get() == "fibo2-edit.json" and app._request().mode == "edit"
-    assert app._prompt_text() == models.FIBO_REFINE and app.v_mode.get() == "refine" and app._layer_prefix().endswith("Refine")
+    assert app._prompt_text() == models.FLUX2_DEFAULT and app.v_mode.get() == "refine" and app._layer_prefix().endswith("Refine")
     app.v_mode.set("txt2img")
     app._on_mode()
     assert app.v_workflow.get() == "fibo2-t2i.json" and app._request().mode == "txt2img" and app._prompt_text() == ""
