@@ -24,7 +24,7 @@ class ModeMixin:
         else:
             self.f_scale.pack_forget()
         if self._run_mode() in SCALE_MODES:
-            self.f_detail.pack(fill="x", padx=10, pady=4, before=self.f_adv)
+            self._pack_post(self.f_detail)
         else:
             self.f_detail.pack_forget()
         self.w_denoise.configure(state="disabled" if mode == "txt2img" or self._ignores_mask() else "normal")   # an editor always runs at 1.0
@@ -286,11 +286,11 @@ class ModeMixin:
         self._status("Reset to the startup settings.")
 
     def _pack_post(self, frame):
-        """Show one of the finishing rows in its place: Sharpen and Match colours, Context, Edge feather, Layer mask."""
+        """Show one of the finishing rows in its place: Mix source/new, Sharpen and Match colours, Context, Edge feather, Layer mask."""
         shown = (lambda f: bool(f.winfo_manager())) if hasattr(frame, "winfo_manager") else (lambda f: False)
         if shown(frame):
             return
-        order = [f for f in (getattr(self, n, None) for n in ("f_sharp", "f_ctx", "f_feather", "f_density", "f_lm")) if f is not None]
+        order = [f for f in (getattr(self, n, None) for n in ("f_detail", "f_sharp", "f_ctx", "f_feather", "f_density", "f_lm")) if f is not None]
         later = [f for f in order[order.index(frame) + 1:] if shown(f)] if frame in order else []
         frame.pack(fill="x", pady=(2, 0), **({"before": later[0]} if later else {}))
 

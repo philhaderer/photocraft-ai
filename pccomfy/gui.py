@@ -405,7 +405,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.cb_scale = ttk.Combobox(self.f_scale, textvariable=self.v_scale, values=["x 1.5", "x 2", "x 3", "x 4"], state="readonly", width=6)
         self.cb_scale.grid(row=0, column=1, padx=8)
         self.f_scale.columnconfigure(0, weight=1)
-        self.f_detail = ttk.Frame(r)      # Upscale and Refine
+        self.f_detail = ttk.Frame(self.f_post)      # Upscale and Refine: under Advanced settings, above "Sharpen result" (user 28.10.)
         self._slider_row(self.f_detail)
         ttk.Label(self.f_detail, text="Mix Source/New Image", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
         self.w_detail = Slider(self.f_detail, scale=self.ui, from_=0.0, to=1.0, variable=self.v_detail, command=self._on_detail,
