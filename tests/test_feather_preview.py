@@ -23,9 +23,8 @@ from pccomfy.bridge import BridgeError, Request, soft_layer_mask  # noqa: E402
 WF = ROOT / "workflows"
 
 
-def req(wf="fibo2-edit.json", layer_mask="soft", feather=10.0, remove=False):
-    r = Request(mode="inpaint", workflow=str(WF / wf), layer_mask=layer_mask, feather_pct=feather, context=0.4, enhance=False,
-                remove=remove)
+def req(wf="fibo2-edit.json", layer_mask="soft", feather=10.0):
+    r = Request(mode="inpaint", workflow=str(WF / wf), layer_mask=layer_mask, feather_pct=feather, context=0.4, enhance=False)
     r.params = workflows.GenParams(prompt="a red ball", seed=3)
     return r
 
@@ -59,12 +58,11 @@ def bridge_checks():
     assert len(d.channels) == 1 and [l["id"] for l in d.layers] == ids0 and d.active == act0 and len(pc.docs) == 1
     soft10 = np.asarray(d.quick).copy()
 
-    # the slider moved (Remove: Fill has no edge feather any more): shown anew without a second export of the picture
+    # the slider moved: shown anew without a second export of the picture
     n_dup = sum(1 for c, _ in pc.log if c == "image.duplicate")
-    b.show_feather(req(feather=3.0, remove=True))
+    b.show_feather(req(feather=3.0))
     assert sum(1 for c, _ in pc.log if c == "image.duplicate") == n_dup
-    assert np.array_equal(np.asarray(d.quick), expected(sel0, req(feather=3.0, remove=True)))
-    assert not np.array_equal(np.asarray(d.quick), soft10)
+    assert np.array_equal(np.asarray(d.quick), expected(sel0, req(feather=3.0))) and not np.array_equal(np.asarray(d.quick), soft10)
     assert len(d.channels) == 1
 
     # hide: the user's own selection back, Quick Mask off, the channel gone

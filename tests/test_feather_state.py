@@ -1,4 +1,4 @@
-"""Edge feather is greyed out whenever no soft layer mask is used, and for Fill with Qwen or Fibo (stubbed Tk).
+"""Edge feather is greyed out whenever no soft layer mask is used (stubbed Tk, no display needed).
 
     python tests/test_feather_state.py
 """
@@ -28,10 +28,7 @@ def main():
 
     # only "soft" uses the feather ("auto" left the menu 28.10.); Expand, Refine and Upscale have no edge feather at all
     assert "auto" not in L
-    # Fill with an editor that ignores the mask (Fibo, Qwen) fades out to the crop's edge: no slider
-    # (Show feather stays; the Tk stub has no packing to check)
-    assert state("fibo2-edit.json", "inpaint", "soft") == "disabled"
-    assert state("fibo2-edit.json", "remove", "soft") == "normal"
+    assert state("fibo2-edit.json", "inpaint", "soft") == "normal"
     assert state(gui.BUILTIN, "inpaint", "soft") == "normal"
     assert state("fibo2-edit.json", "inpaint", "selection") == "disabled"
     assert state("fibo2-edit.json", "inpaint", "none") == "disabled"
@@ -43,12 +40,12 @@ def main():
     app.v_mode.set("outpaint")
     app._on_mode_ui()
     assert app.w_feather["state"] == "disabled"
-    app.v_mode.set("remove")
+    app.v_mode.set("inpaint")
     app._on_mode_ui()
     assert app.w_feather["state"] == "normal"
-    app._apply_settings({"mode": "remove", "layer_mask": "auto"})
+    app._apply_settings({"mode": "inpaint", "layer_mask": "auto"})
     assert app.v_lmask.get() == L["soft"] and app.w_feather["state"] == "normal"
-    app._apply_settings({"mode": "remove", "layer_mask": "none"})
+    app._apply_settings({"mode": "inpaint", "layer_mask": "none"})
     assert app.w_feather["state"] == "disabled"
     shutil.rmtree(t.TMP, ignore_errors=True)
     print("ALL OK (feather state)")

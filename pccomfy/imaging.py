@@ -149,34 +149,25 @@ def _outside_distance(inside: np.ndarray, limit: int) -> np.ndarray:
     return np.sqrt(d2)
 
 
-def crop_fade(mask: Image.Image, radius: int, inner: tuple[bool, bool, bool, bool]) -> Image.Image:
-    """Layer mask for Fill with an instruction editor, the size of the redrawn crop: fully opaque over the selection
-    and `radius` px around it, then a smooth fade that reaches 0 exactly at the crop's sides inside the picture
-    (`inner` = left, top, right, bottom; a side on the canvas edge does not fade). So a shadow or a part that grows
-    out of the selection stays visible, and the crop's straight edge never shows (live test 28.10.: the narrow soft
-    edge cut both off). A mask that is already soft (feathered in PhotoCraft) is returned unchanged."""
+def outer_feather(mask: Image.Image, radius: int) -> Image.Image:
+    """Soften a hard selection mask OUTSIDE its edge: inside it stays fully opaque, around it the mask fades out over
+    about `radius` px (1 at the edge, ~0.05 at `radius`: the profile twice a Gaussian blur of half the radius gives a
+    straight edge). Used for Fill with an instruction editor: the new object keeps its full outline, only the redrawn
+    surroundings blend in. The fade follows the distance to the selection, so a corner fades as wide as an edge
+    (the blur alone gave a rectangle hard corners, live test 28.10.). A mask that is already soft is returned
+    unchanged, as in auto_feather."""
     m = mask.convert("L")
-    if is_soft(m):
+    if radius <= 0 or is_soft(m):
         return m
     a = np.asarray(m, dtype=np.float32)
-    h, w = a.shape
-    big = 1e9
-    ys, xs = np.arange(h, dtype=np.float32)[:, None], np.arange(w, dtype=np.float32)[None, :]
-    e = np.full((h, w), big, np.float32)        # distance to the nearest side that fades
-    for on, dist in zip(inner, (xs, ys, w - 1 - xs, h - 1 - ys)):
-        if on:
-            e = np.minimum(e, np.broadcast_to(dist, (h, w)))
-    if e.min() >= big or not (a > 127).any():
-        return Image.new("L", (w, h), 255) if e.min() >= big else m
-    # the distance to the selection at a lower resolution (the fade is smooth; the selection itself stays exact)
-    s = max(1, math.ceil(max(w, h) / 400))
-    small = np.asarray(m.resize((max(1, w // s), max(1, h // s)), Image.BOX)) > 127
-    sd = _outside_distance(small, max(small.shape)) * s
-    d = np.asarray(Image.fromarray(sd.astype(np.float32), "F").resize((w, h), Image.BILINEAR))
-    d = np.maximum(d - min(radius, 0.7 * float(e[a > 127].min())), 0.0)   # always a fade of 30 % of the room at least
-    t = np.where(e >= big, 1.0, e / np.maximum(d + e, 1e-6))
-    fade = t * t * (3.0 - 2.0 * t) * 255.0
-    return Image.fromarray(np.maximum(a, fade).round().astype(np.uint8))
+    limit = int(radius * 1.3)                  # cut off beyond 1.3 × radius (below 1 %), where the blur ended too
+    d = _outside_distance(a > 127, limit)
+    sigma = radius / 2.0
+    xs = np.arange(0, limit + 2, 0.25)
+    table = np.array([1.0 - math.erf(x / (sigma * math.sqrt(2.0))) for x in xs])   # = 2 × (1 - Phi(x / sigma))
+    b = np.interp(np.maximum(d - 0.5, 0.0), xs, table) * 255.0   # measured from the pixel's edge, as the blur was
+    b[d > limit] = 0.0
+    return Image.fromarray(np.maximum(a, np.minimum(255.0, b)).round().astype(np.uint8))
 
 
 def fill_transparent(img: Image.Image) -> Image.Image:

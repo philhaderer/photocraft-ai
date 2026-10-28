@@ -1,5 +1,5 @@
-"""Fill with an instruction editor (Qwen, Fibo), layer mask soft: the fill is fully opaque over the selection, then fades out to the redrawn crop's sides (a shadow below the selection stays); Remove keeps its
-feather across the edge.
+"""Fill with an instruction editor (Qwen, Fibo), layer mask soft: the fill is fully opaque up to the selection's edge, the
+soft edge lies OUTSIDE the selection and is as wide as the edge feather says; Remove keeps its feather across the edge.
 
     python tests/test_fill_outer_edge.py
 """
@@ -37,22 +37,21 @@ def layer_mask(mask, wf="qwen-image-21-edit.json", pct=10.0, remove=False, conte
 
 def main():
     sel = np.asarray(sel_mask()) > 127
-    bbox = imaging.mask_bbox(sel_mask())
-    region = imaging.grow_box(bbox, (W, H), 0.4)            # 120 px room: x 180..719
     for wf in ("qwen-image-21-edit.json", "fibo2-edit.json"):
         m = layer_mask(sel_mask(), wf)
         assert m[sel].min() == 255, "the fill must be fully opaque inside the selection"
         row = m[400]                        # a line through the middle: left edge at x = 300
-        # opaque up to the selection, then a fade that ends exactly at the crop's side
-        assert row[299] == 255 and row[280] > 200 and 60 < row[240] < 200 and row[region.x] == 0 and row[region.x - 1] == 0, row[175:305]
-        assert abs(int(m[400, 599 + 30]) - int(row[300 - 30])) <= 2      # the same on the right side
-        assert m[640, 450] > 0 and m[region.y + region.h - 1, 450] == 0   # below the selection: a shadow there stays
-    # the edge feather is not used for Fill (its slider is hidden there, user 28.10.)
-    assert np.array_equal(layer_mask(sel_mask(), pct=0.0), layer_mask(sel_mask(), pct=20.0))
-    # a small Context: still 0 at the crop's side (its straight edge would show)
+        assert row[299] > 230 and 60 < row[300 - 15] < 200 and row[300 - 30] < 20 and row[300 - 40] == 0, row[255:305]
+        assert m[400, 600 + 15] == row[300 - 16]          # the same on the right side
+    # 0 % = hard edge: exactly the selection
+    assert np.array_equal(layer_mask(sel_mask(), pct=0.0) > 0, sel)
+    # a wider feather, a wider edge
+    assert layer_mask(sel_mask(), pct=20.0)[400, 300 - 30] > layer_mask(sel_mask(), pct=10.0)[400, 300 - 30]
+    # the edge never reaches the end of the redrawn crop (its straight edge would show): context 0.05 = 32 px room
     m = layer_mask(sel_mask(), pct=50.0, context=0.05)
+    bbox = imaging.mask_bbox(sel_mask())
     region = imaging.grow_box(bbox, (W, H), 0.05)
-    assert m[400, region.x] == 0, m[400, region.x]
+    assert m[400, region.x] < 15, m[400, region.x]
     # Remove keeps the feather across the selection's edge (unchanged)
     r = layer_mask(sel_mask(), remove=True)
     assert r[sel].min() < 255 and r[400, 299] < 255
