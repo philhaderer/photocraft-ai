@@ -13,7 +13,7 @@ import test_gui_presets as t  # noqa: E402  (installs the Tk stub and a temporar
 import test_detection as td  # noqa: E402
 
 gui, cfgmod = t.gui, t.cfgmod
-from pccomfy import inventory, manifest, models  # noqa: E402
+from pccomfy import gui_theme, inventory, manifest, models, ui_settings  # noqa: E402
 
 
 class RecText(t.Text):
@@ -170,9 +170,11 @@ def main():
     t.ttk.Button = RecBtn
     probe = gui.App(cfgmod.load())
     t.ttk.Button = plain
-    assert probe.b_gear.master is not probe.f_tabs and probe.b_gear.image == probe._icon("gear") and probe.b_gear.master is not None
+    assert probe.b_gear.master is not probe.f_tabs and probe.b_gear.image == probe._icon("gear", px=ui_settings.GEAR_PX) and probe.b_gear.master is not None
     foot = [b.master for b in made if b.text in ("Refresh", "Reset")]
     assert len(foot) == 2 and foot[0] is foot[1] and probe.b_gear.master is foot[0]
+    # flat like the trash button (no dark button background) and about 60 % of the other icons (user 28.10.)
+    assert probe.b_gear["style"] == probe.b_clear["style"] == "Link.TButton" and ui_settings.GEAR_PX == 12 == round(0.6 * gui_theme.ICON_PX)
     del probe
 
     app = make_app()

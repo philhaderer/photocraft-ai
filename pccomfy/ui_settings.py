@@ -17,11 +17,13 @@ import webbrowser
 from . import inventory, manifest
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
+from .gui_theme import ICON_PX
 
 _LABELS = dict(MODE_LABELS)      # noqa: F405
 EMPTY_TEXT = {"choose": "Choose a function", "none_linked": "Link your model in the settings"}
 PICK_TEXT = "Choose another file…"     # next to every file in the settings window (C.13, wording chosen by the user)
 STATE_TEXT = {"ready": "ready", "partial": "some functions need files", "missing": "files missing"}
+GEAR_PX = round(ICON_PX * 0.6)     # the gear: about 60 % of the other button icons, flat without a button background (user 28.10.)
 
 
 class SettingsMixin:
@@ -44,7 +46,7 @@ class SettingsMixin:
         self._map_undo: list[dict] = []            # the links before each change ("Undo")
         style = ttk.Style()
         style.configure("Missing.Tab.Toolbutton", foreground=NA_RED)      # a tab that is not available: red text, the background of an inactive tab
-        self.b_gear = ttk.Button(foot, image=self._icon("gear"), style="Icon.TButton", command=self.toggle_settings)
+        self.b_gear = ttk.Button(foot, image=self._icon("gear", px=GEAR_PX), style="Link.TButton", command=self.toggle_settings)
         self.b_gear.pack(side="right")
         Tooltip(self.b_gear, "Settings: which model files ComfyUI has, links to get the missing ones, ComfyUI folders, credits.")
         style.configure("Empty.TLabel", foreground=MUTED, font=font(11))
