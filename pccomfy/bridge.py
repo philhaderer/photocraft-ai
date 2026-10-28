@@ -81,6 +81,8 @@ class Request:
     loras: list = field(default_factory=list)   # extra LoRAs [(file name, strength), ...] chained in front of the samplers
     match: float = 0.0                   # 0..1: pull colours that are louder than the surroundings back towards them (Fill / Expand / Reference)
     sharpen: float = 0.0                 # 0..1: a light sharpening of the result (high-pass style, like KJNodes' Image Sharpen)
+    seam: bool = False                   # Fill / Remove / Expand: seam correction as an A/B test, each result twice
+    #                                      ("[seam fix]" on top, "[raw]" hidden below it; imaging.seam_correct)
     sampler_override: dict = field(default_factory=dict)   # {"steps": .., "cfg": .., "denoise": .., "sampler": .., "scheduler": ..} typed over the workflow's sampler
     doc_tag: str = ""                    # Upscale: model and options in the new document's name ("Flux3Klein x1.5 SeedVR2")
     label: str = ""                      # added to the layer names (a comparison run: "res 1024")
@@ -651,6 +653,10 @@ class Bridge:
         sel_small = None   # the new area in the size the model drew it, for "match colours"
         if req.match > 0 and req.mode in ("inpaint", "outpaint") and mask is not None and results and results[0][1]:
             sel_small = mask.crop(region.pil()).resize(results[0][1][0].size, Image.NEAREST)
+        seam_mask = None   # seam correction: the new area in the size the model drew it (white = new)
+        if req.seam and req.mode in ("inpaint", "outpaint") and mask is not None and results and results[0][1]:
+            seam_mask = mask.crop(region.pil()).resize(results[0][1][0].size, Image.BILINEAR)
+        seam = None        # the tone jump at the seam of #1 in levels, before and after: (before, after)
         items = [(label, i, im, len(ims)) for label, ims in results for i, im in enumerate(ims)]
         layers = []
         # the new layers go on top of the stack, whichever layer was active (else they can sit under it); also with the hard
@@ -670,16 +676,25 @@ class Bridge:
                 rgb = raw.convert("RGB")
                 if req.match > 0 and sel_small is not None:
                     rgb = imaging.match_saturation(rgb, crop_plain, sel_small, req.match)
-                im = rgb.resize((region.w, region.h), Image.LANCZOS)
-                im = imaging.sharpen(im, req.sharpen)
+                # A/B: the raw result first (it ends up hidden below), then the corrected one on top of it
+                pairs = [("raw", rgb), ("seam fix", imaging.seam_correct(rgb, crop_plain, seam_mask))] if seam_mask is not None else [("", rgb)]
+                if seam_mask is not None and g == 0:
+                    seam = (imaging.seam_jump(rgb, crop_plain, seam_mask), imaging.seam_jump(pairs[1][1], crop_plain, seam_mask))
                 label = " ".join(x for x in (label, req.label) if x)
-                if req.preset:
-                    name = f"{req.preset} #{req.run_no}" + (f".{i + 1}" if count > 1 else "") + (f" [{label}]" if label else "")
-                else:
-                    name = (f"AI {mode_name}" + (f" [{label}]" if label else "") + f": {base} [{p.seed}]"
-                            + (f" #{i + 1}" if count > 1 else ""))
-                layers.insert(0, self._import(orig, im, region, mode, name, tag, g, first=(n == 0), hidden=(g > 0),
-                                              layer_mask=layer_mask, above=above if n == 0 else None, density=density))
+                for k, (ab, out) in enumerate(pairs):
+                    im = out.resize((region.w, region.h), Image.LANCZOS)
+                    im = imaging.sharpen(im, req.sharpen)
+                    lab = " ".join(x for x in (label, ab) if x)
+                    if req.preset:
+                        name = f"{req.preset} #{req.run_no}" + (f".{i + 1}" if count > 1 else "") + (f" [{lab}]" if lab else "")
+                    else:
+                        name = (f"AI {mode_name}" + (f" [{lab}]" if lab else "") + f": {base} [{p.seed}]"
+                                + (f" #{i + 1}" if count > 1 else ""))
+                    top_one = k == len(pairs) - 1     # the corrected one (or the only one) of this result
+                    first = n == 0 and k == 0
+                    layers.insert(0, self._import(orig, im, region, mode, name, tag, g * 2 + k, first=first,
+                                                  hidden=(g > 0 or not top_one), layer_mask=layer_mask,
+                                                  above=above if first else None, density=density))
         group = self._group(layers, req.group_name or f"AI {mode_name} variants") if len(layers) > 1 else None
         if req.mode == "outpaint":
             self._last_expand = {"doc": orig_name, "size": (W, H), "keep": keep, "layers": list(layers)}
@@ -687,9 +702,11 @@ class Bridge:
                 self._try("select.deselect")   # the new-area selection is not needed any more; a rerun finds the area again
         elif has_sel and not kept and mode == "selection":
             self._try("select.reselect")  # the layer mask used the selection up: it comes back, ready for another generation
+        if seam is not None:
+            self._log_seam(req, p.seed, seam)
         progress(1.0, f"Done (seed {p.seed})", phase="place")
         return {"seed": p.seed, "vgl": self.last_vgl, "layers": layers, "region": region.__dict__, "size": [gw, gh], "pipeline": self.pipeline,
-                "group": group}
+                "group": group, "seam": seam}
 
     # ---------- feather preview ----------
 
@@ -921,6 +938,17 @@ class Bridge:
                    "workflow": Path(wf).name if wf else "builtin", "seed": gp.seed, "size": [gp.width, gp.height],
                    "turbo": req.turbo, "enhance": req.enhance, "layer_mask": req.layer_mask, "base_res": req.base_res,
                    "context": req.context, "sampler": req.sampler_override, "prompt": (gp.prompt or "")[:600]}
+            f.write_text("\n".join(old + [json.dumps(rec, ensure_ascii=False)]) + "\n", encoding="utf-8")
+        except (OSError, TypeError, ValueError):
+            pass
+
+    def _log_seam(self, req: Request, seed: int, seam: tuple[float, float]):
+        """The seam correction's measurement as a line of its own in runs.jsonl: the tone jump of #1 before and after."""
+        try:
+            f = self.exchange / "runs.jsonl"
+            old = f.read_text(encoding="utf-8").splitlines()[-99:] if f.exists() else []
+            rec = {"time": time.strftime("%Y-%m-%d %H:%M:%S"), "mode": ("remove" if req.remove else req.mode), "seed": seed,
+                   "seam_before": round(seam[0], 1), "seam_after": round(seam[1], 1)}
             f.write_text("\n".join(old + [json.dumps(rec, ensure_ascii=False)]) + "\n", encoding="utf-8")
         except (OSError, TypeError, ValueError):
             pass
