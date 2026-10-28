@@ -1,4 +1,4 @@
-"""Number fields: typing, deleting, comma or point, the bare number while editing, Up/Down steps, LoRA strengths
+"""Number fields: typing, deleting, comma or point, the unit kept while editing, Up/Down steps, LoRA strengths
 (stubbed Tk, no display needed).
 
 Live bugs 28.10.: "%", the space and "hard edge" could not be deleted (the key check also ran on deleting); a
@@ -26,22 +26,23 @@ def main():
     assert p("0,2") == 0.2 and p("0.2") == 0.2 and p("35 %") == 35 and p(" 12,5 ") == 12.5 and p("abc") is None and p("") is None
 
     app = t.gui.App(cfgmod.load())
-    # while editing the box holds the bare number; a double-click selects only the number
+    # the unit stays while editing (user 28.10.: else the number shifts); a double-click or Tab selects only the number
     box = app.lbl_sharpen
     app.v_sharpen.set(0.3)
     app._on_sharpen()
     assert box.cget("text") == "30 %"
     box._start_edit()
-    assert box.cget("text") == "30"
-    box.configure(text="45 %")
     box._select_number()
-    assert box.cget("text") == "45"
+    assert box.cget("text") == "30 %"
+    span = gui.ValueBox._number_span
+    assert span("30 %") == (0, 2) and span("0.45") == (0, 4) and span("12,5 %") == (0, 4) and span("hard edge") == (0, 9)
     app.w_feather.configure(state="normal")
     app.v_feather.set(0)
     app._on_feather()
     assert app.lbl_feather.cget("text") == "hard edge"
-    app.lbl_feather._start_edit()
-    assert app.lbl_feather.cget("text") == "0"
+    app.lbl_feather.configure(text="hard3 edge")        # a digit typed into "hard edge"
+    app.lbl_feather._commit()
+    assert app.v_feather.get() == 3
     # comma or point, and a unit left in the text
     app.lbl_context.configure(text="0,2")
     app.lbl_context._commit()
@@ -58,7 +59,7 @@ def main():
     assert app.v_context.get() == 1.0
     box.configure(text="30")
     box._step(1)
-    assert abs(app.v_sharpen.get() - 0.31) < 1e-9 and box.cget("text") == "31"     # bare while still in the box
+    assert abs(app.v_sharpen.get() - 0.31) < 1e-9 and box.cget("text") == "31 %"
     box._step(-1)
     box._step(-1)
     assert abs(app.v_sharpen.get() - 0.29) < 1e-9
