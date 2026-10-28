@@ -287,8 +287,10 @@ def main():
     assert all(back.values())
     # Flux 3 restore prompt without "people" (an older copy in the field is replaced); a tip under the prompt in Edit whole image
     assert "people" not in models.FLUX3_DEFAULT and models.FLUX3_DEFAULT_OLD in models.STOCK_PROMPTS
-    for key in ("qwen", "flux2", "flux3", "fibo"):
+    for key in ("qwen", "fibo"):
         assert models.BY_KEY[key].modes["edit"].prompt_tip == models.EDIT_TIP, key
+    for key in ("flux2", "flux3"):        # the Flux note moved from the tooltip under the prompt (user 28.10.)
+        assert models.BY_KEY[key].modes["edit"].prompt_tip == models.EDIT_TIP + " " + models.EDIT_AGAIN, key
 
     # run time next to "Done"; Flux 2 refine default without "people, faces"; the tip is a wrapped label
     assert gui.duration_text(23.4) == "23 s" and gui.duration_text(65) == "1 min 05 s" and gui.duration_text(0.2) == "0 s"

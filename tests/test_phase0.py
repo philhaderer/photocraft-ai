@@ -35,7 +35,6 @@ assert [m.key for m in models.MODELS] == ["flux3", "flux2", "qwen", "fibo", "kre
 for m in models.MODELS:
     assert isinstance(m.requires, tuple) and m.requires, m.key      # L1 filled requires (the file names per tab); test_detection.py checks them
     assert (m.max_refs == 0) == (m.tag_style == ""), m.key          # L2: a model with slots names its images
-    assert set(m.mode_tips) <= set(m.modes), (m.key, set(m.mode_tips) - set(m.modes))      # no tooltip for a mode the model does not have
 assert {k: (m.max_refs, m.tag_style) for k, m in by.items()} == {
     "qwen": (8, "<image{n}>"), "fibo": (2, "<image_{n}>"), "flux2": (3, "image {n}"), "flux3": (3, "<ref_image_{i}>"),
     "krea2": (0, ""), "moss": (0, "")}                                                          # Multi Image Edit: slots per model

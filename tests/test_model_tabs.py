@@ -101,7 +101,7 @@ def main():
     assert app._hint_text == models.DESCRIBE_TIP
     app.v_mode.set("edit")
     app._on_mode()
-    assert app._hint_text == models.EDIT_TIP          # the tip under the prompt in Edit whole image
+    assert app._hint_text == models.EDIT_TIP + " " + models.EDIT_AGAIN    # the tip under the prompt in Edit whole image (Flux 3)
     assert app.v_workflow.get() == "flux3-klein-edit.json" and app.t_prompt.get("1.0", "end").strip() == ""
     app.t_prompt.insert("1.0", "make it night")
     app.v_mode.set("upscale")
@@ -188,7 +188,7 @@ def main():
     assert app.t_prompt["highlightbackground"] == gui.ACCENT
     app.v_mode.set("edit")
     app._on_model()
-    assert app._hint_text == models.EDIT_TIP            # Edit whole image: the tip under the prompt, also orange
+    assert app._hint_text.startswith(models.EDIT_TIP)   # Edit whole image: the tip under the prompt, also orange
     app.v_mode.set("txt2img")
     app._on_model()
     assert app._hint_text == models.T2I_TIP             # Text to image: says that a new image is added, also orange
@@ -233,22 +233,19 @@ def main():
     for k in ("flux2", "flux3"):
         assert mm[k].modes["remove"].settings["feather_pct"] == 10.0 and mm[k].modes["remove"].settings["layer_mask"] == "soft"
     assert "inpaint" not in mm["moss"].modes
-    # every mode of every model has a tooltip of its own, and none of them names another model
-    names = ("Qwen", "Fibo", "Flux", "MOSS")
-    for m in models.MODELS:
-        assert set(m.mode_tips) == set(m.modes), m.key
-        for tip in m.mode_tips.values():
-            others = [n for n in names if n.lower() not in (m.key, m.label.lower()) and n.lower() in tip.lower() and not m.label.lower().startswith(n.lower())]
-            assert not others, (m.key, others)
-    app.v_model.set("qwen")
-    app.v_mode.set("inpaint")
-    app._on_model()
-    q_tip = app.tt_modes["remove"].text
-    app.v_model.set("fibo")
-    app.v_mode.set("inpaint")
-    app._on_model()
-    own = app.tt_modes["remove"].text.split("\n", 1)[1]     # below the ranking line (which names Qwen)
-    assert app.tt_modes["remove"].text != q_tip and "Qwen" not in own
+    # one general tooltip per function, the same on every tab, naming no model (user 28.10.); model notes go under the prompt
+    names = ("Qwen", "Fibo", "Flux", "MOSS", "Krea", "SeedVR")
+    assert set(models.FUNCTION_TIPS) >= {k for m in models.MODELS for k in m.modes}
+    assert not [n for n in names for tip in models.FUNCTION_TIPS.values() if n.lower() in tip.lower()]
+    tips = {}
+    for key in ("qwen", "fibo", "flux2"):
+        app.v_model.set(key)
+        app.v_mode.set("inpaint" if key != "flux2" else "remove")
+        app._on_model()
+        tips[key] = app.tt_modes["remove"].text
+    assert tips["qwen"] == tips["fibo"] == tips["flux2"] == models.function_tip("remove", models.FUNCTION_TIPS["remove"])
+    assert mm["flux2"].modes["remove"].prompt_tip.endswith(models.REMOVE_AGAIN)
+    assert mm["fibo"].modes["refine"].prompt_tip == models.DESCRIBE_TIP + " Change the prompt for other edits."
     # every function's tooltip starts with the ranking (user 28.10.); a function without one says so
     assert models.ranking_text("inpaint") == "Ranking: 1. Fibo, 2. Qwen."
     assert models.ranking_text("remove") == "Ranking: 1. Fibo, 2. Qwen (not ranked: Flux 3, Flux 2)."
@@ -286,7 +283,7 @@ def main():
         app.v_model.set(k)
         app.v_mode.set("remove")
         app._on_model()
-        assert str(app.t_prompt.cget("state")) == "normal" and app._hint_text == models.REMOVE_NAME_TIP, k
+        assert str(app.t_prompt.cget("state")) == "normal" and app._hint_text.startswith(models.REMOVE_NAME_TIP), k
         assert app._request().remove_target == ""
         app.t_prompt.insert("1.0", "the dog")
         assert app._request().remove_target == "the dog" and app._request().mode == "remove"

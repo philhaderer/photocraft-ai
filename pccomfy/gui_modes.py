@@ -86,7 +86,7 @@ class ModeMixin:
                 rb.grid_remove()           # no model uses it
                 continue
             rb.configure(state="normal")
-            self.tt_modes[key].text = models.function_tip(key, (m.mode_tips.get(key) if m is not None else None) or MODE_TIPS[key])
+            self.tt_modes[key].text = models.function_tip(key, MODE_TIPS[key])
             shown.append(key)
         for i, key in enumerate(shown):
             self.rb_modes[key].grid(row=i // 2, column=i % 2, sticky="ew", padx=2, pady=2)
