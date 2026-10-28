@@ -519,6 +519,9 @@ class Bridge:
             src, mask = self._export(orig, tag, need_mask=has_sel)
             if keep is not None:
                 src = imaging.white_outside(src, keep) if editor else imaging.clear_outside(src, keep)
+                # soft only towards the original, 0 along the original's edges where no canvas was added (MOSS / Krea 2 use
+                # it for the model and the layer mask; 28.10.: a band of ~24 px there was painted anew, darker with Krea 2)
+                mask = imaging.outpaint_mask(keep, (W, H), req.overlap)
 
         bbox = None
         if req.mode in ("inpaint", "outpaint"):
@@ -1114,7 +1117,9 @@ class Bridge:
         x0, y0, x1, y1 = imaging.new_area_rect(keep, (doc["width"], doc["height"]), req.overlap)
         self.pc.execute("select.all")
         if x1 > x0 and y1 > y0:
-            # feather only the edge against the original (feathering the whole selection would round the canvas corners)
+            # feather only the edge against the original (feathering the whole selection would round the canvas corners).
+            # The mask that goes on is built by imaging.outpaint_mask: PhotoCraft cuts the rectangle at the canvas edge
+            # before feathering, which half-selected the original's edges where no canvas was added.
             self.pc.execute("select.rect", {"x": x0, "y": y0, "width": x1 - x0, "height": y1 - y0,
                                             "mode": "subtract", "feather": max(0, int(req.overlap) // 2)})
         return keep

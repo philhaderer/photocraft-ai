@@ -95,6 +95,19 @@ def main():
             "Replace the white area on the left, top, right and bottom with a seamless continuation of the scene, a forest path. "
             "Keep the existing picture unchanged.")
 
+    # the Expand mask: soft only towards the original, black along the original's edges where no canvas was added
+    # (PhotoCraft's feather half-selected them; MOSS / Krea 2 painted them anew, 28.10.)
+    import numpy as np
+    m = np.asarray(imaging.outpaint_mask(imaging.Box(0, 0, 400, 300), (600, 300), 48))
+    assert m.shape == (300, 600) and m[150, 0] == 0 and m[0, 100] == 0 and m[299, 100] == 0, "edges without new canvas"
+    assert m[0, 599] == 255 and m[150, 420] == 255, "the new canvas"
+    assert 100 < m[150, 352] < 155, m[150, 352]                     # half way on the edge 48 px into the original
+    assert m[150, 300] == 0 and m[150, 404] == 255                   # the ramp is 2 x 48 px wide
+    assert (np.diff(m[150].astype(int)) >= 0).all()                  # rises steadily towards the new canvas
+    m = np.asarray(imaging.outpaint_mask(imaging.Box(100, 50, 400, 300), (600, 400), 48))
+    assert m[0, 0] == m[399, 599] == 255 and m[200, 300] == 0       # all four sides added: a frame around the original
+    assert np.asarray(imaging.outpaint_mask(imaging.Box(0, 0, 600, 300), (600, 300), 48)).max() == 0   # nothing added
+
     rect = imaging.new_area_rect
     # right only: overlap on the right edge of the original, none on the other sides
     assert rect(imaging.Box(0, 0, 200, 100), (300, 100), 32) == (0, 0, 168, 100)
