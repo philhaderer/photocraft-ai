@@ -32,7 +32,8 @@ Fork of Peszemeszek/photocraft-comfyui-bridge (MIT OR Apache-2.0): a PhotoCraft 
 
 ## What the user calls "perfect" (do not touch without asking)
 
-Qwen 2.1 Edit / Fill / Expand / Remove; Flux 2 and Flux 3 Edit; Flux 3 Upscale; Flux 3 Text to image; MOSS Text to image and Expand; Fibo Edit whole image; the window head and sharpness of the window.
+Qwen 2.1 Edit / Fill / Expand / Remove; Flux 2 and Flux 3 Edit; Flux 3 Upscale; Flux 3 Text to image; MOSS Text to image; Fibo Edit whole image; the window head and sharpness of the window.
+MOSS Expand is off the list since 28.10. (poor results, like Krea 2 Expand) until it gets better results.
 
 ## Release 1 scope
 
