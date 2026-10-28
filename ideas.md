@@ -1,5 +1,5 @@
 # Todo: Ideen aus OpenFill (Recherche 2026-10-26, nichts gebaut)
-Eingeplant in `PLAN.md`, Abschnitt 3 (T1 = Punkt 6, T2 = Punkt 9, T3a/T3b/T4 = Punkte 12 bis 14, Geparkt = „Geparkt“). Diese Datei bleibt die Detailbeschreibung.
+Eingeplant in `PLAN.md`, Abschnitt 3 (T1 = Punkt 6, T2 = E2 (seit 28.10. vorgezogen, nach Context/Feather), T3a/T3b/T4 = Punkte 12 bis 14, Geparkt = „Geparkt“). Diese Datei bleibt die Detailbeschreibung.
 Quelle: github.com/beckettharriman/openfill (Apache-2.0, nur Doku gelesen, kein Code).
 Regel: an Entscheidungen Optionen nennen, nicht still wählen. Ein Commit je Änderung, nie pushen.
 

@@ -49,7 +49,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 **E. Offen aus der alten Liste**
 7. **Refresh/Reset** kleiner und klarer: A ⟳-Icon neben dem ComfyUI-Punkt + „Defaults“ als Textknopf (empfohlen), B Menü „⋯“, C zwei Icons, D Reset ins Zahnrad.
 8. **Expand-Entscheidungen:** Krea 2 Expand mehrseitig (A einseitig, mehrseitig in Runden; B abschalten; C nur Tooltip); Flux 3 Expand: Steps prüfen und Startwert setzen, bleibt es an?
-9. **Ränder bei Fill/Expand:** Masken-Option A (wartet auf Freigabe) und **Seam-Korrektur als A/B-Test** (OpenFill T2: ein Lauf liefert „roh“ und „korrigiert“ als zwei Ebenen; Schalter standardmäßig aus, bis bestätigt).
+9. **Ränder bei Fill/Expand:** Masken-Option A (wartet auf Freigabe). Die Seam-Korrektur (T2) ist seit 28.10. vorgezogen, siehe E2.
 10. **Restliche Design-Vorschläge:** Prompt-Feld mit dünnem Scrollbalken, runde Radios und echte Checkbox im PhotoCraft-Look, gesperrte Felder einheitlich, Tipp-Text gedämpft mit Info-Icon, Fortschrittsbalken nach „Done“ neutral.
 
 **L3 Fenster-Politur**
@@ -60,6 +60,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 - ~~Bug: Edge feather beim Start immer 2 %~~ (wirkte bei Fibo/Qwen Fill hart, bis die Funktion neu gewählt wurde): **behoben 28.10.**, jeder Start setzt den Startwert der Funktion (Option B des Users, kein Merken des letzten Werts). Vom User bestätigt.
 - **Context und Maske genauer abstimmen** (User: „müssen wir uns noch genauer kümmern“): größerer Context gibt bei Qwen bessere, genauer passende Ergebnisse. Startwerte für Context und Edge feather je Modell mit der Feather-Vorschau festlegen. **Läuft (Option A des Users, 28.10.):** zusammen mit dem nächsten Punkt in einer Testrunde, Liste `docs/tests/e2-context-feather.md`; der User macht die Läufe, danach werden die Werte in `models.py` eingetragen.
 - **Runde (gezeichnete) und eckige Auswahl vergleichen**, dazu Tooltips, wie man sie verwendet; eventuell je ein Modus für rechteckige und runde Auswahlen. Bekannt: eine geglättete Auswahl (Ellipse, Lasso) gilt als „schon weich“ und bekommt keinen weichen Rand vom Plugin (`imaging.is_soft`). Referenz des Users: Fibo, Rechteck, soft, 6,5 % Feather ist gut.
+- **Seam-Korrektur als A/B-Test** (OpenFill T2, Details `ideas.md`), **direkt nach den zwei Punkten oben** (Entscheidung des Users 28.10.: vorgezogen aus E, Punkt 9, weil sie denselben Übergang betrifft): ein Lauf liefert „roh“ und „korrigiert“ als zwei Ebenen; Schalter standardmäßig aus, bis bestätigt. Die Bilder aus der E2-Testrunde dienen als Vergleich.
 
 **F. OpenFill-Ideen (aus `ideas.md`)**
 12. **Live-Vorschau** unten im Plugin (T3a): ComfyUI mit `--preview-method taesd`, Frames über den Websocket; Layout-Optionen (immer reserviert / nur während des Laufs / Klick vergrößert).

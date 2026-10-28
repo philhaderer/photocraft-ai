@@ -142,4 +142,4 @@ Die Reihenfolge steht nur noch in `PLAN.md`, Abschnitt 3 (dort sind auch die Ope
 
 **Beim Nutzer:** zwei alte Kanäle `pccomfy-preview-…` im zweiten „Untitled-1“ bleiben (sein Wunsch).
 
-**Als Nächstes (PLAN E2):** Context und Edge feather je Modell abstimmen; runde und eckige Auswahl vergleichen (Tooltips, eventuell eigene Modi).
+**Als Nächstes (PLAN E2):** Context und Edge feather je Modell abstimmen; runde und eckige Auswahl vergleichen (Tooltips, eventuell eigene Modi); danach die Seam-Korrektur T2 als A/B-Test (vorgezogen 28.10.).
