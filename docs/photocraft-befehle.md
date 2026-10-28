@@ -27,7 +27,7 @@ Stand 2026-10-27. Quelle: die Befehlsliste der Engine (`photocraft-cli commands 
 
 ## Was daraus wurde (Entscheidung des Users, 27.10.)
 
-Gebaut: 1 (Feather-Vorschau, als Quick Mask), 2 (Gruppe, Name „<Funktion> <Lauf-Nr.>“) und 4 (ohne Zwischenablage). Abgelehnt: 3 (Expand bleibt wie bisher). Befunde beim Bauen, in 0.15.1 und 0.16 gleich:
+Gebaut: 1 (Feather-Vorschau, als Quick Mask), 2 (Gruppe, Name „<Funktion> <Lauf-Nr.>“) und 4 (ohne Zwischenablage). Abgelehnt: 3 (Expand bleibt wie bisher). Die Spalte „Nutzen wir schon?“ oben ist der Stand vor dem Bau: seit 28.10. nutzt das Plugin `layer.copyToDocument`, `layer.layerMask.revealSelection`, `select.saveSelection`/`loadSelection`, `channel.delete`, `layer.new.groupFromLayers`, `layer.moveTo` und `select.editInQuickMaskMode`; `edit.copy`, `edit.paste` und `edit.pasteSpecial.pasteInto` benutzt ein Lauf nicht mehr. Befunde beim Bauen, in 0.15.1 und 0.16 gleich:
 
 - `layer.copyToDocument` macht das **Ziel** zum aktiven Dokument; vor dem Schließen der Ergebnis-PNG muss sie wieder aktiviert werden, sonst schließt man das Bild des Nutzers. Die Kopie landet als Pixel-Ebene über der aktiven (auch über einer Einstellungsebene) und wird aktiv; `offset` setzt sie pixelgenau.
 - Ist eine **Gruppe** aktiv, landet die Kopie **in** der Gruppe. Das Plugin schiebt das Ergebnis dann mit `layer.moveTo {position: "above"}` über die Gruppe.

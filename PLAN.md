@@ -1,6 +1,6 @@
 # PLAN: PhotoCraft x ComfyUI plugin, release 1
 
-Stand 2026-10-27 (dritte Sitzung). Der Plan ist freigegeben. Abschnitt 3 ist die Arbeitsliste in ihrer Reihenfolge: von oben nach unten abarbeiten. Gesamtstand, Befunde und Optionen im Detail: `docs/HANDOFF-claude-code.md`. Die OpenFill-Ideen stehen ausführlich in `ideas.md` (Aufgaben T1 bis T4); hier sind sie eingeplant. Backup: Tag `backup-2026-10-26` (6df02df) und das ZIP des Users.
+Stand 2026-10-28. Der Plan ist freigegeben. Abschnitt 3 ist die Arbeitsliste in ihrer Reihenfolge: von oben nach unten abarbeiten. Gesamtstand, Befunde und Optionen im Detail: `docs/HANDOFF-claude-code.md`. Die OpenFill-Ideen stehen ausführlich in `ideas.md` (Aufgaben T1 bis T4); hier sind sie eingeplant. Backup: Tag `backup-2026-10-26` (6df02df) und das ZIP des Users.
 
 ## 1. Erledigt (in `next`)
 
@@ -9,7 +9,8 @@ Stand 2026-10-27 (dritte Sitzung). Der Plan ist freigegeben. Abschnitt 3 ist die
 - Liste A vom 27.10. (Abstände, Chevron, „Custom LoRAs:“, ComfyUI-Punkt grün/rot, Slider rechts in einer Spalte und eintippbar, „Advanced settings“) und die Nachrunde: Ergebnis über einer Korrekturebene (vom User bestätigt), Flux 2 Refine startet auf „Default“, Leerzeile nach dem letzten LoRA weg, Qwen ohne Turbo, Expand/Edit getauscht, kürzere Slider-Texte.
 - Zweite Sitzung 27.10., danach: feste Startposition, Flux 2 Klein über die obsxrver-Datei (alle 24 Dateien mit Link), „Choose another file…“ mit Relink/Undo/Reset, Settings-Tabs „Models“/„Credits“, Fensterkopf „Funktion zuerst“ (Funktions-Buttons, Modell-Chips).
 - Dritte Sitzung 27.10.: Funktions-Symbole (`fn-<key>` in `icons.py`), Funktions-Buttons linksbündig, 8 px zwischen Symbol und Text (Entscheidungen des Users); Schrift Inter wie in PhotoCraft (D.16, Option A). Live bestätigt vom User: neuer Fensterkopf (Chips, Namen, Höhe, 150 %), Startposition, Flux-2-Lauf mit der obsxrver-Datei.
-- Einzelheiten: `git log next` und Handoff, Abschnitt 4.
+- Sitzung 27./28.10.: Ergebnis ohne Zwischenablage, Varianten-Gruppe, Feather-Vorschau, Fill Qwen/Fibo mit Rand außen, Layer mask ohne „auto“, Context-Regler, neue Regler-Reihenfolge, „Image and mask“ ausgeblendet, vollständiger Reset, Fill-Tipp. Live bestätigt vom User: Funktions-Symbole, Inter-Schrift, Vorschau, Gruppe, Zwischenablage, Fill, Reset.
+- Einzelheiten: `git log next` und Handoff, Abschnitte 4 und 10.
 
 ## 2. Entscheidungen des Users (gelten weiter)
 
@@ -23,14 +24,15 @@ Stand 2026-10-27 (dritte Sitzung). Der Plan ist freigegeben. Abschnitt 3 ist die
 - Strg+Z/Strg+Y bleiben wie heute (kein Plugin-Kürzel). Fast Mode gestrichen.
 - Fensterkopf (27.10.): Funktion zuerst, Modell darunter (Chips). Das Rechtsklick-Menü der Tabs (L3) gehört damit auf die Modell-Chips. Settings-Fenster mit Tabs „Models“ und „Credits“; weitere Settings-Tabs kommen später dazu.
 - Screenshots des Fensters nur, wenn der User etwas nicht selbst prüfen kann.
+- 28.10.: Layer mask nur noch soft / hard / none; Fill Qwen/Fibo „soft“ mit Rand außen; Regler-Reihenfolge Sharpen, Match colours, Context, Edge feather, Layer mask + „Show feather“; „Image and mask“ ausgeblendet; PhotoCraft 0.16 ist die Hauptversion.
 
 ## 3. Arbeitsliste (Reihenfolge)
 
 Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher Optionen nennen. Details und Optionen je Punkt: Handoff, Abschnitt 6.
 
 **Als Nächstes (neuer Chat)**
-0. ~~**Funktions-Symbole einbauen**~~: **gebaut 27.10.** (Formen aus `docs/icons/icon-set-final.md`, `img2img` behält den Platzhalter, eigene PNGs haben Vorrang; Symbol und Text linksbündig, Entscheidung des Users). Live-Prüfung durch den User offen: 100 % und 150 %, normal, gewählt (orange), grau.
-   Noch genauer zu testen (Aussage des Users): Zahnrad-Fenster, „Choose another file…“ → Relink, Undo, Reset to startup.
+0. ~~**Funktions-Symbole einbauen**~~: **gebaut 27.10.** (Formen aus `docs/icons/icon-set-final.md`, `img2img` behält den Platzhalter, eigene PNGs haben Vorrang; Symbol und Text linksbündig, Entscheidung des Users). Vom User live bestätigt (28.10.).
+   Noch genauer zu testen (Aussage des Users, am 28.10. weiter offen): Zahnrad-Fenster, „Choose another file…“ → Relink, Undo, Reset to startup.
 
 **B. Wichtig**
 1. ~~**Feste Startposition** (B.11)~~: **gebaut 27.10.** (Option A des Users: letzte Position merken, beim ersten Start rechts oben in PhotoCraft unter der Menüleiste; Klicks auf das Plugin selbst lösen den Menü-Wächter nicht mehr aus). Vom User live bestätigt.
@@ -41,20 +43,20 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 
 **D. Recherche (nichts bauen, Ergebnis vorlegen)**
 4. ~~**Funktionen zuerst, Modell darunter?** (D.15)~~: **gebaut 27.10.** (`docs/ux-funktion-zuerst.md`). Entscheidung des Users: Funktionen oben als große Buttons mit Symbol, Modelle darunter als Umriss-Chips (alle sichtbar, unpassende grau), feste Reihenfolge; das beste Modell wählt später der Easy Mode. Offen: die Symbole des Users (`pccomfy/assets/functions/`, Platzhalter bis dahin).
-5. **UI-Fonts** (D.16): **Recherche fertig 27.10.** (`docs/ui-schriften.md`, Vergleichsblatt `docs/ui-schriften.png`; Befund: PhotoCraft benutzt Inter). **Gebaut 27.10.:** Option A des Users, Inter wird mitgeliefert (Kopie der Windows-Dateien, Inter 3.019, Regular und SemiBold), eine Stufe kleiner als die alten Segoe-Größen. Live-Prüfung durch den User offen (100 % und 150 %, Chips, Slider-Texte, Zahnrad-Fenster, Tooltips; Vergleich mit `PCCOMFY_NO_INTER=1`).
-6. ~~**PhotoCraft-Befehle prüfen** (OpenFill T1)~~: **erledigt 27.10.** (`docs/photocraft-befehle.md`). Alle gesuchten Befehle gibt es in 0.15.1 und 0.16 (Feather, Expand, Gruppe, Crop über den Rand, copyToDocument); nur „mehrere Schritte = ein Strg+Z“ gibt es nicht. 0.16 ändert nur `edit.paste` (neuer Parameter `clampToCanvas`, für uns heute ohne Folge). Entscheidungen des Users (27.10.): **gebaut** Feather-Vorschau (Knopf „Show feather“/„Hide feather“, Quick Mask in PhotoCraft), Varianten-Gruppe (Name „<Funktion> <Lauf-Nr.>“, z. B. „Fill Selection 3“) und Ergebnis ohne Zwischenablage (`layer.copyToDocument`); **abgelehnt** Expand per Crop (Expand bleibt wie bisher). Alle drei gegen kopfloses PhotoCraft 0.15.1 und 0.16 geprüft; Live-Test durch den User offen. Befund dabei: bei Fibo (Feather in % der Auswahl) gilt eine geglättete Auswahl (Ellipse, Lasso mit Anti-Aliasing) schon als weich (`imaging.is_soft`), der Edge-feather-Regler wirkt dann kaum; die Vorschau zeigt das. Entscheidung des Users (28.10.): bleibt so, Fibo funktioniert mit glatter Auswahl sehr gut. Live-Test 28.10.: Vorschau, Gruppe und Zwischenablage vom User bestätigt; Qwen und Fibo Fill starten jetzt mit Layer mask „auto“ (bei „soft“ war der Außenrand des Fills weich), Fill hat den Tipp unter dem Prompt.
+5. **UI-Fonts** (D.16): **Recherche fertig 27.10.** (`docs/ui-schriften.md`, Vergleichsblatt `docs/ui-schriften.png`; Befund: PhotoCraft benutzt Inter). **Gebaut 27.10.:** Option A des Users, Inter wird mitgeliefert (Kopie der Windows-Dateien, Inter 3.019, Regular und SemiBold), eine Stufe kleiner als die alten Segoe-Größen. Vom User live bestätigt (28.10.).
+6. ~~**PhotoCraft-Befehle prüfen** (OpenFill T1)~~: **erledigt 27.10.** (`docs/photocraft-befehle.md`). Alle gesuchten Befehle gibt es in 0.15.1 und 0.16 (Feather, Expand, Gruppe, Crop über den Rand, copyToDocument); nur „mehrere Schritte = ein Strg+Z“ gibt es nicht. 0.16 ändert nur `edit.paste` (neuer Parameter `clampToCanvas`, für uns heute ohne Folge). Entscheidungen des Users (27.10.): **gebaut** Feather-Vorschau (Knopf „Show feather“/„Hide feather“, Quick Mask in PhotoCraft), Varianten-Gruppe (Name „<Funktion> <Lauf-Nr.>“, z. B. „Fill Selection 3“) und Ergebnis ohne Zwischenablage (`layer.copyToDocument`); **abgelehnt** Expand per Crop (Expand bleibt wie bisher). Alle drei gegen kopfloses PhotoCraft 0.15.1 und 0.16 geprüft; Live-Test durch den User offen. Befund dabei: bei Fibo (Feather in % der Auswahl) gilt eine geglättete Auswahl (Ellipse, Lasso mit Anti-Aliasing) schon als weich (`imaging.is_soft`), der Edge-feather-Regler wirkt dann kaum; die Vorschau zeigt das. Entscheidung des Users (28.10.): bleibt so, Fibo funktioniert mit glatter Auswahl sehr gut. Live-Test 28.10.: Vorschau, Gruppe und Zwischenablage vom User bestätigt; Fill hat den Tipp unter dem Prompt. (Fill startete kurz mit „auto“; ersetzt durch E2: „soft“ mit Rand außen.)
 
 **E. Offen aus der alten Liste**
 7. **Refresh/Reset** kleiner und klarer: A ⟳-Icon neben dem ComfyUI-Punkt + „Defaults“ als Textknopf (empfohlen), B Menü „⋯“, C zwei Icons, D Reset ins Zahnrad.
 8. **Expand-Entscheidungen:** Krea 2 Expand mehrseitig (A einseitig, mehrseitig in Runden; B abschalten; C nur Tooltip); Flux 3 Expand: Steps prüfen und Startwert setzen, bleibt es an?
 9. **Ränder bei Fill/Expand:** Masken-Option A (wartet auf Freigabe) und **Seam-Korrektur als A/B-Test** (OpenFill T2: ein Lauf liefert „roh“ und „korrigiert“ als zwei Ebenen; Schalter standardmäßig aus, bis bestätigt).
-10. **Restliche Design-Vorschläge:** Prompt-Feld mit dünnem Scrollbalken, runde Radios und echte Checkbox im PhotoCraft-Look, gesperrte Felder einheitlich, „Image and mask“ ohne Rahmen, Tipp-Text gedämpft mit Info-Icon, Fortschrittsbalken nach „Done“ neutral.
+10. **Restliche Design-Vorschläge:** Prompt-Feld mit dünnem Scrollbalken, runde Radios und echte Checkbox im PhotoCraft-Look, gesperrte Felder einheitlich, Tipp-Text gedämpft mit Info-Icon, Fortschrittsbalken nach „Done“ neutral.
 
 **L3 Fenster-Politur**
 11. Hide/Show (Einklappen zur Titelleiste), Rechtsklick-Menü auf Tabs (Favorit, ausblenden, Workflow-JSON speichern), „Copy canvas to clipboard“, alten Knopf „Insert reference image“ entfernen, falls noch sichtbar.
 
 **E2. Aus dem Live-Test 28.10.**
-- ~~Option B für Fill (Qwen, Fibo)~~: **gebaut 28.10.** Layer mask „soft“ = Auswahl voll deckend, weicher Rand nur außen, Breite = Edge feather; „auto“ aus dem Menü entfernt (Expand behält genau, was „auto“ ergab); Context ist ein Regler 0–1 (Schritt 0.05); Reset setzt alles zurück (Ausnahme: aufgeklappte Bereiche, Checkpoint-Datei des eingebauten Graphen). Fill Qwen/Fibo vom User bestätigt („passt gut, lassen wir so“). Danach: Context-Regler unter Edge feather (nur Fill, Remove, Expand), Sektion „Image and mask“ ausgeblendet, Fix „Show feather“ + Generate bei zwei gleichnamigen Dokumenten (Ursache: Suche nach Namen). Live-Test dieser drei Punkte offen.
+- ~~Option B für Fill (Qwen, Fibo)~~: **gebaut 28.10.** Layer mask „soft“ = Auswahl voll deckend, weicher Rand nur außen, Breite = Edge feather; „auto“ aus dem Menü entfernt (Expand behält genau, was „auto“ ergab); Context ist ein Regler 0–1 (Schritt 0.05); Reset setzt alles zurück (Ausnahme: aufgeklappte Bereiche, Checkpoint-Datei des eingebauten Graphen). Fill Qwen/Fibo vom User bestätigt („passt gut, lassen wir so“). Danach: Context-Regler unter Edge feather (nur Fill, Remove, Expand), Sektion „Image and mask“ ausgeblendet, Fix „Show feather“ + Generate bei zwei gleichnamigen Dokumenten (Ursache: Suche nach Namen); vom User bestätigt. Danach neue Reihenfolge: Sharpen, Match colours, Context, Edge feather, Layer mask mit „Show feather“ daneben; bei Expand kein Abstand mehr vor Context. Live-Test dieser Reihenfolge offen.
 - **Context und Maske genauer abstimmen** (User: „müssen wir uns noch genauer kümmern“): größerer Context gibt bei Qwen bessere, genauer passende Ergebnisse. Startwerte für Context und Edge feather je Modell mit der Feather-Vorschau festlegen.
 - **Runde (gezeichnete) und eckige Auswahl vergleichen**, dazu Tooltips, wie man sie verwendet; eventuell je ein Modus für rechteckige und runde Auswahlen. Bekannt: eine geglättete Auswahl (Ellipse, Lasso) gilt als „schon weich“ und bekommt keinen weichen Rand vom Plugin (`imaging.is_soft`). Referenz des Users: Fibo, Rechteck, soft, 6,5 % Feather ist gut.
 
@@ -84,7 +86,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 - Krea-Style-Explorer: Lizenz des Repos und der Bilder vor dem Mitliefern klären.
 - Lizenzen für den Release: Fibo 2.0 (CC BY-NC) und die FLUX.2-Dateien nur nicht-kommerziell; Lenovo UltraReal verlangt Nennung von Danrisi; Lucide-Icons (ISC) nennen; Inter (SIL OFL 1.1) liegt mit `OFL-Inter.txt` bei.
 - Scribble/Sketch, Remove-Prompt, Encoder-Tausch, Steps-Prüfung: Recherche- und Testaufgaben ohne Code (`docs/tests/`).
-- PhotoCraft 0.16: Befehle geprüft (Punkt 6, nur `edit.paste` geändert); beim Umstieg noch den Start (`photocraft-ai 0.16.bat`) und je Funktion einen Lauf live prüfen.
+- PhotoCraft 0.16 ist seit 28.10. die Hauptversion des Users (Start über `photocraft-ai 0.16.bat`); Befehle geprüft (Punkt 6, nur `edit.paste` geändert). `photocraft-ai.bat` zeigt noch auf 0.14.0 (Punkt 18).
 
 ## 6. Wann ein neuer Chat sinnvoll ist
 
