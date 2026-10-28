@@ -38,7 +38,8 @@ class RunMixin:
                        stage_on=bool(self.v_stage.get()) or not self._stage_label(), stages_off=self._stages_off(), stage_strengths=self._stage_strengths(), sampler_override=self._sampler_override(), doc_tag=self._doc_tag(), loras=[tuple(x) for x in self._loras()], sharpen=0.0 if self.v_mode.get() == "outpaint" else round(float(self.v_sharpen.get()), 2), match=round(float(self.v_match.get()), 2), detail=round(float(self.v_detail.get()), 2) if self.v_mode.get() in SCALE_MODES else 1.0,
                        layer_mask=layer_mask_key(self.v_lmask.get()),
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2,
-                       mask_density=min(100, max(0, int(self.v_density.get()))))
+                       mask_density=min(100, max(0, int(self.v_density.get()))),
+                       seam=bool(self.v_seam.get()) and self._run_mode() in ("inpaint", "remove", "outpaint"))
 
     def _doc_tag(self) -> str:
         """Model and options for the name of an upscaled document: "Flux3Klein x1.5 SeedVR2 Restore0.8"."""
@@ -118,7 +119,9 @@ class RunMixin:
                     res = self.bridge.run(rq, progress)
                     total += len(res["layers"])
                 self.events.put(("vgl", res.get("vgl", "")))
-                self.events.put(("done", f"Done · seed {res['seed']} · created {total} layer{'s' if total != 1 else ''} · {duration_text(time.monotonic() - t_start)}"))
+                seam = res.get("seam")     # the seam correction's A/B: the tone jump of #1 in levels, before → after
+                seam_text = f" · seam {seam[0]:.0f} → {seam[1]:.0f}" if seam else ""
+                self.events.put(("done", f"Done · seed {res['seed']} · created {total} layer{'s' if total != 1 else ''}{seam_text} · {duration_text(time.monotonic() - t_start)}"))
             except Cancelled:
                 self.events.put(("done", "Cancelled."))
             except (BridgeError, ComfyError, PhotoCraftError, ValueError, OSError) as e:

@@ -271,6 +271,95 @@ def match_saturation(gen: Image.Image, ref: Image.Image, mask: Image.Image, stre
     return Image.merge("HSV", (h, sat.point(lambda x: min(255, int(x * k + 0.5))), v)).convert("RGB")
 
 
+SEAM_OUTLIER = 40.0    # levels: a difference this large is a changed object (a shadow, a new edge), not a tone shift
+
+
+def _seam_parts(gen: Image.Image, ref: Image.Image, mask: Image.Image):
+    """What the seam correction works with, all at the size of `gen`: the difference ref - gen (float RGB), the weight of
+    each pixel (1 where the result must match the original: outside the new area and not a changed object) and the ring
+    just outside the new area where the seam is measured. None when there is not enough to measure."""
+    size = gen.size
+    g = np.asarray(gen.convert("RGB"), dtype=np.float32)
+    r = np.asarray(ref.convert("RGB").resize(size, Image.BILINEAR), dtype=np.float32)
+    m = np.asarray(mask.convert("L").resize(size, Image.BILINEAR))
+    new, known = m > 127, m < 8           # (Expand: the soft overlap between them counts as neither)
+    if new.sum() < 64 or known.sum() < 64:
+        return None
+    diff = r - g
+    lum = np.abs(diff @ np.array([0.299, 0.587, 0.114], dtype=np.float32))
+    w = (known & (lum < SEAM_OUTLIER)).astype(np.float32)
+    if w.sum() < 64:
+        return None
+    band = max(3.0, 0.03 * min(size))
+    near = np.asarray(Image.fromarray((new * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(band))) > 6
+    ring = near & known
+    return diff, w, ring
+
+
+def _smooth_field(diff: np.ndarray, w: np.ndarray, sigma: float) -> np.ndarray:
+    """The weighted difference, blurred: a smooth correction for every pixel. Where no measured pixel lies near (deep
+    inside a large selection) the next wider blur fills in, at last the overall mean (as fill_transparent does)."""
+    h, wd = w.shape
+
+    def blur(a: np.ndarray, s: float) -> np.ndarray:
+        k = max(1, int(s / 2))           # downscale + Gaussian + upscale: fast for large radii (Pillow cannot blur
+        sw, sh = max(1, wd // k), max(1, h // k)     # float images, so the small one is blurred with numpy)
+        small = np.asarray(Image.fromarray(a.astype(np.float32), "F").resize((sw, sh), Image.BILINEAR), dtype=np.float32)
+        ss = max(0.5, s / k)
+        x = np.arange(-int(3 * ss), int(3 * ss) + 1, dtype=np.float32)
+        kern = np.exp(-0.5 * (x / ss) ** 2)
+        kern /= kern.sum()
+        n = len(x) // 2
+        for axis in (0, 1):
+            p = np.pad(small, [(n, n) if ax == axis else (0, 0) for ax in (0, 1)], mode="edge")
+            small = sum(kern[i] * np.take(p, range(i, i + small.shape[axis]), axis=axis) for i in range(len(x)))
+        return np.asarray(Image.fromarray(small.astype(np.float32), "F").resize((wd, h), Image.BILINEAR), dtype=np.float32)
+
+    out = np.zeros_like(diff)
+    done = np.zeros((h, wd), bool)
+    s = sigma
+    while not done.all() and s < 4 * max(h, wd):
+        bw = blur(w, s)
+        ok = (bw > 0.05) & ~done
+        if ok.any():
+            for c in range(3):
+                out[..., c][ok] = (blur(diff[..., c] * w, s) / np.maximum(bw, 1e-4))[ok]
+            done |= ok
+        s *= 2
+    if not done.all():
+        mean = (diff * w[..., None]).sum((0, 1)) / max(1.0, float(w.sum()))
+        out[~done] = mean
+    return out
+
+
+def seam_jump(gen: Image.Image, ref: Image.Image, mask: Image.Image) -> float:
+    """The tone jump at the seam in levels (0..255): the smoothed brightness difference between the result and the
+    original, averaged over a ring just outside the new area. 0 when there is nothing to measure."""
+    parts = _seam_parts(gen, ref, mask)
+    if parts is None:
+        return 0.0
+    diff, w, ring = parts
+    if not ring.any():
+        return 0.0
+    field = _smooth_field(diff, w, max(4.0, 0.04 * min(gen.size)))
+    lum = field @ np.array([0.299, 0.587, 0.114], dtype=np.float32)
+    return float(np.abs(lum[ring]).mean())
+
+
+def seam_correct(gen: Image.Image, ref: Image.Image, mask: Image.Image) -> Image.Image:
+    """Seam correction (OpenFill's idea, T2): where the result must match the original (outside the new area, `mask`
+    white = new) the tone difference is measured, smoothed and added to the whole result, so the redrawn surroundings
+    meet the original without a lighter or darker rim. Only the smooth part changes: the detail stays as the model drew
+    it, a geometric shift is not corrected. Returns `gen` unchanged when there is nothing to measure."""
+    parts = _seam_parts(gen, ref, mask)
+    if parts is None:
+        return gen
+    diff, w, _ring = parts
+    field = _smooth_field(diff, w, max(4.0, 0.04 * min(gen.size)))
+    g = np.asarray(gen.convert("RGB"), dtype=np.float32)
+    return Image.fromarray(np.clip(g + field, 0, 255).round().astype(np.uint8), "RGB")
+
+
 def layer_box(layer: Image.Image) -> "Box | None":
     """Where a layer's visible pixels lie on the canvas (the layer exported at canvas size), or None when it is empty."""
     box = layer.convert("RGBA").getchannel("A").point(lambda a: 255 if a > 8 else 0).getbbox()
