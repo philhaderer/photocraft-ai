@@ -312,6 +312,7 @@ class ModeMixin:
         self.v_feather.set(2.0)
         self.v_density.set(100)
         self.v_seam.set(False)
+        self.v_live.set(True)
         self.v_detail.set(1.0)
         self.v_lmask.set(LAYER_MASKS["soft"])       # the model's function sets its own below
         self.v_cmp_res.set("")
@@ -352,7 +353,7 @@ class ModeMixin:
         shown = (lambda f: bool(f.winfo_manager())) if hasattr(frame, "winfo_manager") else (lambda f: False)
         if shown(frame):
             return
-        order = [f for f in (getattr(self, n, None) for n in ("f_detail", "f_sharp", "f_ctx", "f_feather", "f_density", "f_lm", "f_seam")) if f is not None]
+        order = [f for f in (getattr(self, n, None) for n in ("f_detail", "f_sharp", "f_ctx", "f_feather", "f_density", "f_lm", "f_seam", "f_live")) if f is not None]
         later = [f for f in order[order.index(frame) + 1:] if shown(f)] if frame in order else []
         frame.pack(fill="x", pady=(2, 0), **({"before": later[0]} if later else {}))
 

@@ -88,6 +88,7 @@ class Request:
     doc_tag: str = ""                    # Upscale: model and options in the new document's name ("Flux3Klein x1.5 SeedVR2")
     label: str = ""                      # added to the layer names (a comparison run: "res 1024")
     preset: str = ""                     # name of the preset used: the layers are named "<preset> #<run_no>"
+    preview: bool = False                # live preview: ComfyUI sends the sampler's frames to Bridge.on_preview (T3a)
     run_no: int = 0                      # running number of this preset's runs (kept by the window)
     group_name: str = ""                 # several results: the name of the layer group they go into ("Fill Selection 3");
                                          # empty = "<mode> variants"
@@ -368,6 +369,7 @@ class Bridge:
         self.pipeline = ""
         self.last_vgl = ""
         self._cancel = threading.Event()
+        self.on_preview = None                  # the window's callback for live preview frames (PIL images), see Request.preview
         self._tmp: list[Path] = []
         self._snap: dict | None = None          # history snapshot taken before the last generation (for "Undo AI edit")
         self._snap_error = ""
@@ -458,7 +460,7 @@ class Bridge:
         except OSError:
             pass
 
-    def _wait(self, prompt_id, graph, wf, start, span, suffix, progress):
+    def _wait(self, prompt_id, graph, wf, start, span, suffix, progress, on_preview=None):
         """comfy.wait with the work split in "prompt" (text model) and "image" (the image model), each with its
         own fraction, elapsed time and, once a run has been timed, an estimate for the text phase."""
         writer = prompt_phase_nodes(graph)
@@ -493,7 +495,8 @@ class Bridge:
                 overall = start + span * (share + (1 - share) * pf) if pf >= 0 else -1
             progress(overall, text + suffix, phase=phase, phase_fraction=pf, elapsed=elapsed)
 
-        return self.comfy.wait(prompt_id, on_progress=on, cancelled=self._cancel.is_set)
+        kw = {"on_preview": on_preview} if on_preview is not None else {}
+        return self.comfy.wait(prompt_id, on_progress=on, cancelled=self._cancel.is_set, **kw)
 
     def _run(self, req: Request, p: workflows.GenParams, tag: str, progress: Progress) -> dict:
         pc = self.pc.connect()
@@ -636,10 +639,13 @@ class Bridge:
                 graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name, force_plain=marked and not (fill and req.enhance and prompt_phase_nodes(workflows.load_template(wf))))
                 self._save_graph(graph)
                 self._log_run(req, gp, wf, attempt)
-                prompt_id = self.comfy.queue(graph)
+                live = req.preview and self.on_preview is not None
+                # "taesd": the model's TAESD file when it is installed, else ComfyUI's coarse latent2rgb colours
+                prompt_id = self.comfy.queue(graph, preview="taesd") if live else self.comfy.queue(graph)
                 progress(start, f"Queued in ComfyUI ({self.pipeline}{suffix})" if not attempt
                          else f"Object still there, trying again ({attempt + 1}/{tries})", phase="prepare")
-                hist = self._wait(prompt_id, graph, wf, start, span, suffix, progress)
+                hist = self._wait(prompt_id, graph, wf, start, span, suffix, progress,
+                                  on_preview=self.on_preview if live else None)
                 vgl = self._vgl_text(graph, hist)
                 if vgl:
                     self.last_vgl = vgl

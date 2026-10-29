@@ -4,7 +4,7 @@ Endpoints used:
   GET  /system_stats, /object_info/<Node>   – connection check, model/sampler lists
   POST /upload/image                         – upload image and mask (land in input/)
   POST /prompt                               – queue an API-format graph
-  WS   /ws?clientId=…                        – progress (optional, needs websocket-client)
+  WS   /ws?clientId=…                        – progress and live preview frames (optional, needs websocket-client)
   GET  /history/<prompt_id>, /view           – fetch results
   POST /interrupt, /queue                    – cancel
 """
@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import io
 import json
+import struct
 import time
 import uuid
 import urllib.error
@@ -34,6 +35,32 @@ class ComfyError(RuntimeError):
 
 class Cancelled(Exception):
     pass
+
+
+PREVIEW_IMAGE, PREVIEW_IMAGE_WITH_METADATA = 1, 4      # ComfyUI's binary websocket events (protocol.py BinaryEventTypes)
+
+
+def preview_image(data: bytes, prompt_id: str | None = None) -> Image.Image | None:
+    """A live preview frame from a binary websocket message: event 1 = image type (1 JPEG, 2 PNG) + image; event 4 =
+    length + JSON metadata (with the prompt id) + image. None for anything else or a frame of another prompt."""
+    try:
+        if len(data) < 8:
+            return None
+        event, head = struct.unpack(">II", data[:8])
+        if event == PREVIEW_IMAGE:
+            body = data[8:]
+        elif event == PREVIEW_IMAGE_WITH_METADATA:
+            meta = json.loads(data[8:8 + head].decode("utf-8"))
+            if prompt_id and meta.get("prompt_id") not in (None, prompt_id):
+                return None
+            body = data[8 + head:]
+        else:
+            return None
+        im = Image.open(io.BytesIO(body))
+        im.load()
+        return im.convert("RGB")
+    except Exception:
+        return None
 
 
 class ComfyUI:
@@ -124,6 +151,14 @@ class ComfyUI:
             return heads[0], patches[0]  # sorted descending: newest patch (v26 > v25) first
         return None
 
+    def _folder(self, folder: str) -> list[str]:
+        """The files in one of ComfyUI's model folders (GET /models/<folder>); [] when it cannot be read."""
+        try:
+            j = self._json("/models/" + urllib.parse.quote(folder))
+        except (ComfyError, ValueError):
+            return []
+        return [str(x) for x in j] if isinstance(j, list) else []
+
     def inventory_raw(self) -> dict:
         """Model files per loader kind (unet, clip, vae, lora) and, when readable, the names of all node classes
         ("nodes", one /object_info call; None when that failed). Raises ComfyError when the server cannot be reached,
@@ -134,6 +169,7 @@ class ComfyUI:
             "clip": self._choices("CLIPLoader", "clip_name"),
             "vae": self._choices("VAELoader", "vae_name"),
             "lora": self._choices("LoraLoaderModelOnly", "lora_name"),
+            "preview": self._folder("vae_approx"),      # the live preview decoders (TAESD) have no loader node
         }
         try:
             out["nodes"] = set((self._json("/object_info") or {}).keys())
@@ -164,10 +200,15 @@ class ComfyUI:
 
     # ---------- execution ----------
 
-    def queue(self, graph: dict) -> str:
+    def queue(self, graph: dict, preview: str | None = None) -> str:
+        """preview: ComfyUI's preview method for this prompt only ("taesd" uses the TAESD file of the model when it is in
+        models/vae_approx and falls back to the coarse latent2rgb colours; "none"); None = ComfyUI's start setting."""
         if self.name_fixer is not None:
             self.name_fixer(graph)
-        j = self._json("/prompt", {"prompt": graph, "client_id": self.client_id})
+        payload = {"prompt": graph, "client_id": self.client_id}
+        if preview:
+            payload["extra_data"] = {"preview_method": preview}
+        j = self._json("/prompt", payload)
         if j.get("node_errors"):
             raise ComfyError(self._explain(400, json.dumps(j)))
         return j["prompt_id"]
@@ -184,8 +225,10 @@ class ComfyUI:
         return self._json(f"/history/{prompt_id}").get(prompt_id)
 
     def wait(self, prompt_id: str, on_progress: Callable[..., None] | None = None,
-             cancelled: Callable[[], bool] | None = None, timeout: float = 1800) -> dict:
-        """Wait for the job to finish. Progress via websocket when available, else poll /history."""
+             cancelled: Callable[[], bool] | None = None, timeout: float = 1800,
+             on_preview: Callable[[Image.Image], None] | None = None) -> dict:
+        """Wait for the job to finish. Progress via websocket when available, else poll /history. on_preview gets each
+        live preview frame (a PIL image) the sampler sends."""
         # on_progress(fraction, message, node=<id of the node ComfyUI is executing, or None>);
         # fraction is -1 when the node reports no progress (e.g. a text model writing the prompt).
         on_progress = on_progress or (lambda f, msg, node=None: None)
@@ -213,6 +256,11 @@ class ComfyUI:
                     except Exception:
                         ws = None
                         msg = None
+                    if isinstance(msg, (bytes, bytearray)):
+                        im = preview_image(bytes(msg), prompt_id) if on_preview else None
+                        if im is not None:
+                            on_preview(im)
+                        continue
                     if isinstance(msg, str):
                         m = json.loads(msg)
                         d = m.get("data", {})

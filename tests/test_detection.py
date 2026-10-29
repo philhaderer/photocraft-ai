@@ -214,6 +214,8 @@ class FakeComfy(comfy.ComfyUI):
             if not self.all_nodes:
                 raise comfy.ComfyError("boom")
             return {"UNETLoader": {}, "AUSBOSS_NODES_Seed": {}}
+        if path == "/models/vae_approx":          # the live preview decoders: a plain folder list
+            return list(self.lists.get("preview", []))
         node = path.rsplit("/", 1)[1]
         field = {"UNETLoader": "unet_name", "CLIPLoader": "clip_name", "VAELoader": "vae_name", "LoraLoaderModelOnly": "lora_name"}[node]
         kind = {v[0]: k for k, v in manifest.KINDS.items()}[node]

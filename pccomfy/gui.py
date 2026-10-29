@@ -74,6 +74,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.v_feather = tk.DoubleVar(value=2.0)    # the function's own value is set after the build (see below)
         self.v_density = tk.IntVar(value=100)       # the same
         self.v_seam = tk.BooleanVar(value=False)    # seam correction A/B test: off at every start until confirmed (T2)
+        self.v_live = tk.BooleanVar(value=True)     # live preview of the sampler under the plugin: on at every start (T3a)
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
         self.v_enhance = tk.BooleanVar(value=g("enhance", True))
         self.v_turbo = tk.BooleanVar(value=g("turbo", True))
@@ -526,6 +527,12 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.cb_seam.pack(side="left")
         Tooltip(self.cb_seam, "Evens out a lighter or darker rim where the result meets your picture. Test: each result "
                               "comes twice, “[seam fix]” on top and “[raw]” hidden below it.")
+        fl = self.f_live = ttk.Frame(self.f_post)   # the last row of the finishing options, for every function
+        fl.pack(fill="x", pady=(2, 0))
+        self.cb_live = ttk.Checkbutton(fl, text="Live preview", variable=self.v_live)
+        self.cb_live.pack(side="left")
+        Tooltip(self.cb_live, "Shows the picture while it is being made, under the plugin. It goes away when the result "
+                              "is in PhotoCraft.")
 
         bf = self.f_go = ttk.Frame(r)   # Generate, Cancel, Undo, Redo: above the line over "Prompt", under the functions
         bf.pack(fill="x", padx=10, pady=(6, 2), before=self.sep_prompt)
@@ -569,6 +576,10 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.pb.pack(fill="x", pady=(2, 0))
         self._show_pl_line()
         self._bar_value = 0.0
+        # the live preview (T3a, user 29.10.): only while a run sends frames, above the status line (gui_run.py _show_preview)
+        self.f_preview = ttk.Frame(self.root)
+        self.lbl_preview = ttk.Label(self.f_preview, anchor="center")
+        self.lbl_preview.pack(fill="x")
         st = self.f_status = ttk.Frame(self.root)
         st.pack(fill="x", padx=10, pady=(4, 0))
         self.lbl_err = ttk.Label(st, text="!", style="Badge.TLabel", width=2, anchor="center")
