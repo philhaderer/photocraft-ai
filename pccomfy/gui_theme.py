@@ -10,7 +10,7 @@ from . import icons
 ICON_PX = 20       # the window's button icons (vector, icons.py) before the display scaling; the slot icons have their own (19, refslots.py)
 HINT_ICON_PX = 14  # the info icon in front of the tip under the prompt: about one text line high
 FN_GAP = 8         # room between a function symbol and its text (ttk has no gap option: the symbol gets it on its right)
-SPIN_PX = 14       # the chevrons of the spin boxes: flatter than a button icon, so the field keeps its height
+SPIN_PX = 21       # the chevrons of the spin boxes (50 % larger than the first 14): cut flat, so the field keeps its height
 CHECK_PX = 16      # the checkbox square (PhotoCraft's, measured from docs/design/photocraft-checkbox.png at 150 %)
 CHECK_GAP = 6      # room between the checkbox and its text
 
