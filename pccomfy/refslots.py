@@ -447,7 +447,12 @@ class RefSlotsMixin:
                     self._refs_slot_drop(lbl, k)
                 Tooltip(lbl, f"{it.name or 'clipboard'}" + ("  (cut out)" if it.cut_out else "") + (f"\n{it.description}" if it.description else ""))
                 tag = rs.tag(k)
-                ttk.Label(cell, text=tag or f"image {k + 2}", style="Hint.TLabel", anchor="center").pack(fill="x")      # centred under the slot
+                lt = ttk.Label(cell, text=tag or f"image {k + 2}", style="Hint.TLabel", anchor="center")      # centred under the slot
+                lt.pack(fill="x")
+                if tag:         # a click on it adds it to the end of the prompt field
+                    lt.configure(cursor="hand2")
+                    lt.bind("<Button-1>", lambda e, k=k: self._refs_insert_tag(k))
+                    Tooltip(lt, "Click to add it to the end of your prompt, or drag the picture into the prompt.")
                 if it.description:      # shown under the image; Describe also wrote it into the prompt field
                     self._refs_description(cell, it.description)
                 busy = k in self._ref_busy
