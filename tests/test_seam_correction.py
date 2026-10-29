@@ -1,8 +1,9 @@
 """Seam correction as an A/B test (OpenFill T2, user 28.10.): the tone difference where the result must match the
 original is measured, smoothed and added to the whole result (imaging.seam_correct). With the switch on, each result
 comes twice: "[seam fix]" on top and visible, "[raw]" hidden below it; the tone jump of #1 before and after goes into
-the result (status line) and runs.jsonl. Off (the default at every start): nothing changes. Stubbed Tk, PhotoCraft and
-ComfyUI.
+the result (status line) and runs.jsonl. Off (the default at every start): nothing changes. Per model (user 29.10.):
+Fibo always corrects (one layer, no checkbox), Flux 2 / 3 never (no checkbox), Qwen keeps the checkbox. Stubbed Tk,
+PhotoCraft and ComfyUI.
 
     python tests/test_seam_correction.py
 """
@@ -18,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_reset_all as ra  # noqa: E402  (installs the Tk stub and a temporary PCCOMFY_HOME)
 import test_reference_mode as t  # noqa: E402
 
-from pccomfy import imaging, workflows  # noqa: E402
+from pccomfy import imaging, models, workflows  # noqa: E402
 from pccomfy.bridge import Request  # noqa: E402
 
 ROOT = t.ROOT
@@ -64,11 +65,11 @@ def imaging_checks():
     assert np.abs(np.asarray(same, float) - o).max() <= 1
 
 
-def run(seam, variants=1, mode="inpaint", remove=False, wf="qwen-image-21-edit.json"):
+def run(seam, variants=1, mode="inpaint", remove=False, wf="qwen-image-21-edit.json", fixed=False):
     tmp = tempfile.mkdtemp()
     pc, _, b = t.make(tmp, layers=2)
     b.comfy = t.FakeComfy()
-    req = Request(mode=mode, workflow=str(ROOT / "workflows" / wf), enhance=False, remove=remove, seam=seam,
+    req = Request(mode=mode, workflow=str(ROOT / "workflows" / wf), enhance=False, remove=remove, seam=seam, seam_fixed=fixed,
                   variants=variants, layer_mask="soft")
     req.params = workflows.GenParams(prompt="a boat", seed=7)
     res = b.run(req)
@@ -101,6 +102,12 @@ def bridge_checks():
     # Remove too
     res, names, hidden, _ = run(seam=True, mode="remove", wf="fibo2-edit.json")
     assert len(names) == 2 and "[seam fix]" in names[0], names
+    # always on (Fibo, user 29.10.): one corrected layer, a plain name, no number in the status line, but in runs.jsonl
+    res, names, hidden, b = run(seam=False, fixed=True, wf="fibo2-edit.json")
+    assert len(names) == 1 and "[seam fix]" not in names[0] and "[raw]" not in names[0], names
+    assert res["seam"] is None and res["group"] is None
+    rec = [json.loads(x) for x in (b.exchange / "runs.jsonl").read_text(encoding="utf-8").splitlines()][-1]
+    assert rec["seam"] == "on" and "seam_before" in rec and "seam_after" in rec, rec
 
 
 def gui_checks():
@@ -116,6 +123,17 @@ def gui_checks():
         assert app._request().seam is on, mode            # only where a new area meets the old picture
     app.reset_settings()
     assert app.v_seam.get() is False
+    # per model (user 29.10.): Fibo always on without the checkbox, Flux 2 / 3 off without it, Qwen keeps it
+    assert {m.key: m.seam for m in models.MODELS if m.key in ("qwen", "flux2", "flux3", "fibo")} ==         {"qwen": "switch", "flux2": "off", "flux3": "off", "fibo": "on"}
+    for key, mode, box, ab, fixed in (("fibo", "inpaint", False, False, True), ("fibo", "remove", False, False, True),
+                                      ("fibo", "outpaint", False, False, True), ("fibo", "edit", False, False, False),
+                                      ("flux2", "outpaint", False, False, False), ("flux3", "remove", False, False, False),
+                                      ("qwen", "outpaint", True, True, False)):
+        ra.go(app, key, mode)
+        app.v_seam.set(True)
+        assert shown.get("seam", False) is box, (key, mode, shown)
+        req = app._request()
+        assert (req.seam, req.seam_fixed) == (ab, fixed), (key, mode, req.seam, req.seam_fixed)
 
 
 def main():
