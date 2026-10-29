@@ -8,6 +8,7 @@ from PIL import Image
 from . import icons
 
 ICON_PX = 20       # the window's button icons (vector, icons.py) before the display scaling; the slot icons have their own (24)
+HINT_ICON_PX = 14  # the info icon in front of the tip under the prompt: about one text line high
 FN_GAP = 8         # room between a function symbol and its text (ttk has no gap option: the symbol gets it on its right)
 SPIN_PX = 14       # the chevrons of the spin boxes: flatter than a button icon, so the field keeps its height
 

@@ -121,13 +121,13 @@ class PromptMixin:
         self.t_prompt.configure(highlightbackground=ACCENT if on else "#454545", highlightthickness=2 if on else 1)
         if on:
             self.lbl_hint.configure(text=text)
-            self.lbl_hint.pack(anchor="w", padx=10, after=self.grip)
+            self.f_hint.pack(fill="x", padx=10, after=self.grip)      # the text with its info icon (gui.py)
         else:
-            self.lbl_hint.pack_forget()
+            self.f_hint.pack_forget()
         b = getattr(self, "b_describe", None)
         if b is not None:
             if self._needs_description():
-                b.pack(anchor="w", padx=10, pady=(4, 0), after=self.lbl_hint)
+                b.pack(anchor="w", padx=10, pady=(4, 0), after=self.f_hint)
             else:
                 b.pack_forget()
 

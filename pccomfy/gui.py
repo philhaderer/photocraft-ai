@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _COMMON  # noqa: F401
-from .gui_theme import ThemeMixin
+from .gui_theme import ThemeMixin, HINT_ICON_PX
 from .gui_prompt import PromptMixin
 from .gui_lora import LoraMixin
 from .gui_modes import ModeMixin
@@ -312,7 +312,13 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.grip.pack(fill="x", padx=10, pady=(1, 0))
         self._grip_drag(self.grip, self.t_prompt)
         Tooltip(self.grip, "Drag to resize the prompt field.")
-        self.lbl_hint = ttk.Label(r, text=EXPAND_HINT, style="Hint.TLabel", wraplength=self._px(MIN_W - 24), justify="left")   # Expand image, Upscale, Refine (see _update_prompt_hint)
+        # the tip under the prompt: orange text with an orange info icon in front, level with its first line (user 29.10.)
+        self.f_hint = ttk.Frame(r)
+        self.lbl_hint_icon = ttk.Label(self.f_hint, image=self._icon("info", ACCENT, px=HINT_ICON_PX))
+        self.lbl_hint_icon.pack(side="left", anchor="n", padx=(0, 6), pady=(2, 0))
+        self.lbl_hint = ttk.Label(self.f_hint, text=EXPAND_HINT, style="Hint.TLabel", justify="left",
+                                  wraplength=self._px(MIN_W - 24 - HINT_ICON_PX - 6))   # Expand image, Upscale, Refine (see _update_prompt_hint)
+        self.lbl_hint.pack(side="left", anchor="n", fill="x", expand=True)
         # Krea 2 / MOSS Expand: writes a description of the surroundings into the field (under the tip, user 29.10.)
         self.b_describe = ttk.Button(r, text="Describe", style="Small.TButton", command=self.describe_scene)
         Tooltip(self.b_describe, "Qwen 3.5 9B describes the surroundings of your picture (not the main subject) and writes "
