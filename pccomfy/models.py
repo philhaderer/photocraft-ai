@@ -151,13 +151,14 @@ FLUX3 = Model(
 # MOSS: the DMD2 speed LoRA (8 steps, CFG 1.5) is the model's own LoRA; the Lenovo UltraReal LoRA and the skip-layer
 # guidance (SLG) are switches that start on (best result in the live tests); the LLM prompt enhancer starts off.
 _MOSS = dict(turbo=True, stage_on=True, stage2_on=True)
-MOSS_STEPS_TIP = "Turn up the steps to 25 for best results."     # wording of the user (29.10.)
+MOSS_STEPS_TIP = "Turn up the steps to 35 for best results."     # wording of the user (29.10.), 35 after the CFG test
 MOSS = Model(
     "moss", "MOSS Image",
     "MOSS-Image: text to image. No edit functions.",
     {
-        # Text to image starts without DMD2 and without SLG, 25 steps (the workflow's values without the LoRA), no LLM: the
-        # user's live test 29.10. (with DMD2 or SLG the photos looked artificial, with the LLM prompt too)
+        # Text to image starts without DMD2 and without SLG, no LLM: the user's live test 29.10. (with DMD2 or SLG the photos
+        # looked artificial, with the LLM prompt too). Without DMD2 the workflow runs 35 steps at CFG 3.0 (pc_no_lora; blind
+        # test docs/tests/moss-cfg.md)
         "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "turbo": False, "stage2_on": False, "base_res": 1280,
                                                 "layer_mask": "none", "enhance": False},
                         prompt_tip=T2I_TIP, steps_tip=MOSS_STEPS_TIP),

@@ -1,5 +1,5 @@
 """MOSS Text to image: switching the DMD2 LoRA on or off sets Steps and CFG to the workflow's values for that case (8 / 1.5
-with it, 25 / 2.5 without: pc_no_lora), so nothing stale is sent as an override; the Steps field has MOSS's tooltip.
+with it, 35 / 3.0 without: pc_no_lora, CFG test 29.10.), so nothing stale is sent as an override; the Steps field has MOSS's tooltip.
 
     python tests/test_moss_steps.py
 """
@@ -24,17 +24,17 @@ def main():
     app.v_model.set("moss")
     app.v_mode.set("txt2img")
     app._on_model()
-    # the start of MOSS Text to image (user 29.10.): DMD2 off, UltraReal on, SLG off, no LLM, 25 steps
+    # the start of MOSS Text to image (user 29.10.): DMD2 off, UltraReal on, SLG off, no LLM, 35 steps
     labels = [st["label"] for st in app._stages()]
     assert "SLG" in labels[1] or "Skip" in labels[1], labels
     assert (app.v_turbo.get(), app.v_stage.get(), app.v_stage2.get(), app.v_enhance.get()) == (False, True, False, False)
-    assert app.v_steps.get() == 25, app.v_steps.get()
+    assert (app.v_steps.get(), app.v_cfg.get()) == (35, 3.0), (app.v_steps.get(), app.v_cfg.get())
     app.v_turbo.set(True)
     app._on_turbo()
     assert (app.v_steps.get(), app.v_cfg.get()) == (8, 1.5), (app.v_steps.get(), app.v_cfg.get())
     app.v_turbo.set(False)
     app._on_turbo()
-    assert (app.v_steps.get(), app.v_cfg.get()) == (25, 2.5), (app.v_steps.get(), app.v_cfg.get())
+    assert (app.v_steps.get(), app.v_cfg.get()) == (35, 3.0), (app.v_steps.get(), app.v_cfg.get())
     assert app._sampler_override() == {}, app._sampler_override()       # the workflow's own values: no override
     assert app.w_lora_str["state"] == "disabled"
     app.v_turbo.set(True)

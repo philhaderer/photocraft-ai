@@ -66,7 +66,7 @@ def main():
     app.v_sstr[0].set(0.6)
     assert app._request().stage_strengths == {"5": 0.6}
     app.v_sstr[0].set(1.0)
-    assert r.sampler_override == {} and (app.v_steps.get(), app.v_cfg.get()) == (25, 2.5)  # without DMD2: the full recipe
+    assert r.sampler_override == {} and (app.v_steps.get(), app.v_cfg.get()) == (35, 3.0)  # without DMD2: the full recipe
     app.v_turbo.set(True)
     app._on_workflow()
     assert (app.v_steps.get(), app.v_cfg.get()) == (8, 1.5)                               # with DMD2: its own values

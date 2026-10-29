@@ -229,8 +229,8 @@
   "_meta": {
    "title": "pc:sampler",
    "pc_no_lora": {
-    "steps": 25,
-    "cfg": 2.5
+    "steps": 35,
+    "cfg": 3.0
    }
   }
  },
