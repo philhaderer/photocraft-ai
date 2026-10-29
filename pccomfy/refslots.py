@@ -25,6 +25,14 @@ DEFAULT_BACKGROUND = (128, 128, 128)
 MAX_TAG = 9      # image numbers that count as a tag (1 = the picture ... 9); at least the most slots of any model + 1
 
 
+def spaced_tag(tag: str, before: str, after: str) -> str:
+    """`tag` as it goes into the prompt between `before` and `after` (the text left and right of where it lands): a space
+    in front unless it starts a line or follows one, and a space behind when a word follows straight away."""
+    lead = "" if not before or before[-1].isspace() else " "
+    tail = " " if after and not after[0].isspace() and after[0] not in ",.;:!?)" else ""
+    return lead + tag + tail
+
+
 def _tag_regex(style: str) -> "re.Pattern[str]":
     """A pattern for the tags of one naming rule ("<image{n}>", "image {n}", "<ref_image_{i}>"); the number is group 1."""
     parts = re.split(r"(\{n\}|\{i\})", style)
@@ -430,7 +438,10 @@ class RefSlotsMixin:
                 lbl = tk.Label(box, image=photo, bg=PANEL, bd=0)
                 lbl.pack(expand=True, side="left")
                 lbl.configure(cursor="hand2")
-                lbl.bind("<Button-1>", lambda e, k=k: self._refs_preview(k))   # a larger view (500 %)
+                # drag the picture into the prompt field: its tag lands where you let go (the eye shows it larger)
+                lbl.bind("<ButtonPress-1>", lambda e, k=k: self._refs_drag_start(e, k))
+                lbl.bind("<B1-Motion>", self._refs_drag_move)
+                lbl.bind("<ButtonRelease-1>", self._refs_drag_drop)
                 if self._refs_dnd:      # a drop onto a filled slot replaces its picture (the rest of the frame adds)
                     self._refs_slot_drop(box, k)
                     self._refs_slot_drop(lbl, k)
@@ -440,7 +451,7 @@ class RefSlotsMixin:
                 if it.description:      # shown under the image; Describe also wrote it into the prompt field
                     ttk.Label(cell, text=it.description, style="Muted.TLabel", wraplength=s, justify="left").pack(anchor="w")
                 busy = k in self._ref_busy
-                bar = [("eye", "Preview", "Shows this picture larger beside the plugin (a click on the picture does the same).",
+                bar = [("eye", "Preview", "Shows this picture larger beside the plugin.",
                         lambda k=k: self._refs_preview(k), False),
                        ("remove", "Remove", "Takes this image out of the slots.", lambda k=k: self._refs_remove(k), False),
                        ("cut", "Undo cut" if it.cut_out else "Cut out",
@@ -508,10 +519,83 @@ class RefSlotsMixin:
                 lb.bind("<Leave>", lambda e, l=lb, k=kind: l.configure(image=self._refs_icon(k, FG)), add="+")
             Tooltip(lb, f"{word}: {tip}")
 
+    # ---- dragging a slot picture into the prompt field ----
+    DRAG_PX = 5        # the mouse moves this far (before the display scaling) before a press on a picture becomes a drag
+
+    def _refs_drag_start(self, event, k: int):
+        self._ref_drag = {"k": k, "x": event.x_root, "y": event.y_root, "on": False}
+
+    def _refs_prompt_at(self, x_root: int, y_root: int):
+        """The text index of the prompt field under the screen point, or None when the point is not over the (usable) field."""
+        import tkinter as tk
+        t = getattr(self, "t_prompt", None)
+        if t is None or str(t.cget("state")) == "disabled":
+            return None
+        try:
+            if self.root.winfo_containing(x_root, y_root) is not t:
+                return None
+            return t.index(f"@{x_root - t.winfo_rootx()},{y_root - t.winfo_rooty()}")
+        except (tk.TclError, TypeError, ValueError):
+            return None
+
+    def _refs_drag_move(self, event):
+        """While dragging, the text cursor of the prompt field follows the mouse: it shows where the tag will go."""
+        d = getattr(self, "_ref_drag", None)
+        if d is None:
+            return
+        if not d["on"]:
+            if max(abs(event.x_root - d["x"]), abs(event.y_root - d["y"])) < self._px(self.DRAG_PX):
+                return
+            d["on"] = True
+            try:
+                event.widget.configure(cursor="plus")
+            except Exception:
+                pass
+        idx = self._refs_prompt_at(event.x_root, event.y_root)
+        if idx is not None:
+            t = self.t_prompt
+            t.focus_set()
+            t.mark_set("insert", idx)
+
+    def _refs_drag_drop(self, event):
+        """Let go: over the prompt field the slot's tag goes in there (a space in front when needed); a plain click does
+        nothing (the eye opens the larger view)."""
+        d, self._ref_drag = getattr(self, "_ref_drag", None), None
+        if d is None or not d["on"]:
+            return
+        try:
+            event.widget.configure(cursor="hand2")
+        except Exception:
+            pass
+        idx = self._refs_prompt_at(event.x_root, event.y_root)
+        if idx is not None:
+            self._refs_insert_tag(d["k"], idx)
+
+    def _refs_insert_tag(self, k: int, idx: str = "end-1c"):
+        """Writes the tag of slot k into the prompt field at idx (default: the end), as its own undo step."""
+        rs = self.refslots
+        tag = rs.tag(k) if 0 <= k < len(rs.items) else ""
+        t = getattr(self, "t_prompt", None)
+        if not tag or t is None or str(t.cget("state")) == "disabled":
+            return
+        text = spaced_tag(tag, t.get("1.0", idx), t.get(idx, "end-1c"))
+        try:
+            t.edit_separator()
+        except Exception:
+            pass
+        t.insert(idx, text)
+        try:
+            t.edit_separator()
+            t.mark_set("insert", f"{idx}+{len(text)}c")
+            t.see("insert")
+            t.focus_set()
+        except Exception:
+            pass
+
     def _refs_preview(self, k: int):
-        """The eye in a slot's bar or a click on its picture: a larger view (500 %, at most twice as wide as the plugin and as
+        """The eye in a slot's bar: a larger view (500 %, at most twice as wide as the plugin and as
         tall as it) in a borderless window beside the plugin, level with the slot. The X, Esc, a click on the picture or a
-        click elsewhere closes it; the eye or a click on the same slot again too."""
+        click elsewhere closes it; the eye again too."""
         import tkinter as tk
         from .gui_common import ACCENT, FG, PANEL
         was = getattr(self, "_ref_preview", None)
@@ -557,7 +641,7 @@ class RefSlotsMixin:
         top.focus_force()
 
     def _refs_preview_lost_focus(self):
-        """A click elsewhere closes the larger view, except a click on the slot picture itself (that one toggles it)."""
+        """A click elsewhere closes the larger view, except a click on the eye of the same slot (that one toggles it)."""
         p = getattr(self, "_ref_preview", None)
         if p is None:
             return

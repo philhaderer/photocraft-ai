@@ -151,7 +151,48 @@ def main():
     app.root.clipboard_append = lambda t: copied.append(t)
     app._refs_copy_text(0)
     assert copied == ["A red square."]
-    # a click on a slot picture opens the larger view; a second click on it, the X or a redraw of the slots closes it
+    # dragging a slot picture into the prompt field writes its tag where you let go; a plain click does nothing
+    class IdxText(t.Widget):                 # a prompt field with real positions: index "n" = character n
+        def __init__(self, s):
+            super().__init__()
+            self.s = s
+
+        def _i(self, idx):
+            return 0 if idx == "1.0" else len(self.s) if idx in ("end", "end-1c") else int(idx)
+
+        def get(self, a, b):
+            return self.s[self._i(a):self._i(b)]
+
+        def insert(self, idx, text):
+            i = self._i(idx)
+            self.s = self.s[:i] + text + self.s[i:]
+    real_prompt = app.t_prompt
+    app.t_prompt = IdxText("put the cat on the sofa")
+    app.refslots.set_model(8, "<image{n}>")
+    ev = lambda x, y: type("E", (), {"x_root": x, "y_root": y, "widget": t.Widget()})()
+    app._refs_prompt_at = lambda x, y: "11" if y > 50 else None    # below y = 50 is the prompt field, after "put the cat"
+    app._refs_drag_start(ev(10, 10), 0)
+    app._refs_drag_drop(ev(10, 10))                                     # a click: nothing goes in, no larger view opens
+    assert app.t_prompt.s == "put the cat on the sofa" and getattr(app, "_ref_preview", None) is None
+    app._refs_drag_start(ev(10, 10), 0)
+    app._refs_drag_move(ev(12, 11))                                     # too short to be a drag yet
+    assert not app._ref_drag["on"]
+    app._refs_drag_move(ev(10, 60))
+    app._refs_drag_drop(ev(10, 60))
+    assert app.t_prompt.s == "put the cat <image2> on the sofa", app.t_prompt.s
+    app._refs_drag_start(ev(10, 10), 0)
+    app._refs_drag_move(ev(10, 30))
+    app._refs_drag_drop(ev(10, 30))                                     # let go outside the prompt field: nothing
+    assert app.t_prompt.s == "put the cat <image2> on the sofa"
+    assert refslots.spaced_tag("<image2>", "", "") == "<image2>"
+    assert refslots.spaced_tag("<image2>", "a cat", "") == " <image2>"
+    assert refslots.spaced_tag("<image2>", "a cat ", "on") == "<image2> "
+    assert refslots.spaced_tag("<image2>", "a cat", ", red") == " <image2>"
+    assert refslots.spaced_tag("<image2>", "line\n", " x") == "<image2>"
+    app.t_prompt = real_prompt
+    del app._refs_prompt_at
+
+    # the eye opens the larger view; a second click on it, the X or a redraw of the slots closes it
     for name, v in (("winfo_rootx", 1500), ("winfo_rooty", 100), ("winfo_width", 380), ("winfo_height", 900),
                     ("winfo_vrootx", 0), ("winfo_vrootwidth", 2560)):
         setattr(app.root, name, lambda v=v: v)
