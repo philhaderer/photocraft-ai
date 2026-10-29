@@ -187,7 +187,8 @@ class PromptMixin:
             self._status(f"Could not copy: {e}", error=True)
 
     def _update_prompt_choices(self):
-        """Ready-made prompts of a mode (Flux 2 refine): radio buttons next to "Prompt" that put the text into the field."""
+        """Ready-made prompts of a mode (Flux 2 refine): small switches next to "Prompt" that put the text into the field (the
+        look of the Upscale factor, user 29.10.: PhotoCraft has no round radio buttons); the chosen one is orange."""
         m = self._model()
         spec = m.modes.get(self.v_mode.get()) if m else None
         choices = spec.prompts if spec else ()
@@ -203,8 +204,8 @@ class PromptMixin:
         self.v_pchoice.set(next((lb for lb, text, _ in choices if text.strip() == cur), ""))
         for label, text, tip in choices:
             rb = ttk.Radiobutton(self.f_pchoice, text=label, value=label, variable=self.v_pchoice,
-                                 command=lambda t=text: self._insert_prompt(t))
-            rb.pack(side="left", padx=(0, 8))
+                                 command=lambda t=text: self._insert_prompt(t), style="Small.Toolbutton")
+            rb.pack(side="left", padx=(0, 4))
             Tooltip(rb, tip)
 
     def _insert_prompt(self, text: str):
