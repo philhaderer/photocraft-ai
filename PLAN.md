@@ -32,6 +32,7 @@ Stand 2026-10-29. Der Plan ist freigegeben. Abschnitt 3 ist die Arbeitsliste in 
 Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher Optionen nennen. Details und Optionen je Punkt: Handoff, Abschnitt 6.
 
 **Als Nächstes (neuer Chat)**
+- **30.10. (Wunsch des Users): Aufräumaktion und Ergänzung von Features.** Alle Planungsdokumente (PLAN.md, HANDOFF, ideas.md, CLAUDE.md, docs/) werden sauberer: Erledigtes kürzen oder archivieren, offene Punkte klar sichtbar. Vorher Optionen vorlegen. Danach weiter mit Punkt 13. Offen beim User: Live-Test von Punkt 11 und 12.
 0. ~~**Funktions-Symbole einbauen**~~: **gebaut 27.10.** (Formen aus `docs/icons/icon-set-final.md`, `img2img` behält den Platzhalter, eigene PNGs haben Vorrang; Symbol und Text linksbündig, Entscheidung des Users). Vom User live bestätigt (28.10.).
    Zahnrad-Fenster („Choose another file…“ → Relink, Undo, Reset to startup): Test durch den User später, eingeplant unter „Danach“ (Punkt 15a).
 
