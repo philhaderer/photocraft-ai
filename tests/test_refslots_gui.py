@@ -59,7 +59,7 @@ def main():
         assert not app.refslots.items and ("no picture" in app.lbl_refmsg["text"] or "Windows" in app.lbl_refmsg["text"])
         clipboard.read_image = lambda hwnd=0: img
         app._refs_paste()
-        assert len(app.refslots.items) == 1 and app.lbl_refnames["text"] == "Dragging an image into the prompt box inserts its tag."
+        assert len(app.refslots.items) == 1 and app.lbl_refnames["text"] == "Dragging an image into the prompt box inserts its tag. Your picture in PhotoCraft is <image1>."
         assert app._refs_ctrl_v() == "break" and len(app.refslots.items) == 2
         for _ in range(6):
             app._refs_ctrl_v()
