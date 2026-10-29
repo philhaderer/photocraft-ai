@@ -82,6 +82,7 @@ SHAPES.update({
     "gear": _gear(),
     "undo": _UNDO,
     "redo": _mirror(_UNDO),
+    "refresh": [_arc(12, 12, 9, 0, 315, 28) + [(21, 8)], [(21, 3), (21, 8), (16, 8)]],    # a circle arrow, clockwise
     "chevron-up": [[(6, 15), (12, 9), (18, 15)]],
     "chevron-down": [[(6, 9), (12, 15), (18, 9)]],
     "chevron-right": [[(9, 6), (15, 12), (9, 18)]],

@@ -24,6 +24,7 @@ EMPTY_TEXT = {"choose": "Choose a function", "none_linked": "Link your model in 
 PICK_TEXT = "Choose another file…"     # next to every file in the settings window (C.13, wording chosen by the user)
 STATE_TEXT = {"ready": "ready", "partial": "some functions need files", "missing": "files missing"}
 GEAR_PX = round(ICON_PX * 0.6)     # the gear: about 60 % of the other button icons, flat without a button background (user 28.10.)
+FOOT_REFRESH_PADX, FOOT_RESET_PADX = (4, 0), (12, 0)     # footer: the refresh arrow close to the ComfyUI dot, "Defaults" apart
 
 
 class SettingsMixin:
@@ -40,7 +41,7 @@ class SettingsMixin:
     # ---------- build (one call at the end of App._build) ----------
 
     def _build_settings(self, foot):
-        """The gear button at the right end of the footer row (the one with the connection dots, Refresh and Reset)."""
+        """The gear button at the right end of the footer row (the one with the connection dot, the refresh arrow and "Defaults")."""
         self._last_model = self.v_model.get()
         self._map_start = cfgmod.model_map()       # the links at startup ("Reset to startup")
         self._map_undo: list[dict] = []            # the links before each change ("Undo")
@@ -177,8 +178,8 @@ class SettingsMixin:
                 w.pack_forget()
             if not hide_foot:
                 self.lbl_conn.pack(side="left")
-                self.b_refresh.pack(side="left", padx=(8, 0))
-                self.b_reset.pack(side="left", padx=(6, 0))
+                self.b_refresh.pack(side="left", padx=FOOT_REFRESH_PADX)
+                self.b_reset.pack(side="left", padx=FOOT_RESET_PADX)
         if fit and getattr(self, "_sized", False):
             self._fit_height()
 
@@ -271,10 +272,10 @@ class SettingsMixin:
         add = lambda text, style="", url="": seg.append((text, style, url))  # noqa: E731
         if self.inv is None:
             add("ComfyUI could not be read.\n", "bad")
-            add((self._inv_error or "Not connected yet.") + "\nStart ComfyUI, then press Refresh.\n\n", "muted")
+            add((self._inv_error or "Not connected yet.") + "\nStart ComfyUI, then click the refresh arrow (⟳) at the bottom of the plugin.\n\n", "muted")
         else:
             add("Installed models\n", "head")
-            add("ComfyUI reads its model folders only when it starts: after copying a file, restart ComfyUI and press Refresh.\n\n", "muted")
+            add("ComfyUI reads its model folders only when it starts: after copying a file, restart ComfyUI and click the refresh arrow (⟳) at the bottom of the plugin.\n\n", "muted")
             for row in self.inv.rows():
                 st = row["status"]
                 mark = {"ready": ("● ", "ok"), "partial": ("◐ ", "note"), "missing": ("○ ", "bad")}[st.state]

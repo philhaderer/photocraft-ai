@@ -155,7 +155,7 @@ def test_empty_view():
 
 
 def main():
-    # the gear sits in the footer row, in the same frame as the Refresh and Reset buttons (not next to the tabs)
+    # the gear sits in the footer row, in the same frame as the refresh arrow and "Defaults" (not next to the tabs)
     made = []
 
     class RecBtn(t.Widget):
@@ -171,10 +171,13 @@ def main():
     probe = gui.App(cfgmod.load())
     t.ttk.Button = plain
     assert probe.b_gear.master is not probe.f_tabs and probe.b_gear.image == probe._icon("gear", px=ui_settings.GEAR_PX) and probe.b_gear.master is not None
-    foot = [b.master for b in made if b.text in ("Refresh", "Reset")]
+    foot = [b.master for b in made if b.text == "Defaults" or b.image == probe._icon("refresh", px=ui_settings.GEAR_PX)]
     assert len(foot) == 2 and foot[0] is foot[1] and probe.b_gear.master is foot[0]
     # flat like the trash button (no dark button background) and about 60 % of the other icons (user 28.10.)
     assert probe.b_gear["style"] == probe.b_clear["style"] == "Link.TButton" and ui_settings.GEAR_PX == 12 == round(0.6 * gui_theme.ICON_PX)
+    # Refresh = a flat circle arrow in the gear's size, Reset = the text link "Defaults" (option A, user 29.10.)
+    assert probe.b_refresh.image == probe._icon("refresh", px=ui_settings.GEAR_PX) and probe.b_refresh.text is None
+    assert probe.b_reset.text == "Defaults" and probe.b_refresh["style"] == probe.b_reset["style"] == "Link.TButton"
     del probe
 
     app = make_app()
