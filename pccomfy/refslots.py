@@ -267,11 +267,12 @@ def preview_size(image_size: tuple[int, int], thumb_px: int, max_w: int, max_h: 
 
 
 def preview_position(win: tuple[int, int, int, int], size: tuple[int, int], screen_left: int, screen_right: int,
-                     gap: int = 8) -> tuple[int, int]:
-    """Top left corner of the larger view: beside the plugin window (x, y, w, h), level with its top; on the left when it
-    fits on the screen there (the plugin usually sits at PhotoCraft's right edge), else on the right, else at the screen's
-    left edge."""
-    x, y, w, _ = win
+                     gap: int = 8, top: int | None = None) -> tuple[int, int]:
+    """Top left corner of the larger view: beside the plugin window (x, y, w, h), level with `top` (the slot's top edge,
+    user 29.10.; else the plugin's), moved up so it ends no lower than the plugin; on the left when it fits on the screen
+    there (the plugin usually sits at PhotoCraft's right edge), else on the right, else at the screen's left edge."""
+    x, wy, w, wh = win
+    y = wy if top is None else max(wy, min(top, wy + wh - size[1]))
     left = x - gap - size[0]
     if left >= screen_left:
         return left, y
@@ -298,7 +299,7 @@ class RefSlotsMixin:
     SLOT = 108         # px (before the display scaling): every slot is the same size, whatever the model
     ICON_PX = 24       # size of the slot icons (vector line icons, icons.py) before the display scaling: the ONE place to change it
     PER_ROW = 3        # slots per row
-    BAR_ICONS = 4      # the most icons one bar holds (the slot is as tall as that needs)
+    BAR_ICONS = 5      # the most icons one bar holds (the slot is as tall as that needs)
 
     # ---- wrapped window methods ----
     def _on_mode_ui(self):
@@ -407,6 +408,7 @@ class RefSlotsMixin:
             w.destroy()
         self._refs_preview_close()   # the slots change: an open larger view may show a picture that is gone
         self._ref_photos = []
+        self._ref_boxes = {}
         rs = self.refslots
         s = self._px(self.SLOT)
         per_row = self.PER_ROW
@@ -420,6 +422,7 @@ class RefSlotsMixin:
             box = tk.Frame(cell, width=s, height=self._px(max(self.SLOT, self.BAR_ICONS * (self._icon_px() + 3) + 2)), bg=PANEL, highlightthickness=1, highlightbackground="#5c5c5c")
             box.pack_propagate(False)
             box.pack()
+            self._ref_boxes[k] = box        # the larger view opens level with it
             if k < len(rs.items):
                 it = rs.items[k]
                 photo = tk.PhotoImage(data=_b64(thumbnail_png(it.image, s - 4 - self._px(self._bar_px()))))
@@ -437,7 +440,9 @@ class RefSlotsMixin:
                 if it.description:      # shown under the image; Describe also wrote it into the prompt field
                     ttk.Label(cell, text=it.description, style="Muted.TLabel", wraplength=s, justify="left").pack(anchor="w")
                 busy = k in self._ref_busy
-                bar = [("remove", "Remove", "Takes this image out of the slots.", lambda k=k: self._refs_remove(k), False),
+                bar = [("eye", "Preview", "Shows this picture larger beside the plugin (a click on the picture does the same).",
+                        lambda k=k: self._refs_preview(k), False),
+                       ("remove", "Remove", "Takes this image out of the slots.", lambda k=k: self._refs_remove(k), False),
                        ("cut", "Undo cut" if it.cut_out else "Cut out",
                         "Back to the original picture." if it.cut_out else "Removes the background (BiRefNet in ComfyUI).", lambda k=k: self._refs_cut(k), True),
                        ("describe", "Describe", "Qwen 3.5 9B writes a short description of this picture (about 5 s).", lambda k=k: self._refs_describe(k), True)]
@@ -504,9 +509,9 @@ class RefSlotsMixin:
             Tooltip(lb, f"{word}: {tip}")
 
     def _refs_preview(self, k: int):
-        """A click on a slot picture: a larger view (500 %, at most twice as wide as the plugin and as tall as it) in a borderless
-        window beside the plugin. The X, Esc, a click on the picture or a click elsewhere closes it; a click on the same
-        slot again too."""
+        """The eye in a slot's bar or a click on its picture: a larger view (500 %, at most twice as wide as the plugin and as
+        tall as it) in a borderless window beside the plugin, level with the slot. The X, Esc, a click on the picture or a
+        click elsewhere closes it; the eye or a click on the same slot again too."""
         import tkinter as tk
         from .gui_common import ACCENT, FG, PANEL
         was = getattr(self, "_ref_preview", None)
@@ -523,7 +528,11 @@ class RefSlotsMixin:
         thumb = self._px(self.SLOT) - 4 - self._px(self._bar_px())
         w, h = preview_size(it.image.size, thumb, 2 * win[2], win[3])
         vx = root.winfo_vrootx()
-        x, y = preview_position(win, (w, h), vx, vx + root.winfo_vrootwidth())
+        try:
+            top = int(self._ref_boxes[k].winfo_rooty())
+        except (AttributeError, KeyError, TypeError, ValueError, tk.TclError):
+            top = None
+        x, y = preview_position(win, (w, h), vx, vx + root.winfo_vrootwidth(), top=top)
         top = tk.Toplevel(root)
         top.wm_overrideredirect(True)
         top.configure(bg=PANEL, highlightthickness=1, highlightbackground="#5c5c5c")
