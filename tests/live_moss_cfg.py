@@ -1,4 +1,4 @@
-"""Manual check (not part of run_all.py): MOSS Text to image without DMD2, CFG 1.5 against CFG 2.5 (user 29.10.).
+"""Manual check (not part of run_all.py): MOSS Text to image without DMD2, two CFG / steps variants blind (user 29.10.).
 
 MOSS starts without DMD2, without SLG, without the LLM, at 25 steps (PLAN 10c). Without DMD2 the workflow says CFG 2.5
 (pc_no_lora); the user's good test on the second computer most likely ran with 1.5 (the LoRA switch did not change the
@@ -7,7 +7,8 @@ the user rates each pair blind (left / right in random order, the CFG is hidden)
 
 The prompts are the realistic ones from docs/tests/testprompts.md (ImageBench), by number.
 
-    python tests\\live_moss_cfg.py run [--seeds 2] [--size 1280]
+    python tests\\live_moss_cfg.py run [--seeds 2] [--size 1280] [--vs 1.5@25 2.5@25]
+                                      (two variants CFG@steps; round 2: --vs <winner> 3.0@35)
     python tests\\live_moss_cfg.py rate          (the newest round; or give its folder)
     python tests\\live_moss_cfg.py summary       (wins per CFG, also written to ergebnis.md)
 
@@ -36,7 +37,7 @@ WF = ROOT / "workflows" / "moss-image-t2i.json"
 PROMPT_FILE = ROOT / "docs" / "tests" / "testprompts.md"
 # realistic photographs: faces, materials, camera, product shots
 PROMPTS = [73, 74, 79, 81, 115, 116, 143, 144, 166, 168]
-CFGS = (1.5, 2.5)
+VARIANTS = ("1.5@25", "2.5@25")     # round 1 (CFG@steps); the workflow without DMD2 runs 25 steps at CFG 2.5
 SLG = "7"            # the skip-layer guidance node of moss-image-t2i.json (starts off)
 
 
@@ -63,25 +64,26 @@ def cmd_run(a):
     seeds = [101, 202, 303, 404][: max(1, a.seeds)]
     ps = prompts()
     key, pairs, n, t_start = {}, [], 0, time.time()
-    total = len(ps) * len(seeds) * len(CFGS)
+    variants = [parse(v) for v in a.vs]
+    total = len(ps) * len(seeds) * len(variants)
     for num, prompt in ps.items():
         for seed in seeds:
             pair = []
-            for cfg in CFGS:
+            for cfg, steps in variants:
                 n += 1
                 t0 = time.time()
-                # the plugin's start settings: no LLM, DMD2 off (25 steps, CFG 2.5), UltraReal on, SLG off
+                # the plugin's start settings: no LLM, DMD2 off, UltraReal on, SLG off; CFG and steps of the variant
                 req = Request(mode="txt2img", workflow=str(WF), enhance=False, turbo=False, stage_on=True,
-                              stages_off=[SLG], sampler_override={} if cfg == 2.5 else {"cfg": cfg})
+                              stages_off=[SLG], sampler_override={"cfg": cfg, "steps": steps})
                 p = workflows.GenParams(prompt=prompt, seed=seed, width=a.size, height=a.size)
                 graph, out_node = b._graph(req, p, None, None, str(WF))
                 hist = b._wait(b.comfy.queue(graph), graph, str(WF), 0, 1, "", lambda *x, **k: None)
                 im = b.comfy.output_images(hist, out_node)[0].convert("RGB")
                 fid = f"{len(key) + 1:04d}"
                 im.save(out / "bilder" / f"{fid}.png")
-                key[fid] = {"prompt_nr": num, "seed": seed, "cfg": cfg}
+                key[fid] = {"prompt_nr": num, "seed": seed, "cfg": cfg, "steps": steps}
                 pair.append(fid)
-                print(f"{n}/{total} prompt {num} seed {seed} cfg {cfg}: {time.time() - t0:.0f} s", flush=True)
+                print(f"{n}/{total} prompt {num} seed {seed} cfg {cfg} steps {steps}: {time.time() - t0:.0f} s", flush=True)
             pairs.append(pair)
     rnd = random.Random(7)
     rnd.shuffle(pairs)
@@ -91,6 +93,16 @@ def cmd_run(a):
               open(out / "key.json", "w", encoding="utf-8"), indent=1, ensure_ascii=False)
     print(f"\nDONE in {(time.time() - t_start) / 60:.1f} min: {len(key)} pictures in {out}\n"
           f"Next: python tests\\live_moss_cfg.py rate", flush=True)
+
+
+def parse(v: str) -> tuple[float, int]:
+    """ "3.0@35" -> (3.0, 35); a bare CFG keeps 25 steps."""
+    cfg, _, steps = v.partition("@")
+    return float(cfg), int(steps or 25)
+
+
+def label(it: dict) -> str:
+    return f"CFG {it['cfg']}, {it.get('steps', 25)} Steps"
 
 
 def latest(folder):
@@ -202,7 +214,8 @@ def cmd_summary(a):
     fout = out / "bewertung.json"
     data = json.loads(fout.read_text(encoding="utf-8")) if fout.exists() else {}
     items = key["items"]
-    wins = {c: 0 for c in CFGS}
+    labels = list(dict.fromkeys(label(it) for it in items.values()))       # the two variants, in run order
+    wins = {c: 0 for c in labels}
     same = bad = 0
     per_prompt = {}
     for rec in data.values():
@@ -210,9 +223,9 @@ def cmd_summary(a):
         if not w:
             continue
         num = items[rec["links"]]["prompt_nr"]
-        pp = per_prompt.setdefault(num, {c: 0 for c in CFGS} | {"gleich": 0, "beide schlecht": 0})
+        pp = per_prompt.setdefault(num, {c: 0 for c in labels} | {"gleich": 0, "beide schlecht": 0})
         if w in ("links", "rechts"):
-            c = items[rec[w]]["cfg"]
+            c = label(items[rec[w]])
             wins[c] += 1
             pp[c] += 1
         elif w == "gleich":
@@ -222,18 +235,19 @@ def cmd_summary(a):
             bad += 1
             pp["beide schlecht"] += 1
     rated = sum(1 for r in data.values() if r.get("wahl"))
+    a_, b_ = labels
     lines = [f"# MOSS CFG-Testrunde {out.name}", "", f"Bewertet: {rated} von {len(key['pairs'])} Paaren "
-             f"({key.get('size', '?')} px, 25 Steps, ohne DMD2, ohne SLG, ohne LLM, UltraReal an)", "",
-             "| CFG 1.5 besser | CFG 2.5 besser | gleich gut | beide schlecht |", "|---|---|---|---|",
-             f"| {wins[1.5]} | {wins[2.5]} | {same} | {bad} |", "", "Je Prompt:", "",
-             "| Prompt | 1.5 | 2.5 | gleich | beide schlecht |", "|---|---|---|---|---|"]
+             f"({key.get('size', '?')} px, ohne DMD2, ohne SLG, ohne LLM, UltraReal an)", "",
+             f"| {a_} besser | {b_} besser | gleich gut | beide schlecht |", "|---|---|---|---|",
+             f"| {wins[a_]} | {wins[b_]} | {same} | {bad} |", "", "Je Prompt:", "",
+             f"| Prompt | {a_} | {b_} | gleich | beide schlecht |", "|---|---|---|---|---|"]
     for num in sorted(per_prompt):
         pp = per_prompt[num]
-        lines.append(f"| {num} | {pp[1.5]} | {pp[2.5]} | {pp['gleich']} | {pp['beide schlecht']} |")
+        lines.append(f"| {num} | {pp[a_]} | {pp[b_]} | {pp['gleich']} | {pp['beide schlecht']} |")
     notes = [(r, r["notiz"]) for r in data.values() if r.get("notiz")]
     if notes:
-        lines += ["", "Notizen:"] + [f"- Prompt {items[r['links']]['prompt_nr']} (links CFG {items[r['links']]['cfg']}, "
-                                     f"rechts CFG {items[r['rechts']]['cfg']}): {n}" for r, n in notes]
+        lines += ["", "Notizen:"] + [f"- Prompt {items[r['links']]['prompt_nr']} (links {label(items[r['links']])}, "
+                                     f"rechts {label(items[r['rechts']])}): {n}" for r, n in notes]
     text = "\n".join(lines) + "\n"
     (out / "ergebnis.md").write_text(text, encoding="utf-8")
     print(text)
@@ -245,6 +259,7 @@ def main():
     r = sub.add_parser("run")
     r.add_argument("--seeds", type=int, default=2, help="seeds per prompt (1 to 4)")
     r.add_argument("--size", type=int, default=1280, help="width and height in px (the plugin's base res. for MOSS)")
+    r.add_argument("--vs", nargs=2, default=list(VARIANTS), help="the two variants as CFG@steps (default 1.5@25 2.5@25)")
     for name in ("rate", "summary"):
         s = sub.add_parser(name)
         s.add_argument("folder", nargs="?", help="the round's folder (default: the newest)")
