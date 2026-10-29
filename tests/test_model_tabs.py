@@ -57,7 +57,7 @@ def main():
     assert app.v_enhance.get() is False and "Qwen 3.5 9B" in app.tt_enhance.text      # which text model writes the prompt (starts off)
     assert app.cb_enhance["text"] == "LLM prompt enhancement (Qwen 3.5 9B)"
     assert app.v_turbo.get() is True and app.cb_turbo["text"].startswith("DMD2") and app.v_lora_str.get() == 1.0
-    assert list(models.MOSS.modes) == ["txt2img", "outpaint"]                                           # Generative fill is off again (not good enough)
+    assert list(models.MOSS.modes) == ["txt2img"]                                                       # Fill off (not good enough), Expand parked 29.10.
     assert [c["text"] for c in app.stage_cbs] == ["UltraReal LoRA", "Skip-layer guidance (SLG)", "Stage"]
     assert app.v_stage.get() and app.v_stage2.get()                                    # Lenovo on, SLG on
     r = app._request()
@@ -75,9 +75,7 @@ def main():
     app.v_turbo.set(True)
     app._on_workflow()
     assert app._request().mode == "txt2img" and app._layer_prefix() == "MOSS Image Text"
-    app.v_mode.set("outpaint")
-    app._on_mode()
-    assert app.v_workflow.get() == "moss-image-inpaint.json" and app.v_res.get() == 1216 and app.v_match.get() == 0.5
+    assert "outpaint" not in models.BY_KEY["moss"].modes          # MOSS Expand is parked since 29.10. (models.PARKED_EXPAND)
 
     # Flux 3: text to image and edit share the settings (base res 1536); Flux 2 edit starts at 1024
     app.v_model.set("flux3")
@@ -164,9 +162,10 @@ def main():
     assert app._loras() == []
     app._set_loras([["qwen\\style_a.safetensors", 0.6]])
 
-    # text to image for Qwen, Expand for Flux 2, Flux 3 and Krea 2 (Flux 3 / Krea 2 on again for a test, 26.10.); Fibo Remove starts with a soft mask and 10 % feather
-    for key, mode in (("qwen", "txt2img"), ("flux2", "outpaint"), ("flux3", "outpaint"), ("krea2", "outpaint")):
+    # text to image for Qwen, Expand for Flux 2 and Flux 3, not for Krea 2 (off 29.10.); Fibo Remove starts with a soft mask and 10 % feather
+    for key, mode in (("qwen", "txt2img"), ("flux2", "outpaint"), ("flux3", "outpaint")):
         assert mode in models.BY_KEY[key].modes, (key, mode)
+    assert "outpaint" not in models.BY_KEY["krea2"].modes
     app.v_model.set("fibo")
     app.v_mode.set("remove")
     app._on_model()
@@ -249,7 +248,7 @@ def main():
     # every function's tooltip starts with the ranking (user 28.10.); a function without one says so
     assert models.ranking_text("inpaint") == "Ranking: 1. Fibo, 2. Qwen."
     assert models.ranking_text("remove") == "Ranking: 1. Fibo, 2. Qwen (not ranked: Flux 3, Flux 2)."
-    assert models.ranking_text("outpaint") == "Ranking: 1. Flux 2, 2. Flux 3, 3. Qwen, 4. Fibo, 5. Krea 2, 6. MOSS."
+    assert models.ranking_text("outpaint") == "Ranking: 1. Flux 2, 2. Flux 3, 3. Qwen, 4. Fibo."      # Krea 2 / MOSS Expand off 29.10.
     assert models.ranking_text("edit") == "Ranking: not set yet." and models.ranking_text("img2img") == ""
     assert app.tt_modes["remove"].text.startswith("Ranking: 1. Fibo, 2. Qwen")
     assert all(k in models.SHORT for k in models.BY_KEY) and all(k in models.BY_KEY for r in models.RANKING.values() for k in r)

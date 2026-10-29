@@ -157,9 +157,9 @@ def main():
     assert workflows.sampler_values(f2)["sampler"] == "euler"
     assert workflows.set_sampler(f2, sampler="dpmpp_2m", scheduler="karras")["198"]["inputs"]["sampler_name"] == "dpmpp_2m"
 
-    # Krea 2 Turbo: Text to image (prompt enhancer switchable) and Expand (mask workflow); no LoRA box
+    # Krea 2 Turbo: Text to image (prompt enhancer switchable); Expand (mask workflow) is parked since 29.10.; no LoRA box
     from pccomfy import bridge
-    assert [k for k, rb in models.BY_KEY["krea2"].modes.items()] == ["txt2img", "outpaint"]
+    assert [k for k, rb in models.BY_KEY["krea2"].modes.items()] == ["txt2img"]
     k2 = workflows.load_template(t.ROOT / "workflows" / "krea2-turbo-t2i.json")
     ki = workflows.load_template(t.ROOT / "workflows" / "krea2-turbo-inpaint.json")
     for g in (k2, ki):
@@ -173,8 +173,6 @@ def main():
     assert next(n for n in off.values() if n["class_type"] == "CLIPTextEncode")["inputs"]["text"] == "a fox"
     pick("krea2", "txt2img")
     assert app.v_workflow.get() == "krea2-turbo-t2i.json" and app.v_res.get() == 1024 and app.v_enhance.get() is False
-    pick("krea2", "outpaint")
-    assert app.v_workflow.get() == "krea2-turbo-inpaint.json"
     # the names: Fill Selection, no Bionic anywhere, one Fibo workflow with the LLM checkbox
     assert dict(gui.MODE_LABELS)["inpaint"] == "Fill Selection" and gui.SHORT_MODES["inpaint"] == "Fill Selection"
     assert sorted(p.name for p in (t.ROOT / "workflows").glob("fibo2*")) == ["fibo2-edit.json", "fibo2-t2i.json"]
