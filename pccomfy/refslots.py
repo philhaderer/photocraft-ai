@@ -340,7 +340,7 @@ class RefSlotsMixin:
             return
         import tkinter as tk
         from tkinter import ttk
-        from .gui_common import Tooltip
+        from .gui_common import ACCENT, BG, FG, Tooltip
         self.refslots = RefSlots()
         self._ref_photos: list = []
         self._ref_busy: set[int] = set()
@@ -356,6 +356,18 @@ class RefSlotsMixin:
         self.f_refgrid.pack(fill="x", pady=(4, 0))
         self.lbl_refnames = ttk.Label(self.f_refs, text="", style="Muted.TLabel", wraplength=self._px(380 - 24), justify="left")
         self.lbl_refnames.pack(fill="x", pady=(4, 0))
+        # spot XY: the last description (Describe, or a click on a described picture), white, with a copy icon on its right;
+        # only packed while it shows one
+        self.f_refxy = ttk.Frame(self.f_refs)
+        self.b_refcopy = tk.Label(self.f_refxy, image=self._refs_icon("copy", FG), bg=BG, bd=0, cursor="hand2")
+        self.b_refcopy.pack(side="right", anchor="n", padx=(self._px(6), 0))
+        self.b_refcopy.bind("<Button-1>", lambda e: self._refs_copy_shown())
+        self.b_refcopy.bind("<Enter>", lambda e: self.b_refcopy.configure(image=self._refs_icon("copy", ACCENT)), add="+")
+        self.b_refcopy.bind("<Leave>", lambda e: self.b_refcopy.configure(image=self._refs_icon("copy", FG)), add="+")
+        Tooltip(self.b_refcopy, "Copy text: puts this description on the clipboard.")
+        self.lbl_refdesc = ttk.Label(self.f_refxy, text="", wraplength=self._px(380 - 24 - self.ICON_PX - 6), justify="left")
+        self.lbl_refdesc.pack(side="left", fill="x", expand=True)
+        self._ref_shown = None          # the slot item whose description spot XY shows
         self.lbl_refmsg = ttk.Label(self.f_refs, text="", style="Hint.TLabel", wraplength=self._px(380 - 24), justify="left")   # only packed while it has text
         self._refs_dnd = self._refs_setup_dnd()
         try:
@@ -453,8 +465,6 @@ class RefSlotsMixin:
                     lt.configure(cursor="hand2")
                     lt.bind("<Button-1>", lambda e, k=k: self._refs_insert_tag(k))
                     Tooltip(lt, "Click to add it to the end of your prompt, or drag the picture into the prompt.")
-                if it.description:      # shown under the image; Describe also wrote it into the prompt field
-                    self._refs_description(cell, it.description)
                 busy = k in self._ref_busy
                 bar = [("eye", "Preview", "Shows this picture larger beside the plugin.",
                         lambda k=k: self._refs_preview(k), False),
@@ -471,6 +481,7 @@ class RefSlotsMixin:
                 # the one empty slot takes the pictures: paste and add file sit in its bar
                 self._refs_bar(box, [("paste", "Paste", "Takes the picture from the clipboard (Ctrl+V does the same when no text field has the focus).", self._refs_paste, False),
                                      ("file", "Add file", "Picks a picture file. Or drop files onto a slot.", self._refs_add_file, False)], False)
+        self._refs_xy()                 # the description in spot XY follows its slot (new tag, removed picture)
         over = len(rs.overflow)
         self.lbl_refmax.configure(text=f"Max. images: {rs.max_refs}")
         hint = rs.hint()
@@ -485,30 +496,6 @@ class RefSlotsMixin:
             self._on_content_size()
         except Exception:
             pass
-
-    def _refs_description(self, cell, text: str):
-        """The description under a slot: looks like the muted label it was, but you can select it and copy it (Ctrl+C).
-        A read-only text field as wide as the slot and exactly as many lines high as the wrapped text needs."""
-        import tkinter as tk
-        from .gui_common import ACCENT, BG, MUTED, font
-        t = tk.Text(cell, width=1, height=1, wrap="word", bg=BG, fg=MUTED, font=font(9), relief="flat", bd=0,
-                    highlightthickness=0, padx=0, pady=0, cursor="xterm", selectbackground=ACCENT,
-                    selectforeground="#1b1b1b", inactiveselectbackground=ACCENT, takefocus=0)
-        t.insert("1.0", text)
-        t.configure(state="disabled")          # read-only; selecting and copying still work
-        t.pack(fill="x", anchor="w")
-        t.bind("<Button-1>", lambda e: t.focus_set(), add="+")     # a disabled field takes no focus by itself: Ctrl+C needs it
-
-        def fit(_e=None):
-            try:
-                n = t.count("1.0", "end-1c", "displaylines")
-                n = (n[0] if isinstance(n, tuple) else n) or 0
-                if int(t.cget("height")) != n + 1:
-                    t.configure(height=n + 1)
-            except (tk.TclError, TypeError, ValueError):
-                pass
-        t.bind("<Configure>", fit, add="+")
-        return t
 
     def _refs_visible(self) -> int:
         """How many slots are shown: the filled ones and exactly one empty slot ("Drop a picture or Ctrl+V") while the model
@@ -587,10 +574,15 @@ class RefSlotsMixin:
             t.mark_set("insert", idx)
 
     def _refs_drag_drop(self, event):
-        """Let go: over the prompt field the slot's tag goes in there (a space in front when needed); a plain click does
-        nothing (the eye opens the larger view)."""
+        """Let go: over the prompt field the slot's tag goes in there (a space in front when needed); a plain click shows
+        the picture's description in spot XY, when it has one (the eye opens the larger view)."""
         d, self._ref_drag = getattr(self, "_ref_drag", None), None
-        if d is None or not d["on"]:
+        if d is None:
+            return
+        if not d["on"]:
+            rs = self.refslots
+            if 0 <= d["k"] < len(rs.items) and rs.items[d["k"]].description:
+                self._refs_xy(rs.items[d["k"]])
             return
         try:
             event.widget.configure(cursor="hand2")
@@ -699,6 +691,30 @@ class RefSlotsMixin:
                 self._refs_say("Description copied.")
             except Exception:
                 self._refs_say("The clipboard is not available.")
+
+    def _refs_xy(self, item=False):
+        """Spot XY shows `item`'s description ("<image2>: ..."), white, with the copy icon; no argument: the one shown, again
+        (after a redraw its tag may differ); it goes when its picture or its description is gone."""
+        if item is not False:
+            self._ref_shown = item
+        it = self._ref_shown
+        rs = self.refslots
+        if it is None or it not in rs.items or not it.description:
+            self._ref_shown = None
+            self.lbl_refdesc.configure(text="")
+            self.f_refxy.pack_forget()
+            return
+        k = rs.items.index(it)
+        self.lbl_refdesc.configure(text=f"{rs.tag(k) or f'image {k + 2}'}: {it.description}")
+        if self.lbl_refmsg.winfo_manager() == "pack":       # a message is showing: XY goes above it
+            self.f_refxy.pack(fill="x", pady=(4, 0), before=self.lbl_refmsg)
+        else:
+            self.f_refxy.pack(fill="x", pady=(4, 0))
+
+    def _refs_copy_shown(self):
+        it = self._ref_shown
+        if it is not None and it in self.refslots.items:
+            self._refs_copy_text(self.refslots.items.index(it))
 
     def _refs_say(self, text: str):
         self.lbl_refmsg.configure(text=text)
@@ -847,7 +863,8 @@ class RefSlotsMixin:
                 old, src.description = src.description, box["text"]
                 self._ref_last_described = src
                 i = self.refslots.items.index(src) if src in self.refslots.items else 0
-                self._refs_say(f"{self.refslots.tag(i) or 'image'}: {box['text']}")
+                self._refs_say("")
+                self._refs_xy(src)
                 t = getattr(self, "t_prompt", None)
                 if t is not None and src in self.refslots.items and str(t.cget("state")) != "disabled":
                     cur = t.get("1.0", "end").rstrip("\n")
@@ -856,7 +873,7 @@ class RefSlotsMixin:
                         t.delete("1.0", "end")
                         t.insert("1.0", new)
                     elif old:      # the old line was changed by hand: the prompt stays, the new text is under the image
-                        self._refs_say("You changed the description line in the prompt, so it was kept. The new text is under the image (copy icon).")
+                        self._refs_say("You changed the description line in the prompt, so it was kept. The new text is shown above (copy icon).")
             self._refs_redraw()
         self.root.after(200, check)
 
@@ -865,7 +882,7 @@ class RefSlotsMixin:
         rs = self.refslots
         if not 0 <= k < len(rs.items) or not rs.items[k].description:
             return
-        self._refs_say(f"{rs.tag(k) or 'image'}: {rs.items[k].description}")
+        self._refs_xy(rs.items[k])
         t = getattr(self, "t_prompt", None)
         if t is None or str(t.cget("state")) == "disabled":
             return
