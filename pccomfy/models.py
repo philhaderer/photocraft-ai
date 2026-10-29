@@ -148,11 +148,9 @@ FLUX3 = Model(
 _MOSS = dict(turbo=True, stage_on=True, stage2_on=True)
 MOSS = Model(
     "moss", "MOSS Image",
-    "MOSS-Image: text to image and Expand. No edit functions.",
+    "MOSS-Image: text to image. No edit functions.",
     {
         "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "base_res": 1280, "layer_mask": "none", "enhance": False}, prompt_tip=T2I_TIP),
-        "outpaint": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "soft", "match": 0.5},
-                         prompt_tip=EXPAND_DESCRIBE_TIP, describe=True),
     },
     requires=(
         "moss_image_sft_int8_convrot.safetensors",
@@ -161,21 +159,29 @@ MOSS = Model(
     ))   # the model files this tab needs (details per mode: manifest.py)
 
 # Krea-2 Turbo: a fast distilled text-to-image model (8 steps, CFG 1). Text to image has the model's own prompt enhancer
-# (starts off, like the other models'); Expand redraws the new area with the same mask recipe as MOSS (back on for a
-# new test, 26.10.).
+# (starts off, like the other models').
 KREA2 = Model(
     "krea2", "Krea 2 Turbo",
-    "Krea-2 Turbo: fast text to image and Expand.",
+    "Krea-2 Turbo: fast text to image.",
     {
         "txt2img": Mode("krea2-turbo-t2i.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=T2I_TIP),
-        "outpaint": Mode("krea2-turbo-inpaint.json", dict(base_res=1024, layer_mask="soft"),
-                         prompt_tip=EXPAND_DESCRIBE_TIP, describe=True),
     },
     requires=(
         "krea2_turbo_int8_convrot.safetensors",
         "qwen3vl_4b_fp8_scaled.safetensors",
         "qwen_image_vae.safetensors",
     ))   # the model files this tab needs (details per mode: manifest.py)
+
+# Expand with Krea 2 and MOSS is switched off (user 29.10.): in a blind test with the user's own pictures
+# (docs/tests/expand-seam-testrunde.md) only 2 of 64 Krea 2 and 10 of 64 MOSS results were good, also with a description
+# of the surroundings, a wider overlap, the seam correction or a second run over the border. The modes are kept here,
+# with the Describe button they used, so they can come back when a better recipe exists (idea: Krea 2 AnyPaint LoRA).
+PARKED_EXPAND = {
+    "krea2": Mode("krea2-turbo-inpaint.json", dict(base_res=1024, layer_mask="soft"),
+                  prompt_tip=EXPAND_DESCRIBE_TIP, describe=True),
+    "moss": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "soft", "match": 0.5},
+                 prompt_tip=EXPAND_DESCRIBE_TIP, describe=True),
+}
 
 FIBO = Model(
     "fibo", "Fibo 2.0 Edit",
@@ -206,7 +212,7 @@ BY_KEY = {m.key: m for m in MODELS}
 RANKING = {
     "inpaint": ("fibo", "qwen"),            # E2 test round 28.10.: "Fibo is better overall"
     "remove": ("fibo", "qwen"),
-    "outpaint": ("flux2", "flux3", "qwen", "fibo", "krea2", "moss"),   # user 28.10.: Flux 2 very good, Flux 3 and Qwen too
+    "outpaint": ("flux2", "flux3", "qwen", "fibo"),   # user 28.10.: Flux 2 very good, Flux 3 and Qwen too; Krea 2 / MOSS off 29.10.
 }
 SHORT = {"flux3": "Flux 3", "flux2": "Flux 2", "qwen": "Qwen", "fibo": "Fibo", "krea2": "Krea 2", "moss": "MOSS"}
 

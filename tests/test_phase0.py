@@ -24,13 +24,13 @@ for name in ("BUILTIN", "MODE_LABELS", "SHORT_MODES", "LAYER_MASKS", "CLIP_DEFAU
              "word_left", "word_right", "sweep_requests", "duration_text", "scale_text", "parse_list", "winlink", "Tooltip", "run_gui", "DONE_GREEN"):
     assert hasattr(gui, name), name
 
-# 3. models: Expand is on again for Flux 3 and Krea 2 (new test, 26.10.); the new fields start neutral
+# 3. models: Expand is on for Flux 3 (26.10.), off for Krea 2 and MOSS (blind test 29.10.); the new fields start neutral
 by = models.BY_KEY
 assert list(by["flux3"].modes) == ["txt2img", "edit", "multi_edit", "remove", "outpaint", "upscale"]
-assert list(by["krea2"].modes) == ["txt2img", "outpaint"]
+assert list(by["krea2"].modes) == ["txt2img"]
 assert list(by["flux2"].modes) == ["txt2img", "edit", "multi_edit", "remove", "outpaint", "upscale", "refine"]
 assert list(by["qwen"].modes) == ["txt2img", "edit", "multi_edit", "inpaint", "outpaint", "remove"]
-assert list(by["moss"].modes) == ["txt2img", "outpaint"]
+assert list(by["moss"].modes) == ["txt2img"]
 assert [m.key for m in models.MODELS] == ["flux3", "flux2", "qwen", "fibo", "krea2", "moss"]
 for m in models.MODELS:
     assert isinstance(m.requires, tuple) and m.requires, m.key      # L1 filled requires (the file names per tab); test_detection.py checks them
@@ -38,8 +38,8 @@ for m in models.MODELS:
 assert {k: (m.max_refs, m.tag_style) for k, m in by.items()} == {
     "qwen": (8, "<image{n}>"), "fibo": (2, "<image_{n}>"), "flux2": (3, "image {n}"), "flux3": (3, "<ref_image_{i}>"),
     "krea2": (0, ""), "moss": (0, "")}                                                          # Multi Image Edit: slots per model
-assert "Expand" in by["flux3"].tip and "Expand" in by["krea2"].tip
-assert models.model_for_workflow("krea2-turbo-inpaint.json") is models.KREA2      # Krea 2 Expand uses it again
+assert "Expand" in by["flux3"].tip and "Expand" not in by["krea2"].tip and "Expand" not in by["moss"].tip
+assert set(models.PARKED_EXPAND) == {"krea2", "moss"} and all(m.describe for m in models.PARKED_EXPAND.values())   # kept for later
 
 
 # 4. footer: only "ComfyUI" and its dot (no PhotoCraft mark, no document count)

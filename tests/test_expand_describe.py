@@ -1,7 +1,8 @@
 """Krea 2 / MOSS Expand need a prompt (user 29.10., A/B test docs/tests/krea-moss-expand-ab.md): their own tip under the
 field, a Describe button under it that writes a description of the surroundings (Qwen 3.5 9B, SCENE_QUESTION) into the
-field, and Generate refuses an empty prompt with a message. Other models' Expand stays as it was. Stubbed Tk,
-PhotoCraft and ComfyUI.
+field, and Generate refuses an empty prompt with a message. Other models' Expand stays as it was. Since the blind test
+of 29.10. both modes are parked (models.PARKED_EXPAND, not offered); the test puts them back for its duration, so the
+button keeps working for when they return. Stubbed Tk, PhotoCraft and ComfyUI.
 
     python tests/test_expand_describe.py
 """
@@ -19,7 +20,8 @@ from pccomfy import bridge, imaging, models  # noqa: E402
 
 def model_checks():
     for key in ("krea2", "moss"):
-        spec = next(m for m in models.MODELS if m.key == key).modes["outpaint"]
+        assert "outpaint" not in models.BY_KEY[key].modes, key          # parked (off since 29.10.)
+        spec = models.PARKED_EXPAND[key]
         assert spec.describe and spec.prompt_tip == models.EXPAND_DESCRIBE_TIP, key
     for m in models.MODELS:
         if m.key not in ("krea2", "moss") and "outpaint" in m.modes:
@@ -100,7 +102,13 @@ def gui_checks():
 def main():
     model_checks()
     bridge_checks()
-    gui_checks()
+    for key, spec in models.PARKED_EXPAND.items():      # back for the window checks only
+        models.BY_KEY[key].modes["outpaint"] = spec
+    try:
+        gui_checks()
+    finally:
+        for key in models.PARKED_EXPAND:
+            models.BY_KEY[key].modes.pop("outpaint", None)
     print("ALL OK (expand describe)")
 
 
