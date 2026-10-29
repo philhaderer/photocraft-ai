@@ -286,7 +286,7 @@ def main():
             break
         time.sleep(0.02)
     assert app.refslots.items[0].description == "A red square on blue." and not app._ref_busy
-    assert app.lbl_refmsg["text"] == "<image2>: A red square on blue."
+    assert app.lbl_refdesc["text"] == "<image2>: A red square on blue." and app._ref_shown is app.refslots.items[0]   # spot XY
     # the description is written into the prompt field as its own line, and the field is sent as it is (nothing added twice)
     assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa\n<image2>: A red square on blue."
     assert app._request().params.prompt == "put it on the sofa\n<image2>: A red square on blue."
@@ -344,10 +344,21 @@ def main():
     assert describe(1, "A blue circle.") == [None] and app.refslots.items[1].description == "A blue circle."
     first = app.refslots.items[0].description
     assert describe(0, "SHOULD NOT RUN") == [] and app.refslots.items[0].description == first
-    assert app.lbl_refmsg["text"] == f"<image2>: {first}"
+    assert app.lbl_refdesc["text"] == f"<image2>: {first}"
     assert f"<image2>: {first}" in app.t_prompt.get("1.0", "end")          # its line is back in the prompt
     seeds = describe(0, "A red square, new words.")
     assert len(seeds) == 1 and isinstance(seeds[0], int) and app.refslots.items[0].description == "A red square, new words."
+    # a click (no drag) on a described picture shows its description in spot XY; the copy icon copies the one shown
+    ev = lambda x, y: type("E", (), {"x_root": x, "y_root": y, "widget": t.Widget()})()
+    app._refs_drag_start(ev(5, 5), 1)
+    app._refs_drag_drop(ev(5, 5))
+    assert app.lbl_refdesc["text"] == "<image3>: A blue circle.", app.lbl_refdesc["text"]
+    copied.clear()
+    app._refs_copy_shown()
+    assert copied == ["A blue circle."]
+    app.refslots.remove(1)                                            # its picture is gone: spot XY empties
+    app._refs_redraw()
+    assert app.lbl_refdesc["text"] == "" and app._ref_shown is None
     from pccomfy import workflows
     g = workflows.text_sampling(workflows.load_template(workflows.DESCRIBE_WORKFLOW), 42)
     tg = [n["inputs"] for n in g.values() if n["class_type"] == "TextGenerate"][0]
