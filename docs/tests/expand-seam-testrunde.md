@@ -50,3 +50,22 @@ zeigt die Tabelle je Modell und Variante und schreibt sie nach `ergebnis.md` im 
 - **Zweiter Rechner:** aus `data\expand-seam-test\<Zeit>\` die Dateien `key.json`, `bewertung.json` und `ergebnis.md` mitbringen (USB-Stick, Mail an dich selbst) und in den Chat ziehen oder in denselben Ordner auf dem Hauptrechner legen. Die Bilder selbst brauche ich nur, wenn wir uns einzelne ansehen wollen. Auf dem zweiten Rechner nichts committen oder hochladen.
 
 Danach entscheiden wir: eine Variante einbauen, oder Expand bei Krea 2 / MOSS abschalten.
+
+## Ergebnis (29.10., Hauptrechner)
+
+8 eigene Bilder des Users (Strand, Innenraum mit Tür, Küste mit Bergen, Flussufer unter einer Brücke, Innenräume, Lichtung, Platz mit Kolonnaden), 2 Ränder, 1 Seed, 128 Ergebnisse in 17 Minuten, blind bewertet (`data/expand-seam-test/20261029-161201/`):
+
+| Modell | Variante | gut | mittel | schlecht |
+|---|---|---|---|---|
+| Krea 2 | A wie heute | 0 | 0 | 16 |
+| Krea 2 | B breit | 1 | 1 | 14 |
+| Krea 2 | C breit + Seam-Korrektur | 1 | 0 | 15 |
+| Krea 2 | D C + Nachlauf | 0 | 1 | 15 |
+| MOSS | A wie heute | 1 | 2 | 13 |
+| MOSS | B breit | 3 | 2 | 11 |
+| MOSS | C breit + Seam-Korrektur | 3 | 2 | 11 |
+| MOSS | D C + Nachlauf | 3 | 2 | 11 |
+
+Krea 2: 2 von 64 gut, MOSS: 10 von 64 gut (meist Rand links + unten). Die Varianten unterscheiden sich kaum; breitere Überlappung, Seam-Korrektur und Nachlauf bringen nichts Messbares.
+
+**Entscheidung des Users (29.10.): Expand bei Krea 2 und MOSS abschalten** (`feat/expand-off-krea-moss`). Die Modi bleiben mit Tipp und Describe-Knopf in `models.PARKED_EXPAND`. Idee für später: das Krea 2 AnyPaint-LoRA (github.com/alexw5702-afk/krea2-anypaint, MIT; LoRA 229 MB, Krea 2 Community License), das mit Bild-Referenz über die ganze Leinwand arbeitet; nicht verfolgt (Entscheidung des Users).
