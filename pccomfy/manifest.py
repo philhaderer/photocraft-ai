@@ -113,6 +113,9 @@ _LIST = [
          _QWEN21 + "loras/qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors", "licence: Qwen research licence", size=913314512),
     File("Flux 2\\ultra_real_v4.safetensors", "lora", "https://civitai.com/api/download/models/2846977",
          "Civitai 'UltraReal - Moss, Krea2, Klein9b' by vizsumit, version KL9_V4 (Civitai may ask to log in)", size=165705592),
+    File("Flux 3\\flux-3-image-klein-outpaint.safetensors", "lora",
+         _HF + "ausboss/FLUX-3-Image-Klein-Outpaint-LoRA/resolve/main/flux-3-image-klein-outpaint.safetensors",
+         "Flux 3 Expand: ausboss' outpaint LoRA, FLUX Kommunity License", size=160697104),
     File("Moss\\lora_dmd2.safetensors", "lora", _HF + "lodestones/MOSS-Image-Base-8-steps-dmd/resolve/main/lora_dmd2.safetensors",
          "licence: Apache 2.0", size=1189176800),
     File("Moss\\lenovo_moss.safetensors", "lora", _HF + "Danrisi/lenovo_moss/resolve/main/lenovo_moss.safetensors",
@@ -147,6 +150,7 @@ TABS: dict[str, TabSpec] = {
         required=("flux3-image-klein-int8-convrot.safetensors", "qwen3vl_4b_int8_convrot.safetensors", _UPS),
         modes={
             "txt2img": ModeSpec(optional=(_UPSAMPLER,)),
+            "outpaint": ModeSpec(requires=("Flux 3\\flux-3-image-klein-outpaint.safetensors",)),
             "upscale": ModeSpec(requires=("seedvr2_3b_int8_convrot.safetensors", "seedvr2_ema_vae_fp16.safetensors"),
                                 nodes=_FLUX3_UP_NODES),
         }),

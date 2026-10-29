@@ -303,6 +303,18 @@ def outpaint_hint(keep: "imaging.Box", canvas: tuple[int, int]) -> str:
 SCENE_QUESTION = ("Describe only the setting and the background of this picture in one sentence: the place, the surfaces, "
                   "the style and the light. Do not mention the main subject (people, animals or the central object).")
 
+# Flux 3 Expand (flux3-klein-outpaint.json): the outpaint LoRA's own first sentence, the typed text after "Scene:"; the
+# margin is mid grey, the colour the LoRA was trained on (Pixaroma's "14. Flux 3 Klein - Outpaint")
+FLUX3_OUTPAINT_PROMPT = ("Outpaint the image: replace the solid gray areas with a seamless continuation of the scene, "
+                         "keeping the existing picture unchanged.")
+GREY_OUTPAINT = (128, 128, 128)
+
+
+def grey_outpaint(workflow: str | None) -> bool:
+    """The workflow wants a grey margin and the LoRA's sentence (Flux 3 Expand), not white and the hint."""
+    return bool(workflow) and Path(workflow).name.startswith("flux3-klein-outpaint")
+
+
 FIBO_OUTPAINT_PROMPT = ("Replace the white area on the {where} with a seamless continuation of the scene{text}. "
                         "Keep the existing picture unchanged.")
 
@@ -314,6 +326,8 @@ def outpaint_prompt(prompt: str, enhance: bool, keep: "imaging.Box", canvas: tup
     the same text, so a workflow without a text model (whose checkbox keeps its value) behaves the same.
     Fibo's workflows get FIBO_OUTPAINT_PROMPT instead, with the typed description inside the sentence."""
     prompt = prompt.strip()
+    if grey_outpaint(workflow):
+        return FLUX3_OUTPAINT_PROMPT + (f" Scene: {prompt}" if prompt else "")
     if workflow and Path(workflow).name.startswith("fibo"):
         text = prompt.rstrip(".!")
         return FIBO_OUTPAINT_PROMPT.format(where=_margin_sides(keep, canvas), text=f", {text}" if text else "")
@@ -527,7 +541,11 @@ class Bridge:
             progress(0.05, "Exporting the image from PhotoCraft", phase="prepare")
             src, mask = self._export(orig, tag, need_mask=has_sel)
             if keep is not None:
-                src = imaging.white_outside(src, keep) if editor else imaging.clear_outside(src, keep)
+                if editor:
+                    grey = any(grey_outpaint(w) for w in wf_paths)
+                    src = imaging.white_outside(src, keep, GREY_OUTPAINT if grey else (255, 255, 255))
+                else:
+                    src = imaging.clear_outside(src, keep)
                 # soft only towards the original, 0 along the original's edges where no canvas was added (MOSS / Krea 2 use
                 # it for the model and the layer mask; 28.10.: a band of ~24 px there was painted anew, darker with Krea 2)
                 mask = imaging.outpaint_mask(keep, (W, H), req.overlap)
