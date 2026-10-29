@@ -449,7 +449,7 @@ class RefSlotsMixin:
                 tag = rs.tag(k)
                 ttk.Label(cell, text=tag or f"image {k + 2}", style="Hint.TLabel", anchor="center").pack(fill="x")      # centred under the slot
                 if it.description:      # shown under the image; Describe also wrote it into the prompt field
-                    ttk.Label(cell, text=it.description, style="Muted.TLabel", wraplength=s, justify="left").pack(anchor="w")
+                    self._refs_description(cell, it.description)
                 busy = k in self._ref_busy
                 bar = [("eye", "Preview", "Shows this picture larger beside the plugin.",
                         lambda k=k: self._refs_preview(k), False),
@@ -480,6 +480,30 @@ class RefSlotsMixin:
             self._on_content_size()
         except Exception:
             pass
+
+    def _refs_description(self, cell, text: str):
+        """The description under a slot: looks like the muted label it was, but you can select it and copy it (Ctrl+C).
+        A read-only text field as wide as the slot and exactly as many lines high as the wrapped text needs."""
+        import tkinter as tk
+        from .gui_common import ACCENT, BG, MUTED, font
+        t = tk.Text(cell, width=1, height=1, wrap="word", bg=BG, fg=MUTED, font=font(9), relief="flat", bd=0,
+                    highlightthickness=0, padx=0, pady=0, cursor="xterm", selectbackground=ACCENT,
+                    selectforeground="#1b1b1b", inactiveselectbackground=ACCENT, takefocus=0)
+        t.insert("1.0", text)
+        t.configure(state="disabled")          # read-only; selecting and copying still work
+        t.pack(fill="x", anchor="w")
+        t.bind("<Button-1>", lambda e: t.focus_set(), add="+")     # a disabled field takes no focus by itself: Ctrl+C needs it
+
+        def fit(_e=None):
+            try:
+                n = t.count("1.0", "end-1c", "displaylines")
+                n = (n[0] if isinstance(n, tuple) else n) or 0
+                if int(t.cget("height")) != n + 1:
+                    t.configure(height=n + 1)
+            except (tk.TclError, TypeError, ValueError):
+                pass
+        t.bind("<Configure>", fit, add="+")
+        return t
 
     def _refs_visible(self) -> int:
         """How many slots are shown: the filled ones and exactly one empty slot ("Drop a picture or Ctrl+V") while the model
