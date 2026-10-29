@@ -1,187 +1,178 @@
-# PhotoCraft × ComfyUI bridge
+# PhotoCraft AI
 
-Generative Fill, Generative Expand (outpaint), image-to-image and text-to-image for
-[PhotoCraft](https://github.com/storytold/photocraft), computed locally by [ComfyUI](https://github.com/comfyanonymous/ComfyUI).
-Each result lands in your document as a **new layer with an editable soft layer mask**, the way Photoshop does it.
+AI functions for [PhotoCraft](https://github.com/storytold/photocraft) on Windows: Fill, Remove, Expand, Edit,
+Multi Image Edit, Upscale, Refine and Text to image. Everything is computed locally by
+[ComfyUI](https://github.com/comfyanonymous/ComfyUI) on your own graphics card. Each result lands in your document as a
+**new layer with an editable layer mask**.
 
-![Before / after: generative fill in PhotoCraft](docs/before-after.jpg)
+![Before / after: Fill Selection in PhotoCraft](docs/before-after.jpg)
 
-> Unofficial community project. It is not affiliated with ArtCraft / Storyteller. PhotoCraft is in early alpha
-> and so is this bridge.
+> Unofficial community project, not affiliated with PhotoCraft, ArtCraft or Storyteller. PhotoCraft is in early alpha
+> and so is this plugin. "PhotoCraft AI" is a working title.
+>
+> Based on [photocraft-comfyui-bridge](https://github.com/Peszemeszek/photocraft-comfyui-bridge) by Peszemeszek
+> (see [Based on](#based-on)).
 
-[Polska wersja README](README.pl.md)
+## What it does
 
-```
- PhotoCraft (--control 7878)          bridge (python -m pccomfy)                ComfyUI :8188
- ┌───────────────────────┐   JSON/TCP  ┌──────────────────────────┐  HTTP + WS  ┌─────────────┐
- │ selection + layers    │ ──────────► │ 1. copy, PNG of image+mask│ ──────────► │ inpaint /   │
- │                       │             │ 2. crop + scale           │             │ img2img /   │
- │ new layer with mask   │ ◄────────── │ 3. paste + layer mask     │ ◄────────── │ txt2img     │
- └───────────────────────┘             └──────────────────────────┘             └─────────────┘
-                 ▲     PNG files exchanged via ~/.cache/pccomfy/exchange     ▲
-```
+A small window sits next to PhotoCraft. You pick a **function** at the top, a **model** below it, type a prompt and
+press **Generate** (Ctrl+Enter). The plugin sends the picture (or the selection) to ComfyUI and puts the result back
+into PhotoCraft as a new layer in a group, with a soft layer mask where that makes sense.
 
-## Why a bridge and not a plugin
+| Function | What it does |
+|---|---|
+| **Fill Selection** | Select an area, type what should appear there. |
+| **Remove Selection** | Select an object (the whole object inside); it is removed and the background filled in. |
+| **Expand image** | Extend the canvas with the Crop tool, fill the new area white; the plugin paints it. |
+| **Edit whole image** | Changes the whole picture from your text ("make it night"). |
+| **Multi Image Edit** | Edits the picture with up to several reference images (drop, paste or add files into the slots). |
+| **Upscale (new file)** | Enlarges the picture or selection into a new document, up to 24 MP. |
+| **Refine (same size)** | Cleans up the picture or selection at the same size, as a new layer. |
+| **Text to image** | A new picture from text only, as a new layer. |
 
-PhotoCraft plug-ins are sandboxed WebAssembly modules (ABI v1). They have no network or file access and only see
-the pixels of one layer, so they can't talk to ComfyUI. PhotoCraft does have a **control channel**
-(`--control <port>`), a JSON-lines protocol that can run any of its ~900 commands. This bridge drives it from outside.
-See [Notes for PhotoCraft developers](#notes-for-photocraft-developers) for what would make a native version possible.
+Which model offers which function:
 
-## Features
+| | Flux 3 | Flux 2 | Qwen | Fibo | Krea 2 | MOSS |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| Fill Selection | | | ✓ | ✓ | | |
+| Remove Selection | ✓ | ✓ | ✓ | ✓ | | |
+| Expand image | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Edit whole image | ✓ | ✓ | ✓ | ✓ | | |
+| Multi Image Edit | ✓ | ✓ | ✓ | ✓ | | |
+| Upscale | ✓ | ✓ | | | | |
+| Refine | | ✓ | | ✓ | | |
+| Text to image | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-| Mode | What it does | Selection | Denoise |
-|---|---|---|---|
-| **Generative fill** | add, remove or replace something inside the selection | required | 1.0 = new content, 0.6–0.8 = rework what's there |
-| **Expand image** | grows the canvas by N px per side and paints the new area | created for you | 1.0 |
-| **Image → image** | reworks the whole image or the selected part | optional | 0.3–0.7 |
-| **Text → image** | generates from scratch in the selection or the whole canvas | optional | n/a |
+Models you don't have are greyed out. The tooltip of each function shows which models work best for it.
 
-- **Fooocus inpaint for SDXL** (same approach as Krita AI Diffusion). It is detected and used automatically when the
-  server has [comfyui-inpaint-nodes](https://github.com/Acly/comfyui-inpaint-nodes) and the Fooocus patch files.
-- **Soft layer mask**: the layer mask is the same grown and blurred mask the model was given, so results blend in with
-  no hard edge, and you can still paint on the mask. You can switch to a hard mask from the selection, or no mask.
-- **Variants**: N results become N layers. #1 is visible, the others are hidden underneath.
-- **Custom ComfyUI workflows**: export any workflow in API format, tag a few nodes with `pc:` titles, and it shows up
-  in the bridge (Flux Fill, Qwen-Image-Edit, ControlNet…).
-- Small always-on-top window plus a CLI (`python -m pccomfy run …`) for keyboard shortcuts and scripting.
-- Works with an existing Krita AI Diffusion ComfyUI install (same server, models and port).
+More in the window:
 
-## Install (Arch Linux; other distros need the equivalent packages)
+- **Variants**: several results become several layers in one group; the first is visible.
+- **Edge feather, Context, Mask density, Sharpen, Match colours** in the advanced settings, with a **Show feather**
+  preview of the soft edge in PhotoCraft.
+- **Undo / Redo** of a whole run, presets, and custom LoRAs per model.
+- **Gear window**: shows which model files are found, which are missing (with download link and size), and lets you
+  point a model at a file of your own ("Choose another file…").
 
-```bash
-sudo pacman -S --needed python-pillow python-numpy tk python-websocket-client
-git clone https://github.com/Peszemeszek/photocraft-comfyui-bridge.git ~/photocraft-comfyui-bridge
-chmod +x ~/photocraft-comfyui-bridge/photocraft-ai.sh
-```
+## Requirements
 
-`python-websocket-client` is optional and only gives a "step 12/25" progress bar. Python ≥ 3.11 is required.
-With pip instead: `pip install pillow numpy websocket-client`.
+| Part | Version |
+|---|---|
+| Windows | 10 or 11 |
+| Graphics card | NVIDIA with **16 GB** VRAM (the only size tested for this release) |
+| Python | 3.11 or newer, with "tcl/tk" ticked in the installer ([python.org](https://www.python.org/downloads/windows/)) |
+| PhotoCraft | 0.16 or 0.17 (portable). Mask density needs 0.17. |
+| ComfyUI | 0.42.0 or newer, running on `http://127.0.0.1:8188` |
+| [ComfyUI-AusBoss](https://github.com/ausboss/ComfyUI-AusBoss) | 2.13.0 or newer (only for Upscale and Refine) |
+| Models | the files of the models you want to use, see [Models](#models) |
 
-## ComfyUI
+All other nodes the workflows use are part of ComfyUI itself.
 
-Any ComfyUI server works. Point `[comfyui] url` in the config at it (default `http://127.0.0.1:8188`).
-If you use **Krita AI Diffusion**, its managed server already listens on 8188 while Krita is open, and the bridge uses
-its models, including the Fooocus inpaint patch.
+## Install
 
-## Run
+1. Download this repository: **Code › Download ZIP** and unpack it (e.g. to `C:\programs\photocraft-ai`), or
+   `git clone` it.
+2. Install **Python** (keep "tcl/tk and IDLE" and "Add python.exe to PATH" ticked).
+3. Double-click **`setup-windows.bat`** in the plugin folder. It creates `.venv`, installs Pillow, NumPy,
+   websocket-client and tkinterdnd2, and ends with "Setup done".
+4. Set up **ComfyUI**, install ComfyUI-AusBoss (ComfyUI-Manager) and put the model files into ComfyUI's model folders.
+   ComfyUI reads its model folders only at start, so restart it after adding files.
+5. Create the **desktop shortcut**: in the plugin folder, type `powershell` into Explorer's address bar, press Enter,
+   then run (with the path to your `photocraft.exe`):
 
-```bash
-~/photocraft-comfyui-bridge/photocraft-ai.sh
-```
+   ```
+   .venv\Scripts\python.exe -m pccomfy shortcut --photocraft "C:\programs\photocraft-0.17.0-windows-x64-portable\photocraft.exe"
+   ```
 
-This starts PhotoCraft with the control channel and opens the bridge window once PhotoCraft is listening. Under the hood:
+   If `setup-windows.bat` said it uses Python directly instead of the virtual environment, use the Python path it
+   wrote into `data\python.txt` instead of `.venv\Scripts\python.exe`.
+6. **First start**: ComfyUI is running, PhotoCraft is closed. Double-click **PhotoCraft AI** on the desktop.
+   PhotoCraft starts, and a few seconds later the plugin window appears. Open the gear window: red entries are model
+   files that are still missing.
 
-```bash
-photocraft --control 7878 \
-  --control-token-file ~/.config/pccomfy/photocraft.token \
-  --automation-read-root ~/.cache/pccomfy/exchange \
-  --automation-write-root ~/.cache/pccomfy/exchange
-```
+The shortcut starts PhotoCraft with its control channel (loopback only, token-protected, file access limited to
+`data\exchange`) and then the plugin, without a console window. `photocraft-ai.bat` does the same with a console;
+set the path to your `photocraft.exe` at the top of it first.
 
-The channel is loopback-only and token-protected. The automation roots confine its file access to the exchange folder.
-Environment options for the script: `PCC_PORT`, `PCC_NO_GUI=1`, `PHOTOCRAFT=/path/to/binary` (e.g. an AppImage).
+To update: download the new version (or `git pull`) and restart the plugin. Your settings stay in `data\`.
 
-If PhotoCraft is already running with `--control`:
+## Models
 
-```bash
-cd ~/photocraft-comfyui-bridge
-python -m pccomfy check   # tests both connections, lists checkpoints and Fooocus status
-python -m pccomfy         # the window
-```
+You only need the files for the models you want to use; the plugin enables what it finds. All direct download links,
+sizes, target folders and licences are in [docs/model-downloads.md](docs/model-downloads.md), and the gear window shows
+the same links for missing files.
 
-## Usage tips
+- Release 1 uses the **int8 ConvRot** files, which fit into 16 GB VRAM.
+- Some files are **gated**: log in to Hugging Face and accept the licence on the model page first, otherwise the
+  download answers "401".
+- If you keep models outside ComfyUI, set them up in ComfyUI's `extra_model_paths.yaml`.
 
-- Write the prompt as a description of **what should be inside the selection**, e.g. `head of a ginger tabby cat,
-  orange fur, photo`, not "replace the head with…". SD/SDXL don't follow instructions; for that, plug in an
-  instruction-edit model (Flux Kontext, Qwen-Image-Edit) as a custom workflow.
-- **Denoise 1.0** paints something entirely new that fills the whole selection. **0.6–0.8** keeps the shape, pose
-  and lighting of what's there and changes its look.
-- **Base res.**: SDXL/Flux around 1024, SD1.5 around 512–768. Small selections are upscaled (up to 2×) for detail,
-  large ones downscaled. Going higher than the model's native size gives duplicated objects.
-- **Context** controls how much of the surroundings the model sees. **Mask grow/blur** controls how far the result
-  reaches past the selection edge.
+## Using it
 
-## Custom workflows
+- **Fill Selection**: describe what should appear in the selection, e.g. "a wooden bench". Hide the layers of earlier
+  results before running again.
+- **Remove Selection**: select the whole object with a little margin. If the first try didn't work, remove it a second
+  time.
+- **Expand image**: make the canvas bigger with the Crop tool (Enter) and fill the new area white. An empty prompt often
+  works best. Expand large areas in small steps.
+- **Edit whole image** and **Multi Image Edit** change the whole picture; a selection is ignored. In Multi Image Edit,
+  name the reference images in your text by the tags shown on their slots.
+- **Upscale / Refine**: add a short description of your image in front of the default text.
+- Ctrl+Z / Ctrl+Y in PhotoCraft work as usual; the plugin's own Undo / Redo buttons undo a whole run.
 
-1. Build and test a workflow in the ComfyUI web UI.
-2. Give these nodes a title (right-click → Title):
-   `pc:image` (LoadImage for the crop), `pc:mask` (LoadImage for the mask, white = generate; follow with ImageToMask),
-   `pc:prompt` / `pc:negative` (text nodes), `pc:sampler` (gets seed/noise_seed and denoise),
-   `pc:latent` or `pc:size` (gets width/height/batch_size), `pc:output` (PreviewImage/SaveImage).
-3. Use **Workflow → Export (API)** to save it into `~/.config/pccomfy/workflows/`, then click **Refresh** in the bridge.
+## Known limitations
 
-The workflow's own model, steps, CFG and sampler are used as saved. Examples are in [`workflows/`](workflows):
-`sdxl-fooocus-inpaint.json` is the built-in Fooocus graph (drag it into ComfyUI to inspect it), and `flux-fill.json` is
-Flux.1 Fill (rename the model files to yours).
+- Only tested on Windows with a 16 GB NVIDIA card.
+- During a run, PhotoCraft briefly opens a temporary document, so tabs flicker. Don't switch documents or change the
+  selection while a run is going.
+- A run consists of several PhotoCraft steps (history entries).
+- CMYK, Lab and 16-bit documents go through 8-bit RGB.
 
-## CLI
+## Licences of the models
 
-```bash
-python -m pccomfy run inpaint -p "ginger tabby cat head" --variants 3
-python -m pccomfy run outpaint -p "mountains at sunset" --expand 0 0 512 0
-python -m pccomfy run img2img -p "watercolor" --denoise 0.45 -m juggernautXL_v9.safetensors
-python -m pccomfy run inpaint -w ~/.config/pccomfy/workflows/flux-fill.json -p "wooden table"
-```
+The plugin's code is MIT / Apache-2.0, but **the models have their own licences**, and some of them are
+**non-commercial only**: Fibo 2.0 (CC BY-NC 4.0) and the FLUX.2 Klein files. Others ask for credit (the Lenovo
+UltraReal LoRA for MOSS: Danrisi). Check [docs/model-downloads.md](docs/model-downloads.md) before you use results
+commercially.
 
-## Configuration
+## For developers
 
-All settings are optional. Copy [`config.example.toml`](config.example.toml) to `~/.config/pccomfy/config.toml`.
-The window remembers its last settings in `~/.config/pccomfy/state.json`.
+- **Your own workflows**: build and test a workflow in ComfyUI, export it in API format into `workflows\`, and give the
+  nodes the plugin should fill a title: `pc:image`, `pc:mask`, `pc:prompt`, `pc:negative`, `pc:sampler`, `pc:size` /
+  `pc:latent`, `pc:output` (more in [pccomfy/workflows.py](pccomfy/workflows.py)). It then shows up as a workflow of
+  your own.
+- **Command line**: `python -m pccomfy check` (tests both connections), `python -m pccomfy run <mode> -p "…"`
+  (one generation), `python -m pccomfy --help` for the rest.
+- **Tests**: `python tests/run_all.py` (stubbed Tk, fake PhotoCraft and fake ComfyUI; no GPU needed).
+- **Diagnostics**: `data\exchange\last-graph.json` (the last graph sent) and `data\exchange\runs.jsonl` (one line per
+  run).
+- **PhotoCraft's control channel**: which commands the plugin uses and what would make a native version easier:
+  [docs/photocraft-developer-notes.md](docs/photocraft-developer-notes.md).
 
-## Limitations
+## Based on
 
-- A temporary copy of the document (tab `pccomfy-…`) and the result PNGs are opened briefly, so tabs flicker, and the
-  result files can show up in *Open Recent*.
-- Don't switch documents or change the selection while a job is running.
-- Each step is its own history entry (Canvas Size, Paste…).
-- CMYK/Lab/16-bit documents go through 8-bit RGB PNG.
-
-## Tests
-
-```bash
-python tests/e2e_headless.py /path/to/photocraft-cli            # headless PhotoCraft + fake ComfyUI, all modes
-python tests/e2e_headless.py /path/to/photocraft --desktop      # same against the real desktop app (needs a display)
-python tests/gui_smoke.py /path/to/photocraft-cli shot.png       # opens the window, clicks Generate, takes a screenshot
-```
-
-`tests/fake_comfy.py` mimics the ComfyUI endpoints and inverts the image. The generated graphs were also validated
-against a real ComfyUI 0.41 with comfyui-inpaint-nodes; day-to-day use is with SDXL checkpoints (RealVisXL) on an RTX 4060 Ti 16 GB.
-
-## Notes for PhotoCraft developers
-
-The bridge uses only documented control-channel methods: `ui.inspect` (session), `document.inspect`,
-`image.duplicate {mergedOnly}`, `app.save` / `app.open`, `layer.new.layer`, `edit.fill`, `select.*` (all, deselect,
-rect, reselect), `layer.select`, `layer.flattenImage`, `file.close`, `document.activate`, `edit.copy`,
-`edit.paste {center, target:"mask"}`, `edit.pasteSpecial.pasteInto`, `layer.layerMask.revealAll`,
-`layer.renameLayer`, `layer.hideLayers` and `image.canvasSize`. It works, but most of that is a workaround for
-moving pixels in and out. What would make this (or a proper plug-in) much cleaner:
-
-1. **Pixel I/O over the control channel.** For example `document.renderRegion {rect, scope: composite|layer|selection}`
-   that returns a full-resolution base64 PNG (`doc.render` exists, but only headless and capped at 2048 px), plus
-   `layer.newFromImage {data, offset, mask?}`. That would remove the temp document, the file round-trips, the tab
-   flicker and the *Open Recent* side effects.
-2. **Parity between desktop and headless control.** `session.list` and `doc.place` exist in `photocraft-cli serve`
-   but not in the desktop channel.
-3. **Plug-in ABI v2 with a permissioned network capability** (e.g. localhost only, user-approved) and panels. With that,
-   this could be a real Filter › Generative Fill… plug-in with a prompt field.
-4. **Native AI (gap G15).** A "bring your own ComfyUI" backend avoids model licensing questions. The plan for a native
-   version is a `crates/ai` client (HTTP + WebSocket), `edit.generativeFill` / `edit.generativeExpand` /
-   `image.generate` commands run as background jobs with one history step, and a contextual prompt bar under the
-   selection. Happy to help with a PR if that direction is welcome.
-
-Also: at `5f65579` (2026-10-16), `crates/engine/src/presets/mod.rs` failed to compile (`Persisted` missing the
-`export_presets` field). A one-line fix: `export_presets: take(&mut m, "export_presets"),`.
+This project started as a fork of [photocraft-comfyui-bridge](https://github.com/Peszemeszek/photocraft-comfyui-bridge)
+by Peszemeszek, which drives PhotoCraft from outside over its control channel (`--control`), because PhotoCraft
+plug-ins are sandboxed WebAssembly modules without network access. The upstream version targets Linux and SDXL
+(with the Fooocus inpaint patch); its README is still available in Polish as [README.pl.md](README.pl.md) and
+describes that version, not this one.
 
 ## Credits
 
+- [photocraft-comfyui-bridge](https://github.com/Peszemeszek/photocraft-comfyui-bridge) by Peszemeszek, the base of
+  this project
 - [PhotoCraft](https://github.com/storytold/photocraft) by the ArtCraft team
-- [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
+- [ComfyUI](https://github.com/comfyanonymous/ComfyUI) and the Comfy-Org model repositories
+- [ComfyUI-AusBoss](https://github.com/ausboss/ComfyUI-AusBoss) (Upscale and Refine)
+- The model authors: Black Forest Labs (FLUX.2 / FLUX.3 Klein), Qwen (Qwen-Image 2.1), Bria (Fibo 2.0), Krea (Krea 2),
+  MOSS-Image, ByteDance (SeedVR2), obsxrver (FLUX.2 Klein int8 ConvRot), lodestones (MOSS DMD2 LoRA),
+  Danrisi (Lenovo UltraReal LoRA), vizsumit (UltraReal LoRA for Flux 2)
+- [Lucide](https://lucide.dev) (ISC): the window's icons follow its shapes and style
+- [Inter](https://rsms.me/inter/) font by Rasmus Andersson (SIL Open Font License 1.1, see `OFL-Inter.txt`)
 - [comfyui-inpaint-nodes](https://github.com/Acly/comfyui-inpaint-nodes) and
-  [Krita AI Diffusion](https://github.com/Acly/krita-ai-diffusion) by Acly, which inspired the inpaint pipeline
-- [Fooocus](https://github.com/lllyasviel/Fooocus) inpaint patch by lllyasviel
+  [Krita AI Diffusion](https://github.com/Acly/krita-ai-diffusion) by Acly, which inspired the upstream inpaint pipeline
 
 ## License
 
-Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. This is the same as PhotoCraft,
-so code can move upstream freely.
+Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option, like PhotoCraft and the
+upstream bridge. The models are not part of this repository and have their own licences (see above).
