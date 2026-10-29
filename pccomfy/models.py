@@ -186,6 +186,9 @@ PARKED_EXPAND = {
     "moss": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "soft", "match": 0.5},
                  prompt_tip=EXPAND_DESCRIBE_TIP, describe=True),
 }
+# their graph files stay in the workflows folder but are not offered in the Workflow list: picked there they counted as a
+# workflow of your own ("Image -> image" appeared, user 29.10.)
+PARKED_WORKFLOWS = {m.workflow for m in PARKED_EXPAND.values()}
 
 FIBO = Model(
     "fibo", "Fibo 2.0 Edit",

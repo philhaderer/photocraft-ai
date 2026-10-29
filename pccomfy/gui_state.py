@@ -49,10 +49,13 @@ class StateMixin:
             ok = info["fooocus"] is not None
             self.cb_fooocus.configure(state="normal" if ok else "disabled",
                                       text="Fooocus inpaint (SDXL, as in Krita AI Diffusion)" + ("" if ok else " – not on server"))
-        self.templates = list_templates(self.workflows_dir)
+        self.templates = [t for t in list_templates(self.workflows_dir) if t.name not in models.PARKED_WORKFLOWS]
         self.cb_workflow["values"] = [BUILTIN] + [t.name for t in self.templates]
         if self.v_workflow.get() not in self.cb_workflow["values"]:
-            self.v_workflow.set(BUILTIN)
+            # gone (or parked): the chosen model's own workflow for this function, so the model stays
+            m = self._model()
+            spec = m.modes.get(self.v_mode.get()) if m else None
+            self.v_workflow.set(spec.workflow if spec and spec.workflow in self.cb_workflow["values"] else BUILTIN)
         self._on_workflow()
         self._sync_model()
         if not self.v_model.get() and self.v_workflow.get() == BUILTIN:
