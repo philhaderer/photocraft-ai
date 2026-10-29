@@ -58,6 +58,17 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
    - Slot-Vorschau: **gebaut** (`feat/slot-eye-preview`): Auge als erstes Symbol in der Slot-Leiste (Slot ca. 25 px höher), Vorschau neben dem Plugin oben bündig mit dem Slot, nie tiefer als das Plugin; Klick aufs Bild geht weiter.
    - Context in Prozent: **gebaut** (`feat/context-percent`): „40 %“, Eintippen in Prozent, Pfeiltasten 5 %.
 
+10b. **Nächste Runde (Liste des Users 29.10. abends, für den neuen Chat; Entscheidungen schon gefallen):** je Punkt ein Branch.
+   - **Checkbox im PhotoCraft-Look, aber orange statt blau:** Vorlage `docs/design/photocraft-checkbox.png` (oben leer: abgerundetes Quadrat, hellgrauer Rand, dunkle Fläche; unten angehakt: gefüllt mit weißem Haken, bei PhotoCraft blau). Bei uns angehakt = Orange `ACCENT` mit weißem Haken (Hakenfarbe weiß wie in PhotoCraft; im Zweifel den User fragen). Als Bild-Indikator (Pillow, geglättet wie der Slider) für alle `TCheckbutton`, gesperrt grau.
+   - **Bild aus einem Slot in die Prompt-Box ziehen** fügt das Bild-Tag ein, **dort, wo man loslässt** (Leerzeichen davor, wenn nötig; während des Ziehens zeigt der Text-Cursor die Stelle). Ein Klick aufs Slot-Bild öffnet die Vorschau **nicht mehr**, nur noch das Auge.
+   - **Slot-Symbole auf 80 %** der heutigen Größe (`RefSlotsMixin.ICON_PX` 24 → ca. 19; Tests in `test_refslots_gui.py` prüfen 24/30).
+   - **Beschreibung unter dem Slot markierbar** (Text auswählen und mit Strg+C kopieren), z. B. als schreibgeschütztes `tk.Text` statt Label, Höhe nach Zeilen.
+   - **Pfeile der Zahlenfelder 50 % größer** (Seed und alle Spinboxen: `SPIN_PX` 14 → 21 in gui_theme.py).
+   - **Seed in die Advanced settings** neben Steps und CFG (heute Zeile `sf` unter dem Negative prompt, gui.py ca. Zeile 374–395).
+   - **Variants an den Generate-Knopf** (Entscheidung des Users: „Teil von Generate“): ein schmaler oranger Knopf „×2 ▾“ hängt rechts direkt an Generate, wie ein geteilter Knopf; Klick öffnet ein kleines Menü 1 bis 8; bei 1 nur „▾“. `v_variants` bleibt (Presets, Request, State).
+   - **Klick auf das Tag unter einem Multi-Image-Edit-Slot** hängt das Tag ans Ende des Prompt-Felds, mit einem Leerzeichen davor.
+   - **Grafischer Header + Minimieren** (Entscheidung des Users statt Knopf oder Doppelklick): über den 8 Funktions-Buttons ein Header-Bereich, etwa so hoch wie ein Funktions-Button, vorerst **leer** (der User liefert später ein PNG oder SVG); rechts daneben der Minimieren-Knopf. Minimieren lässt nur die Titelleiste stehen (L3 „hide/show“); wie man wieder aufklappt, mit dem User klären (Vorschlag: der Header bleibt als schmale Leiste mit dem Knopf sichtbar).
+
 **L3 Fenster-Politur**
 11. Hide/Show (Einklappen zur Titelleiste), Rechtsklick-Menü auf Tabs (Favorit, ausblenden, Workflow-JSON speichern), „Copy canvas to clipboard“, alten Knopf „Insert reference image“ entfernen, falls noch sichtbar.
 
