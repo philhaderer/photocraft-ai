@@ -164,8 +164,12 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
             rb = ttk.Radiobutton(f_md, text=m.label, value=m.key, variable=self.v_model, style="Chip.Toolbutton",
                                  command=self._on_model)
             rb.grid(row=i // cols, column=i % cols, sticky="ew", padx=2, pady=2)
+            rb.bind("<Button-3>", lambda e, k=m.key: self._chip_menu(k, e), add="+")    # favourite, hide (gui_modes.py)
             self.tt_tabs[m.key] = Tooltip(rb, m.tip)
             self.rb_tabs[m.key] = rb
+        self.m_chip = tk.Menu(self.root, tearoff=0, bg=PANEL, fg=FG, activebackground=ACCENT,
+                              activeforeground="#1b1b1b", selectcolor=FG, bd=0, font=font(10))
+        self.v_chip_fav = tk.BooleanVar(value=False)
 
         # everything under the tabs: hidden while no model is chosen (ui_settings.py). It sits in a Canvas, so it can scroll
         # with a thin bar when the window would be taller than the screen (Advanced open, many slots): _fit_height decides.

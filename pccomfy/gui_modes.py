@@ -85,12 +85,15 @@ class ModeMixin:
         model that cannot do the chosen function is greyed out in its place (_update_model_chips)."""
         m = self._model()
         shown = []
+        hidden = cfgmod.hidden_tabs()
         for key, _label in MODE_LABELS:
             rb = self.rb_modes[key]
             if key == "img2img" and not self._custom_workflow():
                 rb.grid_remove()           # no model uses it
                 continue
-            rb.configure(state="normal")
+            # greyed out when every model that can do it is hidden (right-click menu, gear window)
+            offered = self._custom_workflow() or any(key in x.modes and x.key not in hidden for x in models.MODELS)
+            rb.configure(state="normal" if offered else "disabled")
             self.tt_modes[key].text = models.function_tip(key, MODE_TIPS[key])
             shown.append(key)
         for i, key in enumerate(shown):
@@ -98,21 +101,72 @@ class ModeMixin:
         self._update_model_chips()
 
     def _update_model_chips(self):
+        """A hidden model (right-click menu, gear window) leaves the row; the others close up, three per row."""
         mode = self.v_mode.get()
+        hidden = cfgmod.hidden_tabs()
+        i = 0
         for m in models.MODELS:
             rb = self.rb_tabs.get(m.key)
-            if rb is not None:
-                rb.configure(state="normal" if (mode in m.modes or self._custom_workflow()) else "disabled")
+            if rb is None:
+                continue
+            if m.key in hidden:
+                rb.grid_remove()
+                continue
+            rb.grid(row=i // 3, column=i % 3, sticky="ew", padx=2, pady=2)
+            i += 1
+            rb.configure(state="normal" if (mode in m.modes or self._custom_workflow()) else "disabled")
+
+    def _chip_menu(self, key: str, event):
+        """Right-click on a model chip (L3, user 29.10.): this model as the favourite of the chosen function (a tick in the
+        menu, no mark on the chip), or hide the model (it comes back in the gear window, tab "Models")."""
+        m = models.BY_KEY.get(key)
+        if m is None:
+            return
+        mode = self.v_mode.get()
+        menu = self.m_chip
+        menu.delete(0, "end")
+        self.v_chip_fav.set(cfgmod.favorites().get(mode) == key)
+        menu.add_checkbutton(label=f"Favourite for {dict(MODE_LABELS).get(mode, mode)}", variable=self.v_chip_fav,
+                             state="normal" if mode in m.modes else "disabled",
+                             command=lambda: cfgmod.set_favorite(mode, key if self.v_chip_fav.get() else None))
+        menu.add_command(label="Hide this model", command=lambda: self._set_model_hidden(key, True))
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            try:
+                menu.grab_release()
+            except Exception:
+                pass
+
+    def _set_model_hidden(self, key: str, hidden: bool):
+        """Hide or show a model chip. Hiding the chosen model chooses another one for the function (_model_for_mode), else
+        the first model still shown; with every model hidden, none is chosen."""
+        cfgmod.set_tab_hidden(key, hidden)
+        if hidden and self.v_model.get() == key:
+            shown = [m.key for m in models.MODELS if m.key not in cfgmod.hidden_tabs()]
+            new = self._model_for_mode(self.v_mode.get()) or (shown[0] if shown else "")
+            self.v_model.set(new)
+            if new:
+                self._on_model()
+            else:
+                self.v_workflow.set(BUILTIN)
+                if hasattr(self, "_apply_start_state"):
+                    self._apply_start_state()
+        self._update_mode_radios()
+        self._fit_height()
 
     def _model_for_mode(self, mode: str) -> str:
-        """The model a function opens with when the chosen one cannot do it: the one last used for it, else the first in
-        the fixed order (Easy Mode will choose the best one later). A model whose files are missing comes last."""
-        usable = [m.key for m in models.MODELS if mode in m.modes]
+        """The model a function opens with when the chosen one cannot do it: the favourite of the function (right-click
+        menu), else the one last used for it, else the first in the fixed order (Easy Mode will choose the best one later).
+        Hidden models are left out; a model whose files are missing comes last."""
+        hidden = cfgmod.hidden_tabs()
+        usable = [m.key for m in models.MODELS if mode in m.modes and m.key not in hidden]
         if not usable:
             return ""
         last = self.__dict__.setdefault("_mode_model", dict(self.state.get("model_by_mode") or {})).get(mode)
+        fav = cfgmod.favorites().get(mode)
         ok = getattr(self, "_model_usable", lambda key, mode: True)
-        for key in ([last] if last in usable else []) + usable:
+        for key in [k for k in (fav, last) if k in usable] + usable:
             if ok(key, mode):
                 return key
         return usable[0]
