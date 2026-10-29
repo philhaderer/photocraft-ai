@@ -118,6 +118,21 @@ def main():
     assert cfgmod.hidden_tabs() == set() and len(chips(app)) == len(models.MODELS)
     assert app.rb_modes["inpaint"].cget("state") == "normal"
 
+    # the gear window, tab "Models": one tick per model, all ticked after installing; unticking hides, ticking shows
+    app._fill_text = lambda *a: None                      # (the stub Text has no tags)
+    app.open_settings()
+    assert list(app._shown_vars) == [m.key for m in models.MODELS] and all(v.get() for v in app._shown_vars.values())
+    app._shown_vars["krea2"].set(False)
+    app._set_model_hidden("krea2", not app._shown_vars["krea2"].get())     # what the tick's command does
+    assert cfgmod.hidden_tabs() == {"krea2"} and "krea2" not in chips(app)
+    app._set_model_hidden("moss", True)                   # the right-click menu: the gear window follows
+    assert app._shown_vars["moss"].get() is False
+    app._shown_vars["krea2"].set(True)
+    app._set_model_hidden("krea2", False)
+    app._set_model_hidden("moss", False)
+    assert cfgmod.hidden_tabs() == set() and all(v.get() for v in app._shown_vars.values())
+    app._settings_close()
+
     # every model hidden: none is chosen
     for m in models.MODELS:
         app._set_model_hidden(m.key, True)

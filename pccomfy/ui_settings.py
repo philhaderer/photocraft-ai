@@ -118,6 +118,9 @@ class SettingsMixin:
 
     def _update_tabs(self):
         tts = getattr(self, "tt_tabs", {})
+        hidden = cfgmod.hidden_tabs()
+        for key, var in (getattr(self, "_shown_vars", None) or {}).items():    # the gear window follows the right-click menu
+            var.set(key not in hidden)
         for m in models.MODELS:
             rb = self.rb_tabs.get(m.key)
             if rb is None:
@@ -411,6 +414,21 @@ class SettingsMixin:
         nb.add(tab_models, text="Models")
         nb.add(tab_credits, text="Credits")
         self.nb_settings = nb
+
+        # which models the plugin shows (user 29.10.): after installing, all are shown; untick to hide one (the right-click
+        # menu of a chip hides too, only here a model comes back)
+        shown = ttk.Frame(tab_models)
+        shown.pack(fill="x", side="top", pady=(0, 6))
+        ttk.Label(shown, text="Shown in the plugin", style="Muted.TLabel").grid(row=0, column=0, columnspan=3, sticky="w")
+        hidden = cfgmod.hidden_tabs()
+        self._shown_vars = {}
+        for i, m in enumerate(models.MODELS):
+            var = tk.BooleanVar(value=m.key not in hidden)
+            cb = ttk.Checkbutton(shown, text=models.SHORT[m.key], variable=var,
+                                 command=lambda k=m.key, v=var: self._set_model_hidden(k, not v.get()))
+            cb.grid(row=1 + i // 3, column=i % 3, sticky="w", padx=(0, 16), pady=2)
+            Tooltip(cb, "Untick to hide this model in the plugin, tick to show it again.")
+            self._shown_vars[m.key] = var
 
         # another file for an expected one: nothing changes until "Relink"; Undo and Reset go back
         link = ttk.Frame(tab_models)
