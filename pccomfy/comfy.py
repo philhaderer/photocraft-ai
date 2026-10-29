@@ -151,6 +151,14 @@ class ComfyUI:
             return heads[0], patches[0]  # sorted descending: newest patch (v26 > v25) first
         return None
 
+    def _folder(self, folder: str) -> list[str]:
+        """The files in one of ComfyUI's model folders (GET /models/<folder>); [] when it cannot be read."""
+        try:
+            j = self._json("/models/" + urllib.parse.quote(folder))
+        except (ComfyError, ValueError):
+            return []
+        return [str(x) for x in j] if isinstance(j, list) else []
+
     def inventory_raw(self) -> dict:
         """Model files per loader kind (unet, clip, vae, lora) and, when readable, the names of all node classes
         ("nodes", one /object_info call; None when that failed). Raises ComfyError when the server cannot be reached,
@@ -161,6 +169,7 @@ class ComfyUI:
             "clip": self._choices("CLIPLoader", "clip_name"),
             "vae": self._choices("VAELoader", "vae_name"),
             "lora": self._choices("LoraLoaderModelOnly", "lora_name"),
+            "preview": self._folder("vae_approx"),      # the live preview decoders (TAESD) have no loader node
         }
         try:
             out["nodes"] = set((self._json("/object_info") or {}).keys())

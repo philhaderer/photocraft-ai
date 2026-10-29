@@ -16,7 +16,7 @@ from pathlib import Path
 
 from . import manifest, models
 
-LIST_KINDS = tuple(manifest.KINDS)       # unet, clip, vae, lora
+LIST_KINDS = tuple(manifest.KINDS)       # unet, clip, vae, lora, preview
 
 
 def norm(name: str) -> str:
@@ -225,7 +225,8 @@ def load_workflow(path: str | Path) -> dict:
 
 _ABS = re.compile(r"^([A-Za-z]:[\\/]|[\\/]|~)")
 # yaml key -> the loader kind its folders hold
-YAML_KINDS = {"diffusion_models": "unet", "unet": "unet", "text_encoders": "clip", "clip": "clip", "vae": "vae", "loras": "lora"}
+YAML_KINDS = {"diffusion_models": "unet", "unet": "unet", "text_encoders": "clip", "clip": "clip", "vae": "vae", "loras": "lora",
+              "vae_approx": "preview"}
 
 
 def _unquote(v: str) -> str:

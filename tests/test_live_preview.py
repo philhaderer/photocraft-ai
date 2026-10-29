@@ -15,7 +15,7 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_reference_mode as T  # noqa: E402
-from pccomfy import comfy, workflows  # noqa: E402
+from pccomfy import comfy, inventory, manifest, workflows  # noqa: E402
 from pccomfy.bridge import Request  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -123,7 +123,21 @@ def gui_checks():
     app._minimized = False
 
 
+def manifest_checks():
+    """The TAESD files are optional and linked in the gear window (user 29.10.: default coarse colours, the files to test)."""
+    want = {"flux3": "taef2_decoder.pth", "flux2": "taef2_decoder.pth", "fibo": "taef2_decoder.pth", "moss": "taef2_decoder.pth",
+            "qwen": "taeqi2_1_decoder.pth", "krea2": "lighttaew2_1.safetensors"}
+    for key, name in want.items():
+        assert name in manifest.TABS[key].optional and name not in manifest.tab_required(key), key
+        f = manifest.FILES[name]
+        assert f.kind == "preview" and f.target == r"models\vae_approx" and f.url.startswith("https://") and f.size
+    inv = inventory.Inventory({"preview": ["taef2_decoder.safetensors"]})
+    assert inv.has("taef2_decoder.pth") and not inv.has("taeqi2_1_decoder.pth")        # either file format counts
+    assert "taeqi2_1_decoder.pth" in [f.name for f in inv.missing(manifest.TABS["qwen"].optional)]   # a note, never a block
+
+
 def main():
+    manifest_checks()
     parse_checks()
     wait_checks()
     bridge_checks()

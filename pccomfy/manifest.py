@@ -22,8 +22,9 @@ KINDS = {
     "clip": ("CLIPLoader", "clip_name", "text_encoders"),
     "vae": ("VAELoader", "vae_name", "vae"),
     "lora": ("LoraLoaderModelOnly", "lora_name", "loras"),
+    "preview": ("", "", "vae_approx"),       # live preview decoders (TAESD): no loader node, ComfyUI lists /models/vae_approx
 }
-KIND_LABEL = {"unet": "Diffusion model", "clip": "Text encoder", "vae": "VAE", "lora": "LoRA"}
+KIND_LABEL = {"unet": "Diffusion model", "clip": "Text encoder", "vae": "VAE", "lora": "LoRA", "preview": "Preview decoder"}
 
 
 @dataclass(frozen=True)
@@ -121,6 +122,17 @@ _LIST = [
     File("Moss\\lenovo_moss.safetensors", "lora", _HF + "Danrisi/lenovo_moss/resolve/main/lenovo_moss.safetensors",
          "Lenovo UltraReal by Danrisi (also on Civitai, model 1662740)", size=64527960),
 ]
+_TAESD = "https://github.com/madebyollin/taesd/raw/main/"
+_LIVE = "optional: sharper live preview (without it ComfyUI shows coarse colours); "
+_LIST += [
+    # live preview decoders (T3a, user 29.10.: optional, linked here; whether they are better is tested live)
+    File("taef2_decoder.pth", "preview", _TAESD + "taef2_decoder.pth", _LIVE + "licence: MIT (madebyollin/taesd)",
+         aliases=("taef2_decoder.safetensors",), size=2580000),
+    File("taeqi2_1_decoder.pth", "preview", _TAESD + "taeqi2_1_decoder.pth", _LIVE + "licence: MIT (madebyollin/taesd)",
+         aliases=("taeqi2_1_decoder.safetensors",), size=14600000),
+    File("lighttaew2_1.safetensors", "preview", _HF + "lightx2v/Autoencoders/resolve/main/lighttaew2_1.safetensors",
+         _LIVE + "licence: Apache 2.0 (lightx2v/Autoencoders)", aliases=("lighttaew2_1.pth",), size=45300000),
+]
 FILES: dict[str, File] = {f.name: f for f in _LIST}
 
 
@@ -144,6 +156,7 @@ _FLUX3_UP_NODES = ("AUSBOSS_NODES_TiledUpscale", "AUSBOSS_NODES_TiledUpscaleStit
                    "SeedVR2Preprocess", "SeedVR2Conditioning", "SeedVR2PostProcessing")
 _ULTRA = ("Flux 2\\ultra_real_v4.safetensors",)
 _UPSAMPLER = "qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors"
+_TAEF2 = "taef2_decoder.pth"            # live preview of the Flux 2 latent: Flux 2, Flux 3, Fibo, MOSS
 
 TABS: dict[str, TabSpec] = {
     "flux3": TabSpec(
@@ -153,14 +166,16 @@ TABS: dict[str, TabSpec] = {
             "outpaint": ModeSpec(requires=("Flux 3\\flux-3-image-klein-outpaint.safetensors",)),
             "upscale": ModeSpec(requires=("seedvr2_3b_int8_convrot.safetensors", "seedvr2_ema_vae_fp16.safetensors"),
                                 nodes=_FLUX3_UP_NODES),
-        }),
+        },
+        optional=(_TAEF2,)),
     "flux2": TabSpec(
         required=("flux-2-klein-9b_int8_convrot.safetensors", "qwen_3_8b_fp8mixed.safetensors", _UPS),
         modes={
             "txt2img": ModeSpec(optional=(_UPSAMPLER,)),
             "upscale": ModeSpec(requires=_ULTRA),
             "refine": ModeSpec(requires=_ULTRA),
-        }),
+        },
+        optional=(_TAEF2,)),
     "qwen": TabSpec(
         required=("qwen_image_2.1_int8_convrot.safetensors", "qwen_image_2.1_vae_bf16.safetensors"),
         modes={
@@ -172,15 +187,16 @@ TABS: dict[str, TabSpec] = {
             "multi_edit": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),      # runs the edit graph
             "remove": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),
         },
-        optional=("qwen\\qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors",)),
+        optional=("qwen\\qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors", "taeqi2_1_decoder.pth")),
     "fibo": TabSpec(
         required=("fibo2_edit_turbo_int8_convrot.safetensors", "qwen3vl_4b_int8_convrot.safetensors", _UPS),
-        optional=("qwen3.5_9b_int8_convrot.safetensors",)),      # the native VGL prompt writer (LLM prompt enhancement)
+        optional=("qwen3.5_9b_int8_convrot.safetensors", _TAEF2)),      # the native VGL prompt writer (LLM prompt enhancement)
     "krea2": TabSpec(
-        required=("krea2_turbo_int8_convrot.safetensors", "qwen3vl_4b_fp8_scaled.safetensors", "qwen_image_vae.safetensors")),
+        required=("krea2_turbo_int8_convrot.safetensors", "qwen3vl_4b_fp8_scaled.safetensors", "qwen_image_vae.safetensors"),
+        optional=("lighttaew2_1.safetensors",)),          # live preview of the Wan 2.1 latent
     "moss": TabSpec(
         required=("moss_image_sft_int8_convrot.safetensors", "qwen3.5_9b_w4a8_gptq.safetensors", "flux2-vae_small.safetensors"),
-        optional=("Moss\\lora_dmd2.safetensors", "Moss\\lenovo_moss.safetensors")),
+        optional=("Moss\\lora_dmd2.safetensors", "Moss\\lenovo_moss.safetensors", _TAEF2)),
 }
 
 
