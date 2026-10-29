@@ -13,7 +13,14 @@ gui, cfgmod = t.gui, t.cfgmod
 
 
 def main():
-    app = gui.App(cfgmod.load())
+    binds = []
+    t.Widget.bind = lambda self, seq, fn=None, add=None: binds.append((self, seq, fn))
+    try:
+        app = gui.App(cfgmod.load())
+    finally:
+        del t.Widget.bind
+    dbl = [fn for w, seq, fn in binds if seq == "<Double-Button-1>" and w in (app.f_header, app.f_logo)]
+    assert len(dbl) == 2, dbl                            # a double click on the header (or its empty logo) toggles too
     shown = {}
     parts = {"tabs": app.f_tabs, "body": app.f_scrollbox, "status": app.f_status, "foot": app.f_foot}
     for name, w in parts.items():
@@ -30,6 +37,10 @@ def main():
     app.toggle_minimize()
     assert not app._minimized and all(shown.values()), shown
     assert app.tt_min.text.startswith("Minimise")
+    dbl[0](None)                                         # double click: minimised, again: back
+    assert app._minimized and not any(shown.values()), shown
+    dbl[1](None)
+    assert not app._minimized and all(shown.values()), shown
     print("test_header_minimize: ok")
 
 

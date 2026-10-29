@@ -138,6 +138,8 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.b_min = ttk.Button(self.f_header, image=self._icon("minimize"), style="Link.TButton", command=self.toggle_minimize)
         self.b_min.pack(side="right")
         self.tt_min = Tooltip(self.b_min, "Minimise: only this header stays. Click again to show the plugin.")
+        for w in (self.f_header, self.f_logo):      # a double click on the header does the same (user 29.10., option C)
+            w.bind("<Double-Button-1>", lambda e: self.toggle_minimize(), add="+")
         self.f_tabs = ttk.Frame(r)
         self.f_tabs.pack(fill="x", padx=10, pady=(8, 2))
         f_fn = self.f_modes = ttk.Frame(self.f_tabs)
