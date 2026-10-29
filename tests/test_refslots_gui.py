@@ -275,7 +275,7 @@ def main():
     assert not app.refslots.items[0].cut_out
 
     # the describe button: Qwen 3.5 9B's text lands in the slot and, on request, in the prompt (named like the model names the image)
-    app.bridge.describe_image = lambda im: "A red square on blue."
+    app.bridge.describe_image = lambda im, seed=None: "A red square on blue."
     app.t_prompt.delete("1.0", "end")
     app.t_prompt.insert("1.0", "put it on the sofa")
     app._refs_describe(0)
@@ -291,7 +291,7 @@ def main():
     assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa\n<image2>: A red square on blue."
     assert app._request().params.prompt == "put it on the sofa\n<image2>: A red square on blue."
     # describing again replaces that line instead of adding a second one
-    app.bridge.describe_image = lambda im: "A red square on green."
+    app.bridge.describe_image = lambda im, seed=None: "A red square on green."
     app._refs_describe(0)
     for _ in range(100):
         while pending:
@@ -303,7 +303,7 @@ def main():
     # a line changed by hand stays as it is; the window says so
     app.t_prompt.delete("1.0", "end")
     app.t_prompt.insert("1.0", "put it on the sofa\n<image2>: my red square")
-    app.bridge.describe_image = lambda im: "A red square on grey."
+    app.bridge.describe_image = lambda im, seed=None: "A red square on grey."
     app._refs_describe(0)
     for _ in range(100):
         while pending:
@@ -314,7 +314,7 @@ def main():
     assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa\n<image2>: my red square"
     assert "kept" in app.lbl_refmsg["text"]
     assert not hasattr(app, "b_refuse")
-    app.bridge.describe_image = lambda im: (_ for _ in ()).throw(RuntimeError("ComfyUI is not running"))
+    app.bridge.describe_image = lambda im, seed=None: (_ for _ in ()).throw(RuntimeError("ComfyUI is not running"))
     app._refs_describe(0)
     for _ in range(100):
         while pending:
@@ -323,6 +323,35 @@ def main():
             break
         time.sleep(0.02)
     assert app.lbl_refmsg["text"] == "Describe failed: ComfyUI is not running" and not app._ref_busy
+
+    # Describe on a slot that has a description keeps it while another slot was described last (no new run); twice in a
+    # row on the same slot writes a new one with a random seed (the first one takes the likeliest words, no seed)
+    def describe(k, text):
+        seeds = []
+        app.bridge.describe_image = lambda im, seed=None: seeds.append(seed) or text
+        app._refs_describe(k)
+        for _ in range(100):
+            while pending:
+                pending.pop(0)()
+            if not app._ref_busy:
+                break
+            time.sleep(0.02)
+        return seeds
+    while len(app.refslots.items) < 2:
+        app.refslots.add(img, "second.png")
+    app.t_prompt.delete("1.0", "end")
+    app.refslots.items[1].description = ""
+    assert describe(1, "A blue circle.") == [None] and app.refslots.items[1].description == "A blue circle."
+    first = app.refslots.items[0].description
+    assert describe(0, "SHOULD NOT RUN") == [] and app.refslots.items[0].description == first
+    assert app.lbl_refmsg["text"] == f"<image2>: {first}"
+    assert f"<image2>: {first}" in app.t_prompt.get("1.0", "end")          # its line is back in the prompt
+    seeds = describe(0, "A red square, new words.")
+    assert len(seeds) == 1 and isinstance(seeds[0], int) and app.refslots.items[0].description == "A red square, new words."
+    from pccomfy import workflows
+    g = workflows.text_sampling(workflows.load_template(workflows.DESCRIBE_WORKFLOW), 42)
+    tg = [n["inputs"] for n in g.values() if n["class_type"] == "TextGenerate"][0]
+    assert tg["sampling_mode"] == "on" and tg["sampling_mode.seed"] == 42 and tg["sampling_mode.temperature"] == 0.7
 
     assert not hasattr(refslots, "apply_strokes") and not hasattr(app, "_refs_pen")      # the pen is gone
     assert refslots.thumbnail_png(Image.new("RGBA", (300, 100), (0, 0, 0, 0)), 64)[:4] == b"\x89PNG"

@@ -154,6 +154,21 @@ DESCRIBE_WORKFLOW = Path(__file__).resolve().parent.parent / "workflows" / "desc
 BIREFNET_WORKFLOW = Path(__file__).resolve().parent.parent / "workflows" / "birefnet-remove-bg.json"   # reference slots: cut out the background
 
 
+# TextGenerate with sampling on, as in the text-to-image workflows (temperature 0.7 ...): a new seed gives new words
+TEXT_SAMPLING = {"sampling_mode": "on", "sampling_mode.temperature": 0.7, "sampling_mode.top_k": 64,
+                 "sampling_mode.top_p": 0.95, "sampling_mode.min_p": 0.05, "sampling_mode.repetition_penalty": 1.05,
+                 "sampling_mode.presence_penalty": 0.0}
+
+
+def text_sampling(graph: dict, seed: int) -> dict:
+    """Every TextGenerate of the graph samples with `seed` instead of taking always the likeliest words ("off"): the
+    describe workflow then writes a different description for each seed."""
+    for n in graph.values():
+        if n.get("class_type") == "TextGenerate":
+            n["inputs"].update(TEXT_SAMPLING, **{"sampling_mode.seed": int(seed)})
+    return graph
+
+
 def load_template(path: str | Path) -> dict:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if "nodes" in data and "links" in data:

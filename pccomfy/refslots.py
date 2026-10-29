@@ -809,18 +809,26 @@ class RefSlotsMixin:
         self.root.after(200, check)
 
     def _refs_describe(self, k: int):
-        """Qwen 3.5 9B describes the picture in the slot (ComfyUI, describe-image.json); the text is shown under the image and written
-        into the prompt field as its own line ("<image2>: ..."), where it can be edited or deleted."""
+        """Qwen 3.5 9B describes the picture in the slot (ComfyUI, describe-image.json); the text is shown and written into
+        the prompt field as its own line ("<image2>: ..."), where it can be edited or deleted. A slot that already has a
+        description and was not the last one described keeps it (shown again, no new run); Describe twice in a row on the
+        same slot writes a new one (a random seed)."""
+        import random
         import threading
         src = self.refslots.items[k]
         if k in self._ref_busy:
             return
+        if src.description and src is not getattr(self, "_ref_last_described", None):
+            self._ref_last_described = src
+            self._refs_show_description(k)
+            return
+        seed = random.randint(1, 2**31 - 1) if src.description else None     # the first one: the likeliest words
         self._ref_busy.add(k)
         box: dict = {}
 
         def work():
             try:
-                box["text"] = self.bridge.describe_image(src.image)
+                box["text"] = self.bridge.describe_image(src.image, seed=seed)
             except Exception as e:   # ComfyUI not running, no text model ...
                 box["error"] = str(e)
 
@@ -837,6 +845,7 @@ class RefSlotsMixin:
                 self._refs_say("Describe failed: " + box["error"])
             else:
                 old, src.description = src.description, box["text"]
+                self._ref_last_described = src
                 i = self.refslots.items.index(src) if src in self.refslots.items else 0
                 self._refs_say(f"{self.refslots.tag(i) or 'image'}: {box['text']}")
                 t = getattr(self, "t_prompt", None)
@@ -850,6 +859,22 @@ class RefSlotsMixin:
                         self._refs_say("You changed the description line in the prompt, so it was kept. The new text is under the image (copy icon).")
             self._refs_redraw()
         self.root.after(200, check)
+
+    def _refs_show_description(self, k: int):
+        """Shows the description of slot k again and puts its line back into the prompt field when it is not there."""
+        rs = self.refslots
+        if not 0 <= k < len(rs.items) or not rs.items[k].description:
+            return
+        self._refs_say(f"{rs.tag(k) or 'image'}: {rs.items[k].description}")
+        t = getattr(self, "t_prompt", None)
+        if t is None or str(t.cget("state")) == "disabled":
+            return
+        cur = t.get("1.0", "end").rstrip("\n")
+        line = f"{rs.tag(k) or f'image {k + 2}'}: {rs.items[k].description}"
+        if line not in [ln.strip() for ln in cur.split("\n")]:
+            t.delete("1.0", "end")
+            t.insert("1.0", rs.put_description(cur, k))
+
 
 def _b64(data: bytes) -> str:
     import base64
