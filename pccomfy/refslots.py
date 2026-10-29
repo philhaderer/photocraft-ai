@@ -486,7 +486,9 @@ class RefSlotsMixin:
         self._refs_xy()                 # the description in spot XY follows its slot (new tag, removed picture)
         over = len(rs.overflow)
         self.lbl_refmax.configure(text=f"Max. images: {rs.max_refs}")
-        self.lbl_refnames.configure(text=("Dragging an image into the prompt box inserts its tag." if rs.active else
+        pic = rs.picture_tag()          # the picture in PhotoCraft has a tag too (user 29.10.: keep saying so)
+        self.lbl_refnames.configure(text=("Dragging an image into the prompt box inserts its tag." +
+                                          (f" Your picture in PhotoCraft is {pic}." if pic else "") if rs.active else
                                           "Add a picture, then name it in your text."))
         if over:
             self._refs_say(f"The last {over} image(s) are kept but not sent.")
