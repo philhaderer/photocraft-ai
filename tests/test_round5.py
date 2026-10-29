@@ -295,6 +295,9 @@ def main():
     assert "people" not in models.FLUX2_DEFAULT and models.FLUX2_DEFAULT_OLD in models.STOCK_PROMPTS and models.FLUX2_DEFAULT.endswith("Keep the composition and colors exactly as they are.") and models.FLUX2_DEFAULT_PREV in models.STOCK_PROMPTS
     assert models.EDIT_TIP == "To remove something, say what replaces it: \u201cRemove the dog and paint the wall behind him\u201d"
     assert app.lbl_hint["wraplength"]
+    # an orange info icon in front of the tip, both in one row (user 29.10.)
+    from pccomfy import gui_theme
+    assert app.lbl_hint_icon["image"] == app._icon("info", gui.ACCENT, px=gui_theme.HINT_ICON_PX)
 
     # the Upscale factor sits directly under the negative prompt, above the LoRA box
     scale_pack = rec(app.f_scale, "pack")
