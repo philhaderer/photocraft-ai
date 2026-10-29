@@ -24,4 +24,15 @@ Befunde:
 
 Bilder und Skript: `data/ab-expand-krea-moss/20261029/` (lokal, nicht im Repo): `sheet_<modell>_<bild>_<rand>.png` (Zeilen = Prompt, Spalten = Seed), `descriptions.json`, `runs.json`, `expand_ab.py`.
 
+## Bewertung durch den User (29.10.)
+
+Meine Einschätzung oben („24 von 24 passend“) betraf nur den Inhalt. Der User hat die 24 Bilder mit „nur Umgebung“ einzeln bewertet (Bewertungsfenster, `data/ab-expand-krea-moss/20261029/bewertung.json`):
+
+| Modell | gut | mittel | schlecht |
+|---|---|---|---|
+| Krea 2 | 3 (alle Fuchs) | 1 | 8 |
+| MOSS | 0 | 6 | 6 |
+
+Gründe (über beide Modelle): Kante/Naht sichtbar 19, Stil passt nicht 12, Helligkeits-/Farbsprung an der Grenze 10, Perspektive/Proportion falsch 4 (MOSS), Motiv doppelt 2 (MOSS, Nachthaus rechts). Damit ist Expand bei Krea 2 und MOSS so noch nicht gut genug. Nächster Schritt (Wunsch des User): eine Testrunde mit eigenen Bildern gegen die Naht, auf beiden Rechnern ausführbar: `expand-seam-testrunde.md`, Skript `tests/live_expand_seam.py`.
+
 Folgerung für Option C: der Knopf „Describe“ fragt nach der Umgebung ohne Hauptmotiv (der dritte Prompt). Expand bleibt bei Krea 2 und MOSS an, aber nur mit Prompt.
