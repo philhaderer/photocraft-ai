@@ -224,11 +224,18 @@ class ThemeMixin:
         if cv is not None and sb is not None:
             body = self.f_body.winfo_reqheight()
             if isinstance(body, int) and body > 1:
-                cv.configure(height=body)
-                self.root.update_idletasks()
-                over = self.root.winfo_reqheight() - self._max_height()
-                if isinstance(over, int) and over > 0:
-                    cv.configure(height=max(self._px(120), body - over))
+                # the target height straight away: setting the full height first and then a smaller one changed the
+                # canvas twice per call, and each change asked for the next fit (a loop every 60 ms: flicker, a jumping bar)
+                try:
+                    cur = int(float(cv.cget("height")))
+                except (TypeError, ValueError, tk.TclError):
+                    cur = body
+                others = self.root.winfo_reqheight() - cur          # everything but the scrolled body
+                room = self._max_height() - others if isinstance(others, int) else body
+                target = body if body <= room else max(self._px(120), room)
+                if target != cur:
+                    cv.configure(height=target)
+                if target < body:
                     sb.show()
                 else:
                     sb.hide()
