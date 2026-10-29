@@ -1030,6 +1030,15 @@ class Bridge:
         im.load()
         return im
 
+    def canvas_image(self) -> Image.Image:
+        """Copy canvas to clipboard: what is visible in the active document as one picture (the export a run makes)."""
+        pc = self.pc.connect()
+        orig = pc.session().get("active")
+        if orig is None:
+            raise BridgeError("Open a document in PhotoCraft first.")
+        img, _ = self._export(orig, uuid.uuid4().hex[:8], need_mask=False)
+        return img
+
     def _export(self, orig: int, tag: str, need_mask: bool) -> tuple[Image.Image, Image.Image | None]:
         """The picture (and the selection as a mask) from a throw-away duplicate."""
         pc = self.pc

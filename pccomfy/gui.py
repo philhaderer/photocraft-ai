@@ -11,6 +11,7 @@ from .gui_state import StateMixin
 from .gui_run import RunMixin
 from .ui_settings import SettingsMixin, GEAR_PX, FOOT_REFRESH_PADX, FOOT_RESET_PADX
 from .refslots import RefSlotsMixin
+from . import clipboard
 
 
 class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, ModeMixin, StateMixin, RunMixin):
@@ -138,6 +139,10 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.b_min = ttk.Button(self.f_header, image=self._icon("minimize"), style="Link.TButton", command=self.toggle_minimize)
         self.b_min.pack(side="right")
         self.tt_min = Tooltip(self.b_min, "Minimise: only this header stays. Click again to show the plugin.")
+        # left of it: Copy canvas to clipboard (user 29.10., option A): the visible picture as one image
+        self.b_copy_canvas = ttk.Button(self.f_header, image=self._icon("copy"), style="Link.TButton", command=self.copy_canvas)
+        self.b_copy_canvas.pack(side="right", padx=(0, 6))
+        Tooltip(self.b_copy_canvas, "Copy canvas to clipboard: the visible layers of the picture in PhotoCraft as one image.")
         for w in (self.f_header, self.f_logo):      # a double click on the header does the same (user 29.10., option C)
             w.bind("<Double-Button-1>", lambda e: self.toggle_minimize(), add="+")
         self.f_tabs = ttk.Frame(r)
@@ -607,6 +612,25 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
             self.f_foot.pack(fill="x", side="bottom", padx=10, pady=6)
             self.f_status.pack(fill="x", padx=10, pady=(4, 0))
             self._apply_start_state()
+
+    def copy_canvas(self):
+        """The copy button in the header: what is visible in PhotoCraft's active picture goes onto the Windows clipboard as
+        one image (PNG with transparency, and DIB). Runs in the worker like undo (PhotoCraft is busy for a moment)."""
+        if self.worker and self.worker.is_alive():
+            return
+        self._status("Copying the canvas…")
+
+        def work():
+            try:
+                ok = clipboard.write_image(self.bridge.canvas_image())
+                self.events.put(("note", "Canvas copied to the clipboard.") if ok else
+                                ("note-error", "The clipboard could not be set. Try again."))
+            except (BridgeError, PhotoCraftError) as e:
+                self.events.put(("note-error", f"Error: {e}"))
+            except Exception as e:
+                self.events.put(("note-error", f"Unexpected error: {type(e).__name__}: {e}"))
+        self.worker = threading.Thread(target=work, daemon=True)
+        self.worker.start()
 
     def _on_top(self):
         if not winlink.available():
