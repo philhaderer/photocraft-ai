@@ -189,6 +189,13 @@ def main():
     assert refslots.spaced_tag("<image2>", "a cat ", "on") == "<image2> "
     assert refslots.spaced_tag("<image2>", "a cat", ", red") == " <image2>"
     assert refslots.spaced_tag("<image2>", "line\n", " x") == "<image2>"
+    app._refs_insert_tag(0)                                             # a click on the tag under the slot: at the end
+    assert app.t_prompt.s == "put the cat <image2> on the sofa <image2>", app.t_prompt.s
+    app.t_prompt.s = ""
+    app._refs_insert_tag(0)
+    assert app.t_prompt.s == "<image2>"
+    app._refs_insert_tag(7)                                             # no picture in that slot: nothing
+    assert app.t_prompt.s == "<image2>"
     app.t_prompt = real_prompt
     del app._refs_prompt_at
 
