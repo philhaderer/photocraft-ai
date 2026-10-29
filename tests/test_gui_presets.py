@@ -249,6 +249,8 @@ def main():
     assert app._request().scale == 3.0 and app._collect()["scale"] == 3.0
     app.v_scale.set("x")                                   # nonsense falls back to 2
     assert app._request().scale == 2.0
+    # four small switches 1.5x 2x 3x 4x on the same variable (user 29.10.), no drop-down any more
+    assert list(app.rb_scale) == ["x 1.5", "x 2", "x 3", "x 4"] and not hasattr(app, "cb_scale")
     app.v_mode.set("refine")
     app._on_mode_ui()
     assert shown[-1] == "off"
