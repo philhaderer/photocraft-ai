@@ -178,6 +178,8 @@ def main():
     # Refresh = a flat circle arrow in the gear's size, Reset = the text link "Defaults" (option A, user 29.10.)
     assert probe.b_refresh.image == probe._icon("refresh", px=ui_settings.GEAR_PX) and probe.b_refresh.text is None
     assert probe.b_reset.text == "Defaults" and probe.b_refresh["style"] == probe.b_reset["style"] == "Link.TButton"
+    # the prompt field scrolls with the thin bar, shown by itself only while the text is longer than the field (29.10.)
+    assert isinstance(probe.sb_prompt, gui.ThinScrollbar) and probe.sb_prompt.auto and probe.sb_prompt.canvas is probe.t_prompt
     del probe
 
     app = make_app()

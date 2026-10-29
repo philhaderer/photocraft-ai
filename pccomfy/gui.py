@@ -303,12 +303,11 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         except (TypeError, ValueError):
             lines = PROMPT_LINES
         self.t_prompt = self._text(self.f_prompt, lines)
-        sb = ttk.Scrollbar(self.f_prompt, orient="vertical", command=self.t_prompt.yview)
-        self.t_prompt.configure(yscrollcommand=sb.set)
-        sb.pack(side="right", fill="y")
         # fills its frame: with fill="x" only it was centred in a frame that still had the old height while the grip was
         # dragged, so its top edge jumped by half a line
         self.t_prompt.pack(side="left", fill="both", expand=True)
+        # the same thin bar as the body (design list, point 10): only while the text is longer than the field
+        self.sb_prompt = ThinScrollbar(self.f_prompt, self.t_prompt, self._px(6), BG, auto=True)
         self.grip = ttk.Frame(r, style="Grip.TFrame", height=self._px(7), cursor="sb_v_double_arrow")
         self.grip.pack(fill="x", padx=10, pady=(1, 0))
         self._grip_drag(self.grip, self.t_prompt)
