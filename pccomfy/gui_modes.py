@@ -418,7 +418,7 @@ class ModeMixin:
         box = getattr(self, "lbl_context", None)
         if box is not None:
             try:
-                box.configure(text=f"{float(self.v_context.get()):.2f}")
+                box.configure(text=f"{round(float(self.v_context.get()) * 100)} %")
             except (tk.TclError, ValueError):
                 pass
 

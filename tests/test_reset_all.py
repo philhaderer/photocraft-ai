@@ -97,17 +97,17 @@ def main():
     app.v_context.set(0.9)
     app.reset_settings()
     assert app.v_context.get() == 0.4       # Qwen Fill's own start value
-    # Context is a slider from 0 to 1 in steps of 0.05; its box follows every change (Reset, a tab change)
+    # Context is a slider from 0 to 1 in steps of 0.05 (shown as 0 to 100 %); its box follows every change (Reset, a tab change)
     assert isinstance(app.w_adv["Context"], gui.Slider)
     app.v_context.set(0.33)
     app._on_context()
-    assert app.v_context.get() == 0.35 and app.lbl_context.cget("text") == "0.35"
+    assert app.v_context.get() == 0.35 and app.lbl_context.cget("text") == "35 %"
     app.reset_settings()
-    assert app.lbl_context.cget("text") == "0.40"
+    assert app.lbl_context.cget("text") == "40 %"
     app.v_context.set(0.75)
     app._on_context()
     go(app, "fibo", "inpaint")
-    assert app.lbl_context.cget("text") == "0.40"
+    assert app.lbl_context.cget("text") == "40 %"
     app.v_context.set(1.6)                     # an old saved value beyond the slider
     assert app._request().context == 1.0
     shutil.rmtree(t.TMP, ignore_errors=True)

@@ -44,13 +44,13 @@ def main():
     app.lbl_feather._commit()
     assert app.v_feather.get() == 3
     # comma or point, and a unit left in the text
-    app.lbl_context.configure(text="0,2")
+    app.lbl_context.configure(text="20,0 %")
     app.lbl_context._commit()
-    assert abs(app.v_context.get() - 0.2) < 1e-9 and app.lbl_context.cget("text") == "0.20"
-    # Up/Down: 0.05 for a 0..1 value, 1 for %; from the typed value; kept in range
-    app.lbl_context.configure(text="0.40")
+    assert abs(app.v_context.get() - 0.2) < 1e-9 and app.lbl_context.cget("text") == "20 %"
+    # Up/Down: 1 for %, 5 % for Context (its steps of 0.05, shown in % since 29.10.); from the typed value; kept in range
+    app.lbl_context.configure(text="40 %")
     app.lbl_context._step(1)
-    assert abs(app.v_context.get() - 0.45) < 1e-9 and app.lbl_context.cget("text") == "0.45"
+    assert abs(app.v_context.get() - 0.45) < 1e-9 and app.lbl_context.cget("text") == "45 %"
     app.lbl_context._step(-1)
     app.lbl_context._step(-1)
     assert abs(app.v_context.get() - 0.35) < 1e-9

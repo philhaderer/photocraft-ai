@@ -484,14 +484,14 @@ class ValueBox(ttk.Entry):
     leaving the box takes the number, kept inside the slider's range (only digits and one decimal point or comma can be
     typed). The unit stays while you type (else the number shifts, user 28.10.): a click puts the cursor where you
     clicked, a double-click or Tab selects the number without the unit, Up/Down step the value (0.05 for a 0..1 value,
-    1 for %).
+    1 for %, or `step` in shown units).
     `factor`: shown = value * factor (100 for the % sliders). `command` shows the value in its format, as after a drag.
     configure(text=...) shows a value, as the label it stands in for did."""
 
-    def __init__(self, parent, slider, command, factor: float = 1.0):
+    def __init__(self, parent, slider, command, factor: float = 1.0, step: float | None = None):
         self._text = tk.StringVar(value="")
         super().__init__(parent, textvariable=self._text, width=VALUE_W, style="Value.TEntry", justify="center", font=font(9))
-        self._slider, self._cmd, self._factor = slider, command, factor
+        self._slider, self._cmd, self._factor, self._shown_step = slider, command, factor, step
         self._clicked = False
         slider.box = self
         for ev in ("<Return>", "<KP_Enter>", "<FocusOut>"):
@@ -568,7 +568,7 @@ class ValueBox(ttk.Entry):
         s = self._slider
         if s._var is None or not s._on():
             return "break"
-        shown_step = 1.0 if (self._factor != 1 or s._hi > 1.5) else 0.05
+        shown_step = self._shown_step or (1.0 if (self._factor != 1 or s._hi > 1.5) else 0.05)
         step = shown_step / self._factor
         v = self._typed_value()
         v = s._value() if v is None else v

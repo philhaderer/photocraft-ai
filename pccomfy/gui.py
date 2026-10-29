@@ -433,7 +433,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         tips = {
             "Base res.": "Size (px) the model works at. Higher = more detail, slower.",
             "Context": "How much of the surroundings the model sees around your selection, as a share of the selection's "
-                       "longer side (0.4 = 40 % on each side). More often fits the new part better, but it takes longer.",
+                       "longer side (40 % on each side). More often fits the new part better, but it takes longer.",
             "Mask grow": "Grows the model's mask by this many px (mask workflows only).",
             "Mask blur": "Softens the model's mask edge (mask workflows only).",
         }
@@ -450,8 +450,9 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
             self.l_adv[lbl] = lb
             Tooltip(lb, tips[lbl])
             Tooltip(sp, tips[lbl])
-        # Context: a slider like the others (0 to 1 in steps of 0.05), between Match colours and Edge feather (the user's
-        # order, 28.10.); shown for Fill, Remove and Expand only (see _update_availability)
+        # Context: a slider like the others (0 to 1 in steps of 0.05, shown as 0 to 100 % in steps of 5 %, user 29.10.),
+        # between Match colours and Edge feather (the user's order, 28.10.); shown for Fill, Remove and Expand only (see
+        # _update_availability)
         fc = ttk.Frame(self.f_post)
         self.f_ctx = fc
         fc.pack(fill="x", pady=(2, 0))
@@ -461,7 +462,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         sc = Slider(fc, scale=self.ui, from_=0.0, to=1.0, variable=self.v_context, command=self._on_context,
                     length=self._px(SLIDER_W))
         sc.grid(row=0, column=1, sticky="e", padx=8)
-        self.lbl_context = ValueBox(fc, sc, self._on_context)
+        self.lbl_context = ValueBox(fc, sc, self._on_context, factor=100, step=5)
         self.lbl_context.grid(row=0, column=2, sticky="e")
         self.w_adv["Context"], self.l_adv["Context"] = sc, lb
         for w in (lb, sc):
