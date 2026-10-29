@@ -20,6 +20,7 @@ class Mode:
     prompt_tip: str = ""            # an orange hint under the prompt field in this mode (the field gets an orange frame)
     run_as: str = ""                # the mode the bridge runs when it is another one (Fibo "Refine" runs as a whole-image edit)
     remove_text: bool = False       # Remove Selection: the field stays usable and takes an optional name of the object ("the dog")
+    describe: bool = False          # Expand with Krea 2 / MOSS: a prompt is required, the Describe button under the field writes one
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,9 @@ REMOVE_NAME_TIP = "Optional: name what to remove (\"the dog\")."
 REMOVE_AGAIN = "If the first try didn't work, try removing it a second time."   # Fibo Remove, idea of the user (28.10.)
 MULTI_TIP = "You can start with a white image and use the reference images below to place them on the canvas."
 EDIT_TIP = "To remove something, say what replaces it: \u201cRemove the dog and paint the wall behind him\u201d"
+# Krea 2 / MOSS Expand (wording chosen by the user 29.10.; A/B test docs/tests/krea-moss-expand-ab.md)
+EXPAND_DESCRIBE_TIP = ("This model needs a prompt: describe the surroundings only (place, light, style), not the main subject. "
+                       "Describe writes one for you.")
 DESCRIBE_TIP = "Add a short description of your image in front of this text."   # Refine and Upscale, wording chosen by the user (28.10.)
 T2I_TIP = "Text to image: a completely new image is added to the canvas as a new layer."
 FLUX3_DEFAULT_OLD = "Restore the photo: remove blur, noise and compression artifacts and recover sharp, natural detail, keeping the same composition, people and colors."
@@ -147,7 +151,8 @@ MOSS = Model(
     "MOSS-Image: text to image and Expand. No edit functions.",
     {
         "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "base_res": 1280, "layer_mask": "none", "enhance": False}, prompt_tip=T2I_TIP),
-        "outpaint": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "soft", "match": 0.5}),
+        "outpaint": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "soft", "match": 0.5},
+                         prompt_tip=EXPAND_DESCRIBE_TIP, describe=True),
     },
     requires=(
         "moss_image_sft_int8_convrot.safetensors",
@@ -163,7 +168,8 @@ KREA2 = Model(
     "Krea-2 Turbo: fast text to image and Expand.",
     {
         "txt2img": Mode("krea2-turbo-t2i.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=T2I_TIP),
-        "outpaint": Mode("krea2-turbo-inpaint.json", dict(base_res=1024, layer_mask="soft")),
+        "outpaint": Mode("krea2-turbo-inpaint.json", dict(base_res=1024, layer_mask="soft"),
+                         prompt_tip=EXPAND_DESCRIBE_TIP, describe=True),
     },
     requires=(
         "krea2_turbo_int8_convrot.safetensors",

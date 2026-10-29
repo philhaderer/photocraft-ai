@@ -76,6 +76,12 @@ class RunMixin:
     def generate(self):
         if self.worker and self.worker.is_alive():
             return
+        if self._needs_description() and not self.t_prompt.get("1.0", "end").strip():
+            # an empty prompt fills the margin with unrelated things (A/B test 29.10.): no run, say what to do
+            m = self._model()
+            self._status(f"{m.label if m else 'This model'} needs a description of the surroundings: "
+                         "click Describe or type one.", error=True)
+            return
         try:
             req = self._request()
         except (tk.TclError, ValueError) as e:

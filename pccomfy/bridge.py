@@ -296,6 +296,12 @@ def outpaint_hint(keep: "imaging.Box", canvas: tuple[int, int]) -> str:
 
 # Fibo's own wording (A/B test 28.10., 80 runs: margin filled in 30 of 30 runs on every side and on two sides, the old
 # wording above in 11 of 26; the existing picture changed no more than with it)
+# Krea 2 / MOSS Expand: the question for the Describe button. A/B test 29.10. (docs/tests/krea-moss-expand-ab.md): with an
+# empty prompt ~22 of 24 margins got unrelated things, a description naming the main subject painted it twice in ~12 of 24,
+# this description of the surroundings only fitted in 24 of 24.
+SCENE_QUESTION = ("Describe only the setting and the background of this picture in one sentence: the place, the surfaces, "
+                  "the style and the light. Do not mention the main subject (people, animals or the central object).")
+
 FIBO_OUTPAINT_PROMPT = ("Replace the white area on the {where} with a seamless continuation of the scene{text}. "
                         "Keep the existing picture unchanged.")
 
@@ -853,6 +859,28 @@ class Bridge:
             raise BridgeError("The text model returned no description.")
         progress(1.0, "Described")
         return text
+
+    def describe_scene(self, progress: Progress | None = None) -> str:
+        """Krea 2 / MOSS Expand (Describe button): the surroundings of the active picture without its main subject, as the
+        prompt (SCENE_QUESTION). Only the original is described, not the empty margin: where content_box finds it, else
+        where the last Expand of this document put it (its result fills the margin)."""
+        pc = self.pc.connect()
+        orig = pc.session().get("active")
+        if orig is None:
+            raise BridgeError("Open a document in PhotoCraft first.")
+        tag = uuid.uuid4().hex[:8]
+        try:
+            src, _ = self._export(orig, f"{tag}-describe", need_mask=False)
+            keep = imaging.content_box(src)
+            last = self._last_expand
+            if keep is None and last and tuple(last["size"]) == src.size:
+                keep = last["keep"]
+            im = src.crop(keep.pil()) if keep is not None else src
+            return self.describe_image(imaging.to_rgb(im), progress, question=SCENE_QUESTION)
+        except PhotoCraftError as e:
+            raise BridgeError(str(e)) from None
+        finally:
+            self._cleanup()
 
     # ---------- ComfyUI ----------
 

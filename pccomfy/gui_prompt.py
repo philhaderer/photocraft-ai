@@ -115,7 +115,7 @@ class PromptMixin:
         mode = self.v_mode.get()
         m = self._model()
         spec = m.modes.get(mode) if m else None
-        text = EXPAND_HINT if mode == "outpaint" else (spec.prompt_tip if spec else "")
+        text = (spec.prompt_tip if spec and spec.prompt_tip else "") or (EXPAND_HINT if mode == "outpaint" else "")
         on = bool(text)
         self._hint_text = text
         self.t_prompt.configure(highlightbackground=ACCENT if on else "#454545", highlightthickness=2 if on else 1)
@@ -124,6 +124,54 @@ class PromptMixin:
             self.lbl_hint.pack(anchor="w", padx=10, after=self.grip)
         else:
             self.lbl_hint.pack_forget()
+        b = getattr(self, "b_describe", None)
+        if b is not None:
+            if self._needs_description():
+                b.pack(anchor="w", padx=10, pady=(4, 0), after=self.lbl_hint)
+            else:
+                b.pack_forget()
+
+    def _needs_description(self) -> bool:
+        """Krea 2 / MOSS Expand: the model needs a prompt (an empty one fills the margin with unrelated things)."""
+        m = self._model()
+        spec = m.modes.get(self.v_mode.get()) if m else None
+        return bool(spec and spec.describe)
+
+    def describe_scene(self):
+        """The Describe button: Qwen 3.5 9B describes the surroundings of the picture in PhotoCraft (Bridge.describe_scene);
+        the text replaces the field's content in one undo step (Ctrl+Z in the field brings the old text back)."""
+        import threading
+        if getattr(self, "_describing", False) or (self.worker and self.worker.is_alive()):
+            return
+        self._describing = True
+        self.b_describe.configure(state="disabled")
+        self._status("Describing the surroundings …")
+        box: dict = {}
+
+        def work():
+            try:
+                box["text"] = self.bridge.describe_scene()
+            except Exception as e:   # PhotoCraft or ComfyUI not running, no text model ...
+                box["error"] = str(e)
+
+        threading.Thread(target=work, daemon=True).start()
+
+        def check():
+            if "text" not in box and "error" not in box:
+                self.root.after(200, check)
+                return
+            self._describing = False
+            self.b_describe.configure(state="normal")
+            if "error" in box:
+                self._status("Describe failed: " + box["error"], error=True)
+                return
+            t = self.t_prompt
+            t.edit_separator()
+            t.delete("1.0", "end")
+            t.insert("1.0", box["text"])
+            t.edit_separator()
+            self._status("Described. Edit the text as you like, then Generate.")
+        self.root.after(200, check)
 
     def _copy_enhanced(self):
         """The prompt the text model wrote in the last run goes to the clipboard."""

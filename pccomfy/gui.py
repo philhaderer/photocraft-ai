@@ -312,6 +312,10 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._grip_drag(self.grip, self.t_prompt)
         Tooltip(self.grip, "Drag to resize the prompt field.")
         self.lbl_hint = ttk.Label(r, text=EXPAND_HINT, style="Hint.TLabel", wraplength=self._px(MIN_W - 24), justify="left")   # Expand image, Upscale, Refine (see _update_prompt_hint)
+        # Krea 2 / MOSS Expand: writes a description of the surroundings into the field (under the tip, user 29.10.)
+        self.b_describe = ttk.Button(r, text="Describe", style="Small.TButton", command=self.describe_scene)
+        Tooltip(self.b_describe, "Qwen 3.5 9B describes the surroundings of your picture (not the main subject) and writes "
+                                 "it into the prompt. Edit it as you like.")
         self.t_prompt.insert("1.0", self.state.get("prompt", ""))
         self.f_sharp = ttk.Frame(self.f_post)     # a light sharpening of the finished result (under Advanced settings)
         self.f_sharp.pack(fill="x")
