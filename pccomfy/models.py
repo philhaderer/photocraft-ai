@@ -21,6 +21,7 @@ class Mode:
     run_as: str = ""                # the mode the bridge runs when it is another one (Fibo "Refine" runs as a whole-image edit)
     remove_text: bool = False       # Remove Selection: the field stays usable and takes an optional name of the object ("the dog")
     describe: bool = False          # Expand with Krea 2 / MOSS: a prompt is required, the Describe button under the field writes one
+    steps_tip: str = ""             # the tooltip of the Steps field in this mode ("" = none)
 
 
 @dataclass(frozen=True)
@@ -150,11 +151,13 @@ FLUX3 = Model(
 # MOSS: the DMD2 speed LoRA (8 steps, CFG 1.5) is the model's own LoRA; the Lenovo UltraReal LoRA and the skip-layer
 # guidance (SLG) are switches that start on (best result in the live tests); the LLM prompt enhancer starts off.
 _MOSS = dict(turbo=True, stage_on=True, stage2_on=True)
+MOSS_STEPS_TIP = "Turn up the steps to 25 for best results."     # wording of the user (29.10.)
 MOSS = Model(
     "moss", "MOSS Image",
     "MOSS-Image: text to image. No edit functions.",
     {
-        "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "base_res": 1280, "layer_mask": "none", "enhance": False}, prompt_tip=T2I_TIP),
+        "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "base_res": 1280, "layer_mask": "none", "enhance": False},
+                        prompt_tip=T2I_TIP, steps_tip=MOSS_STEPS_TIP),
     },
     requires=(
         "moss_image_sft_int8_convrot.safetensors",

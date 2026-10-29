@@ -225,7 +225,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.b_copy = ttk.Button(self.f_enh, image=self._icons["copy"], style="Icon.TButton", command=self._copy_enhanced, state="disabled")
         self.b_copy.pack(side="left", padx=(8, 0))
         self.tt_copy = Tooltip(self.b_copy, "Copy the prompt the text model wrote in the last run.")
-        self.cb_turbo = ttk.Checkbutton(mf, text="LoRA", variable=self.v_turbo)
+        self.cb_turbo = ttk.Checkbutton(mf, text="LoRA", variable=self.v_turbo, command=self._on_turbo)
         self.cb_turbo.grid(row=1, column=1, sticky="w", padx=6, pady=(4, 0))
         self.tt_turbo = Tooltip(self.cb_turbo, LORA_TIP)
 
@@ -398,6 +398,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
             w.grid(row=1, column=col, sticky="w", padx=(0, 6))
         self.w_denoise = items[3][1]
         self.w_steps, self.w_cfg, self.w_seed = items[0][1], items[1][1], items[2][1]
+        self.tt_steps = Tooltip(self.w_steps, "")      # a hint of the mode, when it has one (MOSS: 25 steps)
         self.recipe_widgets = [items[0][1], items[1][1]]
 
         sm = ttk.Frame(self.adv_body)
