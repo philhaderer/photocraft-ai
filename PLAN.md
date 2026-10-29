@@ -25,6 +25,7 @@ Stand 2026-10-29. Der Plan ist freigegeben. Abschnitt 3 ist die Arbeitsliste in 
 - Fensterkopf (27.10.): Funktion zuerst, Modell darunter (Chips). Das Rechtsklick-Menü der Tabs (L3) gehört damit auf die Modell-Chips. Settings-Fenster mit Tabs „Models“ und „Credits“; weitere Settings-Tabs kommen später dazu.
 - Screenshots des Fensters nur, wenn der User etwas nicht selbst prüfen kann.
 - 28.10.: Layer mask nur noch soft / hard / none; Fill Qwen/Fibo „soft“ mit Rand außen; Regler-Reihenfolge Sharpen, Match colours, Context, Edge feather, Layer mask + „Show feather“; „Image and mask“ ausgeblendet; PhotoCraft 0.16 ist die Hauptversion.
+- 29.10.: Für Testungen (Modellvergleiche, Blindtests, neue Einstellungen) werden die Testprompts aus `docs/tests/testprompts.md` verwendet (192 Prompts der ImageBench-Galerie).
 
 ## 3. Arbeitsliste (Reihenfolge)
 
