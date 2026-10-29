@@ -165,6 +165,10 @@ class SettingsMixin:
         self.v_empty.set(EMPTY_TEXT.get(state, ""))
         for w in (self.f_tabs, self.lbl_empty, self.f_scrollbox):
             w.pack_forget()
+        if getattr(self, "_minimized", False):      # minimised: only the header stays (gui.py toggle_minimize)
+            if fit and getattr(self, "_sized", False):
+                self._fit_height()
+            return
         if state != "none_linked":
             self.f_tabs.pack(fill="x", padx=10, pady=(8, 2), before=self.f_status)
         if state:

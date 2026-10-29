@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _COMMON  # noqa: F401
-from .gui_theme import ThemeMixin, HINT_ICON_PX
+from .gui_theme import ThemeMixin, HINT_ICON_PX, ICON_PX
 from .gui_prompt import PromptMixin
 from .gui_lora import LoraMixin
 from .gui_modes import ModeMixin
@@ -128,6 +128,16 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
 
         # the head: the functions first (big buttons with a symbol, two per row), the models below them (small outlined
         # chips, three per row; a model that cannot do the chosen function is greyed out). See docs/ux-funktion-zuerst.md.
+        # the header above the functions (user 29.10.): as high as a function button, empty for now (the user's picture
+        # comes later into f_logo); on its right the minimise button. Minimised, only this header stays (option A)
+        self.f_header = ttk.Frame(r)
+        self.f_header.pack(fill="x", padx=10, pady=(8, 0))
+        self.f_logo = ttk.Frame(self.f_header, height=self._px(ICON_PX + 12))
+        self.f_logo.pack(side="left", fill="x", expand=True)
+        self._minimized = False
+        self.b_min = ttk.Button(self.f_header, image=self._icon("minimize"), style="Link.TButton", command=self.toggle_minimize)
+        self.b_min.pack(side="right")
+        self.tt_min = Tooltip(self.b_min, "Minimise: only this header stays. Click again to show the plugin.")
         self.f_tabs = ttk.Frame(r)
         self.f_tabs.pack(fill="x", padx=10, pady=(8, 2))
         f_fn = self.f_modes = ttk.Frame(self.f_tabs)
@@ -552,7 +562,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.lbl_err = ttk.Label(st, text="!", style="Badge.TLabel", width=2, anchor="center")
         self.lbl_status = ttk.Label(st, textvariable=self.v_status, wraplength=self._px(MIN_W - 40), justify="left")
         self.lbl_status.pack(side="left", fill="x", expand=True)
-        foot = ttk.Frame(self.root)
+        foot = self.f_foot = ttk.Frame(self.root)
         foot.pack(fill="x", side="bottom", padx=10, pady=6)
         self.lbl_conn, self.lbl_dot = conn_status(foot)        # "ComfyUI ●": green = connected, red = not
         self.lbl_conn.pack(side="left")
@@ -573,6 +583,23 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.root.bind("<Button-1>", self._lora_outside, add="+")
         self.root.bind("<Control-Return>", lambda e: (self.generate(), "break")[1])
         self.root.bind("<Escape>", lambda e: self.stop())
+
+    def toggle_minimize(self):
+        """The button in the header: minimised, the window shrinks to the header (title bar, header, the button); a second
+        click brings everything back as it was."""
+        self._minimized = not self._minimized
+        self.b_min.configure(image=self._icon("chevron-down" if self._minimized else "minimize"))
+        self.tt_min.text = ("Show the plugin again." if self._minimized else
+                            "Minimise: only this header stays. Click again to show the plugin.")
+        self.f_header.pack_configure(pady=(8, 8 if self._minimized else 0))     # alone, the header gets room below too
+        if self._minimized:
+            for w in (self.f_tabs, self.lbl_empty, self.f_scrollbox, self.f_status, self.f_foot):
+                w.pack_forget()
+            self._fit_height()
+        else:
+            self.f_foot.pack(fill="x", side="bottom", padx=10, pady=6)
+            self.f_status.pack(fill="x", padx=10, pady=(4, 0))
+            self._apply_start_state()
 
     def _on_top(self):
         if not winlink.available():

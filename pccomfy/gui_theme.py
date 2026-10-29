@@ -256,6 +256,12 @@ class ThemeMixin:
         """The window is MIN_W wide (fixed) and exactly as high as its content needs. When that is taller than the screen
         allows, the body under the tabs gets the room that is left and scrolls (thin bar on the right)."""
         self.root.update_idletasks()
+        if getattr(self, "_minimized", False):          # only the header: exactly its height
+            w, h = self._px(MIN_W), self.root.winfo_reqheight()
+            if getattr(self, "_geom", None) != (w, h):
+                self._geom = (w, h)
+                self.root.geometry(f"{w}x{h}")
+            return
         cv, sb = getattr(self, "cv_body", None), getattr(self, "sb_body", None)
         if cv is not None and sb is not None:
             body = self.f_body.winfo_reqheight()
