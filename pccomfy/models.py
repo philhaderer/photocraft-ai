@@ -156,7 +156,10 @@ MOSS = Model(
     "moss", "MOSS Image",
     "MOSS-Image: text to image. No edit functions.",
     {
-        "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "base_res": 1280, "layer_mask": "none", "enhance": False},
+        # Text to image starts without DMD2 and without SLG, 25 steps (the workflow's values without the LoRA), no LLM: the
+        # user's live test 29.10. (with DMD2 or SLG the photos looked artificial, with the LLM prompt too)
+        "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "turbo": False, "stage2_on": False, "base_res": 1280,
+                                                "layer_mask": "none", "enhance": False},
                         prompt_tip=T2I_TIP, steps_tip=MOSS_STEPS_TIP),
     },
     requires=(

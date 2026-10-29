@@ -24,6 +24,11 @@ def main():
     app.v_model.set("moss")
     app.v_mode.set("txt2img")
     app._on_model()
+    # the start of MOSS Text to image (user 29.10.): DMD2 off, UltraReal on, SLG off, no LLM, 25 steps
+    labels = [st["label"] for st in app._stages()]
+    assert "SLG" in labels[1] or "Skip" in labels[1], labels
+    assert (app.v_turbo.get(), app.v_stage.get(), app.v_stage2.get(), app.v_enhance.get()) == (False, True, False, False)
+    assert app.v_steps.get() == 25, app.v_steps.get()
     app.v_turbo.set(True)
     app._on_turbo()
     assert (app.v_steps.get(), app.v_cfg.get()) == (8, 1.5), (app.v_steps.get(), app.v_cfg.get())
