@@ -9,7 +9,7 @@ from .gui_lora import LoraMixin
 from .gui_modes import ModeMixin
 from .gui_state import StateMixin
 from .gui_run import RunMixin
-from .ui_settings import SettingsMixin
+from .ui_settings import SettingsMixin, GEAR_PX, FOOT_REFRESH_PADX, FOOT_RESET_PADX
 from .refslots import RefSlotsMixin
 
 
@@ -533,11 +533,13 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         foot.pack(fill="x", side="bottom", padx=10, pady=6)
         self.lbl_conn, self.lbl_dot = conn_status(foot)        # "ComfyUI ●": green = connected, red = not
         self.lbl_conn.pack(side="left")
-        b_refresh = self.b_refresh = ttk.Button(foot, text="Refresh", command=self.refresh)
-        b_refresh.pack(side="left", padx=(8, 0))
-        Tooltip(b_refresh, "Reads PhotoCraft's and ComfyUI's state again: connection, installed LoRAs, samplers, text models, workflows.")
-        b_reset = self.b_reset = ttk.Button(foot, text="Reset", command=self.reset_settings)
-        b_reset.pack(side="left", padx=(6, 0))
+        # Refresh = a flat circle arrow beside the dot, Reset = the text link "Defaults" (PLAN item 7, option A of the user 29.10.)
+        b_refresh = self.b_refresh = ttk.Button(foot, image=self._icon("refresh", px=GEAR_PX), style="Link.TButton",
+                                                command=self.refresh)
+        b_refresh.pack(side="left", padx=FOOT_REFRESH_PADX)
+        Tooltip(b_refresh, "Refresh: reads PhotoCraft's and ComfyUI's state again: connection, installed LoRAs, samplers, text models, workflows.")
+        b_reset = self.b_reset = ttk.Button(foot, text="Defaults", style="Link.TButton", command=self.reset_settings)
+        b_reset.pack(side="left", padx=FOOT_RESET_PADX)
         Tooltip(b_reset, "Back to the startup settings of this tab and function.")
         self._build_settings(foot)      # the gear at the right end of this row (ui_settings.py)
 
