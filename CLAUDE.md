@@ -10,10 +10,11 @@ Fork of Peszemeszek/photocraft-comfyui-bridge (MIT OR Apache-2.0): a PhotoCraft 
 - The user is not git-experienced: do the git work, explain it in plain words, never ask him to run git.
 - Git follows common standards and must stay traceable for the user: one branch per change from `next` (`feat/...`, `fix/...`, `docs/...`), never commit straight onto `next`; tests green, then `git merge --no-ff` into `next`; never push (exception: when the user asks, `git push private next:main` to his private repo philhaderer/photocraft-ai), never rewrite history. After every git step tell him in plain German what happened (branch, commit, where things are now).
 - Commit messages: Conventional Commits. Subject `type: short summary` (English, imperative, no full stop, about 70 chars at most), a blank line, then a body that says what and why. Types: `feat` (new function), `fix` (bug fix), `docs` (documentation only), `test` (tests only), `refactor` (code change without new behaviour), `chore` (assets, build and packaging files, housekeeping). One change per commit. Trailer: `Co-Authored-By: Claude <model of the running session> <noreply@anthropic.com>` (e.g. `Claude Opus 5.5`). Commit with `git -c user.name=Claude -c user.email=noreply@anthropic.com commit`. Afterwards remove `.git/*.lock` and `tmp_obj_*` (rename to `.git/stale-*` if deleting is not allowed).
-- No README polishing. `README.pl.md` is upstream and stays untouched.
+- `README.md` is the GitHub start page (rewritten 29.10. on the user's request): change it only when he asks. `README.pl.md` is upstream and stays untouched.
 - Never delete `photocraft-ai 0.15.1.bat` (his starter). `photocraft-ai.bat` still points to 0.14.0.
 - Keep the checkpoint graph and the Fooocus code for now.
 - No automatic prompt additions for "remove ...": only the tip under the prompt.
+- Only one session does git in this folder (another one switched branches under a running session on 29.10.); other sessions work in their own worktree or read only.
 - Tell him before a chat becomes too long and a fresh one is better (see `PLAN.md`, section 6).
 
 ## Architecture
@@ -25,7 +26,7 @@ Fork of Peszemeszek/photocraft-comfyui-bridge (MIT OR Apache-2.0): a PhotoCraft 
 
 ## Testing
 
-- `python tests/run_all.py` runs all 55 files (check with `ls tests/test_*.py | wc -l` if it changes) (optional name filter: `python tests/run_all.py bars`); a single file: `python tests/<name>.py` (`test_round5.py` collects the latest rounds). `tests/live_clipboard.py`, `tests/live_dnd.py` and `tests/live_flux2_file_compare.py` are manual checks (real Windows clipboard, drag and drop, an A/B run of two model files in ComfyUI), not part of the runner. They run against a stubbed Tk and a fake PhotoCraft (`FakePC`, new layer IDs on duplicate, unknown IDs rejected like the real one).
+- `python tests/run_all.py` runs all 56 files (check with `ls tests/test_*.py | wc -l` if it changes) (optional name filter: `python tests/run_all.py bars`); a single file: `python tests/<name>.py` (`test_round5.py` collects the latest rounds). `tests/live_clipboard.py`, `tests/live_dnd.py` and `tests/live_flux2_file_compare.py` are manual checks (real Windows clipboard, drag and drop, an A/B run of two model files in ComfyUI), not part of the runner. They run against a stubbed Tk and a fake PhotoCraft (`FakePC`, new layer IDs on duplicate, unknown IDs rejected like the real one).
 - In the cloud VM there is no tkinter and no access to ComfyUI's HTTP API, so the real window and real generations could only be checked by the user. With Claude Code on the user's own machine the real window can be started; real generations still need his permission (GPU). The comfyui tools (queue, history, logs) work.
 - New-user test start: `photocraft-ai neuer-nutzer.bat` runs the plugin with its own data folder `data\neuer-nutzer` (`PCCOMFY_HOME`), optionally with `PCCOMFY_SIMULATE_NO_MODELS=1` (ComfyUI's model lists look empty). PhotoCraft must be closed first.
 - All tests must pass before a merge. Say plainly what was not tested live.
