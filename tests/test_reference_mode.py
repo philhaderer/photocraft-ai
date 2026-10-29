@@ -232,17 +232,20 @@ class FakePC:
 
 class FakeComfy:
     def __init__(self):
-        self.uploads, self.graphs = {}, []
+        self.uploads, self.graphs, self.previews = {}, [], []
 
     def upload_image(self, image, name):
         self.uploads[name] = image.copy()
         return name
 
-    def queue(self, graph):
+    def queue(self, graph, preview=None):
         self.graphs.append(graph)
+        self.previews.append(preview)        # the preview method sent with the prompt (live preview)
         return "p1"
 
-    def wait(self, pid, on_progress=None, cancelled=None, timeout=0):
+    def wait(self, pid, on_progress=None, cancelled=None, timeout=0, on_preview=None):
+        if on_preview is not None:
+            on_preview(Image.new("RGB", (32, 32), (200, 10, 10)))     # one live preview frame
         return {"outputs": {"9": {"images": []}}}
 
     def output_images(self, hist, node_id=None):

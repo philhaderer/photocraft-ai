@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
+from . import icons
 
 
 class RunMixin:
@@ -40,7 +41,8 @@ class RunMixin:
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2,
                        mask_density=min(100, max(0, int(self.v_density.get()))),
                        seam=bool(self.v_seam.get()) and self._seam_mode() == "switch" and self._run_mode() in ("inpaint", "remove", "outpaint"),
-                       seam_fixed=self._seam_mode() == "on" and self._run_mode() in ("inpaint", "remove", "outpaint"))
+                       seam_fixed=self._seam_mode() == "on" and self._run_mode() in ("inpaint", "remove", "outpaint"),
+                       preview=bool(self.v_live.get()))
 
     def _doc_tag(self) -> str:
         """Model and options for the name of an upscaled document: "Flux3Klein x1.5 SeedVR2 Restore0.8"."""
@@ -130,6 +132,7 @@ class RunMixin:
 
         def progress(f, msg, phase="", phase_fraction=-1.0, elapsed=0.0):
             self.events.put(("progress", (f, msg, phase, phase_fraction, elapsed)))
+        self.bridge.on_preview = lambda im: self.events.put(("preview", im))
 
         runs = sweep_requests(req, parse_list(self.v_cmp_res.get(), int), parse_list(self.v_cmp_ctx.get(), float))
         if len(runs) > 1:
@@ -233,10 +236,13 @@ class RunMixin:
             self._status("Cancelling…")
 
     def _poll(self):
+        frame = None                # the newest live preview frame of this round (older ones are skipped)
         try:
             while True:
                 kind, data = self.events.get_nowait()
-                if kind == "progress":
+                if kind == "preview":
+                    frame = data
+                elif kind == "progress":
                     f, msg, phase, pf, elapsed = data
                     self._set_progress(f, msg, phase, pf, elapsed)
                     # the bar's label names the step, the line below it says nothing then (no second copy of the same words)
@@ -249,6 +255,8 @@ class RunMixin:
                     self.b_undo.configure(state="normal")
                     self.b_redo.configure(state="normal")
                 elif kind == "done":
+                    frame = None
+                    self._hide_preview()            # the result is in PhotoCraft now (user 29.10., option A)
                     ok = not data.startswith(("Error", "Cancel", "Unexpected"))
                     self._reset_progress(done=ok, text=data if ok else "")      # the success line sits above the bar, nothing below it
                     self._status("" if ok else data, error=data.startswith(("Error", "Unexpected")))
@@ -266,7 +274,33 @@ class RunMixin:
                     self._feather_done(*data)
         except queue.Empty:
             pass
+        if frame is not None:
+            self._show_preview(frame)
         self.root.after(100, self._poll)
+
+    def _show_preview(self, im):
+        """A live preview frame: as wide as the window (at most square), above the status line. The area appears with the
+        first frame and the window grows with it; minimised, nothing is shown."""
+        if getattr(self, "_minimized", False):
+            return
+        try:
+            w = max(int(self.root.winfo_width()), self._px(MIN_W)) - self._px(20)
+        except (tk.TclError, TypeError, ValueError):
+            w = self._px(MIN_W - 20)
+        from PIL import ImageOps
+        shown = ImageOps.contain(im, (w, w))
+        self._preview_photo = icons.photo(self.root, None, "", 0, image=shown)     # Tk drops an image Python no longer holds
+        self.lbl_preview.configure(image=self._preview_photo)
+        if not self.f_preview.winfo_manager():
+            self.f_preview.pack(fill="x", padx=10, pady=(6, 0), before=self.f_status)
+            self._fit_height()
+
+    def _hide_preview(self):
+        if self.f_preview.winfo_manager():
+            self.f_preview.pack_forget()
+            self.lbl_preview.configure(image="")
+            self._preview_photo = None
+            self._fit_height()
 
     def _reset_progress(self, done: bool = False, text: str = ""):
         self._bar_value = 1.0 if done else 0.0
