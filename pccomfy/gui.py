@@ -306,7 +306,9 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         sb = ttk.Scrollbar(self.f_prompt, orient="vertical", command=self.t_prompt.yview)
         self.t_prompt.configure(yscrollcommand=sb.set)
         sb.pack(side="right", fill="y")
-        self.t_prompt.pack(side="left", fill="x", expand=True)
+        # fills its frame: with fill="x" only it was centred in a frame that still had the old height while the grip was
+        # dragged, so its top edge jumped by half a line
+        self.t_prompt.pack(side="left", fill="both", expand=True)
         self.grip = ttk.Frame(r, style="Grip.TFrame", height=self._px(7), cursor="sb_v_double_arrow")
         self.grip.pack(fill="x", padx=10, pady=(1, 0))
         self._grip_drag(self.grip, self.t_prompt)
