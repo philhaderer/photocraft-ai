@@ -305,7 +305,7 @@ class RefSlotsMixin:
     ComfyUI), Describe and (with a description) Copy text."""
 
     SLOT = 108         # px (before the display scaling): every slot is the same size, whatever the model
-    ICON_PX = 24       # size of the slot icons (vector line icons, icons.py) before the display scaling: the ONE place to change it
+    ICON_PX = 19       # size of the slot icons (vector line icons, icons.py) before the display scaling (80 % of the first 24): the ONE place to change it
     PER_ROW = 3        # slots per row
     BAR_ICONS = 5      # the most icons one bar holds (the slot is as tall as that needs)
 
