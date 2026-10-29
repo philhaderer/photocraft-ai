@@ -85,6 +85,7 @@ SHAPES.update({
     "info": [_circle(12, 12, 10), [(12, 16), (12, 11.5)], [(12, 8), (12.01, 8)]],    # a circled i (the tip under the prompt)
     "eye":[_arc(12, 15.64, 10.64, 200, 340, 14) + _arc(12, 8.36, 10.64, 20, 160, 14) + [(2, 12)], _circle(12, 12, 3)],
     "refresh":[_arc(12, 12, 9, 0, 315, 28) + [(21, 8)], [(21, 3), (21, 8), (16, 8)]],    # a circle arrow, clockwise
+    "minimize": [[(5, 12), (19, 12)]],              # the minimise button in the header
     "chevron-up": [[(6, 15), (12, 9), (18, 15)]],
     "chevron-down": [[(6, 9), (12, 15), (18, 9)]],
     "chevron-right": [[(9, 6), (15, 12), (9, 18)]],
