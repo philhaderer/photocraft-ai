@@ -173,10 +173,10 @@ def from_file(path, color: str, px: int) -> Image.Image:
 
 
 def spin_arrow(up: bool, color: str, px: int) -> Image.Image:
-    """A flat chevron for a spin box: the middle band of the px x px icon (px wide, px / 2 high), so the two arrows stack
-    into the height of the field."""
+    """A flat chevron for a spin box: only the band of the px x px icon the chevron covers (grid rows 7.5 to 16.5 of 24:
+    the line from 9 to 15 and its width), so the two arrows stack into the height of the field."""
     im = render("chevron-up" if up else "chevron-down", color, px)
-    return im.crop((0, px // 4, px, px // 4 + px // 2))
+    return im.crop((0, round(px * 7.5 / GRID), px, round(px * 16.5 / GRID)))
 
 
 def checkbox(fill: str, border: str, check: str | None, px: int) -> Image.Image:
