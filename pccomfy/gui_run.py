@@ -39,7 +39,8 @@ class RunMixin:
                        layer_mask=layer_mask_key(self.v_lmask.get()),
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2,
                        mask_density=min(100, max(0, int(self.v_density.get()))),
-                       seam=bool(self.v_seam.get()) and self._run_mode() in ("inpaint", "remove", "outpaint"))
+                       seam=bool(self.v_seam.get()) and self._seam_mode() == "switch" and self._run_mode() in ("inpaint", "remove", "outpaint"),
+                       seam_fixed=self._seam_mode() == "on" and self._run_mode() in ("inpaint", "remove", "outpaint"))
 
     def _doc_tag(self) -> str:
         """Model and options for the name of an upscaled document: "Flux3Klein x1.5 SeedVR2 Restore0.8"."""

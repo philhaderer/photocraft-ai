@@ -71,6 +71,11 @@ class ModeMixin:
     def _model(self):
         return models.BY_KEY.get(self.v_model.get())
 
+    def _seam_mode(self) -> str:
+        """The seam correction for the chosen model: "on", "off" or "switch" (the checkbox; also for a workflow of your own)."""
+        m = self._model()
+        return m.seam if m else "switch"
+
     def _custom_workflow(self) -> bool:
         """A workflow of your own is chosen (no model): every function is offered as it is."""
         return not self.v_model.get() and self.v_workflow.get() not in ("", BUILTIN)
@@ -510,9 +515,9 @@ class ModeMixin:
             self._pack_post(self.f_ctx)
         elif hasattr(self.f_ctx, "pack_forget"):
             self.f_ctx.pack_forget()
-        fs = getattr(self, "f_seam", None)    # the seam correction too: only where a new area meets the old picture
-        if fs is not None:
-            if masked:
+        fs = getattr(self, "f_seam", None)    # the seam correction too: only where a new area meets the old picture,
+        if fs is not None:                    # and only for a model that keeps the checkbox (Fibo always on, Flux off)
+            if masked and self._seam_mode() == "switch":
                 self._pack_post(fs)
             elif hasattr(fs, "pack_forget"):
                 fs.pack_forget()

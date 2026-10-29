@@ -83,6 +83,7 @@ class Request:
     sharpen: float = 0.0                 # 0..1: a light sharpening of the result (high-pass style, like KJNodes' Image Sharpen)
     seam: bool = False                   # Fill / Remove / Expand: seam correction as an A/B test, each result twice
     #                                      ("[seam fix]" on top, "[raw]" hidden below it; imaging.seam_correct)
+    seam_fixed: bool = False             # the same correction always on (Fibo, user 29.10.): one corrected layer, no A/B
     sampler_override: dict = field(default_factory=dict)   # {"steps": .., "cfg": .., "denoise": .., "sampler": .., "scheduler": ..} typed over the workflow's sampler
     doc_tag: str = ""                    # Upscale: model and options in the new document's name ("Flux3Klein x1.5 SeedVR2")
     label: str = ""                      # added to the layer names (a comparison run: "res 1024")
@@ -660,7 +661,7 @@ class Bridge:
         if req.match > 0 and req.mode in ("inpaint", "outpaint") and mask is not None and results and results[0][1]:
             sel_small = mask.crop(region.pil()).resize(results[0][1][0].size, Image.NEAREST)
         seam_mask = None   # seam correction: the new area in the size the model drew it (white = new)
-        if req.seam and req.mode in ("inpaint", "outpaint") and mask is not None and results and results[0][1]:
+        if (req.seam or req.seam_fixed) and req.mode in ("inpaint", "outpaint") and mask is not None and results and results[0][1]:
             seam_mask = mask.crop(region.pil()).resize(results[0][1][0].size, Image.BILINEAR)
         seam = None        # the tone jump at the seam of #1 in levels, before and after: (before, after)
         items = [(label, i, im, len(ims)) for label, ims in results for i, im in enumerate(ims)]
@@ -682,10 +683,14 @@ class Bridge:
                 rgb = raw.convert("RGB")
                 if req.match > 0 and sel_small is not None:
                     rgb = imaging.match_saturation(rgb, crop_plain, sel_small, req.match)
-                # A/B: the raw result first (it ends up hidden below), then the corrected one on top of it
-                pairs = [("raw", rgb), ("seam fix", imaging.seam_correct(rgb, crop_plain, seam_mask))] if seam_mask is not None else [("", rgb)]
-                if seam_mask is not None and g == 0:
-                    seam = (imaging.seam_jump(rgb, crop_plain, seam_mask), imaging.seam_jump(pairs[1][1], crop_plain, seam_mask))
+                # A/B: the raw result first (it ends up hidden below), then the corrected one on top of it;
+                # always on: only the corrected one, named as a plain result
+                pairs = [("", rgb)]
+                if seam_mask is not None:
+                    fixed = imaging.seam_correct(rgb, crop_plain, seam_mask)
+                    pairs = [("", fixed)] if req.seam_fixed else [("raw", rgb), ("seam fix", fixed)]
+                    if g == 0:
+                        seam = (imaging.seam_jump(rgb, crop_plain, seam_mask), imaging.seam_jump(fixed, crop_plain, seam_mask))
                 label = " ".join(x for x in (label, req.label) if x)
                 for k, (ab, out) in enumerate(pairs):
                     im = out.resize((region.w, region.h), Image.LANCZOS)
@@ -712,7 +717,7 @@ class Bridge:
             self._log_seam(req, p.seed, seam)
         progress(1.0, f"Done (seed {p.seed})", phase="place")
         return {"seed": p.seed, "vgl": self.last_vgl, "layers": layers, "region": region.__dict__, "size": [gw, gh], "pipeline": self.pipeline,
-                "group": group, "seam": seam}
+                "group": group, "seam": None if req.seam_fixed else seam}   # always on: the number only in runs.jsonl
 
     # ---------- feather preview ----------
 
@@ -976,7 +981,7 @@ class Bridge:
             f = self.exchange / "runs.jsonl"
             old = f.read_text(encoding="utf-8").splitlines()[-99:] if f.exists() else []
             rec = {"time": time.strftime("%Y-%m-%d %H:%M:%S"), "mode": ("remove" if req.remove else req.mode), "seed": seed,
-                   "seam_before": round(seam[0], 1), "seam_after": round(seam[1], 1)}
+                   "seam": "on" if req.seam_fixed else "ab", "seam_before": round(seam[0], 1), "seam_after": round(seam[1], 1)}
             f.write_text("\n".join(old + [json.dumps(rec, ensure_ascii=False)]) + "\n", encoding="utf-8")
         except (OSError, TypeError, ValueError):
             pass

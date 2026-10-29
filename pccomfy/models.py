@@ -33,6 +33,8 @@ class Model:
     tag_style: str = ""             # Multi Image Edit: how this model names an image in the prompt; {n} counts from 1 (the picture
                                     # is image 1, the first reference image 2), {i} from 0 ("" = no names)
     requires: tuple = ()            # model detection: the model files this tab needs (file names, as ComfyUI lists them); () = not set yet
+    seam: str = "switch"            # seam correction in Fill / Remove / Expand: "on" always (one corrected layer), "off" never,
+                                    # "switch" the A/B checkbox (user 29.10.: Fibo on, Flux 2/3 off, Qwen keeps the checkbox)
 
     def workflows(self) -> list[str]:
         out = []
@@ -123,7 +125,7 @@ FLUX2 = Model(
         "qwen_3_8b_fp8mixed.safetensors",
         "flux2-vae.safetensors",
     ),   # the model files this tab needs (details per mode: manifest.py)
-    max_refs=3, tag_style="image {n}")
+    max_refs=3, tag_style="image {n}", seam="off")
 
 FLUX3 = Model(
     "flux3", "Flux 3 Klein Edit",
@@ -141,7 +143,7 @@ FLUX3 = Model(
         "qwen3vl_4b_int8_convrot.safetensors",
         "flux2-vae.safetensors",
     ),   # the model files this tab needs (details per mode: manifest.py)
-    max_refs=3, tag_style="<ref_image_{i}>")
+    max_refs=3, tag_style="<ref_image_{i}>", seam="off")
 
 # MOSS: the DMD2 speed LoRA (8 steps, CFG 1.5) is the model's own LoRA; the Lenovo UltraReal LoRA and the skip-layer
 # guidance (SLG) are switches that start on (best result in the live tests); the LLM prompt enhancer starts off.
@@ -201,7 +203,7 @@ FIBO = Model(
         "qwen3vl_4b_int8_convrot.safetensors",
         "flux2-vae.safetensors",
     ),   # the model files this tab needs (details per mode: manifest.py)
-    max_refs=2, tag_style="<image_{n}>")
+    max_refs=2, tag_style="<image_{n}>", seam="on")
 
 MODELS = [FLUX3, FLUX2, QWEN, FIBO, KREA2, MOSS]      # the order of the tabs
 BY_KEY = {m.key: m for m in MODELS}
