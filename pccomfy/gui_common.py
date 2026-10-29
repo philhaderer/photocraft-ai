@@ -274,12 +274,13 @@ class Tooltip:
 class ThinScrollbar:
     """A very thin vertical scroll bar for a Canvas: a narrow strip with a rounded handle, no arrows. Dragging the handle,
     a click on the strip and the mouse wheel scroll; the handle lightens under the mouse. Shown only while it is needed
-    (`show` / `hide`)."""
+    (`show` / `hide`; with `auto`, by itself whenever the content is longer than the view, e.g. the prompt field).
+    Works for any widget that scrolls like a Canvas (a Text too)."""
 
     THUMB, THUMB_HOT = "#808080", "#b0b0b0"      # visible on the window grey (#535353) without standing out
 
-    def __init__(self, parent, canvas, width: int, bg: str):
-        self.canvas, self.width = canvas, width
+    def __init__(self, parent, canvas, width: int, bg: str, auto: bool = False):
+        self.canvas, self.width, self.auto = canvas, width, auto
         self.bar = tk.Canvas(parent, width=width, height=1, bg=bg, highlightthickness=0, bd=0, cursor="arrow")   # height: from the canvas beside it
         self.shown = False
         self._first, self._last, self._drag, self._hot = 0.0, 1.0, None, False
@@ -304,6 +305,12 @@ class ThinScrollbar:
 
     def set(self, first, last):
         self._first, self._last = float(first), float(last)
+        if self.auto:
+            if self._last - self._first < 1.0:
+                self.show()
+            elif self.shown:
+                self.shown = False          # not hide(): that scrolls to the top, the view is whole anyway
+                self.bar.pack_forget()
         self._draw()
 
     def _heat(self, hot: bool):
