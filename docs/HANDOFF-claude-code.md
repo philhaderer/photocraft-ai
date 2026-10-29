@@ -61,7 +61,7 @@ Zweck: Alles, was die nächste Claude-Code-Sitzung wissen muss, um direkt weiter
 - Qwen-Slotzahl: 8 bleibt.
 - Veröffentlichung: neues Repo ohne Upstream-Verlauf, Credits Pflicht, erst kurz vor dem Release; bis dahin `windows-fibo`.
 - Reihenfolge: **kleine Verbesserungen zuerst** (PLAN.md 8.A), dann weiter nach Plan; Easy Mode zuletzt. Easy-Mode-Ranking Fill und Remove: Fibo, Qwen (seit 28.10.); Expand: Flux 2, Flux 3, Qwen, Fibo, Krea 2, MOSS (seit 28.10.). Sie steht in `models.RANKING` und vorn in jedem Funktions-Tooltip (`models.function_tip`).
-- Rechtsklick auf Modell-Tab: Favorit, Tab ausblenden, Workflow-JSON speichern. Minimize = Einklappen (hide/show).
+- Rechtsklick auf Modell-Chip: Favorit, Modell ausblenden (zurück nur im Zahnrad-Fenster). Workflow-JSON speichern verworfen (29.10.). Minimize = Einklappen zum Header (gebaut 29.10., PLAN.md Punkt 11).
 - Krea-Styles bis 50 per Bildauswahl; Tutorial-PSDs mit Testbild; Tooltips bei jedem Start.
 - Tipp-Wortlaut Text to image: abgenommen. Icons: 20 px (Slot-Icons 24 px). Drop auf mehrere Bilder: erstes ersetzt, Rest anhängen.
 - Strg+Z/Strg+Y: bleibt wie heute, keine Plugin-Tastenkürzel (27.10.). ComfyUI-Punkt: rot = nicht verbunden, grün = verbunden (27.10.).
