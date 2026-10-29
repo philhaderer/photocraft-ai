@@ -36,7 +36,7 @@ Which model offers which function:
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
 | Fill Selection | | | ✓ | ✓ | | |
 | Remove Selection | ✓ | ✓ | ✓ | ✓ | | |
-| Expand image | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Expand image | ✓ | ✓ | ✓ | ✓ | | |
 | Edit whole image | ✓ | ✓ | ✓ | ✓ | | |
 | Multi Image Edit | ✓ | ✓ | ✓ | ✓ | | |
 | Upscale | ✓ | ✓ | | | | |
