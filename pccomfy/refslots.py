@@ -423,7 +423,7 @@ class RefSlotsMixin:
     def _refs_redraw(self):
         import tkinter as tk
         from tkinter import ttk
-        from .gui_common import ACCENT, FG, MUTED, PANEL, Tooltip
+        from .gui_common import ACCENT, FG, MUTED, PANEL, Tooltip, font
         for w in (self.f_refgrid.winfo_children() or []):
             w.destroy()
         self._refs_preview_close()   # the slots change: an open larger view may show a picture that is gone
@@ -459,8 +459,10 @@ class RefSlotsMixin:
                     self._refs_slot_drop(lbl, k)
                 Tooltip(lbl, f"{it.name or 'clipboard'}" + ("  (cut out)" if it.cut_out else "") + (f"\n{it.description}" if it.description else ""))
                 tag = rs.tag(k)
-                lt = ttk.Label(cell, text=tag or f"image {k + 2}", style="Hint.TLabel", anchor="center")      # centred under the slot
-                lt.pack(fill="x")
+                # the tag in a box of the slots' colour, white, centred under the slot (user 29.10.)
+                lt = tk.Label(cell, text=tag or f"image {k + 2}", bg=PANEL, fg=FG, font=font(9), anchor="center",
+                              bd=0, padx=0, pady=self._px(2))
+                lt.pack(fill="x", pady=(self._px(3), 0))
                 if tag:         # a click on it adds it to the end of the prompt field
                     lt.configure(cursor="hand2")
                     lt.bind("<Button-1>", lambda e, k=k: self._refs_insert_tag(k))
@@ -484,8 +486,7 @@ class RefSlotsMixin:
         self._refs_xy()                 # the description in spot XY follows its slot (new tag, removed picture)
         over = len(rs.overflow)
         self.lbl_refmax.configure(text=f"Max. images: {rs.max_refs}")
-        hint = rs.hint()
-        self.lbl_refnames.configure(text=("Name them in your text: " + hint + "." if hint else
+        self.lbl_refnames.configure(text=("Dragging an image into the prompt box inserts its tag." if rs.active else
                                           "Add a picture, then name it in your text."))
         if over:
             self._refs_say(f"The last {over} image(s) are kept but not sent.")
