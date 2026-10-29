@@ -219,6 +219,8 @@ def main():
     assert pp((1500, 100, 380, 900), (400, 200), 0, 2560) == (1092, 100)   # left of the plugin, level with its top
     assert pp((100, 100, 380, 900), (400, 200), 0, 2560) == (488, 100)     # no room on the left: on the right
     assert pp((100, 100, 380, 900), (760, 200), 0, 1000) == (0, 100)       # room on neither side: at the screen's left edge
+    assert pp((1500, 100, 380, 900), (400, 200), 0, 2560, top=450) == (1092, 450)   # level with the slot (user 29.10.)
+    assert pp((1500, 100, 380, 900), (400, 300), 0, 2560, top=850) == (1092, 700)   # never lower than the plugin's bottom
     print("ALL OK (refslots)")
 
 

@@ -119,7 +119,7 @@ def main():
     assert app.ICON_PX == 24 and app._icon_px() == 24 and app._bar_px() == 30          # vector icons, one constant
     from pccomfy import icons
     for k in ("remove", "cut", "describe", "copy", "paste", "file",                    # every slot and window icon draws, at any size
-              "plus", "gear", "undo", "redo", "chevron-up", "chevron-down", "chevron-right", "save", "saveas", "trash"):
+              "plus", "gear", "undo", "redo", "eye", "refresh", "chevron-up", "chevron-down", "chevron-right", "save", "saveas", "trash"):
         for px in (24, 36):
             im = icons.render(k, "#eeeeee", px)
             assert im.size == (px, px) and im.getbbox() is not None, (k, px)
@@ -142,7 +142,7 @@ def main():
     app._ref_icon_cache.clear()
     app._refs_redraw()
     kinds = {k for k, _c in app._ref_icon_cache}
-    assert {"remove", "cut", "describe"} <= kinds and "pen" not in kinds and "copy" not in kinds
+    assert {"eye", "remove", "cut", "describe"} <= kinds and "pen" not in kinds and "copy" not in kinds
     app.refslots.items[0].description = "A red square."
     app._refs_redraw()
     assert "copy" in {k for k, _c in app._ref_icon_cache}
