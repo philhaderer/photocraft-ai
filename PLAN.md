@@ -49,8 +49,14 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 **E. Offen aus der alten Liste**
 7. ~~**Refresh/Reset** kleiner und klarer~~: **gebaut 29.10.** (`feat/footer-refresh-icon`, Option A des Users): Refresh ist ein flaches ⟳-Symbol (Größe wie das Zahnrad) direkt nach dem ComfyUI-Punkt, Reset der flache Textknopf „Defaults“; Tooltips bleiben. Das Zahnrad-Fenster sagt jetzt „click the refresh arrow (⟳)“ statt „press Refresh“. Live-Test durch den User offen (Abstände, Größe bei 150 %).
 8. ~~**Expand-Entscheidungen:**~~ **erledigt 29.10.** (siehe E2/E3): Krea 2 (und MOSS) Expand abgeschaltet nach dem Blindtest; Flux 3 Expand bleibt an und läuft mit dem eigenen Outpaint-LoRA-Workflow (`flux3-klein-outpaint.json`). Offen nur die Bildbewertung und der Live-Test im echten Fenster (E2).
-9. **Ränder bei Fill/Expand:** Masken-Option A (wartet auf Freigabe). Die Seam-Korrektur (T2) ist seit 28.10. vorgezogen, siehe E2.
-10. **Restliche Design-Vorschläge:** Prompt-Feld mit dünnem Scrollbalken, runde Radios und echte Checkbox im PhotoCraft-Look, gesperrte Felder einheitlich, Tipp-Text gedämpft mit Info-Icon, Fortschrittsbalken nach „Done“ neutral.
+9. ~~**Ränder bei Fill/Expand:** Masken-Option A~~: **hinfällig 29.10.** (User: Fill ist mit dem Rand außen gelöst, „beide Removen perfekt“).
+10. **Restliche Design-Vorschläge** (geprüft 29.10.; Entscheidungen des Users 29.10.): gesperrte Felder einheitlich grau: schon erledigt. Fortschrittsbalken bleibt orange (User: „passt so“). Offen und freigegeben: Prompt-Feld mit dünnem Scrollbalken; Tipp-Text unter dem Prompt bleibt orange und bekommt ein Info-Symbol davor; Checkbox im PhotoCraft-Look (abgerundetes Quadrat, hellgrauer Rand, dunkle Fläche; Screenshot des Users, angehakter Zustand noch offen); runde Radios gibt es in PhotoCraft nicht: Vorschlag, die Prompt-Auswahl (einzige Radios) als kleine Schalter wie bei Upscale factor (Antwort offen).
+10a. **Zusätzliche Todos des Users (29.10.):**
+   - Bug: die Prompt-Box hüpft beim Größerziehen leicht am oberen Rand.
+   - Upscale: „Upscale: opens new document“ wird „Upscale factor“ mit vier kleinen Schaltern 1.5x 2x 3x 4x im Stil von „Show feather“, gewählt = orange gefüllt; „opens a new document“ in den Tooltip.
+   - Bug: hat das Plugin unten zu wenig Platz (z. B. nach unten geschoben), flackert es und der Scrollbalken springt. Vermutete Ursache: `_fit_height` setzt die Höhe der Fläche erst auf voll und dann kleiner, das löst jedes Mal ein neues Anpassen aus (Schleife).
+   - Slot-Vorschau über ein Augensymbol in der Symbolleiste des Slots (als erstes Symbol, Slot dafür etwas höher); die Vorschau erscheint neben dem Plugin, oben bündig mit dem Slot; Klick aufs Bild öffnet sie weiter.
+   - Context wieder in Prozent anzeigen (Schritt 5 %).
 
 **L3 Fenster-Politur**
 11. Hide/Show (Einklappen zur Titelleiste), Rechtsklick-Menü auf Tabs (Favorit, ausblenden, Workflow-JSON speichern), „Copy canvas to clipboard“, alten Knopf „Insert reference image“ entfernen, falls noch sichtbar.
