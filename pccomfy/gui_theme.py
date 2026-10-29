@@ -11,6 +11,8 @@ ICON_PX = 20       # the window's button icons (vector, icons.py) before the dis
 HINT_ICON_PX = 14  # the info icon in front of the tip under the prompt: about one text line high
 FN_GAP = 8         # room between a function symbol and its text (ttk has no gap option: the symbol gets it on its right)
 SPIN_PX = 14       # the chevrons of the spin boxes: flatter than a button icon, so the field keeps its height
+CHECK_PX = 16      # the checkbox square (PhotoCraft's, measured from docs/design/photocraft-checkbox.png at 150 %)
+CHECK_GAP = 6      # room between the checkbox and its text
 
 
 class ThemeMixin:
@@ -102,6 +104,33 @@ class ThemeMixin:
         self.root.option_add("*TCombobox*Listbox.background", PANEL)
         self.root.option_add("*TCombobox*Listbox.foreground", FG)
         self._spin_arrows(s)
+        self._checkbox_look(s)
+
+    def _checkbox_look(self, s):
+        """Every checkbox in PhotoCraft's look (docs/design/photocraft-checkbox.png): a rounded square with a light grey
+        border on a darker field; ticked = filled orange with a white tick (PhotoCraft's is blue); a lighter border under
+        the mouse, grey when greyed out. Without image support clam's own indicator stays."""
+        try:
+            px = self._px(CHECK_PX)
+            looks = {"off": ("#454545", "#a0a0a0", None), "off-hover": ("#454545", FG, None),
+                     "on": (ACCENT, ACCENT, "#ffffff"), "off-grey": (BG, "#6e6e6e", None),
+                     "on-grey": ("#6e6558", "#6e6558", "#a8a8a8")}
+            imgs = {}
+            for k, v in looks.items():      # the gap to the text is part of the picture (an image element ignores padding)
+                wide = Image.new("RGBA", (px + self._px(CHECK_GAP), px), (0, 0, 0, 0))
+                wide.paste(icons.checkbox(*v, px), (0, 0))
+                imgs[k] = icons.photo(self.root, None, "", px, image=wide)
+            self._check_imgs = imgs         # Tk drops an image Python no longer holds
+            if "PC.Checkbutton.indicator" not in s.element_names():
+                s.element_create("PC.Checkbutton.indicator", "image", imgs["off"],
+                                 ("disabled", "selected", imgs["on-grey"]), ("disabled", imgs["off-grey"]),
+                                 ("selected", imgs["on"]), ("active", imgs["off-hover"]), sticky="")
+            s.layout("TCheckbutton", [("Checkbutton.padding", {"sticky": "nswe", "children": [
+                ("PC.Checkbutton.indicator", {"side": "left", "sticky": ""}),
+                ("Checkbutton.focus", {"side": "left", "sticky": "w", "children": [
+                    ("Checkbutton.label", {"sticky": "nswe"})]})]})])
+        except Exception:
+            pass
 
     def _spin_arrows(self, s):
         """The spin boxes' up/down arrows: thin chevrons (icons.py) instead of clam's big filled triangles; orange under the

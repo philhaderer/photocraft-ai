@@ -179,6 +179,24 @@ def spin_arrow(up: bool, color: str, px: int) -> Image.Image:
     return im.crop((0, px // 4, px, px // 4 + px // 2))
 
 
+def checkbox(fill: str, border: str, check: str | None, px: int) -> Image.Image:
+    """A checkbox in PhotoCraft's look (docs/design/photocraft-checkbox.png): a rounded square of px x px with a 2/16
+    border; `check` draws the tick (None = empty box). Drawn large and scaled down, so the corners are smooth."""
+    n = px * SUPER
+    u = n / 16
+    im = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle([0, 0, n - 1, n - 1], radius=round(3 * u), fill=border)
+    d.rounded_rectangle([2 * u, 2 * u, n - 1 - 2 * u, n - 1 - 2 * u], radius=round(1.5 * u), fill=fill)
+    if check:
+        pts = [(3.6 * u, 8.4 * u), (6.6 * u, 11.2 * u), (12.4 * u, 4.8 * u)]
+        w = 2.0 * u
+        d.line(pts, fill=check, width=round(w))
+        for x, y in pts:                     # round ends and joins
+            d.ellipse([x - w / 2, y - w / 2, x + w / 2, y + w / 2], fill=check)
+    return im.resize((px, px), Image.LANCZOS)
+
+
 def photo(root, kind: str, color: str, px: int, image: Image.Image | None = None):
     """The icon as a Tk PhotoImage (PNG data); `image` instead of `kind` for a ready picture (spin_arrow)."""
     import tkinter as tk
