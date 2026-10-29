@@ -102,7 +102,7 @@ sd = types.ModuleType("tkinter.simpledialog")
 tk.Tk = tk.Toplevel = Widget
 tk.StringVar, tk.IntVar, tk.DoubleVar, tk.BooleanVar = Var, IntVar, DoubleVar, Var
 tk.Text, tk.TclError = Text, TclError
-tk.PhotoImage = tk.Listbox = tk.Frame = tk.Label = tk.Canvas = Widget   # (Frame, Label, Canvas: the reference slots)
+tk.PhotoImage = tk.Listbox = tk.Frame = tk.Label = tk.Canvas = tk.Menu = Widget   # (Frame, Label, Canvas: the reference slots; Menu: Variants)
 for n in ("Frame", "Label", "Combobox", "Button", "Radiobutton", "Checkbutton", "Spinbox", "Entry", "LabelFrame",
           "Progressbar", "Style", "Notebook", "Scale", "Scrollbar"):
     setattr(ttk, n, Widget)
@@ -303,6 +303,13 @@ def main():
     app._on_mode()
     assert app.v_workflow.get() == "plain.json", app.v_workflow.get()     # and gave the old one back
     assert app.w_variants["state"] == "normal" and app.w_adv["Context"]["state"] == "normal"
+    # Variants are the narrow piece on the right of Generate: "×n ▾", at 1 only "▾"
+    keep = app.v_variants.get()
+    app.v_variants.set(3)
+    assert app.w_variants["text"] == "×3 ▾", app.w_variants["text"]
+    app.v_variants.set(1)
+    assert app.w_variants["text"] == "▾"
+    app.v_variants.set(keep)
     app.v_workflow.set("up.json")                                          # picking the upscale workflow in the list
     app._workflow_picked()
     assert app.v_mode.get() == "upscale"

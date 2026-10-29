@@ -72,6 +72,7 @@ class ThemeMixin:
         s.configure("Missing.Chip.Toolbutton", foreground=NA_RED)
         s.configure("Accent.TButton", background=ACCENT, foreground="#1b1b1b", font=font(10, bold=True))
         s.map("Accent.TButton", background=[("active", "#ff9d3d"), ("disabled", "#6e6558")])
+        s.configure("Split.Accent.TButton", padding=(6, 6))     # the narrow "×2 ▾" piece on the right of Generate
         s.configure("TCombobox", fieldbackground=PANEL, background=PANEL, foreground=FG, arrowcolor=FG)
         s.map("TCombobox", fieldbackground=[("readonly", PANEL)], foreground=[("readonly", FG)],
               selectbackground=[("readonly", PANEL)], selectforeground=[("readonly", FG)])

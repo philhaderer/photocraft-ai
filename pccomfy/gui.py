@@ -371,31 +371,24 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         Tooltip(self.b_addlora, "Adds an extra LoRA (strength 0 to 1.5).")
         self.f_xl_rows = ttk.Frame(self.f_xl)
         self.f_xl_rows.pack(fill="x")
-        sf = ttk.Frame(r)    # Variants: directly under the negative prompt
-        sf.pack(fill="x", padx=10, pady=(6, 0), after=self.f_neg)
-        self.f_sf = sf
         mf.pack(fill="x", padx=10, pady=4, after=self.f_neg)     # the LoRA / stage box: directly under the negative prompt
         af = ttk.Frame(self.adv_body)
         af.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(2, 0))
         # Seed sits in the Advanced settings beside Steps and CFG (user 29.10.)
-        items = [("Variants", self._spin(sf, self.v_variants, 1, 8, 1, 4)),
-                 ("Steps", self._spin(af, self.v_steps, 1, 150, 1, 5)),
+        items = [("Steps", self._spin(af, self.v_steps, 1, 150, 1, 5)),
                  ("CFG", self._spin(af, self.v_cfg, 1, 30, 0.5, 5)),
                  ("Seed (-1 random)", self._spin(af, self.v_seed, -1, 2**31 - 1, 1, 11)),
                  ("Denoise", self._spin(af, self.v_denoise, 0.05, 1.0, 0.05, 5))]
         # Denoise is not shown (the user, 28.10.: "there is no use for it"): the widget stays ungridded, so the workflow's /
         # the function's value, presets, Reset and the requests work as before
-        for i, (lbl, w) in enumerate(items):
+        for col, (lbl, w) in enumerate(items):
             if lbl == "Denoise":
                 continue
-            parent = sf if i < 1 else af
-            col = i if i < 1 else i - 1
-            ttk.Label(parent, text=lbl, style="Muted.TLabel").grid(row=0, column=col, sticky="w", padx=(0, 6))
+            ttk.Label(af, text=lbl, style="Muted.TLabel").grid(row=0, column=col, sticky="w", padx=(0, 6))
             w.grid(row=1, column=col, sticky="w", padx=(0, 6))
-        self.w_denoise = items[4][1]
-        self.w_variants = items[0][1]
-        self.w_steps, self.w_cfg, self.w_seed = items[1][1], items[2][1], items[3][1]
-        self.recipe_widgets = [items[1][1], items[2][1]]
+        self.w_denoise = items[3][1]
+        self.w_steps, self.w_cfg, self.w_seed = items[0][1], items[1][1], items[2][1]
+        self.recipe_widgets = [items[0][1], items[1][1]]
 
         sm = ttk.Frame(self.adv_body)
         sm.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(6, 0))
@@ -517,6 +510,17 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.b_go = ttk.Button(bf, text="Generate", width=11, style="Accent.TButton", command=self.generate)
         self.b_go.pack(side="left", fill="y")
         Tooltip(self.b_go, "Generate (Ctrl+Enter)")
+        # Variants are part of Generate (user 29.10.): a narrow orange piece on its right, like a split button; a click
+        # opens the choice 1 to 8. It shows "×n ▾", at 1 only "▾"
+        self.w_variants = ttk.Button(bf, style="Split.Accent.TButton", width=0, command=self._variants_menu)
+        self.w_variants.pack(side="left", fill="y", padx=(1, 0))
+        Tooltip(self.w_variants, "Variants: how many pictures one Generate makes (1 to 8).")
+        self.m_variants = tk.Menu(self.root, tearoff=0, bg=PANEL, fg=FG, activebackground=ACCENT,
+                                  activeforeground="#1b1b1b", selectcolor=FG, bd=0, font=font(10))
+        for n in range(1, 9):
+            self.m_variants.add_radiobutton(label=str(n), value=n, variable=self.v_variants)
+        self.v_variants.trace_add("write", lambda *a: self._show_variants())
+        self._show_variants()
         self.b_stop = ttk.Button(bf, text="Cancel", command=self.stop, state="disabled")
         self.b_stop.pack(side="left", fill="y", padx=(6, 0))
         self._icons.update({"undo": self._icon("undo"), "redo": self._icon("redo")})

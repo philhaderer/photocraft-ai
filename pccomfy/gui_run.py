@@ -74,6 +74,25 @@ class RunMixin:
         st = self._stages()
         return [s["id"] for s, var in zip(st[1:], self.stage_vars[1:]) if not var.get()]
 
+    def _show_variants(self):
+        """The orange piece on the right of Generate says how many pictures a run makes: "×3 ▾", at 1 only "▾"."""
+        try:
+            n = int(self.v_variants.get())
+        except (TypeError, ValueError, tk.TclError):
+            n = 1
+        self.w_variants.configure(text=f"×{n} ▾" if n > 1 else "▾")
+
+    def _variants_menu(self):
+        """A click on the piece beside Generate: the choice 1 to 8, opening under it."""
+        b = self.w_variants
+        try:
+            self.m_variants.tk_popup(b.winfo_rootx(), b.winfo_rooty() + b.winfo_height())
+        finally:
+            try:
+                self.m_variants.grab_release()
+            except Exception:
+                pass
+
     def generate(self):
         if self.worker and self.worker.is_alive():
             return
@@ -103,6 +122,7 @@ class RunMixin:
             self._fprev_on, self._fprev_dirty = False, None
             self.b_fprev.configure(text="Show feather")
         self.b_go.configure(state="disabled")
+        self.w_variants.configure(state="disabled")     # part of Generate: grey with it while a run is on
         self.b_undo.configure(state="disabled")
         self.b_redo.configure(state="disabled")
         self.b_stop.configure(state="normal")
@@ -233,6 +253,7 @@ class RunMixin:
                     self._reset_progress(done=ok, text=data if ok else "")      # the success line sits above the bar, nothing below it
                     self._status("" if ok else data, error=data.startswith(("Error", "Unexpected")))
                     self.b_go.configure(state="normal")
+                    self.w_variants.configure(state="disabled" if self._run_mode() in SCALE_MODES else "normal")
                     self.b_undo.configure(state="normal")
                     self.b_redo.configure(state="normal")
                     self.b_stop.configure(state="disabled")
