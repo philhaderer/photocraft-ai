@@ -116,7 +116,7 @@ def main():
     assert seen["parent"] is app.root and seen["link"] is None and seen["popup"] is None
     assert [it.name for it in app.refslots.items] == ["a b.png"]
 
-    assert app.ICON_PX == 24 and app._icon_px() == 24 and app._bar_px() == 30          # vector icons, one constant
+    assert app.ICON_PX == 19 and app._icon_px() == 19 and app._bar_px() == 25          # vector icons, one constant
     from pccomfy import icons
     for k in ("remove", "cut", "describe", "copy", "paste", "file",                    # every slot and window icon draws, at any size
               "plus", "gear", "undo", "redo", "eye", "refresh", "chevron-up", "chevron-down", "chevron-right", "save", "saveas", "trash"):
