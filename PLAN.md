@@ -92,6 +92,8 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 
 ## 4. Git-Ablauf (du musst nichts davon bedienen)
 
+- **Privates GitHub-Repo (29.10., Wunsch des Users):** <https://github.com/philhaderer/photocraft-ai> (Account `philhaderer`, privat). Remote `private`; `next` wird dort als `main` hochgeladen, nur auf Wunsch des Users (sonst gilt weiter: nicht pushen). `origin` bleibt der Upstream. Zweiter Rechner: `docs/installation-zweiter-rechner.md` (GitHub Desktop, nur holen).
+
 - `next` ist der Integrationsstand, den du testest. `windows-fibo` ist der zuletzt abgenommene Stand; nach deiner Abnahme wird er auf `next` vorgezogen.
 - Je Aufgabe ein Branch (`feat/`, `fix/`, `docs/`, `test/`, `refactor/`, `chore/`) aus `next`. Vor dem Zusammenführen laufen alle Tests (`python tests/run_all.py`), dann Merge in `next`. Nie pushen, nie Verlauf umschreiben, vor dem Löschen eines Branches fragen.
 - Commits nach Conventional Commits, Details in `CLAUDE.md`.
