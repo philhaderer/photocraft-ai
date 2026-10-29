@@ -56,20 +56,22 @@ def main():
     assert app.v_mode.get() == "txt2img" and app.v_workflow.get() == "moss-image-t2i.json" and app.v_res.get() == 1280
     assert app.v_enhance.get() is False and "Qwen 3.5 9B" in app.tt_enhance.text      # which text model writes the prompt (starts off)
     assert app.cb_enhance["text"] == "LLM prompt enhancement (Qwen 3.5 9B)"
-    assert app.v_turbo.get() is True and app.cb_turbo["text"].startswith("DMD2") and app.v_lora_str.get() == 1.0
+    assert app.v_turbo.get() is False and app.cb_turbo["text"].startswith("DMD2") and app.v_lora_str.get() == 1.0   # DMD2 starts off (user 29.10.)
     assert list(models.MOSS.modes) == ["txt2img"]                                                       # Fill off (not good enough), Expand parked 29.10.
     assert [c["text"] for c in app.stage_cbs] == ["UltraReal LoRA", "Skip-layer guidance (SLG)", "Stage"]
-    assert app.v_stage.get() and app.v_stage2.get()                                    # Lenovo on, SLG on
+    assert app.v_stage.get() and not app.v_stage2.get()                                # Lenovo on, SLG off (user 29.10.)
     r = app._request()
-    assert r.stage_on is True and r.stages_off == [] and r.turbo is True
+    assert r.stage_on is True and r.stages_off == ["7"] and r.turbo is False
     assert r.stage_strengths == {"5": 1.0}                                              # the Lenovo LoRA has a strength slider
     app.v_sstr[0].set(0.6)
     assert app._request().stage_strengths == {"5": 0.6}
     app.v_sstr[0].set(1.0)
-    assert r.sampler_override == {} and (app.v_steps.get(), app.v_cfg.get()) == (8, 1.5)   # the fields show the workflow's values
+    assert r.sampler_override == {} and (app.v_steps.get(), app.v_cfg.get()) == (25, 2.5)  # without DMD2: the full recipe
+    app.v_turbo.set(True)
+    app._on_workflow()
+    assert (app.v_steps.get(), app.v_cfg.get()) == (8, 1.5)                               # with DMD2: its own values
     app.v_turbo.set(False)
     app._on_workflow()
-    assert (app.v_steps.get(), app.v_cfg.get()) == (25, 2.5)                              # without DMD2: the full recipe
     app.v_steps.set(30)
     assert app._request().sampler_override == {"steps": 30}
     app.v_turbo.set(True)
