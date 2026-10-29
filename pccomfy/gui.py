@@ -412,9 +412,19 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._show_negative()
 
         self.f_scale = ttk.Frame(r)
-        ttk.Label(self.f_scale, text="Upscale: opens new document", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
-        self.cb_scale = ttk.Combobox(self.f_scale, textvariable=self.v_scale, values=["x 1.5", "x 2", "x 3", "x 4"], state="readonly", width=6)
-        self.cb_scale.grid(row=0, column=1, padx=8)
+        # the factor as four small switches (user 29.10.): the chosen one is orange; a new document is said in the tooltip
+        scale_tip = "How much larger the result is. Upscale opens it as a new document."
+        lb = ttk.Label(self.f_scale, text="Upscale factor", style="Muted.TLabel")
+        lb.grid(row=0, column=0, sticky="w")
+        Tooltip(lb, scale_tip)
+        f_sw = ttk.Frame(self.f_scale)
+        f_sw.grid(row=0, column=1, sticky="e")
+        self.rb_scale = {}
+        for i, f in enumerate(("1.5", "2", "3", "4")):
+            rb = ttk.Radiobutton(f_sw, text=f"{f}x", value=scale_text(f), variable=self.v_scale, style="Small.Toolbutton")
+            rb.pack(side="left", padx=(0 if i == 0 else 4, 0))
+            Tooltip(rb, scale_tip)
+            self.rb_scale[scale_text(f)] = rb
         self.f_scale.columnconfigure(0, weight=1)
         self.f_detail = ttk.Frame(self.f_post)      # Upscale and Refine: under Advanced settings, above "Sharpen result" (user 28.10.)
         self._slider_row(self.f_detail)
@@ -546,7 +556,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         Tooltip(b_reset, "Back to the startup settings of this tab and function.")
         self._build_settings(foot)      # the gear at the right end of this row (ui_settings.py)
 
-        for cb in (self.cb_scale, self.cb_lm, self.cb_sampler, self.cb_sched):
+        for cb in (self.cb_lm, self.cb_sampler, self.cb_sched):
             self._open_on_click(cb)         # the list opens on a click anywhere in the box, not only on the arrow
         self._fit_job = None
         self.root.bind("<Configure>", self._on_content_size, add="+")      # the window follows its content: nothing hangs off the bottom

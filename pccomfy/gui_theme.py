@@ -55,6 +55,11 @@ class ThemeMixin:
                     width=0)   # as wide as its text: clam's minimum width would centre "Advanced" and push it right
         s.map("Link.TButton", foreground=[("active", FG)], background=[("active", BG)])
         s.configure("Small.TButton", padding=(8, 2), font=font(9))   # "Show feather" beside the layer mask menu: a button in the size of the slider texts
+        # small switches in the look of "Show feather", the chosen one filled orange like the functions (Upscale factor)
+        s.configure("Small.Toolbutton", background=PANEL, foreground=FG, padding=(8, 2), font=font(9), anchor="center",
+                    relief="flat", borderwidth=0)
+        s.map("Small.Toolbutton", background=[("selected", ACCENT), ("active", "#5f5f5f")],
+              foreground=[("selected", "#1b1b1b")])
         # the model chips under the functions: outlined, no fill; chosen = orange outline and text (Tab.Toolbutton is the
         # filled look of the functions above them)
         s.configure("Chip.Toolbutton", background=BG, foreground=FG, padding=(2, 3), anchor="center", relief="solid",
