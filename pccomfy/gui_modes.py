@@ -560,6 +560,9 @@ class ModeMixin:
                     self._on_lora_str()
                     break
         self.w_lora_str.configure(state="normal" if has_lora and self.v_turbo.get() else "disabled")
+        m = self._model()
+        spec = m.modes.get(self.v_mode.get()) if m else None
+        self.tt_steps.text = spec.steps_tip if spec else ""
         tip = next((t for t in (lora_tip(x) for x in self._wf_templates()) if t), "")
         self.tt_turbo.text = tip or LORA_TIP
         stages = self._stages()
@@ -584,6 +587,12 @@ class ModeMixin:
         self.cb_clip.configure(state="readonly" if (state == "disabled" and enhancing) else "disabled")
         self._update_feather_state()
         self._update_availability()
+
+    def _on_turbo(self):
+        """The workflow's own LoRA (DMD2, Turbo ...) switched on or off: Steps and CFG take the workflow's values for that
+        case (pc_no_lora: e.g. 25 steps instead of 8), and its strength slider follows the checkbox."""
+        self._sync_sampler_fields()
+        self.w_lora_str.configure(state="normal" if self._has_lora_switch() and self.v_turbo.get() else "disabled")
 
     def _sync_sampler_fields(self):
         """Steps, CFG, Denoise (and sampler / scheduler) show what the selected workflow runs with - without its speed LoRA
