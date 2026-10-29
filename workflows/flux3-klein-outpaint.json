@@ -1,0 +1,178 @@
+{
+ "2": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:image Your picture"
+  }
+ },
+ "6": {
+  "class_type": "CLIPLoader",
+  "inputs": {
+   "clip_name": "qwen3vl_4b_int8_convrot.safetensors",
+   "type": "flux3",
+   "device": "default"
+  },
+  "_meta": {
+   "title": "Text encoder"
+  }
+ },
+ "7": {
+  "class_type": "VAELoader",
+  "inputs": {
+   "vae_name": "flux2-vae.safetensors"
+  },
+  "_meta": {
+   "title": "VAE"
+  }
+ },
+ "8": {
+  "class_type": "UNETLoader",
+  "inputs": {
+   "unet_name": "flux3-image-klein-int8-convrot.safetensors",
+   "weight_dtype": "default"
+  },
+  "_meta": {
+   "title": "Diffusion model",
+   "pc_size_multiple": 32
+  }
+ },
+ "10": {
+  "class_type": "LoraLoaderModelOnly",
+  "inputs": {
+   "lora_name": "Flux 3\\flux-3-image-klein-outpaint.safetensors",
+   "strength_model": 1.5,
+   "model": [
+    "8",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Outpaint LoRA (ausboss, strength 1.5: fills the grey margin, keeps the picture in place)"
+  }
+ },
+ "159": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "text": "",
+   "clip": [
+    "6",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "pc:prompt Outpaint instruction",
+   "pc_size_multiple": 32
+  }
+ },
+ "160": {
+  "class_type": "ConditioningZeroOut",
+  "inputs": {
+   "conditioning": [
+    "159",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Empty negative"
+  }
+ },
+ "161": {
+  "class_type": "ReferenceMultiLatent",
+  "inputs": {
+   "resolution": "keep resolution",
+   "positive": [
+    "159",
+    0
+   ],
+   "negative": [
+    "160",
+    0
+   ],
+   "vae": [
+    "7",
+    0
+   ],
+   "images.image0": [
+    "2",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Set Reference Multi Latent - The grey-padded canvas, keep resolution"
+  }
+ },
+ "162": {
+  "class_type": "RepeatLatentBatch",
+  "inputs": {
+   "samples": [
+    "161",
+    2
+   ],
+   "amount": 1
+  },
+  "_meta": {
+   "title": "pc:latent Variants"
+  }
+ },
+ "163": {
+  "class_type": "KSampler",
+  "inputs": {
+   "seed": 1,
+   "steps": 16,
+   "cfg": 1,
+   "sampler_name": "euler",
+   "scheduler": "simple",
+   "denoise": 1,
+   "model": [
+    "10",
+    0
+   ],
+   "positive": [
+    "161",
+    0
+   ],
+   "negative": [
+    "161",
+    1
+   ],
+   "latent_image": [
+    "162",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "pc:sampler"
+  }
+ },
+ "164": {
+  "class_type": "VAEDecode",
+  "inputs": {
+   "samples": [
+    "163",
+    0
+   ],
+   "vae": [
+    "7",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Decode"
+  }
+ },
+ "16": {
+  "class_type": "PreviewImage",
+  "inputs": {
+   "images": [
+    "164",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "pc:output Result"
+  }
+ }
+}
