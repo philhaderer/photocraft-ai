@@ -19,6 +19,7 @@ from . import inventory, manifest
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
 from .gui_theme import ICON_PX
+from .ui_downloads import DownloadMixin, browser_only, size_text
 
 _LABELS = dict(MODE_LABELS)      # noqa: F405
 EMPTY_TEXT = {"choose": "Choose a function", "none_linked": "Link your model in the settings"}
@@ -42,7 +43,7 @@ GEAR_PX = round(ICON_PX * 0.6)     # the gear: about 60 % of the other button ic
 FOOT_REFRESH_PADX, FOOT_RESET_PADX = (4, 0), (12, 0)     # footer: the refresh arrow close to the ComfyUI dot, "Defaults" apart
 
 
-class SettingsMixin:
+class SettingsMixin(DownloadMixin):
     inv = None                  # inventory.Inventory of the last successful reading (None = ComfyUI not read / not reachable)
     _inv_error = ""
     _settings_win = None
@@ -57,6 +58,7 @@ class SettingsMixin:
     def _build_settings(self, foot):
         """The gear button at the right end of the footer row (the one with the connection dot, the refresh arrow and "Defaults")."""
         self._last_model = self.v_model.get()
+        self._dl_init()
         self._map_start = cfgmod.model_map()       # the links at startup ("Reset to startup")
         self._map_undo: list[dict] = []            # the links before each change ("Undo")
         style = ttk.Style()
@@ -311,27 +313,36 @@ class SettingsMixin:
         links = cfgmod.model_map()
         rows.append(("links", "Linked files"))
         rows.append(("line", "Use your own file instead of an expected one. Click the chain symbol next to a file and pick yours.", "muted"))
+        if self.inv is not None:                 # directly after the info text (user 31.10.)
+            rows.append(("intro", "ComfyUI reads its model folders only when it starts: after copying a file, restart ComfyUI "
+                                  "and click the refresh arrow (⟳) at the bottom of the plugin."))
         rows += [("line", f"{k}  →  {v}", "muted") for k, v in sorted(links.items())]
         if self.inv is None:
             rows.append(("error", "ComfyUI could not be read.", (self._inv_error or "Not connected yet.")
                          + "\nStart ComfyUI, then click the refresh arrow (⟳) at the bottom of the plugin."))
         else:
-            rows.append(("intro", "ComfyUI reads its model folders only when it starts: after copying a file, restart ComfyUI "
-                                  "and click the refresh arrow (⟳) at the bottom of the plugin."))
             for row in self.inv.rows():
-                rows.append(("model", row["key"], row["label"], row["status"].state, row["key"] == self._settings_focus))
+                miss = [f for f, found, _lv in row["files"] if found is None and f.url and not browser_only(f)]
+                rows.append(("model", row["key"], row["label"], row["status"].state, row["key"] == self._settings_focus,
+                             {"count": len(miss), "size": size_text(sum(f.size for f in miss))} if len(miss) > 1 else None))
                 for f, found, level in row["files"]:
-                    rows.append(("file", {"name": f.name, "path": file_path(f), "found": found, "level": level,
-                                          "size": f.size_text, "url": f.url, "note": f.note if found is None else ""}))
+                    rows.append(("file", self._file_data(f, found, level)))
                 for c in row["status"].nodes:
                     pack = manifest.node_pack(c)
                     rows.append(("node", c, pack[0] if pack else "", pack[1] if pack else ""))
             rows.append(("head", "Additional models (used by several models)"))
             for f, found, use, keys in self.inv.additional_rows():
-                rows.append(("file", {"name": f.name, "path": file_path(f), "found": found, "level": "optional",
-                                      "size": f.size_text, "url": f.url, "use": f"{use}: " + ", ".join(models.SHORT[k] for k in keys),
+                rows.append(("file", {**self._file_data(f, found, "optional"),
+                                      "use": f"{use}: " + ", ".join(models.SHORT[k] for k in keys),
                                       "note": licence_of(f.note) if found is None else ""}))
         return rows
+
+    def _file_data(self, f, found, level) -> dict:
+        """One file row: expected name, path, found (your file's name or None), level, size, url, note, the download state
+        (see DownloadMixin._dl_info), "restart" (loaded, ComfyUI does not list it yet) and "browser" (its page opens instead)."""
+        return {"name": f.name, "path": file_path(f), "found": found, "level": level, "size": f.size_text, "url": f.url,
+                "note": f.note if found is None else "", "dl": self._dl_info(f.name),
+                "restart": found is None and f.name in self._dl_restart, "browser": browser_only(f) if f.url else False}
 
     def _credits_segments(self) -> list[tuple]:
         """The "Credits" tab: who made the code, nodes and models the plugin builds on (links)."""
@@ -500,6 +511,7 @@ class SettingsMixin:
                 pass
         self._set_widgets = []
         self._wrap_labels = []
+        self._dl_widgets = {}
         parent = getattr(self, "f_set_rows", None)
         if parent is None:
             return
@@ -538,9 +550,14 @@ class SettingsMixin:
             elif kind == "intro":
                 label(line(), row[1], "muted", pady=(0, 4), wrap=self._px(20))
             elif kind == "model":
-                _k, _key, name, state, focus = row
+                _k, key, name, state, focus, allm = row
                 mark, style = STATE_MARK[state]
                 box = line()
+                if allm:
+                    b = ttk.Button(box, image=self._icon("save", px=SET_ICON_PX), style="Link.TButton",
+                                   command=lambda k=key: self.download_missing(k))
+                    b.pack(side="right", padx=(4, 0), pady=(10, 2))
+                    Tooltip(b, f"Download all {allm['count']} missing files that can be loaded here ({allm['size']}).")
                 label(box, mark, style, pady=(10, 2))
                 label(box, name + "   " + STATE_TEXT[state] + ("   ◀" if focus else ""), "head", padx=(8, 0), pady=(10, 2))
             elif kind == "file":
@@ -550,19 +567,36 @@ class SettingsMixin:
                 # the symbols first: pack gives the space to what is packed first, the path takes what is left
                 icon(box, "link", "Use another file of yours for this one: opens the list of the files ComfyUI has.",
                      lambda n=f["name"]: self._choose_for(n))
-                if f["url"] and not ok:
-                    icon(box, "save", f"Download ({f['size'] or 'size unknown'}). Right-click: copy the download link.",
-                         lambda u=f["url"]: webbrowser.open(u), menu=lambda e, u=f["url"]: self._link_menu(e, u))
+                dl = f["dl"]
+                if dl:                                  # queued or loading: a bar and a cross instead of size and disk symbol
+                    cancel = ttk.Button(box, text="\u2715", style="Link.TButton", width=2,
+                                        command=lambda n=f["name"]: self.download_cancel(n))
+                    cancel.pack(side="right", padx=(4, 0))
+                    Tooltip(cancel, "Stop this download. What is loaded stays, loading it again goes on where it stopped.")
+                    lb = ttk.Label(box, text="queued" if dl["state"] == "queued" else "", style=SET_STYLES["muted"], width=8, anchor="e")
+                    lb.pack(side="right")
+                    bar = ttk.Progressbar(box, length=self._px(90), maximum=max(dl["total"], 1), value=dl["done"])
+                    if dl["state"] != "queued":
+                        bar.pack(side="right", padx=(8, 4))
+                    self._dl_widgets[f["name"]] = {"bar": bar, "label": lb}
+                    self._dl_paint(f["name"])
                 else:
-                    ttk.Frame(box, width=slot, height=1).pack(side="right", padx=(4, 0))
-                lb = ttk.Label(box, text=f["size"] if (f["size"] and not ok) else "", style=SET_STYLES["muted"], width=8, anchor="e")
-                lb.pack(side="right")
+                    if f["url"] and not ok:
+                        tip = ("Opens the page in your browser (needs a login or comes from another site). Right-click: copy the link."
+                               if f["browser"] else f"Download ({f['size'] or 'size unknown'}). Right-click: copy the download link.")
+                        icon(box, "save", tip, lambda n=f["name"]: self.download_file(n), menu=lambda e, u=f["url"]: self._link_menu(e, u))
+                    else:
+                        ttk.Frame(box, width=slot, height=1).pack(side="right", padx=(4, 0))
+                    lb = ttk.Label(box, text=f["size"] if (f["size"] and not ok) else "", style=SET_STYLES["muted"], width=8, anchor="e")
+                    lb.pack(side="right")
                 label(box, "✓" if ok else "✗", "ok" if ok else ("bad" if f["level"] == "required" else "note"), padx=(8, 6))
                 label(box, f["path"] + ("   (optional)" if f["level"] == "optional" and not f.get("use") else ""),
                       "muted" if ok else "", wrap=self._px(130))
                 extra = [(f["use"], "muted")] if f.get("use") else []
                 if ok and f["found"] != f["name"]:
                     extra.append((f"your file: {f['found']}", "muted"))
+                if f["restart"]:
+                    extra.append(("loaded: restart ComfyUI and click the refresh arrow to list it", "note"))
                 if f["note"]:
                     extra.append((f["note"], "muted"))
                 for text, style in extra:

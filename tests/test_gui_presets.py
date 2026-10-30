@@ -107,6 +107,7 @@ for n in ("Frame", "Label", "Combobox", "Button", "Radiobutton", "Checkbutton", 
           "Progressbar", "Style", "Notebook", "Scale", "Scrollbar"):
     setattr(ttk, n, Widget)
 mb.askyesno = lambda *a, **k: True
+mb.askokcancel = lambda *a, **k: True
 sd.askstring = lambda *a, **k: None
 tk.ttk, tk.messagebox, tk.simpledialog = ttk, mb, sd
 sys.modules.update({"tkinter": tk, "tkinter.ttk": ttk, "tkinter.messagebox": mb, "tkinter.simpledialog": sd,
