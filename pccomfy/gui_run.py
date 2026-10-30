@@ -78,12 +78,12 @@ class RunMixin:
         return [s["id"] for s, var in zip(st[1:], self.stage_vars[1:]) if not var.get()]
 
     def _show_variants(self):
-        """The orange piece on the right of Generate says how many pictures a run makes: "×3 ▾", at 1 only "▾"."""
+        """The orange piece on the right of Generate says how many pictures a run makes: "×3 ▾", also "×1 ▾" (user 30.10.)."""
         try:
             n = int(self.v_variants.get())
         except (TypeError, ValueError, tk.TclError):
             n = 1
-        self.w_variants.configure(text=f"×{n} ▾" if n > 1 else "▾")
+        self.w_variants.configure(text=f"×{n} ▾")
 
     def _variants_menu(self):
         """A click on the piece beside Generate: the choice 1 to 8, opening under it."""
