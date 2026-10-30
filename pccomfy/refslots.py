@@ -473,7 +473,7 @@ class RefSlotsMixin:
                        ("remove", "Remove", "Takes this image out of the slots.", lambda k=k: self._refs_remove(k), False),
                        ("cut", "Undo cut" if it.cut_out else "Cut out",
                         "Back to the original picture." if it.cut_out else "Removes the background (BiRefNet in ComfyUI).", lambda k=k: self._refs_cut(k), True),
-                       ("describe", "Describe", "Qwen 3.5 9B writes a short description of this picture (about 5 s).", lambda k=k: self._refs_describe(k), True)]
+                       ("describe", "Describe", "The text model of this model writes a short description of this picture (about 5 s).", lambda k=k: self._refs_describe(k), True)]
                 if it.description:
                     bar.append(("copy", "Copy text", "Puts the description on the clipboard.", lambda k=k: self._refs_copy_text(k), False))
                 self._refs_bar(box, bar, busy)
@@ -837,6 +837,12 @@ class RefSlotsMixin:
         src = self.refslots.items[k]
         if k in self._ref_busy:
             return
+        from . import manifest
+        # the text model of the chosen model, like the LLM button (user 30.10.); Qwen 3.5 9B int8 ConvRot only as the fallback
+        clip = self._llm_file() if getattr(self, "inv", None) is not None else ""
+        if getattr(self, "inv", None) is not None and not clip:
+            self._refs_say(f"Describe needs {manifest.DESCRIBE_FALLBACK}: download it in the settings (gear).")
+            return
         if src.description and src is not getattr(self, "_ref_last_described", None):
             self._ref_last_described = src
             self._refs_show_description(k)
@@ -847,7 +853,7 @@ class RefSlotsMixin:
 
         def work():
             try:
-                box["text"] = self.bridge.describe_image(src.image, seed=seed)
+                box["text"] = self.bridge.describe_image(src.image, seed=seed, clip=clip)
             except Exception as e:   # ComfyUI not running, no text model ...
                 box["error"] = str(e)
 

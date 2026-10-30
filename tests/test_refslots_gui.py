@@ -275,7 +275,7 @@ def main():
     assert not app.refslots.items[0].cut_out
 
     # the describe button: Qwen 3.5 9B's text lands in the slot and, on request, in the prompt (named like the model names the image)
-    app.bridge.describe_image = lambda im, seed=None: "A red square on blue."
+    app.bridge.describe_image = lambda im, seed=None, **kw: "A red square on blue."
     app.t_prompt.delete("1.0", "end")
     app.t_prompt.insert("1.0", "put it on the sofa")
     app._refs_describe(0)
@@ -291,7 +291,7 @@ def main():
     assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa\n<image2>: A red square on blue."
     assert app._request().params.prompt == "put it on the sofa\n<image2>: A red square on blue."
     # describing again replaces that line instead of adding a second one
-    app.bridge.describe_image = lambda im, seed=None: "A red square on green."
+    app.bridge.describe_image = lambda im, seed=None, **kw: "A red square on green."
     app._refs_describe(0)
     for _ in range(100):
         while pending:
@@ -303,7 +303,7 @@ def main():
     # a line changed by hand stays as it is; the window says so
     app.t_prompt.delete("1.0", "end")
     app.t_prompt.insert("1.0", "put it on the sofa\n<image2>: my red square")
-    app.bridge.describe_image = lambda im, seed=None: "A red square on grey."
+    app.bridge.describe_image = lambda im, seed=None, **kw: "A red square on grey."
     app._refs_describe(0)
     for _ in range(100):
         while pending:
@@ -314,7 +314,7 @@ def main():
     assert app.t_prompt.get("1.0", "end").strip() == "put it on the sofa\n<image2>: my red square"
     assert "kept" in app.lbl_refmsg["text"]
     assert not hasattr(app, "b_refuse")
-    app.bridge.describe_image = lambda im, seed=None: (_ for _ in ()).throw(RuntimeError("ComfyUI is not running"))
+    app.bridge.describe_image = lambda im, seed=None, **kw: (_ for _ in ()).throw(RuntimeError("ComfyUI is not running"))
     app._refs_describe(0)
     for _ in range(100):
         while pending:
@@ -328,7 +328,7 @@ def main():
     # row on the same slot writes a new one with a random seed (the first one takes the likeliest words, no seed)
     def describe(k, text):
         seeds = []
-        app.bridge.describe_image = lambda im, seed=None: seeds.append(seed) or text
+        app.bridge.describe_image = lambda im, seed=None, **kw: seeds.append(seed) or text
         app._refs_describe(k)
         for _ in range(100):
             while pending:
