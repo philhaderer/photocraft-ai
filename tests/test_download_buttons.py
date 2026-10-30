@@ -99,9 +99,9 @@ def main():
         app.download_file(GATED)
         assert opened == [manifest.FILES[GATED].url] and app._dl == {}
 
-        # one file: queued at once, shown as loading, the target is the sub-folder of its kind
+        # one file: starts at once, shown as loading, the target is the sub-folder of its kind
         app.download_file(SMALL)
-        assert app._dl_order == [SMALL] and app._dl[SMALL]["target"] == mdir / "vae_approx" / SMALL
+        assert list(app._dl) == [SMALL] and app._dl[SMALL]["target"] == mdir / "vae_approx" / SMALL
         drain(app, until=lambda: app._dl[SMALL]["done"] > 0)
         info = app._dl_info(SMALL)
         assert info["state"] == "loading" and info["done"] == 10
@@ -114,22 +114,22 @@ def main():
         app.download_file(SMALL)                                                    # it is there now: nothing again
         assert app._dl == {} and "already in" in app.v_status.get()
 
-        # all missing of a model: queued one after the other; a queued one can be taken out, the running one stopped
+        # all missing of a model: every file loads at the same time; one can be stopped while the other goes on
         fake_gate.clear()
         log.clear()
         missing = [f.name for f, found, _lv in next(r for r in app.inv.rows() if r["key"] == "moss")["files"]
                    if found is None and f.url and not ui_downloads.browser_only(f)]
         assert len(missing) >= 2, missing
         app.download_missing("moss")
-        assert app._dl_order == missing
-        drain(app, until=lambda: app._dl[missing[0]]["done"] > 0)
-        assert app._dl_info(missing[0])["state"] == "loading" and app._dl_info(missing[1])["state"] == "queued"
-        app.download_cancel(missing[1])
-        assert missing[1] not in app._dl and app._dl_order == [missing[0]]
+        assert set(app._dl) == set(missing)
+        drain(app, until=lambda: all(app._dl[n]["done"] > 0 for n in missing))
+        assert sorted(log) == sorted(missing) and all(app._dl_info(n)["state"] == "loading" for n in missing)
         app.download_cancel(missing[0])
         fake_gate.set()
         drain(app, until=lambda: not app._dl)
-        assert app._dl == {} and not (mdir / "vae" / missing[0]).exists() and "Cancelled" in app.v_status.get()
+        assert app._dl == {} and not (mdir / "vae" / missing[0]).exists()
+        done = [n for n in missing if any(mdir.rglob(Path(n.replace("\\", "/")).name))]
+        assert len(done) == len(missing) - 1 and missing[0] not in done, (done, missing)
     finally:
         ui_downloads.downloads.download = real
         del os.environ["PCCOMFY_MODELS_DIR"]

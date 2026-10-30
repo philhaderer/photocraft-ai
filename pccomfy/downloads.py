@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -122,7 +123,11 @@ def download(url: str, dest: str | Path, size: int = 0, sha256: str = "", token:
                 part.unlink(missing_ok=True)
             raise DownloadError(_http_message(e)) from e
     except (urllib.error.URLError, OSError) as e:
-        raise DownloadError("No connection to the server: " + str(getattr(e, "reason", e))) from e
+        reason = getattr(e, "reason", e)
+        if isinstance(reason, ssl.SSLCertVerificationError):
+            raise DownloadError("The secure connection could not be verified (certificate of "
+                                f"{urllib.parse.urlsplit(url).hostname}). Open the page in your browser instead.") from e
+        raise DownloadError("No connection to the server: " + str(reason)) from e
     if resp is not None:
         with resp:
             resume = resp.status == 206 and have > 0
