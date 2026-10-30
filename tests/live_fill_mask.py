@@ -19,8 +19,8 @@ inside the picture, and how much of what the model changed outside the selection
 cases (each picture, position and model once), the four variants side by side in random order; pick the best and tick
 what is wrong.
 
-    python tests\\live_fill_mask.py run --images A:\\testpics3\\resized_1280px
-    python tests\\live_fill_mask.py run --images A:\\testpics3\\resized_1280px --round 2   (the cases changed after the notes)
+    python tests\\live_fill_mask.py run --images C:\\programs\\testpics3\\resized_1280px
+    python tests\\live_fill_mask.py run --images C:\\programs\\testpics3\\resized_1280px --round 2   (the cases changed after the notes)
     python tests\\live_fill_mask.py rate          (the newest round; or give its folder)
     python tests\\live_fill_mask.py summary       (tables, also written to ergebnis.md)
 
@@ -46,7 +46,7 @@ from pccomfy.comfy import ComfyUI  # noqa: E402
 
 BASE = cfgmod.CONFIG_DIR / "fill-mask-test"
 PICTURES = ["IMG_20240522_194039_1", "IMG_20240921_102651", "IMG_20241001_155006", "IMG_20241123_142913"]
-#             room with a piano frame, gorge in the woods, wall with ukuleles, path outdoors (A:\testpics3\resized_1280px)
+#             room with a piano frame, gorge in the woods, wall with ukuleles, path outdoors (C:\programs\testpics3\resized_1280px)
 POSITIONS = ["middle", "left", "top", "top-left", "bottom-right"]
 SEL_W, SEL_H = 0.26, 0.32                          # selection size: share of the picture's width and height
 # "middle" is a free spot per picture (top-left corner of the selection, share of the picture); the others touch the edge
@@ -88,6 +88,14 @@ ROUND2 = [
          prompt={"fibo": "an embroidered patch on the jacket", "qwen": "the man wears a yellow scarf"}),
     dict(bild="IMG_20241123_142913", position="bottom-right", form="rect", box=(0.76, 0.58, 0.24, 0.42)),  # the whole child
     dict(bild="IMG_20241123_142913", position="top-left", form="rect", box=(0.30, 0.0, 0.26, 0.30)),      # in the sky beside
+]
+# Round 3 (notes on round 2): flat and wide above the piano frame, with a subject of its own (Qwen painted the scene itself
+# into "a framed picture"); a bigger selection for the bear (Fibo put it at the edge, Qwen on a white background).
+ROUND3 = [
+    dict(bild="IMG_20240522_194039_1", position="top", form="rect", box=(0.20, 0.0, 0.60, 0.14),
+         prompt="a framed painting of flowers hanging on the wall"),
+    dict(bild="IMG_20240921_102651", position="left", form="rect", box=(0.0, 0.25, 0.19, 0.47),
+         prompt="a brown bear standing on the ground"),
 ]
 
 
@@ -205,8 +213,8 @@ def cmd_run(a):
         im = Image.open(files[n]).convert("RGB")
         im.thumbnail((MAX_SIDE, MAX_SIDE))
         pics[n] = im
-    if a.round == 2:
-        jobs = ROUND2
+    if a.round in (2, 3):
+        jobs = ROUND2 if a.round == 2 else ROUND3
     else:                                # rectangle and lasso take turns: every picture and position gets both
         jobs = [dict(bild=name, position=pos, form=SHAPES[(i + j) % 2])
                 for i, name in enumerate(PICTURES) for j, pos in enumerate(POSITIONS)]
@@ -425,8 +433,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run")
-    r.add_argument("--images", required=True, help="the folder with the test pictures (A:\\testpics3\\resized_1280px)")
-    r.add_argument("--round", type=int, default=1, choices=(1, 2), help="2: the cases changed after the user's notes on round 1")
+    r.add_argument("--images", required=True, help="the folder with the test pictures (C:\\programs\\testpics3\\resized_1280px)")
+    r.add_argument("--round", type=int, default=1, choices=(1, 2, 3),
+                   help="2 and 3: the cases changed after the user's notes on the round before")
     for name in ("rate", "summary"):
         s = sub.add_parser(name)
         s.add_argument("folder", nargs="?", help="the round's folder (default: the newest)")
