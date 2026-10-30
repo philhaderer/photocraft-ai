@@ -673,6 +673,7 @@ def sweep_requests(req: Request, res_list: list, ctx_list: list) -> list[Request
     return runs
 
 
+PREVIEW_MAX_H = 300  # the live preview is at most this high before the display scaling (a tall picture gets narrower; user 30.10.)
 MIN_W = 380  # the window's fixed width (it cannot be resized; the height follows the content)
 
 
@@ -758,6 +759,7 @@ __all__ = [
     "SCALE_MODES",
     "NO_LLM_MODES",
     "LIVE_TIP",
+    "PREVIEW_MAX_H",
     "ERROR",
     "ERROR_TEXT",
     "DONE_GREEN",
