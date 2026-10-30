@@ -20,6 +20,7 @@ cases (each picture, position and model once), the four variants side by side in
 what is wrong.
 
     python tests\\live_fill_mask.py run --images A:\\testpics3\\resized_1280px
+    python tests\\live_fill_mask.py run --images A:\\testpics3\\resized_1280px --round 2   (the cases changed after the notes)
     python tests\\live_fill_mask.py rate          (the newest round; or give its folder)
     python tests\\live_fill_mask.py summary       (tables, also written to ergebnis.md)
 
@@ -73,10 +74,27 @@ SEED = 11
 MAX_SIDE = 1280
 ISSUES = ["Schatten/Rand der Füllung abgeschnitten", "Gerade Kante des Ausschnitts sichtbar",
           "Farb-/Helligkeitsfleck um die Auswahl", "Füllung am Bildrand weich"]
+# Round 2 (user's notes on round 1, 30.10.): the cases whose prompt or selection did not suit the test, run again with both
+# models. box: the selection (share of the picture: x, y, w, h) where it differs from the position; prompt: one text or one
+# per model.
+ROUND2 = [
+    dict(bild="IMG_20240522_194039_1", position="top", form="rect", seed=22),
+    dict(bild="IMG_20240921_102651", position="left", form="rect", prompt="a brown bear"),
+    dict(bild="IMG_20240921_102651", position="bottom-right", form="lasso",
+         prompt={"fibo": "an embroidered patch with a logo on the jacket", "qwen": "a small bird sitting on his shoulder"}),
+    dict(bild="IMG_20241001_155006", position="left", form="lasso", box=(0.0, 0.24, 0.26, 0.96)),        # down to the floor (the lasso reaches the bottom edge)
+    dict(bild="IMG_20241001_155006", position="bottom-right", form="rect", box=(0.66, 0.68, 0.34, 0.32)),  # the whole piano end
+    dict(bild="IMG_20241123_142913", position="left", form="rect",
+         prompt={"fibo": "an embroidered patch on the jacket", "qwen": "the man wears a yellow scarf"}),
+    dict(bild="IMG_20241123_142913", position="bottom-right", form="rect", box=(0.76, 0.58, 0.24, 0.42)),  # the whole child
+    dict(bild="IMG_20241123_142913", position="top-left", form="rect", box=(0.30, 0.0, 0.26, 0.30)),      # in the sky beside
+]
 
 
-def box_at(size, pos, name=""):
+def box_at(size, pos, name="", box=None):
     W, H = size
+    if box:
+        return tuple(round(v * (W if k % 2 == 0 else H)) for k, v in enumerate(box))
     w, h = round(W * SEL_W), round(H * SEL_H)
     if pos == "middle" and name in MIDDLE:
         return round(W * MIDDLE[name][0]), round(H * MIDDLE[name][1]), w, h
@@ -85,9 +103,9 @@ def box_at(size, pos, name=""):
     return x, y, w, h
 
 
-def selection(size, pos, shape, name=""):
+def selection(size, pos, shape, name="", box=None):
     """The selection as PhotoCraft exports it: white = selected, hard edge (a lasso without smoothing)."""
-    x, y, w, h = box_at(size, pos, name)
+    x, y, w, h = box_at(size, pos, name, box)
     m = Image.new("L", size, 0)
     d = ImageDraw.Draw(m)
     if shape == "rect":
@@ -108,7 +126,7 @@ class Runner:
     def __init__(self, out: Path):
         self.b = Bridge(_NoPhotoCraft(), ComfyUI(cfgmod.load()["comfyui"]["url"]), out / "xch")
 
-    def fill(self, model, im, mask, prompt, ctx):
+    def fill(self, model, im, mask, prompt, ctx, seed=SEED):
         """One Fill run as the bridge does it with an editor: crop around the selection, red outline, the fixed wrapper
         around the text, the model, Fibo's seam correction. Returns the result (the size of the crop), region and bbox."""
         mdl = models.BY_KEY[model]
@@ -131,7 +149,7 @@ class Runner:
             mname = self.b.comfy.upload_image(m.convert("RGB"), f"fillmask-{tag}-mask.png")
         req = Request(mode="inpaint", workflow=wf, enhance=st.get("enhance", True), turbo=st.get("turbo", True),
                       base_res=st.get("base_res", 1024), context=ctx)
-        p = workflows.GenParams(prompt=fill_prompt(prompt, sel, wf), seed=SEED, width=gw, height=gh)
+        p = workflows.GenParams(prompt=fill_prompt(prompt, sel, wf), seed=seed, width=gw, height=gh)
         graph, out_node = self.b._graph(req, p, iname, mname, wf, force_plain=not (req.enhance and prompt_phase_nodes(tpl)))
         hist = self.b._wait(self.b.comfy.queue(graph), graph, wf, 0, 1, "", lambda *a, **k: None)
         rgb = self.b.comfy.output_images(hist, out_node)[0].convert("RGB")
@@ -187,29 +205,35 @@ def cmd_run(a):
         im = Image.open(files[n]).convert("RGB")
         im.thumbnail((MAX_SIDE, MAX_SIDE))
         pics[n] = im
+    if a.round == 2:
+        jobs = ROUND2
+    else:                                # rectangle and lasso take turns: every picture and position gets both
+        jobs = [dict(bild=name, position=pos, form=SHAPES[(i + j) % 2])
+                for i, name in enumerate(PICTURES) for j, pos in enumerate(POSITIONS)]
     cases, n_done, t_start = {}, 0, time.time()
-    total = len(MODELS) * len(PICTURES) * len(POSITIONS)
+    total = len(MODELS) * len(jobs)
     for model in MODELS:                 # one model after the other: each is loaded once
-        for i, (name, im) in enumerate(pics.items()):
-            for j, pos in enumerate(POSITIONS):
-                shape = SHAPES[(i + j) % 2]      # rectangle and lasso take turns: every picture and position gets both
-                ctx = CONTEXT
-                mask = selection(im.size, pos, shape, name)
-                n_done += 1
-                t0 = time.time()
-                cid = f"{len(cases) + 1:03d}"
-                rgb, region, bbox, pct = r.fill(model, im, mask, OBJECTS[name][pos], ctx)
-                rgb.save(out / "ergebnisse" / f"{cid}.png")
-                sel = mask.crop(region.pil())
-                variants = {}
-                for v in fillmask.VARIANTS:
-                    m, dens = fillmask.layer_mask(v, mask, region, bbox, pct)
-                    fillmask.composite(im, rgb, region, m, dens).save(out / "bilder" / f"{cid}-{v}.png")
-                    variants[v] = measure(im, rgb, region, sel, fillmask.effective(m, dens))
-                cases[cid] = {"bild": name, "position": pos, "form": shape, "context": ctx, "modell": model,
-                              "prompt": OBJECTS[name][pos], "feather_pct": pct,
-                              "region": [region.x, region.y, region.w, region.h], "messung": variants}
-                print(f"{n_done}/{total} {model} {name[:22]} {pos} {shape}: {time.time() - t0:.0f} s", flush=True)
+        for job in jobs:
+            name, pos, shape, box = job["bild"], job["position"], job["form"], job.get("box")
+            im, ctx, seed = pics[name], CONTEXT, job.get("seed", SEED)
+            prompt = job.get("prompt", OBJECTS[name][pos])
+            prompt = prompt[model] if isinstance(prompt, dict) else prompt
+            mask = selection(im.size, pos, shape, name, box)
+            n_done += 1
+            t0 = time.time()
+            cid = f"{len(cases) + 1:03d}"
+            rgb, region, bbox, pct = r.fill(model, im, mask, prompt, ctx, seed)
+            rgb.save(out / "ergebnisse" / f"{cid}.png")
+            sel = mask.crop(region.pil())
+            variants = {}
+            for v in fillmask.VARIANTS:
+                m, dens = fillmask.layer_mask(v, mask, region, bbox, pct)
+                fillmask.composite(im, rgb, region, m, dens).save(out / "bilder" / f"{cid}-{v}.png")
+                variants[v] = measure(im, rgb, region, sel, fillmask.effective(m, dens))
+            cases[cid] = {"bild": name, "position": pos, "form": shape, "context": ctx, "modell": model, "seed": seed,
+                          "box": list(box) if box else None, "prompt": prompt, "feather_pct": pct,
+                          "region": [region.x, region.y, region.w, region.h], "messung": variants}
+            print(f"{n_done}/{total} {model} {name[:22]} {pos} {shape}: {time.time() - t0:.0f} s", flush=True)
     rate = list(cases)                    # the blind part: every case
     rng = random.Random(7)
     rng.shuffle(rate)
@@ -294,7 +318,7 @@ def cmd_rate(a):
         for k, v in enumerate(shown[cid]):
             im = Image.open(out / "bilder" / f"{cid}-{v}.png").convert("RGB")
             if st["outline"]:          # the selection as an orange line (the same one the run used)
-                edge = selection(im.size, c["position"], c["form"], c["bild"]).filter(ImageFilter.FIND_EDGES)
+                edge = selection(im.size, c["position"], c["form"], c["bild"], c.get("box")).filter(ImageFilter.FIND_EDGES)
                 im.paste((242, 140, 40), (0, 0), edge.point(lambda x: 255 if x else 0).filter(ImageFilter.MaxFilter(3)))
             if not st["whole"]:
                 im = im.crop(view_box(c["region"], im.size))
@@ -402,6 +426,7 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run")
     r.add_argument("--images", required=True, help="the folder with the test pictures (A:\\testpics3\\resized_1280px)")
+    r.add_argument("--round", type=int, default=1, choices=(1, 2), help="2: the cases changed after the user's notes on round 1")
     for name in ("rate", "summary"):
         s = sub.add_parser(name)
         s.add_argument("folder", nargs="?", help="the round's folder (default: the newest)")
