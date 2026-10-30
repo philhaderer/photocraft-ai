@@ -200,7 +200,8 @@ _FLUX3_UP_NODES = ("AUSBOSS_NODES_TiledUpscale", "AUSBOSS_NODES_TiledUpscaleStit
 _ULTRA = ("Flux 2\\ultra_real_v4.safetensors",)
 _UPSAMPLER = "qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors"
 _TAEF2 = "taef2_decoder.pth"            # live preview of the Flux 2 latent: Flux 2, Flux 3, Fibo, MOSS
-_CUT = ModeSpec(optional=("birefnet.safetensors",))     # Multi Image Edit: "Cut out" in the reference slots
+DESCRIBE_FALLBACK = "qwen3.5_9b_int8_convrot.safetensors"     # the LLM button and "Describe" in the reference slots (user 30.10.)
+_CUT = ModeSpec(optional=("birefnet.safetensors", DESCRIBE_FALLBACK))     # Multi Image Edit: "Cut out" and "Describe" in the reference slots
 
 TABS: dict[str, TabSpec] = {
     "flux3": TabSpec(
@@ -213,7 +214,7 @@ TABS: dict[str, TabSpec] = {
                                 nodes=_FLUX3_UP_NODES),
             "multi_edit": _CUT,
         },
-        optional=(_TAEF2,)),
+        optional=(_TAEF2, DESCRIBE_FALLBACK)),
     "flux2": TabSpec(
         required=("flux-2-klein-9b_int8_convrot.safetensors", "qwen_3_8b_fp8mixed.safetensors", _UPS),
         modes={
@@ -222,7 +223,7 @@ TABS: dict[str, TabSpec] = {
             "refine": ModeSpec(requires=_ULTRA),
             "multi_edit": _CUT,
         },
-        optional=(_TAEF2,)),
+        optional=(_TAEF2, DESCRIBE_FALLBACK)),
     "qwen": TabSpec(
         required=("qwen_image_2.1_int8_convrot.safetensors", "qwen_image_2.1_vae_bf16.safetensors"),
         modes={
@@ -233,19 +234,19 @@ TABS: dict[str, TabSpec] = {
             "multi_edit": ModeSpec(requires=("qwen3vl_8b_int8_convrot.safetensors",), optional=_CUT.optional),   # runs the edit graph
             "remove": ModeSpec(requires=("qwen3vl_8b_int8_convrot.safetensors",)),
         },
-        optional=("qwen\\qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors", "taeqi2_1_decoder.pth")),
+        optional=("qwen\\qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors", "taeqi2_1_decoder.pth", DESCRIBE_FALLBACK)),
     "fibo": TabSpec(
         required=("fibo2_edit_turbo_int8_convrot.safetensors", "qwen3vl_4b_int8_convrot.safetensors", _UPS),
         modes={"multi_edit": _CUT},
-        optional=("qwen3.5_9b_int8_convrot.safetensors", _TAEF2)),      # the prompt writer (LLM prompt enhancement)
+        optional=(DESCRIBE_FALLBACK, _TAEF2)),      # the prompt writer (LLM prompt enhancement) and the LLM button
     "krea2": TabSpec(
         required=("krea2_turbo_int8_convrot.safetensors", "qwen3vl_4b_fp8_scaled.safetensors", "qwen_image_vae.safetensors"),
-        optional=("lighttaew2_1.safetensors",)),          # live preview of the Wan 2.1 latent
+        optional=("lighttaew2_1.safetensors", DESCRIBE_FALLBACK)),          # live preview of the Wan 2.1 latent
     "moss": TabSpec(
         required=("moss_image_sft_int8_convrot.safetensors", "qwen3.5_9b_w4a8_gptq.safetensors", "flux2-vae_small.safetensors"),
         # Text to image starts with the UltraReal LoRA on: a file the start values use is required (user 30.10.)
         modes={"txt2img": ModeSpec(requires=("Moss\\lenovo_moss.safetensors",))},
-        optional=("Moss\\lora_dmd2.safetensors", _TAEF2)),
+        optional=("Moss\\lora_dmd2.safetensors", _TAEF2, DESCRIBE_FALLBACK)),
 }
 
 
@@ -296,9 +297,8 @@ def mode_nodes(key: str, mode: str) -> tuple:
 
 # The "LLM" button under the prompt describes the picture with the text model the chosen model already uses (user 30.10.),
 # so nobody downloads another one. Image input checked live 30.10. for all of these. The last one is the fallback.
-_DESCRIBE_FALLBACK = "qwen3.5_9b_int8_convrot.safetensors"
 DESCRIBE_WRITERS = {
-    "fibo": ("qwen3.5_9b_int8_convrot.safetensors",),
+    "fibo": (DESCRIBE_FALLBACK,),
     "qwen": ("qwen3.5_9b_w4a8_gptq.safetensors",),
     "moss": ("qwen3.5_9b_w4a8_gptq.safetensors",),
     "flux2": ("qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors",),
@@ -310,7 +310,26 @@ DESCRIBE_WRITERS = {
 def describe_writers(model_key: str) -> tuple[str, ...]:
     """The text model files that can describe a picture for this model, best first (its own writer, then the fallback)."""
     own = DESCRIBE_WRITERS.get(model_key, ())
-    return own + tuple(n for n in (_DESCRIBE_FALLBACK,) if n not in own)
+    return own + tuple(n for n in (DESCRIBE_FALLBACK,) if n not in own)
+
+
+DESCRIBE_NAMES = {            # short names for the line in the settings
+    "qwen3.5_9b_int8_convrot.safetensors": "Qwen 3.5 9B int8 ConvRot",
+    "qwen3.5_9b_w4a8_gptq.safetensors": "Qwen 3.5 9B w4a8 GPTQ",
+    "qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors": "Flux 3 prompt upsampler (Qwen 3.5 9B)",
+    "qwen3vl_4b_fp8_scaled.safetensors": "Qwen3-VL 4B fp8",
+}
+
+
+def describe_line(model_key: str, has) -> str:
+    """The line in a model's settings tab: which text model the LLM button and the reference pictures of Multi Image Edit
+    use, and the fallback. `has(name)` says whether ComfyUI lists the file."""
+    short = lambda n: DESCRIBE_NAMES.get(n, n) + ("" if has(n) else " (missing)")  # noqa: E731
+    own = DESCRIBE_WRITERS.get(model_key, (DESCRIBE_FALLBACK,))[0]
+    if own == DESCRIBE_FALLBACK:
+        return (f"LLM button and Describe in Multi Image Edit: {short(own)}. It is also the fallback for the other models "
+                "when their own text model is missing.")
+    return (f"LLM button and Describe in Multi Image Edit: {short(own)}. Fallback when it is missing: {short(DESCRIBE_FALLBACK)}.")
 
 
 # node class prefix -> (pack, where to get it). Only what the shipped workflows use.

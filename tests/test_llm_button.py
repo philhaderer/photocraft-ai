@@ -34,6 +34,17 @@ def manifest_checks():
         assert all(n in manifest.FILES for n in names), (m.key, names)
 
 
+def settings_checks():
+    # the fallback is listed (optional) in every model's tab, so it can be downloaded from any of them
+    assert set(manifest.used_by(manifest.DESCRIBE_FALLBACK)) == set(manifest.TABS), manifest.used_by(manifest.DESCRIBE_FALLBACK)
+    have = lambda n: n != "qwen3.5_9b_w4a8_gptq.safetensors"  # noqa: E731
+    line = manifest.describe_line("qwen", have)
+    assert "Qwen 3.5 9B w4a8 GPTQ (missing)" in line and "Fallback when it is missing: Qwen 3.5 9B int8 ConvRot." in line, line
+    assert "Multi Image Edit" in line
+    fibo = manifest.describe_line("fibo", lambda n: True)
+    assert "Qwen 3.5 9B int8 ConvRot." in fibo and "fallback for the other models" in fibo and "missing" not in fibo.replace("is missing", ""), fibo
+
+
 def bridge_checks():
     pc, _, b = t.make(tempfile.mkdtemp(), layers=2)
     asked = []
