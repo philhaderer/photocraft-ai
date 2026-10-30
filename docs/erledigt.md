@@ -2,6 +2,14 @@
 
 Verlauf nach Datum, neuester Stand oben. Alles liegt in `next`. Die vollen Texte von damals (Aufgaben, Befunde, Optionen) stehen in `docs/archiv/PLAN-2026-10-29.md` und `docs/archiv/HANDOFF-2026-10-28.md`, Einzelheiten zu jedem Commit in `git log next`. Was noch auf den Live-Test wartet, steht in `PLAN.md`, Abschnitt 1.
 
+## 31.10.
+
+- **Zahnrad-Fenster, Modell-Manager 14c Schritt 3 bis 5** (`feat/settings-chain-picker`, `feat/downloads`, `feat/download-buttons`, `feat/download-sandbox`, `fix/parallel-downloads-and-tls`): Ketten-Symbol öffnet eine Liste der ComfyUI-Dateien der Art (ähnlichster Name zuerst, „Unlink“ zuletzt); die `extra_model_paths.yaml`-Funktion ist entfernt (ComfyUI listet Standardordner, YAML-Ordner und Symlinks selbst). `pccomfy/downloads.py` (nur Standardbibliothek: `.part`, Fortsetzen, Größe und SHA-256, freier Platz, Abbrechen, Token nur an huggingface.co), `comfydir.py` (ComfyUI-Ordner über den Prozess am Port, sonst einmal fragen), `ui_downloads.py` (Disk-Symbol je Datei und „alle fehlenden“ je Modell, OK-Fenster, Balken, ✕, parallel). Teststart „ComfyUI ohne Modelle“ lädt in `data
+euer-nutzer	est-downloads`. Die TAESD-Decoder kommen von `raw.githubusercontent.com` (github.com scheitert in Windows-Python am Zertifikat).
+- **Zahnrad-Fenster Aussehen** (`feat/settings-order-names`, `fix/settings-layout`, `fix/settings-layout-2`, `feat/settings-model-tabs`, `fix/settings-needs-heading`, `fix/settings-covers-modes`): Dateien je Modell nach Art sortiert; jede Zeile ein eigener Rahmen (Symbole rechts, nichts überdeckt Namen, Texte umbrechen); kleinere Schrift, nur Überschriften fett; „Linked files“ mit Infotext, Undo und Reset oben; Reiter je Modell mit „Covers these modes:“, „Needs these models:“ und orangen Hinweisen für Dateien, die eine Website brauchen (Hugging Face gesperrt, Civitai); „alle fehlenden“ öffnet deren Seiten.
+- **Fibo 2.0 Edit Turbo** heißt das Modell jetzt überall (`feat/settings-order-names`).
+- `user-edits.md`: wo Texte stehen, die du selbst ändern kannst, und was du danach sagst (`docs/user-edits`).
+
 ## 30.10.
 
 - **Abends (Feedback des Users):** LLM-Zeile nur, wo ein Textmodell den Prompt schreibt, nie ausgegraut; aus bei Expand, Remove, Refine, Upscale; Defaults und erster Start: Haken aus (`fix/llm-row-hidden-where-prompts-exist`, `fix/llm-row-only-with-text-model`). Fibo Text to image mit LLM-Schreiber und Brias „Generate“-Systemprompt (`feat/fibo-t2i-llm`), Blindtest `tests/live_fibo_llm.py` (ohne LLM 9, mit 4, gleich 11 von 24; Haken startet aus, `docs/tests/fibo-t2i-llm.md`). Neuer-Nutzer-Start mit PhotoCraft 0.17 (`chore/new-user-photocraft-017`). Plan 14c für das neue Zahnrad-Fenster (`docs/model-manager-window-and-llm-tests`). 14c Schritt 1 Zeilen-Layout (`feat/settings-window-rows`) und Schritt 2 „Additional models“ und Live preview nur mit Decoder (`feat/settings-additional-models`).
