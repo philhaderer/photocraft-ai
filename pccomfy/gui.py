@@ -555,6 +555,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._show_variants()
         self.b_stop = ttk.Button(bf, text="Cancel", command=self.stop, state="disabled")
         self.b_stop.pack(side="left", fill="y", padx=(6, 0))
+        Tooltip(self.b_stop, "Cancel the run (Esc or Ctrl+Alt+Enter)")
         self._icons.update({"undo": self._icon("undo"), "redo": self._icon("redo")})
         self.b_undo = ttk.Button(bf, image=self._icons["undo"], style="Icon.TButton", command=self.undo_edit)
         self.b_redo = ttk.Button(bf, image=self._icons["redo"], style="Icon.TButton", command=self.redo_edit)
@@ -612,6 +613,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.root.bind("<Configure>", self._on_content_size, add="+")      # the window follows its content: nothing hangs off the bottom
         self.root.bind("<Button-1>", self._lora_outside, add="+")
         self.root.bind("<Control-Return>", lambda e: (self.generate(), "break")[1])
+        self.root.bind("<Control-Alt-Return>", lambda e: (self.stop(), "break")[1])      # interrupts a run (user 30.10.)
         self.root.bind("<Escape>", lambda e: self.stop())
 
     def toggle_minimize(self):

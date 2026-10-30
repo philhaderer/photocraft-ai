@@ -99,7 +99,7 @@ def main():
     assert app._request().sharpen == 0.0                       # a function without its own value starts at 0 % (user 28.10.)
     app.v_sharpen.set(0.25)
     pick("fibo", "refine")
-    assert app._request().sharpen == 0.3                       # Fibo Refine's own value
+    assert app._request().sharpen == 0.1                       # Fibo Refine's own value (10 %, user 30.10.)
     pick("qwen", "edit")
     assert app._request().sharpen == 0.0
     pick("fibo", "edit")
