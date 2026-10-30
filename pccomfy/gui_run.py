@@ -335,6 +335,8 @@ class RunMixin:
                         self._hist_run["llm"] = self._last_vgl.strip()
                 elif kind == "refresh":
                     self._apply_refresh(data)
+                elif kind == "download":
+                    self._download_event(data)
                 elif kind == "feather":
                     self._feather_done(*data)
         except queue.Empty:
