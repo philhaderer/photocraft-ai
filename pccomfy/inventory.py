@@ -144,6 +144,23 @@ class Inventory:
                 if real is not None and real != val:
                     inputs[fld] = real
                     changed += 1
+            if node.get("class_type") == "AUSBOSS_NODES_LoraLoader":     # its LoRAs are a JSON list (Flux 3 Restore LoRA)
+                inputs = node.get("inputs") or {}
+                try:
+                    items = json.loads(inputs.get("loras") or "[]")
+                except (TypeError, ValueError):
+                    continue
+                hit = 0
+                for lo in items:
+                    if isinstance(lo, dict) and isinstance(lo.get("name"), str):
+                        f = manifest.FILES.get(lo["name"])
+                        real = resolve(lo["name"], self.lists["lora"], self.mapping, f.aliases if f else ())
+                        if real is not None and real != lo["name"]:
+                            lo["name"] = real
+                            hit += 1
+                if hit:
+                    inputs["loras"] = json.dumps(items)
+                    changed += hit
         return changed
 
     # ---------- the settings overlay ----------
@@ -226,7 +243,7 @@ def load_workflow(path: str | Path) -> dict:
 _ABS = re.compile(r"^([A-Za-z]:[\\/]|[\\/]|~)")
 # yaml key -> the loader kind its folders hold
 YAML_KINDS = {"diffusion_models": "unet", "unet": "unet", "text_encoders": "clip", "clip": "clip", "vae": "vae", "loras": "lora",
-              "vae_approx": "preview"}
+              "vae_approx": "preview", "background_removal": "bg_removal"}
 
 
 def _unquote(v: str) -> str:

@@ -32,6 +32,11 @@ def workflow_files(name):
             v = (n.get("inputs") or {}).get(fld)
             if isinstance(v, str):
                 out.add((kind, v))
+        elif isinstance(n, dict) and n.get("class_type") == "AUSBOSS_NODES_LoraLoader":
+            # AusBoss' LoRA loader keeps its LoRAs as a JSON list (the Flux 3 Restore LoRA was missed before, 30.10.)
+            for lo in json.loads((n.get("inputs") or {}).get("loras") or "[]"):
+                if lo.get("enabled", True):
+                    out.add(("lora", lo["name"]))
     return out
 
 
@@ -188,6 +193,13 @@ def test_graph_names():
     assert g["2"]["inputs"]["vae_name"] == "flux2-vae.safetensors" and g["3"]["inputs"]["lora_name"] == "Moss/lora_dmd2.safetensors"
     assert g["1"]["inputs"]["unet_name"] == "flux3-image-klein-int8-convrot.safetensors"
     assert g["4"]["inputs"]["clip_name"] == "gone.safetensors"          # nothing to rename it to
+    # AusBoss' LoRA loader: the names inside its JSON list are matched too (the Flux 3 Restore LoRA in another sub-folder)
+    lists = full_lists()
+    lists["lora"] = ["Klein/flux-3-image-klein-restore.safetensors"]
+    a = {"1": {"class_type": "AUSBOSS_NODES_LoraLoader",
+               "inputs": {"loras": json.dumps([{"name": "Flux 3\\flux-3-image-klein-restore.safetensors", "strength": 0.5, "enabled": True}])}}}
+    assert inventory.Inventory(lists).apply_names(a) == 1
+    assert json.loads(a["1"]["inputs"]["loras"])[0] == {"name": "Klein/flux-3-image-klein-restore.safetensors", "strength": 0.5, "enabled": True}
     assert inv.apply_names(g) == 0
     # the shipped workflows pass against a full install
     full = inventory.Inventory(full_lists())
