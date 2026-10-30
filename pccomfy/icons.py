@@ -83,6 +83,7 @@ SHAPES.update({
     "undo": _UNDO,
     "redo": _mirror(_UNDO),
     "info": [_circle(12, 12, 10), [(12, 16), (12, 11.5)], [(12, 8), (12.01, 8)]],    # a circled i (the tip under the prompt)
+    "clock": [_circle(12, 12, 10), [(12, 6), (12, 12), (16, 14)]],     # the last runs (header, history.py)
     "eye":[_arc(12, 15.64, 10.64, 200, 340, 14) + _arc(12, 8.36, 10.64, 20, 160, 14) + [(2, 12)], _circle(12, 12, 3)],
     "refresh":[_arc(12, 12, 9, 0, 315, 28) + [(21, 8)], [(21, 3), (21, 8), (16, 8)]],    # a circle arrow, clockwise
     "minimize": [[(5, 12), (19, 12)]],              # the minimise button in the header
