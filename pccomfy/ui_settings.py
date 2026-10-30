@@ -312,10 +312,11 @@ class SettingsMixin(DownloadMixin):
         rows: list[tuple] = []
         links = cfgmod.model_map()
         rows.append(("links", "Linked files"))
-        rows.append(("line", "Use your own file instead of an expected one. Click the chain symbol next to a file and pick yours.", "muted"))
-        if self.inv is not None:                 # directly after the info text (user 31.10.)
-            rows.append(("intro", "ComfyUI reads its model folders only when it starts: after copying a file, restart ComfyUI "
-                                  "and click the refresh arrow (⟳) at the bottom of the plugin."))
+        info = "Use your own file instead of an expected one. Click the chain symbol next to a file and pick yours."
+        if self.inv is not None:                 # one paragraph (user 31.10.)
+            info += (" ComfyUI reads its model folders only when it starts: after copying a file, restart ComfyUI "
+                     "and click the refresh arrow (⟳) at the bottom of the plugin.")
+        rows.append(("intro", info))
         rows += [("line", f"{k}  →  {v}", "muted") for k, v in sorted(links.items())]
         if self.inv is None:
             rows.append(("error", "ComfyUI could not be read.", (self._inv_error or "Not connected yet.")
