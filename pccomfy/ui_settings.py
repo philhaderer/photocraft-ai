@@ -15,7 +15,7 @@ from __future__ import annotations
 import difflib
 import webbrowser
 
-from . import inventory, manifest
+from . import inventory, manifest, sthead
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
 from .gui_theme import ICON_PX
@@ -401,6 +401,31 @@ class SettingsMixin(DownloadMixin):
         base = lambda n: n.replace("\\", "/").rpartition("/")[2].lower()      # noqa: E731
         return sorted((n for n in avail if n != own),
                       key=lambda n: -difflib.SequenceMatcher(None, base(n), base(f.name)).ratio())
+
+    def _link_hints(self, expected: str, cands: list[str]) -> dict[str, str]:
+        """For the files of the chain list: "looks like <file>" when the file's size and its safetensors header match a file of
+        the manifest (a renamed copy; for the expected file itself it reads "looks like <expected>"), "incomplete?" when the header promises
+        more bytes than the file has. Only for files in ComfyUI's models folder (the ones in extra folders have no hint)."""
+        f = manifest.FILES.get(expected)
+        base = self.models_dir(ask=False) if f is not None else None
+        if base is None:
+            return {}
+        by_size = {g.size: g.name for g in manifest.FILES.values() if g.kind == f.kind and g.size}
+        out: dict[str, str] = {}
+        for n in cands:
+            p = base / f.folder / n.replace("\\", "/")
+            try:
+                size = p.stat().st_size
+            except OSError:
+                continue
+            head = sthead.read_header(p)
+            if head is None:
+                continue
+            if not sthead.is_complete(p):
+                out[n] = "incomplete?"
+            elif size in by_size:
+                out[n] = "looks like " + by_size[size]
+        return out
 
     # ---------- the overlay window ----------
 
@@ -819,9 +844,12 @@ class SettingsMixin(DownloadMixin):
         if not cands and not mapped:
             self._status("ComfyUI lists no other file of this kind. Copy yours into its folder and restart ComfyUI.", error=True)
             return
+        hints = self._link_hints(expected, cands)
+        cands = sorted(cands, key=lambda n: not hints.get(n, "").startswith("looks like " + expected))   # a match of the expected file first (sort is stable)
         menu = tk.Menu(self._settings_win or self.root, tearoff=0)
         for n in cands:
-            menu.add_command(label=("✓ " if n == mapped else "") + n, command=lambda n=n: self._link_models(expected, n))
+            tag = f"   ({hints[n]})" if n in hints else ""
+            menu.add_command(label=("✓ " if n == mapped else "") + n + tag, command=lambda n=n: self._link_models(expected, n))
         if mapped:
             if cands:
                 menu.add_separator()
