@@ -19,7 +19,7 @@ Entscheidungen (Optionen nennen):
 Laden startet nichts automatisch, wechselt bei Bedarf Tab und Funktion. Nicht live prüfbar in der VM (kein Tk).
 Nicht anfassen: Cancel, Undo, Shift+Enter (neue Zeile), Strg+Enter (Run) bleiben wie sie sind.
 
-## T4 Modell-Manager von OpenFill mit unserem Stand vergleichen (Nutzer lädt das Repo)
+## T4 Modell-Manager von OpenFill mit unserem Stand vergleichen (erledigt 30.10.: `docs/openfill-modellmanager.md`)
 Ziel: Bericht "was macht er besser, was davon brauchen wir". Ohne Code nur Doku gelesen, das ist zu prüfen.
 Dateien (laut Doku, Namen im Repo prüfen): gimp-openfill/openfill/catalog.py (rank_score, parse_live_entries), hub.py, hardware.py (fit), models/catalog.json (Felder: Größe, sha256, Lizenz, gated, gepinnte Custom-Node-Commits), models/comfy_setup.json, Supervisor/Task-Worker (Download mit Range-Resume, .part, sha256, atomares Umbenennen), docs/security.md (HF-Token nur an huggingface.co, nicht bei Redirects, aus Logs entfernt, config.json), docs/design.md, docs/performance.md, backend.describe_error / ui_text.py (Fehlertexte mit nächstem Schritt).
 Prüffragen:
