@@ -279,14 +279,12 @@ def test_comfy_reading():
 
 
 def test_settings():
-    assert cfgmod.model_map() == {} and cfgmod.favorites() == {} and cfgmod.hidden_tabs() == set() and cfgmod.extra_paths_file() == ""
+    assert cfgmod.model_map() == {} and cfgmod.favorites() == {} and cfgmod.hidden_tabs() == set()
     cfgmod.set_model_link("flux2-vae.safetensors", "my_vae.safetensors")
     cfgmod.set_model_link("a.safetensors", "b.safetensors")
     assert cfgmod.model_map() == {"flux2-vae.safetensors": "my_vae.safetensors", "a.safetensors": "b.safetensors"}
     cfgmod.set_model_link("a.safetensors", "")
     assert cfgmod.model_map() == {"flux2-vae.safetensors": "my_vae.safetensors"}
-    cfgmod.set_extra_paths_file("C:\\x\\extra_model_paths.yaml")
-    assert cfgmod.extra_paths_file() == "C:\\x\\extra_model_paths.yaml"
     cfgmod.set_favorite("inpaint", "qwen")
     cfgmod.set_favorite("remove", "fibo")
     cfgmod.set_favorite("remove", None)
@@ -296,44 +294,11 @@ def test_settings():
     cfgmod.set_tab_hidden("moss", False)
     assert cfgmod.hidden_tabs() == {"krea2"}
     saved = json.loads(cfgmod.SETTINGS_FILE.read_text(encoding="utf-8"))
-    assert set(saved) == {"model_map", "extra_paths_file", "favorites", "hidden_tabs"}
+    assert set(saved) == {"model_map", "favorites", "hidden_tabs"}
     cfgmod.SETTINGS_FILE.write_text("not json", encoding="utf-8")       # a broken file is an empty settings file
     assert cfgmod.model_map() == {} and cfgmod.hidden_tabs() == set()
     # the window state file is separate and untouched
     assert cfgmod.STATE_FILE != cfgmod.SETTINGS_FILE
-
-
-def test_extra_paths():
-    text = (
-        "# comment\r\n"
-        "comfyui:\r\n"
-        "    base_path: C:/AI_Models/\r\n"
-        "    is_default: true\r\n"
-        "    checkpoints: models/checkpoints/\r\n"
-        "    diffusion_models: |\r\n"
-        "        models/diffusion_models\r\n"
-        "        D:/Other/unet   # second place\r\n"
-        "    vae: \"models/vae\"\r\n"
-        "    loras:\r\n"
-        "        - models/loras\r\n"
-        "        - \"E:/Loras\"\r\n"
-        "\n"
-        "a111:\n"
-        "    base_path: /opt/a1111\n"
-        "    text_encoders: models/te\n"
-    )
-    secs = inventory.parse_extra_paths(text)
-    assert [s["name"] for s in secs] == ["comfyui", "a111"]
-    c = secs[0]
-    assert c["base_path"] == "C:/AI_Models/"
-    assert c["folders"]["diffusion_models"] == ["C:/AI_Models/models/diffusion_models", "D:/Other/unet"]
-    assert c["folders"]["vae"] == ["C:/AI_Models/models/vae"] and c["folders"]["checkpoints"] == ["C:/AI_Models/models/checkpoints/"]
-    assert c["folders"]["loras"] == ["C:/AI_Models/models/loras", "E:/Loras"], c["folders"]["loras"]
-    assert "is_default" not in c["folders"]
-    assert secs[1]["folders"] == {"text_encoders": ["/opt/a1111/models/te"]}
-    assert inventory.parse_extra_paths("") == [] and inventory.parse_extra_paths("garbage without colon\n  - x\n") == []
-    assert inventory.parse_extra_paths("only:\n")[0]["folders"] == {}
-    assert inventory.read_extra_paths(Path(os.environ["PCCOMFY_HOME"]) / "does-not-exist.yaml") == []
 
 
 def test_rows_sorted_by_kind():
@@ -348,21 +313,6 @@ def test_rows_sorted_by_kind():
         assert all(v == sorted(v, key=("required", "optional").index) for v in levels.values()), r["key"]
 
 
-def test_find_on_disk():
-    base = Path(tempfile.mkdtemp())
-    (base / "models" / "diffusion_models").mkdir(parents=True)
-    (base / "models" / "vae" / "sub").mkdir(parents=True)
-    (base / "models" / "diffusion_models" / "seedvr2_3b_int8_convrot.safetensors").write_bytes(b"")
-    (base / "models" / "vae" / "sub" / "ema_vae_fp16.safetensors").write_bytes(b"")        # the alias of the SeedVR2 VAE, in a sub-folder
-    (base / "models" / "vae" / "other.safetensors").write_bytes(b"")
-    yaml = f"x:\n    base_path: {base.as_posix()}\n    diffusion_models: models/diffusion_models\n    vae: models/vae\n    loras: models/nonexistent\n"
-    found = inventory.find_on_disk(inventory.parse_extra_paths(yaml))
-    assert [Path(p).name for p in found["seedvr2_3b_int8_convrot.safetensors"]] == ["seedvr2_3b_int8_convrot.safetensors"]
-    assert [Path(p).name for p in found["seedvr2_ema_vae_fp16.safetensors"]] == ["ema_vae_fp16.safetensors"]
-    assert found["flux2-vae.safetensors"] == [] and found["Moss\\lora_dmd2.safetensors"] == []       # a folder that does not exist is no error
-    assert set(found) == set(manifest.FILES)
-
-
 def main():
     test_manifest()
     test_checksums()
@@ -374,8 +324,6 @@ def main():
     test_graph_names()
     test_comfy_reading()
     test_settings()
-    test_extra_paths()
-    test_find_on_disk()
     print("ok")
 
 
