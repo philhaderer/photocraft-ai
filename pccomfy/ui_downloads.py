@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import threading
 import time
+import urllib.parse
 import webbrowser
 from pathlib import Path
 
@@ -21,6 +22,14 @@ DIRECT_HOSTS = ("huggingface.co", "githubusercontent.com")      # the plugin loa
 def browser_only(f) -> bool:
     """A file the plugin does not load itself: gated at Hugging Face (needs a login, the token panel comes later) or from Civitai."""
     return "gated" in f.note.lower() or not downloads._host_ok(f.url, DIRECT_HOSTS)
+
+
+def site_hint(f) -> str:
+    """The orange note of a file that cannot be loaded by the plugin: where to go and where to put it."""
+    if "gated" in f.note.lower():
+        return "Needs a website: log in at Hugging Face and accept the licence. The disk symbol opens the page."
+    host = urllib.parse.urlsplit(f.url).hostname or "the website"
+    return f"Needs a website: the disk symbol opens {host} in your browser. Save the file in {f.target}."
 
 
 def size_text(n: int) -> str:
@@ -103,37 +112,44 @@ class DownloadMixin:
         self._dl_add([(f, target)])
 
     def download_missing(self, key: str):
-        """The disk symbol in a model's head: every file of it that is missing (all of them load at the same time)."""
+        """The disk symbol in a model's head: every file of it that is missing (all of them load at the same time). Files that
+        need a website (gated, Civitai) are named in the OK window and their pages open in the browser."""
         if self.inv is None:
             return
         row = next((r for r in self.inv.rows() if r["key"] == key), None)
         todo = [f for f, found, _lv in (row["files"] if row else []) if found is None and f.url and f.name not in self._dl]
         own = [f for f in todo if not browser_only(f)]
-        if not own:
-            self._status("Nothing to load here: the missing files need a login or come from another site (use their own symbol).")
+        site = [f for f in todo if browser_only(f)]
+        if not own and not site:
             return
-        base = self.models_dir()
-        if base is None:
-            return
-        pairs = []
-        for f in own:
-            try:
-                t = downloads.target_for(base, f)
-            except downloads.DownloadError as e:
-                self._status(str(e), error=True)
+        pairs, base = [], None
+        if own:
+            base = self.models_dir()
+            if base is None:
                 return
-            if not t.exists():
-                pairs.append((f, t))
-        if not pairs:
+            for f in own:
+                try:
+                    t = downloads.target_for(base, f)
+                except downloads.DownloadError as e:
+                    self._status(str(e), error=True)
+                    return
+                if not t.exists():
+                    pairs.append((f, t))
+        parts = []
+        if pairs:
+            names = "\n".join(f"  {f.name}  {f.size_text}" for f, _t in pairs)
+            parts.append(f"Download {len(pairs)} file(s), {size_text(sum(f.size for f, _t in pairs))} in all?\n\n{names}\n\nTo: {base}")
+        if site:
+            parts.append("These need a website and open in your browser:\n" + "\n".join(f"  {f.name}  ({f.target})" for f in site))
+        if not parts:
             self._status("The files are already in the folder. Restart ComfyUI if it does not list them.")
             return
-        total = sum(f.size for f, _t in pairs)
-        names = "\n".join(f"  {f.name}  {f.size_text}" for f, _t in pairs)
-        if not messagebox.askokcancel("Download", f"Download {len(pairs)} file(s), {size_text(total)} in all?\n\n{names}\n\n"       # noqa: F405
-                                      f"To: {base}",
-                                      parent=self._settings_win or self.root):
+        if not messagebox.askokcancel("Download", "\n\n".join(parts), parent=self._settings_win or self.root):         # noqa: F405
             return
-        self._dl_add(pairs)
+        for f in site:
+            webbrowser.open(f.url)
+        if pairs:
+            self._dl_add(pairs)
 
     def _dl_add(self, pairs):
         for f, target in pairs:

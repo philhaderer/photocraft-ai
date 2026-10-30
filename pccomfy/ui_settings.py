@@ -19,7 +19,7 @@ from . import inventory, manifest
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
 from .gui_theme import ICON_PX
-from .ui_downloads import DownloadMixin, browser_only, size_text
+from .ui_downloads import DownloadMixin, browser_only, site_hint, size_text
 
 _LABELS = dict(MODE_LABELS)      # noqa: F405
 EMPTY_TEXT = {"choose": "Choose a function", "none_linked": "Link your model in the settings"}
@@ -47,6 +47,7 @@ class SettingsMixin(DownloadMixin):
     inv = None                  # inventory.Inventory of the last successful reading (None = ComfyUI not read / not reachable)
     _inv_error = ""
     _settings_win = None
+    _page_w: dict = {}          # the width of each settings tab (wrapping texts follow it)
     _settings_focus = None
     _last_model = ""
     _refreshing = False         # inside StateMixin._apply_refresh (its "open on the first model" step is not wanted here)
@@ -59,6 +60,7 @@ class SettingsMixin(DownloadMixin):
         """The gear button at the right end of the footer row (the one with the connection dot, the refresh arrow and "Defaults")."""
         self._last_model = self.v_model.get()
         self._dl_init()
+        self._page_w = {}
         self._map_start = cfgmod.model_map()       # the links at startup ("Reset to startup")
         self._map_undo: list[dict] = []            # the links before each change ("Undo")
         style = ttk.Style()
@@ -321,11 +323,16 @@ class SettingsMixin(DownloadMixin):
         if self.inv is None:
             rows.append(("error", "ComfyUI could not be read.", (self._inv_error or "Not connected yet.")
                          + "\nStart ComfyUI, then click the refresh arrow (⟳) at the bottom of the plugin."))
+            rows += [("enable", m.key, m.label) for m in models.MODELS]
         else:
             for row in self.inv.rows():
-                miss = [f for f, found, _lv in row["files"] if found is None and f.url and not browser_only(f)]
+                miss = [f for f, found, _lv in row["files"] if found is None and f.url]
+                direct = [f for f in miss if not browser_only(f)]
                 rows.append(("model", row["key"], row["label"], row["status"].state, row["key"] == self._settings_focus,
-                             {"count": len(miss), "size": size_text(sum(f.size for f in miss))} if len(miss) > 1 else None))
+                             {"count": len(direct), "site": len(miss) - len(direct), "size": size_text(sum(f.size for f in direct))}
+                             if len(miss) > 1 else None))
+                rows.append(("enable", row["key"], row["label"]))
+                rows.append(("modes", row["key"], self._mode_cover(row["key"])))
                 for f, found, level in row["files"]:
                     rows.append(("file", self._file_data(f, found, level)))
                 for c in row["status"].nodes:
@@ -338,12 +345,32 @@ class SettingsMixin(DownloadMixin):
                                       "note": licence_of(f.note) if found is None else ""}))
         return rows
 
+    def _mode_cover(self, key: str) -> list[tuple]:
+        """The functions a model covers: (mode key, label, state, tooltip); state ready / missing (a file or node is missing) /
+        none (the model does not offer it)."""
+        m = models.BY_KEY[key]
+        out = []
+        for mode, label in MODE_LABELS:           # noqa: F405
+            if mode == "img2img":
+                continue
+            if mode not in m.modes:
+                out.append((mode, label, "none", "This model does not offer this function."))
+                continue
+            st = self.inv.mode_status(key, mode) if self.inv is not None else None
+            if st is None or st.state == "ready":
+                out.append((mode, label, "ready", "Ready."))
+            else:
+                need = [f.name for f in st.missing] + list(st.nodes)
+                out.append((mode, label, "missing", "Missing: " + ", ".join(need[:3]) + (" ..." if len(need) > 3 else "")))
+        return out
+
     def _file_data(self, f, found, level) -> dict:
         """One file row: expected name, path, found (your file's name or None), level, size, url, note, the download state
         (see DownloadMixin._dl_info), "restart" (loaded, ComfyUI does not list it yet) and "browser" (its page opens instead)."""
         return {"name": f.name, "path": file_path(f), "found": found, "level": level, "size": f.size_text, "url": f.url,
                 "note": f.note if found is None else "", "dl": self._dl_info(f.name),
-                "restart": found is None and f.name in self._dl_restart, "browser": browser_only(f) if f.url else False}
+                "restart": found is None and f.name in self._dl_restart, "browser": browser_only(f) if f.url else False,
+                "hint": site_hint(f) if (found is None and f.url and browser_only(f)) else ""}
 
     def _credits_segments(self) -> list[tuple]:
         """The "Credits" tab: who made the code, nodes and models the plugin builds on (links)."""
@@ -398,7 +425,7 @@ class SettingsMixin(DownloadMixin):
         win.configure(bg=BG)
         try:
             win.transient(self.root)
-            win.minsize(self._px(500), self._px(300))      # narrower than this the model switches would be cut off
+            win.minsize(self._px(480), self._px(300))      # narrower than this the model tabs would be cut off
             x = self.root.winfo_rootx() + self.root.winfo_width() + 8
             w, h = self._settings_size()
             win.geometry(f"{w}x{h}+{x}+{self.root.winfo_rooty()}")
@@ -410,7 +437,7 @@ class SettingsMixin(DownloadMixin):
 
         # no ComfyUI dot and no Refresh here: the plugin's footer has both
 
-        nb = ttk.Notebook(win)              # tab 1: the model files; tab 2: credits
+        nb = ttk.Notebook(win)              # tab 1: the models; tab 2: credits
         nb.pack(fill="both", expand=True, padx=10, pady=8)
         tab_models, tab_credits = ttk.Frame(nb), ttk.Frame(nb)
         nb.add(tab_models, text="Models")
@@ -418,37 +445,53 @@ class SettingsMixin(DownloadMixin):
         self.nb_settings = nb
 
         # which models the plugin shows (user 29.10.): after installing, all are shown; untick to hide one (the right-click
-        # menu of a chip hides too, only here a model comes back). One row, its label on the left (user 30.10.)
-        shown = ttk.Frame(tab_models)
-        shown.pack(fill="x", side="top", pady=(0, 6))
-        ttk.Label(shown, text="Your Models", style="SetHead.TLabel").grid(row=0, column=0, sticky="nw", padx=(0, 12))
+        # menu of a chip hides too, only here a model comes back). The tick sits in the tab of its model (user 31.10.)
         hidden = cfgmod.hidden_tabs()
-        self._shown_vars = {}
-        for i, m in enumerate(models.MODELS):          # the full names, three to a line (user 31.10.)
-            var = tk.BooleanVar(value=m.key not in hidden)
-            cb = ttk.Checkbutton(shown, text=m.label, variable=var, style="SetText.TCheckbutton",
-                                 command=lambda k=m.key, v=var: self._set_model_hidden(k, not v.get()))
-            cb.grid(row=i // 3, column=1 + i % 3, sticky="w", padx=(0, 12))
-            Tooltip(cb, "Untick to hide this model in the plugin, tick to show it again.")
-            self._shown_vars[m.key] = var
+        self._shown_vars = {m.key: tk.BooleanVar(value=m.key not in hidden) for m in models.MODELS}
 
-        # the model files: one row per file in fixed columns (mark, path, size, symbols), in a canvas that scrolls (user 30.10.)
-        box = ttk.Frame(tab_models)
-        box.pack(fill="both", expand=True)
-        self.cv_settings = tk.Canvas(box, bg=BG, highlightthickness=0, bd=0)
-        self.cv_settings.pack(side="left", fill="both", expand=True)
-        self.sb_settings = ThinScrollbar(box, self.cv_settings, self._px(6), BG, auto=True)
-        self.f_set_rows = ttk.Frame(self.cv_settings)
-        rows_win = self.cv_settings.create_window(0, 0, window=self.f_set_rows, anchor="nw")
-        self.cv_settings.bind("<Configure>", lambda e: (self.cv_settings.itemconfigure(rows_win, width=e.width),
-                                                        self._settings_wrap(e.width)), add="+")
-        self.f_set_rows.bind("<Configure>", lambda e: self.cv_settings.configure(scrollregion=self.cv_settings.bbox("all")), add="+")
-        win.bind("<MouseWheel>", self.sb_settings.wheel, add="+")      # only this window: the plugin's body has its own
+        # on top of "Models": the linked files (they hold for every model), below them one tab per model and "Additional"
+        self.f_set_top = ttk.Frame(tab_models)
+        self.f_set_top.pack(fill="x", side="top")
+        self.f_set_top.bind("<Configure>", lambda e: self._settings_wrap("top", e.width), add="+")
+        self.nb_models = ttk.Notebook(tab_models, style="Inner.TNotebook")
+        self.nb_models.pack(fill="both", expand=True, pady=(6, 0))
+        self._set_pages = {m.key: self._scroll_page(m.key, models.SHORT[m.key]) for m in models.MODELS}
+        self._set_pages["additional"] = self._scroll_page("additional", "Additional")
+        win.bind("<MouseWheel>", self._settings_wheel, add="+")      # only this window: the plugin's body has its own
         self._set_widgets = []
 
         self.t_credits = self._settings_text(tab_credits)
         self._settings_fill()
+        if focus in self._set_pages:
+            self._select_model_tab(focus)
         self._detect_async()       # a model copied in since the last reading is listed when the window opens (if ComfyUI sees it)
+
+    def _scroll_page(self, key: str, title: str) -> dict:
+        """One tab of the model notebook: a canvas that scrolls, its rows in a frame (the rows: one per file, in a frame each)."""
+        box = ttk.Frame(self.nb_models)
+        self.nb_models.add(box, text=title)
+        cv = tk.Canvas(box, bg=BG, highlightthickness=0, bd=0)
+        cv.pack(side="left", fill="both", expand=True)
+        sb = ThinScrollbar(box, cv, self._px(6), BG, auto=True)
+        rows = ttk.Frame(cv)
+        win_id = cv.create_window(0, 0, window=rows, anchor="nw")
+        cv.bind("<Configure>", lambda e: (cv.itemconfigure(win_id, width=e.width), self._settings_wrap(key, e.width)), add="+")
+        rows.bind("<Configure>", lambda e: cv.configure(scrollregion=cv.bbox("all")), add="+")
+        return {"page": box, "cv": cv, "sb": sb, "rows": rows}
+
+    def _settings_wheel(self, e):
+        """The mouse wheel scrolls the model tab that is open."""
+        try:
+            key = list(self._set_pages)[self.nb_models.index(self.nb_models.select())]
+        except (tk.TclError, TypeError, IndexError, AttributeError):
+            return
+        self._set_pages[key]["sb"].wheel(e)
+
+    def _select_model_tab(self, key: str):
+        try:
+            self.nb_models.select(self._set_pages[key]["page"])
+        except (tk.TclError, KeyError, AttributeError):
+            pass
 
     def _settings_size(self) -> tuple[int, int]:
         """The window's size: the one it had when it was last closed, else about 760 x 700 (user 30.10.: wider, remembered)."""
@@ -501,10 +544,25 @@ class SettingsMixin(DownloadMixin):
         if t_credits is not None:
             self._fill_text(t_credits, self._credits_segments())
 
+    def _settings_sections(self, rows):
+        """The flat rows split for the tabs: (the rows above the models, {model key: its rows}, the rows of "Additional")."""
+        top, per, extra, cur = [], {}, [], None
+        for row in rows:
+            if row[0] in ("model", "enable") and row[1] != cur:
+                cur = row[1]
+                per[cur] = []
+            elif row[0] == "head" and row[1].startswith("Additional"):
+                cur = "additional"
+            if cur is None:
+                top.append(row)
+            elif cur == "additional":
+                extra.append(row)
+            else:
+                per[cur].append(row)
+        return top, per, extra
+
     def _settings_draw(self, rows):
-        """The rows of _settings_rows as widgets in the scrolled frame, one frame per row: a model's head line, then its files
-        (mark and path on the left, size and the download and chain symbols packed at the right edge first, so a narrow
-        window shortens or wraps the path and never lets the symbols cover it)."""
+        """The rows of _settings_rows as widgets: the linked files on top, the rest in the tab of its model (or "Additional")."""
         for w in getattr(self, "_set_widgets", []):
             try:
                 w.destroy()
@@ -513,25 +571,49 @@ class SettingsMixin(DownloadMixin):
         self._set_widgets = []
         self._wrap_labels = []
         self._dl_widgets = {}
-        parent = getattr(self, "f_set_rows", None)
-        if parent is None:
+        top_frame, pages = getattr(self, "f_set_top", None), getattr(self, "_set_pages", None)
+        if top_frame is None or pages is None:
             return
-        made = self._set_widgets
+        top, per, extra = self._settings_sections(rows)
+        self._draw_rows(top, top_frame, "top")
+        for key, page in pages.items():
+            self._draw_rows(extra if key == "additional" else per.get(key, []), page["rows"], key)
+        self._settings_titles()
+        self._settings_wrap()
+
+    def _settings_titles(self):
+        """The tab of a model carries its state: filled dot ready, half some functions need files, empty files missing."""
+        for key, page in getattr(self, "_set_pages", {}).items():
+            if key == "additional":
+                continue
+            st = self.inv.tab_status(key).state if self.inv is not None else ""
+            mark = STATE_MARK.get(st, ("", ""))[0]
+            try:
+                self.nb_models.tab(page["page"], text=(mark + " " + models.SHORT[key]).strip())
+            except (tk.TclError, AttributeError):
+                pass
+
+    def _draw_rows(self, rows, parent, page: str):
+        """One frame per row in ``parent``: a model's head line, then its files (mark and path on the left, size and the
+        download and chain symbols packed at the right edge first, so a narrow window shortens or wraps the path and never
+        lets the symbols cover it)."""
+        made, count = self._set_widgets, [0]
         parent.columnconfigure(0, weight=1)
         slot = self._px(24)
 
         def line():
             f = ttk.Frame(parent)
-            f.grid(row=len(made), column=0, sticky="ew")
+            f.grid(row=count[0], column=0, sticky="ew")
+            count[0] += 1
             made.append(f)
             return f
 
         def label(box, text, style, side="left", padx=(0, 0), pady=(0, 0), wrap=0, **kw):
             lb = ttk.Label(box, text=text, style=SET_STYLES.get(style, "SetText.TLabel"), **kw)
             lb.pack(side=side, padx=padx, pady=pady)
-            if wrap:                                    # follows the width of the window (see _settings_wrap)
+            if wrap:                                    # follows the width of the tab (see _settings_wrap)
                 lb.configure(justify="left")
-                self._wrap_labels.append((lb, wrap))
+                self._wrap_labels.append((lb, wrap, page))
             return lb
 
         def icon(box, kind, tip, command, menu=None):
@@ -557,10 +639,29 @@ class SettingsMixin(DownloadMixin):
                 if allm:
                     b = ttk.Button(box, image=self._icon("save", px=SET_ICON_PX), style="Link.TButton",
                                    command=lambda k=key: self.download_missing(k))
-                    b.pack(side="right", padx=(4, 0), pady=(10, 2))
-                    Tooltip(b, f"Download all {allm['count']} missing files that can be loaded here ({allm['size']}).")
-                label(box, mark, style, pady=(10, 2))
-                label(box, name + "   " + STATE_TEXT[state] + ("   ◀" if focus else ""), "head", padx=(8, 0), pady=(10, 2))
+                    b.pack(side="right", padx=(4, 0), pady=(6, 2))
+                    Tooltip(b, f"Download all missing files that can be loaded here ({allm['count']}, {allm['size']})"
+                               + (f"; {allm['site']} open their page in the browser." if allm["site"] else "."))
+                label(box, mark, style, pady=(6, 2))
+                label(box, name + "   " + STATE_TEXT[state] + ("   \u25C0" if focus else ""), "head", padx=(8, 0), pady=(6, 2))
+            elif kind == "enable":
+                key = row[1]
+                var = self._shown_vars[key]
+                cb = ttk.Checkbutton(line(), text="Show this model in the plugin", variable=var, style="SetText.TCheckbutton",
+                                     command=lambda k=key, v=var: self._set_model_hidden(k, not v.get()))
+                cb.pack(side="left", pady=(0, 4))
+                made.append(cb)
+                Tooltip(cb, "Untick to hide this model in the plugin, tick to show it again.")
+            elif kind == "modes":
+                label(line(), "Covers these functions", "head", pady=(4, 2))
+                grid = ttk.Frame(line())
+                grid.pack(fill="x")
+                made.append(grid)
+                for i, (_mode, text, state, tip) in enumerate(row[2]):
+                    mark, style = {"ready": ("\u2713", "ok"), "missing": ("\u2717", "bad"), "none": ("\u2013", "muted")}[state]
+                    lb = ttk.Label(grid, text=f"{mark}  {text}", style=SET_STYLES[style])
+                    lb.grid(row=i // 3, column=i % 3, sticky="w", padx=(8, 18), pady=1)
+                    Tooltip(lb, tip)
             elif kind == "file":
                 f = row[1]
                 ok = f["found"] is not None
@@ -589,15 +690,17 @@ class SettingsMixin(DownloadMixin):
                         ttk.Frame(box, width=slot, height=1).pack(side="right", padx=(4, 0))
                     lb = ttk.Label(box, text=f["size"] if (f["size"] and not ok) else "", style=SET_STYLES["muted"], width=8, anchor="e")
                     lb.pack(side="right")
-                label(box, "✓" if ok else "✗", "ok" if ok else ("bad" if f["level"] == "required" else "note"), padx=(8, 6))
+                label(box, "\u2713" if ok else "\u2717", "ok" if ok else ("bad" if f["level"] == "required" else "note"), padx=(8, 6))
                 label(box, f["path"] + ("   (optional)" if f["level"] == "optional" and not f.get("use") else ""),
                       "muted" if ok else "", wrap=self._px(130))
                 extra = [(f["use"], "muted")] if f.get("use") else []
+                if f["hint"]:
+                    extra.append((f["hint"], "note"))               # orange: a website is needed
                 if ok and f["found"] != f["name"]:
                     extra.append((f"your file: {f['found']}", "muted"))
                 if f["restart"]:
                     extra.append(("loaded: restart ComfyUI and click the refresh arrow to list it", "note"))
-                if f["note"]:
+                if f["note"] and not (f["hint"] and f["note"].lower().startswith("gated")):
                     extra.append((f["note"], "muted"))
                 for text, style in extra:
                     label(line(), text, style, padx=(36, 0), wrap=self._px(60))
@@ -606,34 +709,33 @@ class SettingsMixin(DownloadMixin):
                 box = line()
                 if url:
                     icon(box, "link", f"Get {pack or 'the node pack'}: opens its page.", lambda u=url: webbrowser.open(u))
-                label(box, "✗", "bad", padx=(8, 6))
-                label(box, f"node {cls}" + (f"   → {pack}" if pack else ""), "", wrap=self._px(120))
+                label(box, "\u2717", "bad", padx=(8, 6))
+                label(box, f"node {cls}" + (f"   \u2192 {pack}" if pack else ""), "", wrap=self._px(120))
             elif kind == "head":
-                label(line(), row[1], "head", pady=(14, 2))
+                label(line(), row[1], "head", pady=(10, 2))
             elif kind == "links":          # the head of "Linked files" with its Undo and Reset
                 box = line()
                 self.b_link_reset = ttk.Button(box, text="Reset to startup", command=self._link_reset, style="SetSmall.TButton")
-                self.b_link_reset.pack(side="right", pady=(14, 2))
+                self.b_link_reset.pack(side="right", pady=(2, 2))
                 Tooltip(self.b_link_reset, "All links as they were when the plugin started.")
                 self.b_link_undo = ttk.Button(box, text="Undo", command=self._link_undo, style="SetSmall.TButton")
-                self.b_link_undo.pack(side="right", padx=(0, 6), pady=(14, 2))
+                self.b_link_undo.pack(side="right", padx=(0, 6), pady=(2, 2))
                 Tooltip(self.b_link_undo, "Takes back the last change of the links.")
-                label(box, row[1], "head", pady=(14, 2))
+                label(box, row[1], "head", pady=(2, 2))
                 self._link_buttons()
             elif kind == "line":
                 label(line(), row[1], row[2], padx=(8, 0), wrap=self._px(40))
-        self._settings_wrap()
 
-    def _settings_wrap(self, width: int | None = None):
-        """Wrapping labels follow the window: the width of the list minus what stands beside them."""
-        cv = getattr(self, "cv_settings", None)
-        try:
-            w = width or cv.winfo_width()
-        except (tk.TclError, AttributeError):
-            return
-        if not isinstance(w, int) or w < 50:
-            w = self._px(SETTINGS_W - 40)
-        for lb, margin in getattr(self, "_wrap_labels", []):
+    def _settings_wrap(self, page: str | None = None, width: int | None = None):
+        """Wrapping labels follow their tab: the width of the tab minus what stands beside them."""
+        if page is not None and isinstance(width, int):
+            self._page_w[page] = width
+        for lb, margin, pg in getattr(self, "_wrap_labels", []):
+            if page is not None and pg != page:
+                continue
+            w = self._page_w.get(pg)
+            if not isinstance(w, int) or w < 50:
+                w = self._px(SETTINGS_W - 40)
             try:
                 lb.configure(wraplength=max(self._px(120), w - margin))
             except tk.TclError:

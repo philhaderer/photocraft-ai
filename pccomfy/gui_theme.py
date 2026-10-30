@@ -44,6 +44,9 @@ class ThemeMixin:
         s.configure("TNotebook", background=BG, borderwidth=0, tabmargins=(0, 4, 0, 0))     # the tabs of the settings window
         s.configure("TNotebook.Tab", background=PANEL, foreground=FG, padding=(14, 4), borderwidth=0)
         s.map("TNotebook.Tab", background=[("selected", ACCENT), ("active", "#5f5f5f")], foreground=[("selected", "#1b1b1b")])
+        s.configure("Inner.TNotebook", background=BG, borderwidth=0, tabmargins=(0, 2, 0, 0))       # the model tabs inside "Models"
+        s.configure("Inner.TNotebook.Tab", background=PANEL, foreground=FG, padding=(8, 3), borderwidth=0, font=font(9))
+        s.map("Inner.TNotebook.Tab", background=[("selected", ACCENT), ("active", "#5f5f5f")], foreground=[("selected", "#1b1b1b")])
         for name, colour in (("ConnOk", DONE_GREEN), ("ConnBad", ERROR), ("ConnWait", MUTED)):     # the ComfyUI dot
             s.configure(f"{name}.TLabel", foreground=colour, font=font(9))
         s.configure("Badge.TLabel", background=ERROR, foreground="white", font=font(10, bold=True))
