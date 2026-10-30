@@ -5,6 +5,7 @@ Verlauf nach Datum, neuester Stand oben. Alles liegt in `next`. Die vollen Texte
 ## 30.10. (Sitzung am Abend)
 
 - **14a Qwen-Encoder-Blindtest** (`tests/live_qwen_encoder.py`, 12 Läufe, 3,1 min): alle 6 Paare „gleich gut“. Der Qwen-Edit-Workflow lädt jetzt `qwen3vl_8b_int8_convrot` (`feat/qwen-edit-int8-encoder`); `qwen3vl_8b_fp8_scaled` fällt weg. 14c Schritt 6 (Token-Panel) gestrichen, 14d auf später.
+- **Feinschliff Gruppe 5 und 6** (`feat/status-stages`, `feat/stop-shortcut-refine-sharpen`): Statuszeile nennt „Loading models“, „Decoding“, „Encoding“, „Restoring detail“ nach 2 s und „tile n“ bei Kacheln; Strg+Alt+Enter bricht ab; Fibo Refine startet bei 10 % Sharpen.
 - **Feinschliff Gruppe 7** (`feat/llm-describe-button`): Knopf „LLM“ links neben dem Papierkorb am Prompt; das Textmodell des gewählten Modells (`manifest.DESCRIBE_WRITERS`, Rückfall Qwen 3.5 9B int8 ConvRot) beschreibt das Bild in PhotoCraft, der Text kommt nach einem Zeilenumbruch ans Ende des Prompts (`tests/test_llm_button.py`).
 - **Feinschliff Gruppe 4** (`feat/live-preview-footer`, `fix/focus-outline`): „Live preview“ steht in der Fußzeile neben „Set Page to Defaults“ (grau, solange der Decoder fehlt); die Vorschau ist höchstens 300 px hoch. Geklickte Knöpfe behalten keinen orangen Fokusrahmen mehr.
 - **Feinschliff Gruppe 3** (`feat/history-list`): der Verlauf (Uhr im Kopf) ist eine eigene Liste (`pccomfy/listpopup.py`) mit Mausrad und dünnem Scrollbalken ab ca. 10 Zeilen; erste Zeile „Erase history“; zweiter Klick auf die Uhr schließt.
