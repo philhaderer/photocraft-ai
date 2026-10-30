@@ -196,7 +196,7 @@ def main():
     app.v_model.set("qwen")
     app.v_mode.set("inpaint")
     app._on_model()
-    assert app._hint_text == models.FILL_TIP and app.t_prompt["highlightbackground"] == gui.ACCENT   # Fill: the tip under the prompt (28.10.)
+    assert app._hint_text == models.FILL_TIP + " " + models.QWEN_SMALL and app.t_prompt["highlightbackground"] == gui.ACCENT   # Fill: the tip under the prompt (28.10.)
     app.v_model.set("flux2")
     app.v_mode.set("txt2img")
     app._on_model()
@@ -217,7 +217,8 @@ def main():
             spec = m.modes["outpaint"]
             ed = is_editor(_wfs.resolve(str(t.ROOT / "workflows" / spec.workflow)))
             assert spec.settings["layer_mask"] == effective_layer_mask("auto", "outpaint", ed, True), m.key
-    assert mm["qwen"].modes["inpaint"].prompt_tip == mm["fibo"].modes["inpaint"].prompt_tip == models.FILL_TIP   # the user's wording
+    assert mm["fibo"].modes["inpaint"].prompt_tip == models.FILL_TIP   # the user's wording
+    assert mm["qwen"].modes["inpaint"].prompt_tip == models.FILL_TIP + " Small selections don't work well with Qwen."   # user 30.10.
     assert models.FILL_TIP == "Draw a selection and prompt e.g. “a red flower”. Hide layers from previous results before running again."
     assert [p[0] for p in mm["flux2"].modes["refine"].prompts] == ["Default", "Neutral", "Studio portrait"]
     assert mm["flux3"].modes["upscale"].prompts == () and mm["flux2"].modes["upscale"].prompts == ()   # Flux 3: the workflow's own prompt only
