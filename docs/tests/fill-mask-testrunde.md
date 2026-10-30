@@ -1,6 +1,6 @@
 # Fill-Masken-Testrunde (30.10.)
 
-Warum: Bei Fill mit Qwen und Fibo schneidet der schmale weiche Rand von heute den Rand der Füllung und ihren Schatten ab (28.10.). Mit Dichte 5 % (heutiger Startwert) ist dagegen fast der ganze neu gemalte Ausschnitt sichtbar, und seine gerade Kante kann sich zeigen. Der Versuch vom 28.10. (Maske läuft bis zum Rand des Ausschnitts aus) wurde zurückgenommen, weil die Füllung an einer Bildkante weich wurde. Vor einem neuen Anlauf deshalb ein großer Test (deine Entscheidungen vom 30.10.: zwei Stufen, alle vier Varianten, Bilder aus `A:\testpics3\resized_1280px`; die Runde danach auf ein Viertel gekürzt).
+Warum: Bei Fill mit Qwen und Fibo schneidet der schmale weiche Rand von heute den Rand der Füllung und ihren Schatten ab (28.10.). Mit Dichte 5 % (heutiger Startwert) ist dagegen fast der ganze neu gemalte Ausschnitt sichtbar, und seine gerade Kante kann sich zeigen. Der Versuch vom 28.10. (Maske läuft bis zum Rand des Ausschnitts aus) wurde zurückgenommen, weil die Füllung an einer Bildkante weich wurde. Vor einem neuen Anlauf deshalb ein großer Test (deine Entscheidungen vom 30.10.: zwei Stufen, alle vier Varianten, Bilder aus `C:\programs\testpics3\resized_1280px`; die Runde danach auf ein Viertel gekürzt).
 
 Qwen und Fibo sehen die Maske beim Generieren nicht. Darum gibt es je Fall **eine** Generierung, und alle vier Masken werden auf dasselbe Ergebnis gelegt:
 
@@ -26,7 +26,7 @@ Der Code der Varianten steht in `pccomfy/fillmask.py`. Das Plugin selbst ist unv
 
 ## Stufe 2: echte Läufe (wartet auf dich)
 
-**Bilder** (aus `A:\testpics3\resized_1280px`): Zimmer mit Klavierrahmen (`IMG_20240522_194039_1`), Waldschlucht (`IMG_20240921_102651`), Wand mit Ukulelen (`IMG_20241001_155006`), Weg im Freien (`IMG_20241123_142913`).
+**Bilder** (aus `C:\programs\testpics3\resized_1280px`): Zimmer mit Klavierrahmen (`IMG_20240522_194039_1`), Waldschlucht (`IMG_20240921_102651`), Wand mit Ukulelen (`IMG_20241001_155006`), Weg im Freien (`IMG_20241123_142913`).
 
 **Positionen:** Mitte (je Bild eine freie Stelle), linke Kante, obere Kante, Ecke oben links, Ecke unten rechts. Die Auswahl ist 26 % der Bildbreite × 32 % der Bildhöhe groß und berührt bei den Kanten- und Eckpositionen die Bildkante. Rechteck und harter Lasso (ohne Glättung: Eine geglättete Auswahl lässt das Plugin ohnehin, wie sie ist) wechseln sich je Bild und Position ab, sodass jedes Bild und jede Position beide Formen bekommt. Fibo und Qwen bekommen im selben Fall dieselbe Auswahl. Übersicht aller Auswahlen mit den Objekten: `data/fill-mask-test/vorschau-auswahlen.png`.
 
@@ -46,7 +46,7 @@ Der Code der Varianten steht in `pccomfy/fillmask.py`. Das Plugin selbst ist unv
 ComfyUI muss laufen, mit den Fibo- und Qwen-Dateien. Im Plugin-Ordner in die Adresszeile des Explorers `powershell` tippen, Enter, dann:
 
 ```
-.venv\Scripts\python.exe tests\live_fill_mask.py run --images "A:\testpics3\resized_1280px"
+.venv\Scripts\python.exe tests\live_fill_mask.py run --images "C:\programs\testpics3\resized_1280px"
 ```
 
 Am Ende steht „DONE … cases, 40 to rate“.
@@ -70,3 +70,19 @@ Es sind alle 40 Fälle: jedes Bild, jede Position und jedes Modell einmal. Je Fa
 ```
 
 Das schreibt `ergebnis.md` in den Ordner der Runde (`data\fill-mask-test\<Zeit>\`). Darin stehen die Messung über alle 40 Fälle (Sprung an den Seiten des Ausschnitts, Anteil der Änderungen außerhalb der Auswahl, der sichtbar bleibt), die Blindbewertung je Modell und Variante und das beste Bild je Position. Danach einfach „Fertig“ sagen; ich lese den Ordner selbst und lege dir die Optionen für den Einbau vor.
+
+## Verlauf
+
+- **Runde 1** (30.10., `data/fill-mask-test/20261030-072640`, 40 Läufe in 6,4 Min.). Gezählt sind die 27 Fälle, die du als geeignet bewertet hast; „gut“ ist, was du als bestes gewählt oder in der Notiz gelobt hast:
+
+  | Variante | Fibo gut (von 15) | Qwen gut (von 12) | „Füllung am Bildrand weich“ angekreuzt |
+  |---|---|---|---|
+  | heute: schmaler Rand | 6 | 6 | 16 |
+  | heute: Dichte 5 % | 13 | 8 | 0 |
+  | bis zum Ausschnittrand | 13 | 11 | 8 |
+  | breiter Rand (3×) | 9 | 7 | 14 |
+
+  Messung: Die gerade Kante des Ausschnitts springt nur bei Dichte 5 %, bei Qwen deutlich (im Mittel 11, höchstens 62 Stufen). Qwen verschiebt oder verkleinert manchmal den ganzen Ausschnitt: Dann zeigt Dichte 5 % einen Fremdkörper, „bis zum Ausschnittrand“ Doppelbilder im Übergang. Bei Fibo springt sie kaum (höchstens 2 Stufen, Seam-Korrektur).
+- **Runde 2** (`--round 2`, `data/fill-mask-test/20261030-082758`, 16 Läufe): die 8 Fälle, deren Prompt oder Auswahl laut deinen Notizen nicht zum Test passte, mit beiden Modellen. Neue Prompts (Bär, Aufnäher, Vogel auf der Schulter, gelber Schal), Stehlampe bis zum Boden, Klavier ganz in der Auswahl, ganzes Kind markiert, Drachen im Himmel neben dem Gesicht, neuer Seed. Ergebnis: 8 von 16 Fällen „alle gut“. Bestes, wo es Unterschiede gab: Fibo Dichte 5 % (4×), Qwen „bis zum Ausschnittrand“ (2×). „Füllung am Bildrand weich“: schmal 6, breit 6, bis zum Ausschnittrand 3, Dichte 5 % 0.
+- **Runde 3** (`--round 3`, 4 Läufe): Zimmer oben flach und quer über dem Klavier mit „a framed painting of flowers hanging on the wall“ (Qwen hatte bei „a framed picture“ die Szene selbst ins Bild gemalt); der Bär in einer eigenen, größeren Auswahl links („a brown bear standing on the ground“).
+- Die Testbilder liegen seit 30.10. in `C:\programs\testpics3\resized_1280px` (vorher A:). ComfyUI benutzt wieder seine eigenen Input- und Output-Ordner; das Plugin hängt davon nicht ab (es spricht nur über ComfyUIs HTTP-Schnittstelle).
