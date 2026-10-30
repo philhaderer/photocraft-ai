@@ -265,6 +265,26 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
     return g, out_node
 
 
+def add_layout(graph: dict, box: tuple[int, int, int, int], canvas: tuple[int, int], desc: str = "") -> dict:
+    """Flux 3 Klein: the box ``box`` = (x, y, width, height) in pixels of a canvas of ``canvas`` = (width, height) becomes
+    <obj_1> of the prompt. Two core nodes are added in front of the prompt node(s) (titled pc:prompt, CLIPTextEncode): Create
+    Bounding Boxes (the box as JSON through its ``bboxes`` input; ``editor_state`` has to be {"__value__": []}) and FLUX 3
+    Image Layout Prompt, which appends the box table to the prompt text. Changes ``graph`` and returns it."""
+    x, y, w, h = (int(v) for v in box)
+    meta = {"type": "obj", "text": "", "desc": desc, "palette": []}
+    boxes = json.dumps([{"x": x, "y": y, "width": w, "height": h, "metadata": meta}])
+    for nid in [k for k, n in graph.items() if "pc:prompt" in n.get("_meta", {}).get("title", "").lower()
+                and n.get("class_type") == "CLIPTextEncode" and "text" in n.get("inputs", {})]:
+        top = max((int(k) for k in graph if str(k).isdigit()), default=0)
+        bb, lay = str(top + 1), str(top + 2)
+        graph[bb] = {"class_type": "CreateBoundingBoxes", "_meta": {"title": "Box (the selection)"},
+                     "inputs": {"width": int(canvas[0]), "height": int(canvas[1]), "editor_state": {"__value__": []}, "bboxes": boxes}}
+        graph[lay] = {"class_type": "Flux3LayoutPrompt", "_meta": {"title": "Layout prompt"},
+                      "inputs": {"prompt": graph[nid]["inputs"]["text"], "element": [bb, 2]}}
+        graph[nid]["inputs"]["text"] = [lay, 0]
+    return graph
+
+
 def has_upscale_slot(graph: dict) -> bool:
     """True when the workflow can enlarge or refine a picture (a node titled pc:upscale sets the result's size)."""
     return any("upscale" in _tags(n) for n in graph.values() if isinstance(n, dict))

@@ -34,6 +34,7 @@ class Model:
     tag_style: str = ""             # Multi Image Edit: how this model names an image in the prompt; {n} counts from 1 (the picture
                                     # is image 1, the first reference image 2), {i} from 0 ("" = no names)
     requires: tuple = ()            # model detection: the model files this tab needs (file names, as ComfyUI lists them); () = not set yet
+    bbox: bool = False              # Multi Image Edit: the BBOX switch (the selection becomes <obj_1>, see bridge.BBOX_SENTENCE); Flux 3 only
     seam: str = "switch"            # seam correction in Fill / Remove / Expand: "on" always (one corrected layer), "off" never,
                                     # "switch" the A/B checkbox (user 29.10.: Fibo on, Flux 2/3 off, Qwen keeps the checkbox)
 
@@ -147,7 +148,7 @@ FLUX3 = Model(
         "qwen3vl_4b_int8_convrot.safetensors",
         "flux2-vae.safetensors",
     ),   # the model files this tab needs (details per mode: manifest.py)
-    max_refs=3, tag_style="<ref_image_{i}>", seam="off")
+    max_refs=3, tag_style="<ref_image_{i}>", seam="off", bbox=True)
 
 # MOSS: the DMD2 speed LoRA (8 steps, CFG 1.5) is the model's own LoRA; the Lenovo UltraReal LoRA and the skip-layer
 # guidance (SLG) are switches that start on (best result in the live tests); the LLM prompt enhancer starts off.

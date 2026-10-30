@@ -354,6 +354,9 @@ class ModeMixin:
         # what the tab's settings may leave as they were: back to a fresh start too (the panels you opened stay open)
         self.v_enhance.set(False)          # off like every start value (user 30.10.)
         self.v_turbo.set(True)
+        if getattr(self, "v_bbox", None) is not None:      # BBOX (Flux 3 Multi Image Edit), made with the reference slots
+            self.v_bbox.set(False)
+            self._refs_bbox_changed()
         self.v_fooocus.set(True)
         self.v_clip.set(CLIP_DEFAULT)
         self.v_pchoice.set("")

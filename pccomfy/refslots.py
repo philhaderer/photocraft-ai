@@ -19,6 +19,10 @@ MAX_SIDE = 1024                      # the longest side of a reference image sen
 # the model gets a flat picture, and white behind a cut-out subject disturbed it.
 DEFAULT_BACKGROUND = (128, 128, 128)
 
+BBOX_CHECK_TIP = "Your selection becomes a box named <obj_1> in the prompt. Without a selection the run is a normal Multi Image Edit."
+BBOX_TIP = ("BBOX: your selection is the box <obj_1>. Say what goes there, e.g. \"replace the tent <obj_1> with <ref_image_1> a little dog\". "
+            "If the prompt has no <obj_1>, the plugin adds \"Place the result in <obj_1>.\"")
+
 
 # ---- rewriting the image names in the prompt when the model changes ----
 
@@ -317,7 +321,14 @@ class RefSlotsMixin:
     def _request(self):
         req = super()._request()
         req.refs = self._refs_for(req.mode)     # the descriptions are already in the prompt field (Describe writes them there)
+        req.bbox = self._bbox_on() and req.mode == "edit"
         return req
+
+    def _bbox_on(self) -> bool:
+        """BBOX (Flux 3 Multi Image Edit) is shown and ticked."""
+        v = getattr(self, "v_bbox", None)
+        m = self._refs_model()
+        return bool(v is not None and v.get() and m is not None and m.bbox and self._refs_wanted())
 
     # ---- state ----
     def _refs_model(self):
@@ -369,12 +380,24 @@ class RefSlotsMixin:
         self.lbl_refdesc.pack(side="left", fill="x", expand=True)
         self._ref_shown = None          # the slot item whose description spot XY shows
         self.lbl_refmsg = ttk.Label(self.f_refs, text="", style="Hint.TLabel", wraplength=self._px(380 - 24), justify="left")   # only packed while it has text
+        # BBOX next to "Prompt" (user 30.10.): the selection is the box <obj_1>; the tip is under the slots while it is ticked
+        self.v_bbox = tk.BooleanVar(value=False)       # off at every start, like the other start values
+        self.cb_bbox = ttk.Checkbutton(self.f_ptop, text="BBOX", variable=self.v_bbox, command=self._refs_bbox_changed)
+        Tooltip(self.cb_bbox, BBOX_CHECK_TIP)
+        self.lbl_refbbox = ttk.Label(self.f_refs, text=BBOX_TIP, style="Hint.TLabel", wraplength=self._px(380 - 24), justify="left")
         self._refs_dnd = self._refs_setup_dnd()
         try:
             self.root.bind("<Control-v>", self._refs_ctrl_v, add="+")
             self.root.bind("<Control-V>", self._refs_ctrl_v, add="+")
         except tk.TclError:
             pass
+
+    def _refs_bbox_changed(self):
+        """The BBOX tip under the slots shows while BBOX is ticked."""
+        if self._bbox_on():
+            self.lbl_refbbox.pack(fill="x", pady=(4, 0), side="bottom")
+        else:
+            self.lbl_refbbox.pack_forget()
 
     def _refs_setup_dnd(self) -> bool:
         """Drag and drop needs the optional package tkinterdnd2; without it everything else still works."""
@@ -414,8 +437,14 @@ class RefSlotsMixin:
         self._refs_ensure()
         if not want:
             self.f_refs.pack_forget()
+            self.cb_bbox.pack_forget()
             return
         m = self._refs_model()
+        if m.bbox:
+            self.cb_bbox.pack(side="left", padx=(self._px(10), 0))
+        else:
+            self.cb_bbox.pack_forget()
+        self._refs_bbox_changed()
         self.refslots.set_model(m.max_refs, m.tag_style)
         self.f_refs.pack(fill="x", padx=10, pady=(6, 0), before=self.f_neg)
         self._refs_redraw()

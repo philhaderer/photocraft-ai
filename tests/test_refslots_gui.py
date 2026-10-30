@@ -364,6 +364,24 @@ def main():
     tg = [n["inputs"] for n in g.values() if n["class_type"] == "TextGenerate"][0]
     assert tg["sampling_mode"] == "on" and tg["sampling_mode.seed"] == 42 and tg["sampling_mode.temperature"] == 0.7
 
+    # BBOX: a Flux 3 Multi Image Edit switch; the request carries it only while it is ticked and the function is the right one
+    seen = []
+    app.cb_bbox.pack = lambda *a, **k: seen.append("box on")
+    app.cb_bbox.pack_forget = lambda: seen.append("box off")
+    app.lbl_refbbox.pack = lambda *a, **k: seen.append("tip on")
+    app.lbl_refbbox.pack_forget = lambda: seen.append("tip off")
+    pick("flux3", "multi_edit")
+    assert seen[0:1] == ["box on"] and seen[-1] == "tip off" and app._request().bbox is False
+    app.v_bbox.set(True)
+    app._refs_bbox_changed()
+    assert seen[-1] == "tip on" and app._request().bbox is True and "<obj_1>" in refslots.BBOX_TIP
+    pick("flux3", "edit")
+    assert seen[-2:] == ["box off", "tip off"] or seen[-1] == "box off"
+    assert app._request().bbox is False
+    pick("qwen", "multi_edit")               # ticked, but not a Flux 3 function
+    assert app._request().bbox is False and not app._bbox_on()
+    app.v_bbox.set(False)
+
     assert not hasattr(refslots, "apply_strokes") and not hasattr(app, "_refs_pen")      # the pen is gone
     assert refslots.thumbnail_png(Image.new("RGBA", (300, 100), (0, 0, 0, 0)), 64)[:4] == b"\x89PNG"
     print("ALL OK (refslots gui)")
