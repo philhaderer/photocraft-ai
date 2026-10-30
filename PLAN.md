@@ -27,7 +27,7 @@ Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir gepr
 - `setup-windows.bat` legt die Desktop-Verknüpfung an.
 
 **Neu vom 30.10. (14e)**
-- Ketten-Menü am Zahnrad-Fenster: Hinweise „(looks like …)“ und „(incomplete?)“ hinter Dateien; im echten Fenster noch nicht gesehen.
+- Ketten-Menü am Zahnrad-Fenster: Hinweise „(looks like …)“ und „(incomplete?)“ hinter Dateien; im echten Fenster noch nicht gesehen. So prüfen (später): eine Modelldatei im `models`-Ordner von ComfyUI umbenennen, ComfyUI neu starten, im Zahnrad-Fenster das Ketten-Symbol der fehlenden Originaldatei anklicken; die umbenannte Kopie soll oben stehen mit „(looks like <Originalname>)“. Eine abgeschnittene Kopie soll „(incomplete?)“ zeigen. Danach Umbenennung zurücknehmen.
 
 **Neu vom 31.10.**
 - **Zahnrad-Fenster mit Reitern je Modell:** oben „Models“ und „Credits“; in „Models“ stehen „Linked files“ (Infotext, Undo, Reset) und darunter ein Reiter je Modell (Zustandszeichen im Titel) plus „Additional“. Jeder Modellreiter: Haken „Show this model in the plugin“, „Covers these modes:“ (grün bereit, rot Dateien fehlen, grau nicht angeboten) und die Dateien. Dateien, die das Plugin nicht selbst lädt (gesperrt bei Hugging Face, Civitai), tragen einen orangen Hinweis; „alle fehlenden“ nennt sie im OK-Fenster und öffnet ihre Seiten im Browser. Downloads laufen parallel (keine Warteschlange); die TAESD-Decoder kommen von `raw.githubusercontent.com`, weil `github.com` in Windows-Python am Zertifikat scheitert.
