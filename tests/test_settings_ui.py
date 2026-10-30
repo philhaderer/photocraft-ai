@@ -33,6 +33,32 @@ class RecText(t.Text):
 t.tk.Text = RecText
 
 
+def rows_text(app) -> str:
+    """The "Models" tab of the settings window as one text (its rows, as _settings_draw shows them)."""
+    out = []
+    for row in app._settings_rows():
+        kind = row[0]
+        if kind == "model":
+            out.append(f"{row[2]}  {ui_settings.STATE_TEXT[row[3]]}" + ("  \u25C0" if row[4] else ""))
+        elif kind == "file":
+            d = row[1]
+            out.append(("\u2713 " if d["found"] is not None else "\u2717 ") + d["path"] + ("  optional" if d["level"] == "optional" else "")
+                       + (f"  (your file: {d['found']})" if d["found"] not in (None, d["name"]) else "")
+                       + (f"  {d['size']}" if d["size"] else "") + (f"  {d['note']}" if d["note"] else "")
+                       + (f"  found on disk: {d['disk']}  (restart ComfyUI to list it)" if d["disk"] else ""))
+        elif kind == "node":
+            out.append(f"node {row[1]}  {row[2]}")
+        elif kind == "error":
+            out.append(row[1] + "\n" + row[2])
+        else:
+            out.append(row[1])
+    return "\n".join(out)
+
+
+def file_rows(app) -> list[dict]:
+    return [row[1] for row in app._settings_rows() if row[0] == "file"]
+
+
 def make_app():
     app = gui.App(cfgmod.load())
     wfdir = Path(app.workflows_dir)
@@ -228,10 +254,12 @@ def main():
     app._on_model()
     assert app.v_model.get() == "flux3" and app._last_model == "flux3"
     assert app._settings_win is not None and app._settings_focus == "krea2"
-    text = "".join(p for p, _tags in app.t_settings.parts)
-    assert "Installed models" in text and "Credits" not in text and "\u25C0" in text
+    text = rows_text(app)
+    assert "restart ComfyUI" in text and "Credits" not in text and "Krea 2 Turbo  files missing  \u25C0" in text
     assert "Credits" in "".join(p for p, _tags in app.t_credits.parts)          # the second tab of the settings window
-    assert "\u2717 qwen_image_vae.safetensors" in text and "ComfyUI\\models\\vae" in text
+    assert "\u2717 /vae/qwen_image_vae.safetensors" in text          # the path with its folder (user 30.10.)
+    assert "\u2713 /loras/Flux 3/flux-3-image-klein-restore.safetensors" in text
+    assert app._settings_size() == (app._px(ui_settings.SETTINGS_W), app._px(ui_settings.SETTINGS_H))   # wider at first
     assert not hasattr(app, "lbl_set_dot")                 # no ComfyUI dot in the settings window (the footer has it)
     app._settings_close()
     assert app._settings_win is None
@@ -262,7 +290,7 @@ def main():
     app.generate()
     assert called == ["krea2", "", "krea2"]
     app.open_settings()
-    text = "".join(p for p, _tags in app.t_settings.parts)
+    text = rows_text(app)
     assert "ComfyUI could not be read." in text and "No connection to ComfyUI" in text
     app._settings_close()
     # the gear toggles: a click opens the window, the next one closes it (user 28.10.)
@@ -273,21 +301,25 @@ def main():
     closed = []
     win.destroy = lambda: closed.append(True)
     win.winfo_exists = lambda: 1
+    win.winfo_width, win.winfo_height = (lambda: 900), (lambda: 640)     # the size you gave it ...
     app.toggle_settings()
     assert closed == [True] and app._settings_win is None
+    assert cfgmod.get_setting("settings_size") == [900, 640] and app._settings_size() == (900, 640)   # ... comes back
     app.toggle_settings()
     assert app._settings_win is not None and app._settings_win is not win
     app._settings_close()
 
-    # the overlay text: downloads are links, a missing node names its pack, the credits are links
+    # the rows: a missing file has its download link and size, a missing node names its pack, the credits are links
     inv = inventory.Inventory(lists_without(unet="seedvr2_3b_int8_convrot.safetensors"), {"SeedVR2Preprocess"})
     app._apply_refresh({"_detect": True, "_inv": inv, "_yaml": [], "_disk": {"seedvr2_3b_int8_convrot.safetensors": ["D:/models/diffusion_models/seedvr2_3b_int8_convrot.safetensors"]}})
-    seg = app._settings_segments() + app._credits_segments()
-    links = [u for _t, style, u in seg if style == "link"]
-    assert manifest.FILES["seedvr2_3b_int8_convrot.safetensors"].url in links and "(3.5 GB)" in "".join(s for s, _st, _u in seg) and "https://github.com/ausboss/ComfyUI-AusBoss" in links
+    seed = next(d for d in file_rows(app) if d["name"] == "seedvr2_3b_int8_convrot.safetensors")
+    assert seed["url"] == manifest.FILES[seed["name"]].url and seed["size"] == "3.5 GB" and seed["path"] == "/diffusion_models/" + seed["name"]
+    nodes = [row for row in app._settings_rows() if row[0] == "node"]
+    assert any(n[1] == "AUSBOSS_NODES_TiledUpscale" and n[3] == "https://github.com/ausboss/ComfyUI-AusBoss" for n in nodes)
+    links = [u for _t, style, u in app._credits_segments() if style == "link"]
     assert all(u.startswith("https://") for u in links) and len(links) >= len(manifest.CONTRIBUTORS)
-    joined = "".join(s for s, _st, _u in seg)
-    assert "node AUSBOSS_NODES_TiledUpscale" in joined and "found on disk: D:/models/diffusion_models/seedvr2" in joined
+    joined = rows_text(app) + "".join(s for s, _st, _u in app._credits_segments())
+    assert "found on disk: D:/models/diffusion_models/seedvr2" in joined
     assert "Peszemeszek" in joined and "optional" in joined and "(as " not in joined
 
     # link a file of another name: the tab turns ready at once and graphs get the real name
@@ -299,10 +331,9 @@ def main():
     app.open_settings()
     exp, avail = app._link_choices()
     assert "flux2-vae.safetensors" in exp and "my_vae.safetensors" in avail["vae"]
-    # "Choose another file..." next to every file (found or missing): it sets the boxes to that file
-    picks = [u for _t, style, u in app._settings_segments() if style == "pick"]
+    # the chain next to every file (found or missing): it sets the boxes to that file
+    picks = [d["name"] for d in file_rows(app)]
     assert picks and set(picks) == set(exp), (len(picks), len(exp))
-    assert all(t == "Choose another file…" for t, style, _u in app._settings_segments() if style == "pick")
     app._choose_for("flux2-vae.safetensors")
     assert app.v_link_exp.get() == "flux2-vae.safetensors" and "my_vae.safetensors" in app.cb_link_act["values"]
     app.v_link_exp.set("flux2-vae.safetensors")
@@ -329,12 +360,12 @@ def main():
     app.v_link_act.set("my_vae.safetensors")
     app._link_models()
     assert cfgmod.model_map() == {"flux2-vae.safetensors": "my_vae.safetensors"}
-    assert "flux2-vae.safetensors  (your file: my_vae.safetensors)" in "".join(s for s, _st, _u in app._settings_segments())
+    assert "/vae/flux2-vae.safetensors  (your file: my_vae.safetensors)" in rows_text(app)
     assert app.rb_tabs["flux3"]["style"] == "Chip.Toolbutton" and app.inv.tab_status("flux3").state == "ready"
     g = {"1": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae.safetensors"}}}
     app.comfy.name_fixer(g)
     assert g["1"]["inputs"]["vae_name"] == "my_vae.safetensors"
-    assert "flux2-vae.safetensors  \u2192  my_vae.safetensors" in "".join(s for s, _st, _u in app._settings_segments())
+    assert "flux2-vae.safetensors  \u2192  my_vae.safetensors" in rows_text(app)
     app.v_link_exp.set("flux2-vae.safetensors")
     app._unlink_model()
     assert cfgmod.model_map() == {} and app.rb_tabs["flux3"]["style"] == "Missing.Chip.Toolbutton"
@@ -353,12 +384,12 @@ def main():
     assert kind == "refresh" and data["_detect"] and "_inv" not in data
     app._apply_refresh(data)
     assert app._yaml_sections[0]["folders"]["vae"] == [(base / "models" / "vae").as_posix()]
-    joined = "".join(s for s, _st, _u in app._settings_segments())
+    joined = rows_text(app)
     assert str(ypath) in joined and "found on disk:" in joined and "restart ComfyUI to list it" in joined
     app.settings_set_yaml("")
     kind, data = app.events.get(timeout=10)
     app._apply_refresh(data)
-    assert cfgmod.extra_paths_file() == "" and app._yaml_sections == [] and "No file chosen" in "".join(s for s, _st, _u in app._settings_segments())
+    assert cfgmod.extra_paths_file() == "" and app._yaml_sections == [] and "No file chosen" in rows_text(app)
 
     # the settings window is an owned window of the bridge window (hidden / minimised / closed with it), never "always on top"
     class RecWin(t.Widget):

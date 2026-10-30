@@ -2,7 +2,7 @@
 
 Every icon lives on a 24 x 24 grid with a 2-unit stroke, round ends and round corners, the style of the Lucide icon set
 (lucide.dev, ISC licence; the shapes here follow its icons x, scissors, message-square-text, copy, clipboard,
-image-plus, plus, settings, undo-2, redo-2, chevron-up/down/right, save and trash-2; of the function symbols `fn-multi_edit`
+image-plus, plus, settings, undo-2, redo-2, chevron-up/down/right, save, link-2 and trash-2; of the function symbols `fn-multi_edit`
 follows images, `fn-upscale` scaling, `fn-refine` focus and `fn-edit` sparkles, the other `fn-` shapes are our own in the
 same style). An icon is drawn 8 times larger and scaled down with Lanczos to the exact pixel size it is shown at
 (display scaling included), so it stays sharp and even at 100 % and at 150 %, which the old 16 px pixel art did not.
@@ -90,6 +90,9 @@ SHAPES.update({
     "chevron-up": [[(6, 15), (12, 9), (18, 15)]],
     "chevron-down": [[(6, 9), (12, 15), (18, 9)]],
     "chevron-right": [[(9, 6), (15, 12), (9, 18)]],
+    # Lucide link-2: two open links and a bar between them (the chain next to a file in the settings window)
+    "link": [[(9, 17), (7, 17)] + _arc(7, 12, 5, 90, 270) + [(9, 7)], [(15, 7), (17, 7)] + _arc(17, 12, 5, 270, 450) + [(15, 17)],
+             [(8, 12), (16, 12)]],
     "save": _SAVE + [[(17, 21), (17, 14), (16, 13), (8, 13), (7, 14), (7, 21)], [(7, 3), (7, 7), (8, 8), (15, 8)]],
     "saveas": _SAVE + [[(13, 14), (13, 20)], [(10, 17), (16, 17)], [(7, 3), (7, 7), (8, 8), (15, 8)]],
     "trash": [[(3, 6), (21, 6)], [(19, 6), (19, 20)] + _arc(17, 20, 2, 0, 90) + [(7, 22)] + _arc(7, 20, 2, 90, 180) + [(5, 6)],
