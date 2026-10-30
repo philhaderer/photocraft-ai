@@ -8,6 +8,7 @@ Stand 2026-10-30. Der Plan ist freigegeben. Abschnitt 3 ist die Arbeitsliste in 
 - `docs/HANDOFF-claude-code.md`: Technik für die nächste Sitzung (Umgebung, Prüfen ohne GPU, Befunde).
 - `ideas.md`: die offenen OpenFill-Ideen im Detail (T3b, T4, Geparkt).
 - `CLAUDE.md`: Arbeitsweise und Regeln.
+- `user-edits.md`: wo Texte stehen, die du selbst ändern kannst, und was du danach sagst.
 - `docs/archiv/`: alte Fassungen und fertige Recherchen (PLAN vom 29.10., Handoff vom 28.10., UX-Studie, Schriften, L1/L2).
 
 ## 1. Wartet auf deinen Live-Test
