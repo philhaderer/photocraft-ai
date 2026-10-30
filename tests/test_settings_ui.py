@@ -308,7 +308,12 @@ def main():
     app.v_link_exp.set("flux2-vae.safetensors")
     app._link_expected_picked()
     assert "my_vae.safetensors" in app.cb_link_act["values"] and "flux3-image-klein-int8-convrot.safetensors" not in app.cb_link_act["values"]
-    assert app.cb_link_act["values"][0] == "flux2-vae.safetensors" and app.v_link_cur.get() == "missing"
+    assert "flux2-vae.safetensors" not in app.cb_link_act["values"] and app.v_link_cur.get() == "missing"   # missing: not offered
+    app.v_link_exp.set("qwen_image_vae.safetensors")       # an installed expected file comes first (choosing it unlinks)
+    app._link_expected_picked()
+    assert app.cb_link_act["values"][0] == "qwen_image_vae.safetensors", app.cb_link_act["values"]
+    app.v_link_exp.set("flux2-vae.safetensors")
+    app._link_expected_picked()
     app.v_link_act.set("my_vae.safetensors")
     assert cfgmod.model_map() == {}                       # choosing alone changes nothing: only "Relink" does
     app._link_models()
