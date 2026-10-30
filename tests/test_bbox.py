@@ -69,8 +69,9 @@ def main():
     box = imaging.Box(x, y, w, h)
     m = imaging.box_margin_mask(box, (t.W, t.H), bridge.BBOX_MARGIN, 0.0)
     a = np.asarray(m)
-    gx0, gy0 = max(0, x - w // 2), max(0, y - h // 2)
-    gx1, gy1 = min(t.W, x + w + w // 2), min(t.H, y + h + h // 2)
+    dx, dy = round(w * bridge.BBOX_MARGIN), round(h * bridge.BBOX_MARGIN)
+    gx0, gy0 = max(0, x - dx), max(0, y - dy)
+    gx1, gy1 = min(t.W, x + w + dx), min(t.H, y + h + dy)
     assert a[gy0:gy1, gx0:gx1].min() == 255 and a.sum() == 255 * (gx1 - gx0) * (gy1 - gy0)
     soft = imaging.box_margin_mask(box, (t.W, t.H), bridge.BBOX_MARGIN, 20.0)
     s_ = np.asarray(soft)
@@ -82,6 +83,19 @@ def main():
     assert pc.doc.sel is not None, "the selection must come back after the soft mask used it"
     pc, b, res = run("replace the tent with a dog", layer_mask="none")
     assert n_masked(pc) == 0, "layer mask none = no mask"
+
+    # colour fit: a result that is brighter and tinted outside the box zone is pulled back to the original there
+    import numpy as _np
+    from PIL import Image as _I
+    yy, xx = _np.mgrid[0:120, 0:200]
+    src = _np.stack([40 + xx // 2, 60 + yy, 100 + (xx + yy) // 4], axis=-1).astype(_np.uint8)
+    gen = _np.clip(src.astype(float) * 1.12 + _np.array([6, -4, 9]), 0, 255).astype(_np.uint8)
+    far = imaging.box_margin_mask(box, (200, 120), bridge.BBOX_MARGIN + 0.1, 0.0).point(lambda v: 255 if v < 128 else 0)
+    fit = _np.asarray(imaging.match_outside(_I.fromarray(gen), _I.fromarray(src), far)).astype(float)
+    o = _np.asarray(far) > 127
+    assert abs(fit[o] - src[o]).mean() < 1.0 < abs(gen[o].astype(float) - src[o]).mean(), "outside must be fitted"
+    tiny = imaging.box_margin_mask(imaging.Box(0, 0, 200, 120), (200, 120), 0.0, 0.0).point(lambda v: 255 if v < 128 else 0)
+    assert _np.array_equal(_np.asarray(imaging.match_outside(_I.fromarray(gen), _I.fromarray(src), tiny)), gen)   # nothing to fit on
 
     # the user's own <obj_1> is left alone
     pc, b, res = run("replace the tent <obj_1> with a dog")
