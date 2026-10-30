@@ -206,11 +206,11 @@ def main():
     assert app.sep_prompt is not None and gui.scale_text(1.5) == "x 1.5" and gui.scale_text("2.0") == "x 2"
     assert app.sep_status["style"] == app.sep_prompt["style"] == "Sep.TFrame" and app.sep_status["height"] == 1   # the same light line above the progress line
 
-    # defaults: Flux 3 upscale starts without SeedVR2 and with the Restore LoRA at 50 %; Qwen text to image: no Turbo, enhancer on
+    # defaults: Flux 3 upscale starts without SeedVR2 and with the Restore LoRA at 50 %; Qwen text to image: no Turbo, enhancer off (user 30.10.)
     assert models.BY_KEY["flux3"].modes["upscale"].settings["stage_on"] is False
     assert workflows.stage_info(workflows.load_template(t.ROOT / "workflows" / "flux3-klein-upscale.json"))[0]["default_on"] is False
     pick("qwen", "txt2img")
-    assert app.v_turbo.get() is False and app.v_enhance.get() is True
+    assert app.v_turbo.get() is False and app.v_enhance.get() is False
 
     # Flux 2 text to image with the Flux 3 prompt upsampler (the checkbox switches it off)
     from pccomfy import bridge as _b
