@@ -36,3 +36,20 @@ Aufbau wie im Plugin: Graph aus `flux3-klein-edit.json` mit `workflows.add_layou
 - **Test mit der Schlichtbild-Szene (Haus, Fuchs):** eigener `<obj_1>` im Prompt und der angehängte Satz geben beide den Fuchs in die Box.
 - **Nachteil: das ganze Bild ändert sich ein wenig.** Mittlere Abweichung außerhalb der Box (0 bis 255): 4,5 bis 14,6 mit Box, 6 bis 13 ohne (Kontrolle). Sichtbar: Möbel, Teppich, Fenster leicht anders; in der Schlichtszene wanderte das Haus. Das ist Flux 3 selbst, nicht die Box.
 - **Abhilfe getestet (nur am Bild, nicht im Plugin):** das Ergebnis nur innerhalb der Box (Rechteck, weicher Rand ca. 12 px) über das Original legen; der Rest bleibt bildgleich, die Uhr sieht gleich aus.
+
+## Großer Testlauf (30.10.): Referenzen aus dem Netz, Maskenvarianten, mehrere Boxen
+
+Bilder in `data/flux3-bbox-test/` (nicht im Repo): `web-refs/` (Wikimedia Commons, nur CC0/Public domain, `SOURCES.md` nennt Datei und Seite), `inputs/` (mit Flux 3 erzeugte realistische Szenen und moderne Referenzen), `big/`, `multi/` und die Blätter `big_sheet1.png`, `big_sheet2.png`, `margin_sheet.png`, `multi_sheet.png`, `multi_sheet2.png`.
+
+**10 Fälle** (Stuhl, Sessel s/w, Hocker, Frau, Mann, altes Paar, Tasse, Vase, Uhr, historische Karte als Person; Szenen: Esszimmer, Park, Café, Tisch), Prompt nur das Wort + „Place the result in <obj_1>.“, Seed 7:
+- **Platzierung:** in allen 10 Fällen sitzt das Objekt in der Box (Position stimmt).
+- **Größe:** die Box ist nur ein Anhalt. Flux 3 zeichnet Möbel und Personen oft größer als die Box (Stuhl: ca. 1,5-fache Höhe). Historische Referenzen (s/w, Karte) kommen mit ihrem Stil (grau, Kartenrand) ins Bild, auch als Person.
+- **Rest des Bildes:** mittlere Abweichung außerhalb der Box 5 bis 13 (0 bis 255), bei Personen am höchsten (12 bis 13).
+- **Nur-in-der-Box einfügen:** mit dem genauen Box-Rechteck wird ein größeres Objekt angeschnitten (Stuhllehne, Karte); mit einem Ellipsen-„Lasso“ noch mehr (Ecken fehlen). Mit 40 % Rand um die Box bleiben fast alle Objekte ganz (nur die Stuhllehne bleibt leicht angeschnitten). Daraus: die Maske braucht Rand (Vorschlag 50 %), oder der Nutzer zieht die Box großzügig.
+
+**Mehrere Boxen (drei Referenzen auf einmal):** `CreateBoundingBoxes` nimmt eine Liste, `Flux3LayoutPrompt` nummeriert in Eingabereihenfolge (`obj_1`, `obj_2`, `obj_3`; ohne Umsortieren geprüft). Prompt: „Place <ref_image_1> in <obj_1>. Place <ref_image_2> in <obj_2>. Place <ref_image_3> in <obj_3>.“
+- Reihenfolge links, rechts, Mitte: alle drei Referenzen am richtigen Ort.
+- Vertauschte Boxen, ohne Beschreibung der Boxen: nur Referenz 1 stimmt, 2 und 3 sind in 3 von 3 Seeds vertauscht (Seeds 7, 8, 9).
+- **Vertauschte Boxen mit `desc` je Box** („a wooden chair“, „a red plastic stool“, „a green porcelain vase“): alle drei stimmen, 3 von 3 Seeds. `desc` aus der Beschreibung des Slots (Describe-Knopf) oder einem Text des Nutzers ist also nötig.
+- Eine Referenz im Slot, die der Prompt nicht nennt, taucht trotzdem im Bild auf (Vase mit Stuhl vermischt): nur die benutzten Slots mitschicken.
+- Offen für den Bau: PhotoCraft kennt nur eine Auswahl; mehrere Rechtecke darin haben keine Reihenfolge. Vorschlag: Knopf je Slot „Auswahl als Box für dieses Bild“, der das Rechteck der aktuellen Auswahl für den Slot merkt (Box k gehört zu Referenz k).
