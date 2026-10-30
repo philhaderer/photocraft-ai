@@ -36,7 +36,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 import numpy as np  # noqa: E402
-from PIL import Image, ImageDraw  # noqa: E402
+from PIL import Image, ImageDraw, ImageFilter  # noqa: E402
 
 from pccomfy import config as cfgmod, fillmask, imaging, models, workflows  # noqa: E402
 from pccomfy.bridge import Bridge, Request, fill_prompt, outline_width, prompt_phase_nodes  # noqa: E402
@@ -254,7 +254,7 @@ def cmd_rate(a):
     root = tk.Tk()
     root.title("Fill-Masken-Testrunde bewerten (blind)")
     root.configure(bg="#282828")
-    st = {"i": next((k for k, c in enumerate(order) if not data.get(c, {}).get("bestes")), 0), "loading": False, "whole": False}
+    st = {"i": next((k for k, c in enumerate(order) if not data.get(c, {}).get("bestes")), 0), "loading": False, "whole": False, "outline": False}
     best, note = tk.StringVar(), tk.StringVar()
     ivars = [{s: tk.BooleanVar() for s in ISSUES} for _ in range(4)]
     kw = dict(bg="#282828", activebackground="#282828", selectcolor="#535353")
@@ -268,13 +268,13 @@ def cmd_rate(a):
         f.grid(row=k // 2, column=k % 2, padx=6, pady=4, sticky="n")
         lbl = tk.Label(f, bg="#282828")
         lbl.pack()
-        row = tk.Frame(f, bg="#282828")
+        row = tk.Frame(f, bg="#282828")         # "best" on the left, the four issues in two rows beside it
         row.pack(anchor="w")
         tk.Radiobutton(row, text=f"Bestes ({k + 1})", variable=best, value=str(k + 1), fg="#f28c28",
-                       command=lambda: save(), **kw).pack(side="left", padx=(0, 10))
-        for s in ISSUES:
+                       command=lambda: save(), **kw).grid(row=0, column=0, rowspan=2, sticky="w", padx=(0, 10))
+        for j, s in enumerate(ISSUES):
             tk.Checkbutton(row, text=s, variable=ivars[k][s], fg="#cfcfcf", font=("Segoe UI", 8),
-                           command=lambda: save(), **kw).pack(side="left")
+                           command=lambda: save(), **kw).grid(row=j // 2, column=1 + j % 2, sticky="w")
         tiles.append(lbl)
     bar = tk.Frame(root, bg="#282828")
     bar.pack(fill="x", padx=12, pady=4)
@@ -284,6 +284,7 @@ def cmd_rate(a):
     tk.Button(bar, text="← Zurück", command=lambda: go(-1)).pack(side="left", padx=(12, 0))
     tk.Button(bar, text="Weiter →", command=lambda: go(1)).pack(side="left", padx=8)
     tk.Button(bar, text="Ganzes Bild (V)", command=lambda: whole()).pack(side="left")
+    tk.Button(bar, text="Auswahl zeigen (O)", command=lambda: outline()).pack(side="left", padx=(8, 0))
     status = tk.Label(bar, bg="#282828", fg="#9a9a9a")
     status.pack(side="left", padx=12)
 
@@ -293,11 +294,14 @@ def cmd_rate(a):
     def show():
         cid = order[st["i"]]
         c = cases[cid]
-        top.configure(text=f"Fall {st['i'] + 1}/{len(order)}   (Auswahl orange umrandet: O)")
-        sw, sh = root.winfo_screenwidth() // 2 - 40, (root.winfo_screenheight() - 200) // 2 - 40
+        top.configure(text=f"Fall {st['i'] + 1}/{len(order)}")
+        sw, sh = root.winfo_screenwidth() // 2 - 40, (root.winfo_screenheight() - 160) // 2 - 70   # room for the ticks
         st["photos"] = []
         for k, v in enumerate(shown[cid]):
             im = Image.open(out / "bilder" / f"{cid}-{v}.png").convert("RGB")
+            if st["outline"]:          # the selection as an orange line (the same one the run used)
+                edge = selection(im.size, c["position"], c["form"], c["bild"]).filter(ImageFilter.FIND_EDGES)
+                im.paste((242, 140, 40), (0, 0), edge.point(lambda x: 255 if x else 0).filter(ImageFilter.MaxFilter(3)))
             if not st["whole"]:
                 im = im.crop(view_box(c["region"], im.size))
             im.thumbnail((sw, sh))
@@ -333,6 +337,10 @@ def cmd_rate(a):
         st["whole"] = not st["whole"]
         show()
 
+    def outline():
+        st["outline"] = not st["outline"]
+        show()
+
     def key_press(e):
         if root.focus_get() is ent:
             return
@@ -343,6 +351,8 @@ def cmd_rate(a):
             go(1 if e.keysym == "Right" else -1)
         elif e.char in ("v", "V"):
             whole()
+        elif e.char in ("o", "O"):
+            outline()
 
     note.trace_add("write", lambda *x: save())
     root.bind("<Key>", key_press)
