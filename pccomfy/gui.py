@@ -76,7 +76,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.v_seam = tk.BooleanVar(value=False)    # seam correction A/B test: off at every start until confirmed (T2)
         self.v_live = tk.BooleanVar(value=True)     # live preview of the sampler under the plugin: on at every start (T3a)
         self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
-        self.v_enhance = tk.BooleanVar(value=g("enhance", True))
+        self.v_enhance = tk.BooleanVar(value=g("enhance", False))   # off at the first start, like Reset
         self.v_turbo = tk.BooleanVar(value=g("turbo", True))
         self.v_lora_str = tk.DoubleVar(value=g("lora_strength", 1.0))
         self.v_model = tk.StringVar(value=g("model", ""))   # the tab; "" = a workflow of your own (everything enabled)

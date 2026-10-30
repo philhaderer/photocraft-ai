@@ -47,7 +47,7 @@ class ModeMixin:
             self.f_sharp.pack_forget()
         else:
             self._pack_post(self.f_sharp)
-        self._show_enhance_box(mode not in NO_LLM_MODES)
+        self._show_enhance_box(self._llm_row_wanted())
         self._update_prompt_hint()
         self._sync_prompt_field(mode)
         self._update_feather_state()
@@ -323,7 +323,7 @@ class ModeMixin:
         self._prompt_kept = ""
         self._set_loras([])
         # what the tab's settings may leave as they were: back to a fresh start too (the panels you opened stay open)
-        self.v_enhance.set(True)
+        self.v_enhance.set(False)          # off like every start value (user 30.10.)
         self.v_turbo.set(True)
         self.v_fooocus.set(True)
         self.v_clip.set(CLIP_DEFAULT)
@@ -593,8 +593,9 @@ class ModeMixin:
             self.cb_fooocus.grid_remove()
         # the text model applies to custom workflows (nodes tagged pc:clip), not to the built-in graph, and only
         # while the prompt enhancement is on
-        has_writer = self._has_text_model() and self.v_mode.get() not in NO_LLM_MODES  # fixed or ready-made prompts
-        self.cb_enhance.configure(state="normal" if has_writer else "disabled")
+        # no text model here, or a fixed / ready-made prompt: the row is hidden, never a greyed-out box (user 30.10.)
+        has_writer = self._llm_row_wanted()
+        self._show_enhance_box(has_writer)
         llm = next((m for m in (writer_model(t) for t in self._wf_templates()) if m), "")
         name = next((n for n in (writer_name(t) for t in self._wf_templates()) if n), "")
         # the model's name only in the tooltip, never in the checkbox (user 30.10.)
@@ -698,6 +699,11 @@ class ModeMixin:
             if key in self._wf_vals and val and val != str(self._wf_vals[key]):
                 out[key] = val
         return out
+
+    def _llm_row_wanted(self) -> bool:
+        """The "LLM prompt enhancement" row is shown only where the workflow has a text model that writes the prompt and the
+        function takes the user's own prompt (not in NO_LLM_MODES)."""
+        return self.v_mode.get() not in NO_LLM_MODES and self._has_text_model()
 
     def _has_text_model(self) -> bool:
         """True when the selected workflow (or one of a group) contains a text model that writes the prompt."""
