@@ -16,7 +16,7 @@ Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir gepr
 
 **Neu vom 30.10. (Nachmittag)**
 - **LLM-Zeile unter dem Prompt:** „LLM prompt enhancement“ steht überall direkt unter dem negativen Prompt, über Upscale factor und LoRA-Schaltern; ohne Modellnamen (der steht nur im Tooltip). Turbo-/LoRA-Haken bündig links. Seit 30.10. abends nur noch dort, wo ein Textmodell den Prompt schreibt (nie ausgegraut); Defaults und erster Start setzen den Haken auf aus.
-- **Fibo Text to image mit LLM** (30.10. abends): derselbe Schreiber wie Fibo Edit (Qwen 3.5 9B int8 ConvRot) mit Brias offiziellem „Generate“-Systemprompt; startet aus. Blindtest `tests/live_fibo_llm.py` liegt bereit (Abschnitt 3).
+- **Fibo Text to image mit LLM** (30.10. abends): derselbe Schreiber wie Fibo Edit (Qwen 3.5 9B int8 ConvRot) mit Brias offiziellem „Generate“-Systemprompt; startet aus. Blindtest gelaufen: Haken startet aus, bleibt verfügbar.
 - **Qwen Text to image** startet ohne LLM.
 - **Zahnrad-Fenster:** „New file“ bietet die erwartete Datei nur noch an, wenn sie da ist; neu in der Liste: Restore-LoRA (Flux 3 Upscale, Pflicht), BiRefNet (Cut out, optional), UltraReal-LoRA für MOSS Text to image jetzt Pflicht.
 
@@ -87,7 +87,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 - **Später (nach Release 1):** GGUF (Loader im Graph tauschen, ComfyUI-GGUF als Abhängigkeit) für 8-GB-Nutzer.
 
 **LLM prompt enhancement (entschieden 30.10. abends)**
-- **Fibo Text to image** hat den LLM-Schreiber (gebaut 30.10. abends, Systemprompt: Brias „Generate“ aus dem FIBO-Repo, CC BY-NC 4.0). **Blindtest** `tests/live_fibo_llm.py` (12 Prompts aller Arten × 2 Seeds = 24 Paare, mit/ohne LLM): laufen lassen, sobald du die GPU freigibst; danach entscheidest du, ob der Haken bei Fibo Text to image an startet.
+- **Fibo Text to image** hat den LLM-Schreiber (30.10. abends, Brias „Generate“-Systemprompt). Blindtest 30.10.: ohne LLM 9, mit LLM 4, gleich 11 von 24 (`docs/tests/fibo-t2i-llm.md`). **Entschieden:** Haken startet aus, bleibt verfügbar.
 - **Später, je als Testrunde (blind, mit/ohne LLM):** Edit whole image (könnte mit LLM besser werden); Qwen Fill mit einem Prompt-Schreiber; Multi Image Edit bei Flux 3, Flux 2 und Qwen (dort ist der Haken heute ausgegraut).
 - Ausgeblendet bleibt die Zeile bei Expand, Remove, Refine und Upscale (feste oder fertige Prompts) und überall, wo es (noch) kein Textmodell gibt.
 
