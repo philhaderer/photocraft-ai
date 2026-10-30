@@ -15,6 +15,7 @@ Fork of Peszemeszek/photocraft-comfyui-bridge (MIT OR Apache-2.0): a PhotoCraft 
 - Keep the checkpoint graph and the Fooocus code for now.
 - No automatic prompt additions for "remove ...": only the tip under the prompt.
 - Only one session does git in this folder (another one switched branches under a running session on 29.10.); other sessions work in their own worktree or read only.
+- `user-edits.md` (project root) tells the user where visible texts live and how to hand over his own edits (he edits, tells Claude, Claude does `git diff`, tests, branch, commit, merge). Keep it up to date whenever visible texts move to another file, a new file gets visible texts, or the workflow changes.
 - Tell him before a chat becomes too long and a fresh one is better (see `PLAN.md`, section 6).
 
 ## Architecture
