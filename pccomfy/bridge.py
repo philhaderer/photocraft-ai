@@ -120,6 +120,7 @@ class Request:
                                          # empty = "<mode> variants"
 
 
+BBOX_MARGIN = 0.5   # BBOX layer mask: the box grown by this share of its size on every side (big test 30.10.: with 40 % nearly every object stayed whole)
 BBOX_SENTENCE = "Place the result in <obj_1>."   # added to the prompt when BBOX is on and the text has no <obj_1> (user 30.10.)
 PLACEHOLDER = "<DESCRIBE THE IMAGE>"
 
@@ -576,7 +577,7 @@ class Bridge:
             # gives a broken picture (a whole creek of ducks); at 1.0 the same instruction edits the picture correctly
             p.denoise = 1.0
 
-        src = mask = layout = None
+        src = mask = layout = obj_box = None
         if req.mode != "txt2img" or has_sel:
             progress(0.05, "Exporting the image from PhotoCraft", phase="prepare")
             src, mask = self._export(orig, tag, need_mask=has_sel or box_sel)
@@ -586,6 +587,7 @@ class Bridge:
                 mask = None
                 if obj is not None:
                     layout = ((obj.x, obj.y, obj.w, obj.h), (W, H))
+                    obj_box = obj
             if keep is not None:
                 if editor:
                     grey = any(grey_outpaint(w) for w in wf_paths)
@@ -719,8 +721,11 @@ class Bridge:
         base = (p.prompt.strip() or ("object" if req.remove else req.mode))[:40]
         mode_name = "remove" if req.remove else req.mode
         layer_mask = None
-        lm_mode = effective_layer_mask(req.layer_mask, req.mode, editor, has_sel)
-        if lm_mode == "soft":
+        lm_mode = effective_layer_mask(req.layer_mask, req.mode, editor, has_sel or obj_box is not None)
+        if lm_mode == "soft" and obj_box is not None:
+            # BBOX: Flux 3 changes the rest of the picture a little; the result only counts inside the box plus a margin
+            layer_mask = imaging.box_margin_mask(obj_box, (W, H), BBOX_MARGIN, req.feather_pct)
+        elif lm_mode == "soft":
             layer_mask = soft_layer_mask(req, wf_paths, mask, region, bbox)
         mode = lm_mode
         # the soft mask's density in PhotoCraft (the slider; every function starts at 100 % since the Fill mask test
@@ -828,7 +833,15 @@ class Bridge:
             region = imaging.grow_box(bbox, (W, H), req.context) if req.mode in ("inpaint", "outpaint") else bbox
             wf_paths = workflows.resolve(req.workflow) if req.workflow else [None]
             lm_mode = effective_layer_mask(req.layer_mask, req.mode, is_editor(wf_paths), True)
-            if lm_mode == "soft":
+            if req.bbox and req.mode == "edit":      # BBOX: the result is the whole canvas, the box (grown) is where it counts
+                region = imaging.Box(0, 0, W, H)
+                if lm_mode == "soft":
+                    shown = imaging.box_margin_mask(bbox, (W, H), BBOX_MARGIN, req.feather_pct)
+                elif lm_mode == "selection":
+                    shown = mask
+                else:
+                    shown = Image.new("L", (W, H), 255)
+            elif lm_mode == "soft":
                 shown = soft_layer_mask(req, wf_paths, mask, region, bbox)
             elif lm_mode == "selection":
                 shown = mask.crop(region.pil())

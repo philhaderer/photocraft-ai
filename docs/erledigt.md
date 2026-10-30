@@ -4,6 +4,8 @@ Verlauf nach Datum, neuester Stand oben. Alles liegt in `next`. Die vollen Texte
 
 ## 30.10. (Sitzung am Abend)
 
+- **BBOX: Ebenenmaske mit Rand** (`feat/bbox-margin-mask`, `imaging.box_margin_mask`, `bridge.BBOX_MARGIN`, `tests/test_bbox.py`): das Ergebnis zählt nur in der Box, um 50 % ihrer Breite und Höhe an jeder Seite vergrößert, weicher Rand nach „Edge feather“; so bleibt der Rest des Bildes bildgleich (Flux 3 verändert ihn sonst leicht). Gilt bei Layer mask „auto“/„soft“; „none“ = ganzes Bild, „hard“ = die Box selbst. Die Feather-Vorschau zeigt dieselbe Maske. Im echten Fenster noch nicht gesehen.
+
 - **Punkt 15 Flux-3-Boxen** (`feat/flux3-bbox`, `tests/test_bbox.py`): Textlauf der Knoten (API nimmt Boxen als JSON an, `editor_state` = `{"__value__": []}`), danach Haken „BBOX“ in Multi Image Edit bei Flux 3: die Auswahl wird die Box `<obj_1>`, `workflows.add_layout` setzt `CreateBoundingBoxes` und `Flux3LayoutPrompt` vor den Prompt-Knoten, fehlt `<obj_1>` im Prompt, kommt „Place the result in <obj_1>.“ dazu. Noch kein echter Lauf.
 
 - **14e Dateien am Kopf erkennen** (`feat/safetensors-header`, `pccomfy/sthead.py`, `tests/test_sthead.py`): das Ketten-Menü im Zahnrad-Fenster hängt „(looks like <Datei>)“ an umbenannte Kopien von Manifest-Dateien (Größe + gültiger Kopf) und „(incomplete?)“ an Dateien, denen Bytes fehlen; Treffer der erwarteten Datei stehen oben.
