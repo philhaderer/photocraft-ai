@@ -155,6 +155,7 @@ class SettingsMixin(DownloadMixin):
         super()._update_mode_radios()
         self._update_tabs()                 # a model chip turns red when its files for the chosen function are missing
         self._update_live_preview()
+        self._update_llm_button()
         m = self._model()
         if m is None or self.inv is None:
             return
