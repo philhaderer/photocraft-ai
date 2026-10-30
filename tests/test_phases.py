@@ -53,3 +53,49 @@ assert imaging.is_soft(soft) and soft.getpixel((100, 100)) == 255 and soft.getpi
 assert list(imaging.auto_feather(soft, 10).getdata()) == list(soft.getdata())  # already soft: unchanged
 assert list(imaging.auto_feather(hard, 0).getdata()) == list(hard.getdata())
 print("ALL OK (feather)")
+
+# stages and tiles (user 30.10.): a step other than sampling that lasts 2 s gets its word; a sampler entered again is a new tile
+import time as _time
+from pccomfy import bridge as _bridge
+assert _bridge.stage_label({"1": {"class_type": "UNETLoader"}}, "1") == "Loading models"
+assert _bridge.stage_label({"1": {"class_type": "SeedVR2Conditioning"}}, "1") == "Restoring detail"
+assert _bridge.stage_label({"1": {"class_type": "KSampler"}}, "1") == "" and _bridge.stage_label({}, "9") == ""
+assert _bridge._root_id("163.0.1") == "163" and _bridge._root_id("163:2") == "163" and _bridge._root_id(7) == "7"
+
+up = json.loads((ROOT / "workflows" / "flux3-klein-upscale.json").read_text(encoding="utf-8"))
+assert _bridge.workflows.main_sampler(up) == "163"
+
+
+class TileComfy:
+    def wait(self, pid, on_progress, cancelled):
+        for node, f in (("8", -1), ("163", 0.5), ("164", -1), ("163", 0.25), ("163", 1.0), ("165", -1), ("163", 0.5)):
+            on_progress(f, f"step {f}" if f >= 0 else "", node)
+        return {}
+
+
+b2 = Bridge.__new__(Bridge)
+b2.comfy, b2.exchange, b2._cancel = TileComfy(), Path(tempfile.mkdtemp()), __import__("threading").Event()
+msgs = []
+b2._wait("x", up, "wf/up.json", 0, 1, "", lambda f, m, **kw: msgs.append((kw["phase"], m)))
+tiles = [m for p, m in msgs if p == "image" and m.startswith("tile")]
+assert tiles and tiles[0].startswith("tile 2 ") and tiles[-1].startswith("tile 3 "), msgs        # the first tile has no number
+assert not any(p == "stage" for p, _ in msgs)                                                    # nothing lasted 2 s
+
+clock = iter([0.0, 0.5, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0])
+_real_mono = _bridge.time.monotonic
+_bridge.time.monotonic = lambda: next(clock, 9.0)
+try:
+    class LoadComfy:
+        def wait(self, pid, on_progress, cancelled):
+            on_progress(-1, "", "8")
+            on_progress(-1, "", "8")                  # the loader runs on: 3 s later it is named
+            on_progress(0.5, "step 1/2", "163")
+            return {}
+    b3 = Bridge.__new__(Bridge)
+    b3.comfy, b3.exchange, b3._cancel = LoadComfy(), Path(tempfile.mkdtemp()), __import__("threading").Event()
+    seen3 = []
+    b3._wait("x", up, "wf/up.json", 0, 1, "", lambda f, m, **kw: seen3.append((kw["phase"], m)))
+finally:
+    _bridge.time.monotonic = _real_mono
+assert ("stage", "Loading models") in seen3 and seen3[-1][0] == "image", seen3
+print("ALL OK (stages, tiles)")

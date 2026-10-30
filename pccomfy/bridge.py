@@ -44,6 +44,31 @@ MAX_RESULT_MP = 24.0                  # Upscale: refuse results above this many 
 LAYER_MASKS = ("auto", "soft", "selection", "none")
 
 
+STAGE_AFTER_S = 2.0       # a step other than sampling gets its own word in the status line only when it takes this long
+STAGE_LABELS = (          # (class name prefix, word); the first match wins
+    ("SeedVR2", "Restoring detail"),
+    ("VAEEncode", "Encoding"), ("VAEDecode", "Decoding"),
+    ("UNETLoader", "Loading models"), ("CLIPLoader", "Loading models"), ("VAELoader", "Loading models"),
+    ("CheckpointLoader", "Loading models"), ("LoraLoader", "Loading models"), ("AUSBOSS_NODES_LoraLoader", "Loading models"),
+    ("AUSBOSS_NODES_TiledUpscale", "Cutting tiles"),
+)
+
+
+def _root_id(node) -> str:
+    """The id of a node that ComfyUI may have expanded ("163.0.1" or "163:0" -> "163")."""
+    return re.split(r"[.:]", str(node))[0]
+
+
+def stage_label(graph: dict, node) -> str:
+    """The word for what ComfyUI is doing in `node` ("Loading models", "Decoding" ...), "" for sampling and unknown nodes."""
+    n = graph.get(str(node)) or graph.get(_root_id(node)) or {}
+    cls = str(n.get("class_type", ""))
+    for prefix, word in STAGE_LABELS:
+        if cls.startswith(prefix):
+            return word
+    return ""
+
+
 class BridgeError(RuntimeError):
     pass
 
@@ -466,10 +491,16 @@ class Bridge:
         key = (Path(wf).stem if wf else "builtin") + ":prompt"
         expected = self._load_timings().get(key)
         t0 = time.monotonic()
-        marks = {"phase": None, "since": t0, "prompt_secs": None}
+        marks = {"phase": None, "since": t0, "prompt_secs": None, "node": None, "node_since": t0, "tiles": 0}
+        sampler = workflows.main_sampler(graph)
 
         def on(f, msg, node=None):
             now = time.monotonic()
+            if node != marks["node"]:                 # ComfyUI moved on to another node
+                marks["node"], marks["node_since"] = node, now
+                if node is not None and sampler is not None and _root_id(node) == sampler:
+                    marks["tiles"] += 1               # the sampler is entered again for every tile of a tiled upscale
+            stage = stage_label(graph, node) if now - marks["node_since"] >= STAGE_AFTER_S else ""
             if writer and node in after and marks["prompt_secs"] is None:
                 marks["prompt_secs"] = now - t0
                 self._save_timing(key, marks["prompt_secs"])
@@ -491,6 +522,11 @@ class Bridge:
                 text = (marks.get("img_msg") or "Generating the image…") if pf >= 0 else f"Generating the image… {elapsed:.0f} s"
                 share = 0.3 if writer else 0.0
                 overall = start + span * (share + (1 - share) * pf) if pf >= 0 else -1
+            if phase == "image" and pf >= 0 and marks["tiles"] > 1:
+                text = f"tile {marks['tiles']} · {text}"
+            if phase == "image" and stage and not (node is not None and sampler is not None and _root_id(node) == sampler):
+                progress(-1, stage + suffix, phase="stage", phase_fraction=-1.0, elapsed=now - marks["node_since"])
+                return
             progress(overall, text + suffix, phase=phase, phase_fraction=pf, elapsed=elapsed)
 
         kw = {"on_preview": on_preview} if on_preview is not None else {}

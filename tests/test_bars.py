@@ -37,6 +37,12 @@ assert app.v_pl.v == "Generating · 6 s"
 app._set_progress(0.3, "Sampling 3/10…", "image", 0.3, 6)
 assert app._bar_value == 0.5 and app.pb.calls == [{"value": 0.5}]
 
+# a step other than sampling that lasts a while is named (user 30.10.); the bar stays where it is
+app._set_progress(-1, "Loading models", "stage", -1.0, 5)
+assert app.v_pl.v == "Loading models · 5 s" and app._bar_value == 0.5
+app._set_progress(0.6, "tile 2 · step 3/15", "image", 0.2, 9)
+assert app.v_pl.v == "Generating · tile 2 · step 3/15"
+
 # a new run starts from zero, a finished one is full
 app._reset_progress()
 assert app._bar_value == 0.0 and app.v_pl.v == ""
