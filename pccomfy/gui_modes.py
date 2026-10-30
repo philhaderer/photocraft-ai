@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
+from .workflows import lora_subgraph as workflows_lora_subgraph, stage_subgraph as workflows_stage_subgraph
 
 
 class ModeMixin:
@@ -451,6 +452,57 @@ class ModeMixin:
         except (OSError, ValueError, KeyError):
             return []
 
+    def _switch_missing(self) -> dict:
+        """What the window's switches need that ComfyUI does not have: {"turbo" or "stage<i>": (label, [file or node names])}.
+        A switch needs the loaders of its LoRA / stage nodes (and the node classes of a stage). Nothing is checked while the
+        inventory was not read or the workflow is not one of ours."""
+        out: dict = {}
+        if getattr(self, "inv", None) is None:
+            return out
+
+        def names(sub):
+            files, classes = self.inv.check_workflow(sub)
+            return [n for _k, n in files] + list(classes)
+
+        for t in self._wf_templates():
+            sub = workflows_lora_subgraph(t)
+            if sub and names(sub):
+                out["turbo"] = (self._lora_label(), names(sub))
+            for i, st in enumerate(stage_info(t)[:3]):
+                miss = names(workflows_stage_subgraph(t, st["id"]))
+                if miss:
+                    out[f"stage{i}"] = (st["label"], miss)
+            break
+        return out
+
+    def _enforce_switch_files(self) -> list[str]:
+        """A switch whose files are missing is greyed out with the file in its tooltip and cannot be on: the mode itself keeps
+        working with the standard settings. A switch that a loaded setting (history, preset, saved page) wanted on is switched
+        off and named in the returned notes, so the user sees why (user 30.10.)."""
+        if not hasattr(self, "stage_cbs"):
+            return []
+        miss = self._switch_missing()
+        notes: list[str] = []
+        rows = [("turbo", self.cb_turbo, self.v_turbo, self.tt_turbo, self._has_lora_switch())]
+        stages = self._stages()
+        rows += [(f"stage{i}", cb, self.stage_vars[i], self.stage_tips[i], i < len(stages)) for i, cb in enumerate(self.stage_cbs)]
+        for key, cb, var, tip, exists in rows:
+            if not exists:
+                continue
+            if key in miss:
+                label, names = miss[key]
+                cb.configure(state="disabled")
+                tip.text = (tip.text + "\n\n" if tip.text else "") + f"Needs {', '.join(names[:3])}: download it in the settings (gear)."
+                if var.get():
+                    var.set(False)
+                    notes.append(f"{label} needs {', '.join(names[:2])}")
+            else:
+                cb.configure(state="normal")
+        if notes:
+            self._on_turbo()
+            self._update_stage_scales()
+        return notes
+
     def _stages(self) -> list[dict]:
         """The switchable stages of the selected workflow ({id, label, tip, default_on}), at most three."""
         for t in self._wf_templates():
@@ -667,6 +719,7 @@ class ModeMixin:
                 cb.configure(state="disabled", text="Stage")
                 cb.grid_remove()          # a workflow without that stage shows nothing (the stages belong to MOSS / Flux 3 upscale)
         self._update_stage_scales(reset=reset_str)
+        self._enforce_switch_files()
         self._update_options_box(has_lora, stages)
         self.w_detail.configure(state="normal" if self._run_mode() in SCALE_MODES else "disabled")
         enhancing = has_writer and bool(self.v_enhance.get())

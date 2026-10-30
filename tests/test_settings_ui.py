@@ -227,15 +227,15 @@ def main():
     assert app.comfy.name_fixer is not None
     assert app._preflight() == []
 
-    # SeedVR2 missing: Flux 3 stays a normal chip for Edit; for Upscale its chip turns red, the tooltip says why
-    inv = inventory.Inventory(lists_without(unet="seedvr2_3b_int8_convrot.safetensors"), NODES)
+    # the Restore LoRA missing: Flux 3 stays a normal chip for Edit; for Upscale its chip turns red, the tooltip says why
+    inv = inventory.Inventory(lists_without(lora="Flux 3__flux-3-image-klein-restore.safetensors"), NODES)
     app._apply_refresh({"_detect": True, "_inv": inv})
     assert app.rb_tabs["flux3"]["style"] == "Chip.Toolbutton"
     assert app.rb_modes["upscale"]["state"] == "normal" and app.rb_modes["edit"]["state"] == "normal"
     app.v_mode.set("upscale"); app._update_mode_radios()
     assert app.rb_tabs["flux3"]["style"] == "Missing.Chip.Toolbutton" and app.rb_tabs["qwen"]["state"] == "disabled"
     app.v_mode.set("edit"); app._update_mode_radios()
-    assert "Missing for Upscale (new file): seedvr2_3b_int8_convrot.safetensors. Set in settings" in app.tt_modes["upscale"].text
+    assert "Missing for Upscale (new file): Flux 3\\flux-3-image-klein-restore.safetensors. Set in settings" in app.tt_modes["upscale"].text
     assert app.tt_modes["upscale"].text.startswith(models.function_tip("upscale", models.FUNCTION_TIPS["upscale"]))
     assert "Missing for Upscale" in app.tt_tabs["flux3"].text and app.tt_tabs["flux3"].text.startswith(models.FLUX3.tip)
     app._update_mode_radios()          # called again (a tab switch does that): the tooltip does not grow
@@ -309,7 +309,7 @@ def main():
     app._settings_close()
 
     # the rows: a missing file has its download link and size, a missing node names its pack, the credits are links
-    inv = inventory.Inventory(lists_without(unet="seedvr2_3b_int8_convrot.safetensors"), {"SeedVR2Preprocess"})
+    inv = inventory.Inventory(lists_without(unet="seedvr2_3b_int8_convrot.safetensors"), {"SomethingElse"})
     app._apply_refresh({"_detect": True, "_inv": inv})
     seed = next(d for d in file_rows(app) if d["name"] == "seedvr2_3b_int8_convrot.safetensors")
     assert seed["url"] == manifest.FILES[seed["name"]].url and seed["size"] == "3.5 GB" and seed["path"] == "/diffusion_models/" + seed["name"]
@@ -423,8 +423,8 @@ def main():
     assert (app.v_model.get(), app.v_mode.get(), app.v_workflow.get()) == before, before
     assert "Not applied: Krea 2 Turbo is missing files: qwen_image_vae.safetensors" in app.v_status.get(), app.v_status.get()
     pp.unlink()
-    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(unet="seedvr2_3b_int8_convrot.safetensors"), NODES)})
-    assert app.preset_blocked({"workflow": "flux3-klein-upscale.json", "mode": "upscale"}).startswith("Flux 3 Klein Edit is missing files: seedvr2_3b")
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(lora="Flux 3__flux-3-image-klein-restore.safetensors"), NODES)})
+    assert app.preset_blocked({"workflow": "flux3-klein-upscale.json", "mode": "upscale"}).startswith("Flux 3 Klein Edit is missing files: Flux 3")
     assert app.preset_blocked({"workflow": "flux3-klein-edit.json", "mode": "edit"}) == ""      # the same tab, another mode: fine
     app._apply_refresh({"_detect": True, "_inv": None, "_inv_error": "x"})
     assert app.preset_blocked({"workflow": "krea2-turbo-t2i.json", "mode": "txt2img"}) == ""

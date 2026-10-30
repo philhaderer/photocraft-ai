@@ -168,6 +168,7 @@ class StateMixin:
         if "layer_mask" in s:
             self.v_lmask.set(LAYER_MASKS[layer_mask_key(s["layer_mask"])])
         self._update_feather_state()
+        notes += self._enforce_switch_files()
         for widget, key in ((self.t_prompt, "prompt"), (self.t_neg, "negative")):
             # an empty prompt in a preset means "not part of the preset": never wipe what was typed
             if str(s.get(key, "")).strip():
