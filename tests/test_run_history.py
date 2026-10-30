@@ -40,32 +40,18 @@ def file_checks():
     assert history.label(e, today="2026-10-30").endswith(": A vivid red tulip")
 
 
-class Menu:
-    def __init__(self):
-        self.items = []
-
-    def delete(self, *a):
-        self.items = []
-
-    def add_command(self, label="", command=None, state="normal"):
-        self.items.append((label, command, state))
-
-    def tk_popup(self, *a):
-        pass
-
-    def grab_release(self):
-        pass
-
-
 def gui_checks():
     cfgmod.HISTORY_FILE = Path(tempfile.mkdtemp()) / "history.json"
     app = gui.App(cfgmod.load())
     app.cb_workflow["values"] = [gui.BUILTIN, "fibo2-edit.json", "fibo2-edit-both.group.json"]
-    app.m_history = Menu()
     app.b_history.winfo_rootx = app.b_history.winfo_rooty = app.b_history.winfo_height = lambda: 0
 
-    app._history_menu()                                                      # nothing run yet
-    assert app.m_history.items == [("No runs yet.", None, "disabled")]
+    # nothing run yet: "Erase history" is greyed out, one note; the list itself opens (the window is the Tk stub here)
+    assert app._history_rows() == [("Erase history", app.erase_history, "disabled"), ("No runs yet.", None, "disabled")]
+    app._history_menu()
+    assert app._history_popup is not None and not app._history_popup.closed
+    app._history_menu()                                                      # a second click on the clock closes it
+    assert app._history_popup is None
 
     # a run: Fill with Fibo, the text model rewrites the prompt
     app.v_mode.set("inpaint")
@@ -104,9 +90,8 @@ def gui_checks():
     app.t_neg.delete("1.0", "end")
     app.v_variants.set(1)
     app.v_feather.set(2.0)
-    app._history_menu()
-    (label, command, state), = app.m_history.items
-    assert "Fill Selection 3" in label and state == "normal", label
+    (erase, erase_cmd, erase_kind), (label, command, kind) = app._history_rows()
+    assert erase == "Erase history" and erase_kind == "action" and "Fill Selection 3" in label and kind == "item", label
     command()
     assert app.v_mode.get() == "inpaint" and app.v_workflow.get() == "fibo2-edit.json"
     assert app.v_variants.get() == 3 and abs(app.v_feather.get() - 6.5) < 1e-6
@@ -115,6 +100,11 @@ def gui_checks():
     assert app.t_neg.get("1.0", "end").strip() == "blurry"
     assert "Loaded “Fill Selection 3”" in app.v_status.get() and app.worker is None    # nothing started
     json.loads(cfgmod.HISTORY_FILE.read_text(encoding="utf-8"))              # still a valid file
+
+    # "Erase history" is the first row: the file is empty afterwards and the list says so
+    erase_cmd()
+    assert history.load(cfgmod.HISTORY_FILE) == [] and app.v_status.get() == "History erased."
+    assert [r[0] for r in app._history_rows()] == ["Erase history", "No runs yet."]
 
 
 def main():

@@ -148,8 +148,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.b_history = ttk.Button(self.f_header, image=self._icon("clock"), style="Link.TButton", command=self._history_menu)
         self.b_history.pack(side="right", padx=(0, 6))
         Tooltip(self.b_history, "Last runs: click one to load all its settings with a new seed. Nothing starts by itself.")
-        self.m_history = tk.Menu(self.root, tearoff=0, bg=PANEL, fg=FG, activebackground=ACCENT,
-                                 activeforeground="#1b1b1b", bd=0, font=font(10))
+        self._history_popup = None
         for w in (self.f_header, self.f_logo):      # a double click on the header does the same (user 29.10., option C)
             w.bind("<Double-Button-1>", lambda e: self.toggle_minimize(), add="+")
         self.f_tabs = ttk.Frame(r)
