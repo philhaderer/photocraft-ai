@@ -176,12 +176,12 @@ class Inventory:
             opt = [n for n in (manifest.TABS[m.key].optional if m.key in manifest.TABS else ()) if n not in names]
             for mode in (manifest.TABS[m.key].modes if m.key in manifest.TABS else {}):
                 opt += [n for n in manifest.mode_optional(m.key, mode) if n not in names and n not in opt]
-            out.append({
-                "key": m.key, "label": m.label, "status": st,
-                "files": [(manifest.FILES[n], self.found(n), "required") for n in names if n in manifest.FILES]
-                         + [(manifest.FILES[n], self.found(n), "optional") for n in opt
-                            if n in manifest.FILES and manifest.FILES[n].kind not in manifest.ADDITIONAL_KINDS],
-            })
+            files = ([(manifest.FILES[n], self.found(n), "required") for n in names if n in manifest.FILES]
+                     + [(manifest.FILES[n], self.found(n), "optional") for n in opt
+                        if n in manifest.FILES and manifest.FILES[n].kind not in manifest.ADDITIONAL_KINDS])
+            kinds = list(manifest.KINDS)       # diffusion models first, then text encoders, VAEs, LoRAs, the rest (user 30.10.)
+            files.sort(key=lambda t: kinds.index(t[0].kind))     # stable: required before optional within a kind
+            out.append({"key": m.key, "label": m.label, "status": st, "files": files})
         return out
 
     def additional_rows(self) -> list[tuple]:

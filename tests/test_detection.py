@@ -336,6 +336,18 @@ def test_extra_paths():
     assert inventory.read_extra_paths(Path(os.environ["PCCOMFY_HOME"]) / "does-not-exist.yaml") == []
 
 
+def test_rows_sorted_by_kind():
+    """Each model lists its files by kind: diffusion models, text encoders, VAEs, LoRAs, the rest (user 30.10.)."""
+    order = list(manifest.KINDS)
+    for r in inventory.Inventory(full_lists()).rows():
+        idx = [order.index(f.kind) for f, _fd, _lv in r["files"]]
+        assert idx == sorted(idx), r["key"]
+        levels = {}
+        for f, _fd, lv in r["files"]:
+            levels.setdefault(f.kind, []).append(lv)
+        assert all(v == sorted(v, key=("required", "optional").index) for v in levels.values()), r["key"]
+
+
 def test_find_on_disk():
     base = Path(tempfile.mkdtemp())
     (base / "models" / "diffusion_models").mkdir(parents=True)
@@ -358,6 +370,7 @@ def main():
     test_resolve()
     test_status()
     test_rows_and_texts()
+    test_rows_sorted_by_kind()
     test_graph_names()
     test_comfy_reading()
     test_settings()
