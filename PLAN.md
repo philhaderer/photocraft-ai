@@ -15,6 +15,17 @@ Stand 2026-10-30. Der Plan ist freigegeben. Abschnitt 3 ist die Arbeitsliste in 
 
 Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir geprüft. (Live-Test vom 30.10. bestanden: Fill-Maske, Verlauf, Punkt 11 und 12, Describe, Seam-Korrektur, Fensterkopf, Slots, Zahnrad-Fenster; Liste in `docs/erledigt.md`.)
 
+**Neu vom 30.10. (Feinschliff, alles noch ungeprüft im echten Fenster)**
+- Fußzeile: „Set Page to Defaults“ (kleiner Knopf) und „Live preview“ daneben; Vorschau höchstens 300 px hoch.
+- Pfeile 90 % mit 3 px Abstand, Steps/CFG gleich schmal, Seed 80 %, Undo/Redo rechts, „×1“ am Generate-Stück.
+- Verlauf (Uhr): eigene Liste mit Mausrad und Scrollbalken, „Erase history“ oben.
+- „LLM“-Knopf links vom Papierkorb; Describe an den Referenz-Slots nutzt dasselbe Textmodell; Zeile je Modell in den Settings.
+- Rechtsklick am Modell: Save current settings / Load default settings / Favourite / Hide.
+- Statuszeile: „Loading models“, „Decoding“ usw. nach 2 s, „tile n“.
+- Strg+Alt+Enter bricht ab; Fibo Refine startet bei 10 % Sharpen; kein oranger Fokusrahmen nach Klick.
+- Regel „Standardeinstellungen“: ein Modell mit einer Funktion ohne ihre Dateien ist ganz gesperrt; Flux 3 Upscale läuft ohne SeedVR2 (Schalter grau).
+- `setup-windows.bat` legt die Desktop-Verknüpfung an.
+
 **Neu vom 31.10.**
 - **Zahnrad-Fenster mit Reitern je Modell:** oben „Models“ und „Credits“; in „Models“ stehen „Linked files“ (Infotext, Undo, Reset) und darunter ein Reiter je Modell (Zustandszeichen im Titel) plus „Additional“. Jeder Modellreiter: Haken „Show this model in the plugin“, „Covers these modes:“ (grün bereit, rot Dateien fehlen, grau nicht angeboten) und die Dateien. Dateien, die das Plugin nicht selbst lädt (gesperrt bei Hugging Face, Civitai), tragen einen orangen Hinweis; „alle fehlenden“ nennt sie im OK-Fenster und öffnet ihre Seiten im Browser. Downloads laufen parallel (keine Warteschlange); die TAESD-Decoder kommen von `raw.githubusercontent.com`, weil `github.com` in Windows-Python am Zertifikat scheitert.
 - **Download-Knöpfe (14c Schritt 5):** Disk-Symbol je Datei und „alle fehlenden“ je Modell, mit OK-Fenster, Balken und Abbrechen; Testlauf ohne Verschieben: `PCCOMFY_MODELS_DIR=<Testordner>` setzen (dann landet alles dort). Dein ComfyUI listet die Vorschau-Decoder nur, wenn in der `extra_model_paths.yaml` die Zeile `vae_approx` nicht auskommentiert ist (nicht verändert).
@@ -45,7 +56,7 @@ Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir gepr
 ## 2. Deine Entscheidungen (gelten weiter)
 
 **Release und Ablauf**
-- Regel (30.10.): Ein Modell ist im Plugin nur anwählbar, wenn die Dateien für seine Standardeinstellungen da sind (Pflichtdateien des Reiters plus Dateien der Schalter, die beim Start an sind: Speed-LoRA, Stufen). Schalter, die beim Start aus sind, brauchen ihre Dateien erst, wenn der Nutzer sie einschaltet; fehlen sie, ist der Schalter grau. Das Zahnrad-Fenster sagt es oben und am Modell (Haken grau, orange Zeile). `inventory.default_switch_files` liest das aus dem Workflow, ein Test hält es mit dem Manifest zusammen.
+- Regel (30.10.): Ein Modell ist im Plugin nur anwählbar, wenn die Dateien für die Standardeinstellungen **aller** seiner Funktionen da sind (Pflichtdateien des Reiters plus Dateien der Schalter, die beim Start an sind: Speed-LoRA, Stufen); fehlt einer Funktion eine Datei, ist das ganze Modell gesperrt (Qualitätssicherung). Schalter, die beim Start aus sind, brauchen ihre Dateien erst, wenn der Nutzer sie einschaltet; fehlen sie, ist der Schalter grau. Das Zahnrad-Fenster sagt es oben und am Modell (Haken grau, orange Zeile). `inventory.default_switch_files` liest das aus dem Workflow, ein Test hält es mit dem Manifest zusammen.
 - Release 1: nur 16 GB getestet (int8-ConvRot-Dateien), 8-GB-Empfehlungen nur als Doku, nur Windows. AusBoss bleibt Abhängigkeit.
 - Veröffentlichung: neues Repo ohne Upstream-Verlauf, Credits Pflicht, erst kurz vor dem Release.
 - Easy Mode zuletzt. Fast Mode gestrichen. PhotoCraft 0.16 ist seit 28.10. deine Hauptversion.

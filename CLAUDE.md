@@ -16,7 +16,8 @@ Fork of Peszemeszek/photocraft-comfyui-bridge (MIT OR Apache-2.0): a PhotoCraft 
 - No automatic prompt additions for "remove ...": only the tip under the prompt.
 - Only one session does git in this folder (another one switched branches under a running session on 29.10.); other sessions work in their own worktree or read only.
 - `user-edits.md` (project root) tells the user where visible texts live and how to hand over his own edits (he edits, tells Claude, Claude does `git diff`, tests, branch, commit, merge). Keep it up to date whenever visible texts move to another file, a new file gets visible texts, or the workflow changes.
-- Tell him before a chat becomes too long and a fresh one is better (see `PLAN.md`, section 6).
+- Tell him before a chat becomes too long and a fresh one is better (see `PLAN.md`, section 6). Reliably: after every finished work package end the answer with one line "Chatlänge: ok" or "Chatlänge: neuer Chat empfohlen" (+ the ready-to-paste start message, German, code block); from about 15 work packages or a long tool history it is "empfohlen".
+- Standard settings: a model is offered only if the files of the standard settings of ALL its functions are there (otherwise the whole model is locked, for quality assurance). When the user changes standard settings (start values of a function, in chat), check the required files at once: manifest lists, `inventory.default_switch_files`, `tests/test_optional_switches.py`, the settings window and the rule in `PLAN.md`; tell him what changes.
 
 ## Architecture
 

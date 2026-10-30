@@ -1,4 +1,4 @@
-# Handoff: Technik für die nächste Sitzung (Stand 2026-10-30)
+# Handoff: Technik für die nächste Sitzung (Stand 2026-10-30, Abend)
 
 Zweck: wie man in diesem Repo arbeitet und prüft. Regeln und Arbeitsweise stehen in `CLAUDE.md`, offene Arbeit und Entscheidungen in `PLAN.md`, der Verlauf in `docs/erledigt.md`. Die alte, lange Fassung dieser Datei liegt in `docs/archiv/HANDOFF-2026-10-28.md`.
 
@@ -9,8 +9,19 @@ Zweck: wie man in diesem Repo arbeitet und prüft. Regeln und Arbeitsweise stehe
 - Remotes: `origin` = Upstream (nie pushen), `private` = <https://github.com/philhaderer/photocraft-ai> (nur auf Wunsch: `git push private next:main`).
 - Tags: `backup-2026-10-26` (6df02df, vor Phase 0), `vor-claude-code` (65e955f).
 - In PowerShell mehrzeilige Commit-Nachrichten mit `git commit -F <datei>` (Datei im Scratchpad).
-- Tests: `python tests/run_all.py` (66 Dateien, alle grün, ca. 40 s). Python des Nutzers: Pfad in `data/python.txt`.
+- Tests: `python tests/run_all.py` (71 Dateien, alle grün, ca. 60 s). Python des Nutzers: Pfad in `data/python.txt`.
 - Diagnose: `data/exchange/last-graph.json` (letzter Graph), `data/exchange/runs.jsonl` (eine Zeile je Lauf); ComfyUI-Historie über `http://127.0.0.1:8188/history`.
+
+## 1a. Stand und Offenes zum Chat-Wechsel (30.10. Abend)
+
+- Alles liegt in `next` (nicht gepusht), 71 Testdateien grün. Gebaut in diesem Chat: Qwen-Edit auf `qwen3vl_8b_int8_convrot` (fp8 weg), Feinschliff-Liste Gruppe 1 bis 10 (siehe `docs/erledigt.md`), LLM-Knopf, Fallback-Zeile in den Settings, Regel „Standardeinstellungen“.
+- **Regel, die gilt (Nutzer, 30.10.):** Ein Modell ist nur anwählbar, wenn **alle** seine Funktionen mit den Standardeinstellungen laufen können (Dateien der Reiter-Pflicht plus der beim Start eingeschalteten Schalter, `inventory.default_switch_files`). Fehlt einer Funktion eine Datei, ist das **ganze Modell gesperrt** (roter Chip, Haken im Zahnrad grau; Grund: Qualitätssicherung). Schalter, die beim Start aus sind, sind grau, solange ihre Dateien fehlen.
+- **Neue Arbeitsregel:** Ändert der Nutzer im Chat Standardeinstellungen (Startwerte einer Funktion), prüfe sofort die Pflichtdateien (Manifest, `default_switch_files`, `tests/test_optional_switches.py`, Zahnrad-Fenster, PLAN-Regel) und sag ihm, was sich ändert.
+- **Offen, vom Nutzer zu testen:** Fensteroptik (Fußzeile mit „Set Page to Defaults“ und „Live preview“, Pfeile 90 %, schmale Felder, Undo/Redo rechts, „×1“, Verlaufsliste, LLM-Knopf, Rechtsklick-Menü am Modell, gesperrte Modelle im Zahnrad), `setup-windows.bat` mit Verknüpfung, Flux 3 Upscale ohne SeedVR2 (echter Lauf).
+- **Offen, zu entscheiden:** Logik von „Set Page to Defaults“ / „Save current settings“ / „Load default settings“ (Fragen in `PLAN.md`, Abschnitt 3, „Zu hinterfragen“); Statuszeile zeigt „tile n“ ohne Gesamtzahl (so bestätigt).
+- **Als Nächstes:** 14e (Dateien am `.safetensors`-Kopf erkennen, `PLAN.md` Abschnitt 3). Danach Flux-3-Boxen (15), Inhalte (16), Easy Mode (17), Release (18).
+- **Fallstricke beim Editieren (diese Sitzung gelernt):** In Python-Skripten, die Quelltext schreiben, werden `
+` und `\` leicht zu echten Zeilenumbrüchen bzw. einfachen Backslashes; Dateien mit CRLF vor dem Ersetzen auf LF normalisieren. Besser: das Edit-Werkzeug oder `chr(92)`. Nach jedem Merge `python tests/run_all.py` vorher grün sehen, nicht nur `tail -1`.
 
 ## 2. Umgebung
 
