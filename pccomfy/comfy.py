@@ -11,14 +11,14 @@ Endpoints used:
 
 from __future__ import annotations
 
+import http.client
 import io
 import json
 import struct
+import threading
 import time
 import uuid
-import urllib.error
 import urllib.parse
-import urllib.request
 from typing import Callable
 
 from PIL import Image
@@ -67,25 +67,73 @@ class ComfyUI:
     def __init__(self, url: str = "http://127.0.0.1:8188", timeout: float = 30.0):
         self.url = url.rstrip("/")
         self.timeout = timeout
+        parts = urllib.parse.urlsplit(self.url)
+        self._host, self._port = parts.hostname or "127.0.0.1", parts.port or 80
+        self._local = threading.local()
+        self._cache: dict = {}
+        self._cache_lock = threading.RLock()
         self.client_id = uuid.uuid4().hex
         self.name_fixer: Callable[[dict], object] | None = None   # called with every graph before it is queued (see inventory.apply_names)
 
     # ---------- HTTP ----------
 
+    # Lists that rarely change are read at most once per CACHE_SECONDS (start, "Refresh", opening the settings window and a
+    # download each ask for them; fired together they were 16 connections within a second, 30.10.). GETs share one
+    # keep-alive connection per thread; a POST gets a connection of its own (a stale one must never send a job twice).
+    CACHE_SECONDS = 10.0
+    _CACHED = ("/system_stats", "/object_info", "/models/")
+
+    def invalidate(self) -> None:
+        """Forget the cached lists (a file was just added)."""
+        with self._cache_lock:
+            self._cache.clear()
+
+    def _connection(self, fresh: bool) -> http.client.HTTPConnection:
+        if fresh:
+            return http.client.HTTPConnection(self._host, self._port, timeout=self.timeout)
+        conn = getattr(self._local, "conn", None)
+        if conn is None:
+            conn = self._local.conn = http.client.HTTPConnection(self._host, self._port, timeout=self.timeout)
+        return conn
+
     def _request(self, path: str, data: bytes | None = None, headers: dict | None = None, method: str | None = None):
-        req = urllib.request.Request(self.url + path, data=data, headers=headers or {}, method=method)
-        try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as r:
-                return r.read()
-        except urllib.error.HTTPError as e:
-            body = e.read().decode(errors="replace")
-            raise ComfyError(self._explain(e.code, body)) from None
-        except urllib.error.URLError as e:
-            raise ComfyError(f"No connection to ComfyUI at {self.url} ({e.reason}). Is the server running?") from None
+        method = method or ("POST" if data is not None else "GET")
+        fresh = method != "GET"
+        for attempt in (0, 1):
+            conn = self._connection(fresh)
+            reused = not fresh and getattr(conn, "sock", None) is not None
+            try:
+                conn.request(method, path, body=data, headers=headers or {})
+                r = conn.getresponse()
+                body, status = r.read(), r.status
+                break
+            except (http.client.HTTPException, OSError) as e:
+                conn.close()
+                if not fresh:
+                    self._local.conn = None
+                if reused and attempt == 0:       # the server closed an idle connection: once more on a new one (GET only)
+                    continue
+                reason = getattr(e, "strerror", None) or e
+                raise ComfyError(f"No connection to ComfyUI at {self.url} ({reason}). Is the server running?") from None
+            finally:
+                if fresh:
+                    conn.close()
+        if status >= 400:
+            raise ComfyError(self._explain(status, body.decode(errors="replace")))
+        return body
 
     def _json(self, path: str, payload=None):
         data = None if payload is None else json.dumps(payload).encode()
         headers = {"Content-Type": "application/json"} if data else {}
+        if data is None and path.startswith(self._CACHED):
+            with self._cache_lock:        # one reader at a time: a second thread gets the first one's answer
+                hit = self._cache.get(path)
+                if hit is not None and time.monotonic() - hit[0] < self.CACHE_SECONDS:
+                    return hit[1]
+                raw = self._request(path, None, headers)
+                out = json.loads(raw) if raw else None
+                self._cache[path] = (time.monotonic(), out)
+                return out
         raw = self._request(path, data, headers)
         return json.loads(raw) if raw else None
 

@@ -4,6 +4,8 @@ Verlauf nach Datum, neuester Stand oben. Alles liegt in `next`. Die vollen Texte
 
 ## 30.10. (Sitzung am Abend)
 
+- **ComfyUI-Verbindungen entschärft** (`fix/comfy-connections`, `tests/test_comfy_connections.py`): ComfyUI wurde taub (Windows-asyncio-Proactor, `WinError 64` in der Accept-Schleife), vermutlich nach vielen kurzen Verbindungen kurz hintereinander (Start, Aktualisieren, Zahnrad, Download lasen je ca. 16 Listen). Jetzt: GET-Anfragen über eine Keep-Alive-Verbindung je Thread (`http.client`), Listen (`/system_stats`, `/object_info…`, `/models/…`) höchstens alle 10 s (`ComfyUI.CACHE_SECONDS`), gleichzeitige Leser teilen sich eine Anfrage, nach einem Download `comfy.invalidate()`; POSTs (Job senden, Upload) mit eigener Verbindung. Ob das den Ausfall behebt, ist nicht bewiesen.
+
 - **BBOX: Ebenenmaske mit Rand** (`feat/bbox-margin-mask`, `imaging.box_margin_mask`, `bridge.BBOX_MARGIN`, `tests/test_bbox.py`): das Ergebnis zählt nur in der Box, um 50 % ihrer Breite und Höhe an jeder Seite vergrößert, weicher Rand nach „Edge feather“; so bleibt der Rest des Bildes bildgleich (Flux 3 verändert ihn sonst leicht). Gilt bei Layer mask „auto“/„soft“; „none“ = ganzes Bild, „hard“ = die Box selbst. Die Feather-Vorschau zeigt dieselbe Maske. Im echten Fenster noch nicht gesehen.
 
 - **Punkt 15 Flux-3-Boxen** (`feat/flux3-bbox`, `tests/test_bbox.py`): Textlauf der Knoten (API nimmt Boxen als JSON an, `editor_state` = `{"__value__": []}`), danach Haken „BBOX“ in Multi Image Edit bei Flux 3: die Auswahl wird die Box `<obj_1>`, `workflows.add_layout` setzt `CreateBoundingBoxes` und `Flux3LayoutPrompt` vor den Prompt-Knoten, fehlt `<obj_1>` im Prompt, kommt „Place the result in <obj_1>.“ dazu. Noch kein echter Lauf.

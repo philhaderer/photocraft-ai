@@ -198,6 +198,7 @@ class DownloadMixin:
         if result == "ok":
             self._dl_restart.add(name)
             self._status(f"Loaded {name}. If ComfyUI does not list it, restart ComfyUI.")
+            self.comfy.invalidate()
             self._detect_async()
         elif result == "cancelled":
             self._status(f"Cancelled: {name}. Loading it again goes on where it stopped.")
