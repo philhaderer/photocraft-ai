@@ -226,7 +226,7 @@ class SettingsMixin:
 
     def preset_blocked(self, settings: dict) -> str:
         """For a preset: "" when its model and mode can run, else a short note ("Flux 3 Klein Edit is missing files ..."). The preset
-        loader (gui_state.py, see docs/entscheidungen-L1.md) uses it to leave the model out and say why."""
+        loader (gui_state.py, see docs/archiv/entscheidungen-L1.md) uses it to leave the model out and say why."""
         wf = settings.get("workflow") if isinstance(settings, dict) else None
         m = models.model_for_workflow(wf) if wf and wf != BUILTIN else None
         if m is None or self.inv is None:
