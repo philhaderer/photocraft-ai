@@ -33,6 +33,9 @@ class ThemeMixin:
         s.configure(".", background=BG, foreground=FG, fieldbackground=PANEL, bordercolor="#454545",
                     lightcolor=PANEL, darkcolor=PANEL, troughcolor=PANEL, focuscolor=ACCENT, font=font(10))
         s.configure("TLabel", background=BG, foreground=FG)
+        # a clicked button keeps no orange focus outline (user 30.10.): after the click the focus goes back to the window
+        for cls in ("TButton", "TRadiobutton", "TCheckbutton"):
+            self.root.bind_class(cls, "<ButtonRelease-1>", self._drop_focus, add="+")
         s.configure("Muted.TLabel", foreground=MUTED, font=font(9))
         # the rows of the settings window (ui_settings.py): a bold model line, green / red / orange marks, grey details
         # only the headings are bold; everything else in the window is one size smaller (user 31.10.)
@@ -144,6 +147,19 @@ class ThemeMixin:
                     ("Checkbutton.label", {"sticky": "nswe"})]})]})])
         except Exception:
             pass
+
+    def _drop_focus(self, event):
+        """After a mouse click a button gives the focus up (its orange ring goes), unless the click opened something that has
+        the focus now (a list, a dialog). Keyboard use (Tab, Space) keeps the ring."""
+        w = event.widget
+
+        def back():
+            try:
+                if w.winfo_exists() and self.root.focus_get() is w:
+                    w.winfo_toplevel().focus_set()
+            except Exception:
+                pass
+        w.after_idle(back)
 
     def _spin_arrows(self, s):
         """The spin boxes' up/down arrows: thin chevrons (icons.py) instead of clam's big filled triangles; orange under the
