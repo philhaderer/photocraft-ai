@@ -70,7 +70,7 @@ class RunMixin:
         """The name the result layers start with (presets are hidden): "Qwen2.1 Fill", then " #<running number>"."""
         m = self._model()
         name, short = (m.label if m else "AI"), SHORT_MODES.get(self.v_mode.get(), self.v_mode.get())
-        return name if name.endswith(" " + short) else f"{name} {short}"      # "Fibo 2.0 Edit" + Edit = "Fibo 2.0 Edit"
+        return name if short in name.split() else f"{name} {short}"      # "Fibo 2.0 Edit Turbo" + Edit stays "Fibo 2.0 Edit Turbo"
 
     def _stages_off(self) -> list[str]:
         """Node ids of the second and third switchable stage when their checkboxes are off (the first one is stage_on)."""

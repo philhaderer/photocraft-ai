@@ -308,6 +308,12 @@ class SettingsMixin:
         "line" (text, style). A file row: expected name, path with its folder ("/vae/flux2-vae.safetensors"), found (your
         file's name or None), level (required / optional), size text, download url, note, found on disk (a path or "")."""
         rows: list[tuple] = []
+        links = cfgmod.model_map()
+        rows.append(("links", "Linked files (the plugin uses your file for its expected one)"))
+        if links:
+            rows += [("line", f"{k}  →  {v}", "muted") for k, v in sorted(links.items())]
+        else:
+            rows.append(("line", "none. Use the chain symbol next to a file.", "muted"))
         if self.inv is None:
             rows.append(("error", "ComfyUI could not be read.", (self._inv_error or "Not connected yet.")
                          + "\nStart ComfyUI, then click the refresh arrow (⟳) at the bottom of the plugin."))
@@ -327,12 +333,6 @@ class SettingsMixin:
                 rows.append(("file", {"name": f.name, "path": file_path(f), "found": found, "level": "optional",
                                       "size": f.size_text, "url": f.url, "use": f"{use}: " + ", ".join(models.SHORT[k] for k in keys),
                                       "note": licence_of(f.note) if found is None else ""}))
-        links = cfgmod.model_map()
-        rows.append(("links", "Linked files (the plugin uses your file for its expected one)"))
-        if links:
-            rows += [("line", f"{k}  →  {v}", "muted") for k, v in sorted(links.items())]
-        else:
-            rows.append(("line", "none. Use the chain symbol next to a file.", "muted"))
         return rows
 
     def _credits_segments(self) -> list[tuple]:
@@ -410,14 +410,14 @@ class SettingsMixin:
         # menu of a chip hides too, only here a model comes back). One row, its label on the left (user 30.10.)
         shown = ttk.Frame(tab_models)
         shown.pack(fill="x", side="top", pady=(0, 6))
-        ttk.Label(shown, text="Enable models in plugin", style="Muted.TLabel").pack(side="left", padx=(0, 12))
+        ttk.Label(shown, text="Enable models in plugin", style="Muted.TLabel").grid(row=0, column=0, sticky="nw", padx=(0, 12))
         hidden = cfgmod.hidden_tabs()
         self._shown_vars = {}
-        for m in models.MODELS:
+        for i, m in enumerate(models.MODELS):          # the full names, three to a line (user 31.10.)
             var = tk.BooleanVar(value=m.key not in hidden)
-            cb = ttk.Checkbutton(shown, text=models.SHORT[m.key], variable=var,
+            cb = ttk.Checkbutton(shown, text=m.label, variable=var,
                                  command=lambda k=m.key, v=var: self._set_model_hidden(k, not v.get()))
-            cb.pack(side="left", padx=(0, 12))
+            cb.grid(row=i // 3, column=1 + i % 3, sticky="w", padx=(0, 12))
             Tooltip(cb, "Untick to hide this model in the plugin, tick to show it again.")
             self._shown_vars[m.key] = var
 
