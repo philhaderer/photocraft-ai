@@ -125,6 +125,7 @@ class RunMixin:
                 self._fprev_after = None
             self._fprev_on, self._fprev_dirty = False, None
             self.b_fprev.configure(text="Show feather")
+        self._running = True
         self.b_go.configure(state="disabled")
         self.w_variants.configure(state="disabled")     # part of Generate: grey with it while a run is on
         self.b_undo.configure(state="disabled")
@@ -320,6 +321,7 @@ class RunMixin:
                     ok = not data.startswith(("Error", "Cancel", "Unexpected"))
                     self._reset_progress(done=ok, text=data if ok else "")      # the success line sits above the bar, nothing below it
                     self._status("" if ok else data, error=data.startswith(("Error", "Unexpected")))
+                    self._running = False
                     self.b_go.configure(state="normal")
                     self.w_variants.configure(state="disabled" if self._run_mode() in SCALE_MODES else "normal")
                     self.b_undo.configure(state="normal")

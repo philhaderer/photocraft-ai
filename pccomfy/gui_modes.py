@@ -296,9 +296,8 @@ class ModeMixin:
 
     def reset_settings(self):
         """Everything in the window back to what a fresh start has: this tab and function stay, their starting settings come back,
-        the prompt, the negative prompt, extra LoRAs, seed and the finishing sliders are cleared."""
-        if self.worker and self.worker.is_alive():
-            return
+        the prompt, the negative prompt, extra LoRAs, seed and the finishing sliders are cleared. Also while a run is on
+        (user 30.10.): the run took its own copy of the settings at Generate, Generate stays grey until it is done."""
         d = self.cfg["defaults"]
         self.v_seed.set(-1)
         self.v_variants.set(int(d["variants"]))
@@ -556,7 +555,8 @@ class ModeMixin:
             widget.configure(state=normal if yes else "disabled")
 
         on(self.w_denoise, not (mode == "txt2img" or editor or scale))
-        on(self.w_variants, not scale)                       # the upscale workflow gives one picture
+        # the upscale workflow gives one picture; grey while a run is on (part of Generate, also after Defaults or a tab change)
+        on(self.w_variants, not scale and not getattr(self, "_running", False))
         on(self.w_adv["Base res."], not scale)               # the picture goes in at its own size
         t2i = mode == "txt2img"            # Context, Mask grow and Mask blur mean nothing without a picture: not shown
         for k in ("Context", "Mask grow", "Mask blur"):
