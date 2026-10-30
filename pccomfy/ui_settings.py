@@ -309,11 +309,8 @@ class SettingsMixin:
         file's name or None), level (required / optional), size text, download url, note, found on disk (a path or "")."""
         rows: list[tuple] = []
         links = cfgmod.model_map()
-        rows.append(("links", "Linked files (the plugin uses your file for its expected one)"))
-        if links:
-            rows += [("line", f"{k}  →  {v}", "muted") for k, v in sorted(links.items())]
-        else:
-            rows.append(("line", "none. Use the chain symbol next to a file.", "muted"))
+        rows.append(("links", "Linked files"))
+        rows += [("line", f"{k}  →  {v}", "muted") for k, v in sorted(links.items())]
         if self.inv is None:
             rows.append(("error", "ComfyUI could not be read.", (self._inv_error or "Not connected yet.")
                          + "\nStart ComfyUI, then click the refresh arrow (⟳) at the bottom of the plugin."))
@@ -388,6 +385,7 @@ class SettingsMixin:
         win.configure(bg=BG)
         try:
             win.transient(self.root)
+            win.minsize(self._px(500), self._px(300))      # narrower than this the model switches would be cut off
             x = self.root.winfo_rootx() + self.root.winfo_width() + 8
             w, h = self._settings_size()
             win.geometry(f"{w}x{h}+{x}+{self.root.winfo_rooty()}")
@@ -410,14 +408,14 @@ class SettingsMixin:
         # menu of a chip hides too, only here a model comes back). One row, its label on the left (user 30.10.)
         shown = ttk.Frame(tab_models)
         shown.pack(fill="x", side="top", pady=(0, 6))
-        ttk.Label(shown, text="Enable models in plugin", style="SetHead.TLabel").pack(side="left", padx=(0, 12))
+        ttk.Label(shown, text="Your Models", style="SetHead.TLabel").grid(row=0, column=0, sticky="nw", padx=(0, 12))
         hidden = cfgmod.hidden_tabs()
         self._shown_vars = {}
-        for m in models.MODELS:                        # the full names in one row, in the small settings font (user 31.10.)
+        for i, m in enumerate(models.MODELS):          # the full names, three to a line (user 31.10.)
             var = tk.BooleanVar(value=m.key not in hidden)
             cb = ttk.Checkbutton(shown, text=m.label, variable=var, style="SetText.TCheckbutton",
                                  command=lambda k=m.key, v=var: self._set_model_hidden(k, not v.get()))
-            cb.pack(side="left", padx=(0, 10))
+            cb.grid(row=i // 3, column=1 + i % 3, sticky="w", padx=(0, 12))
             Tooltip(cb, "Untick to hide this model in the plugin, tick to show it again.")
             self._shown_vars[m.key] = var
 
@@ -428,9 +426,9 @@ class SettingsMixin:
         self.cv_settings.pack(side="left", fill="both", expand=True)
         self.sb_settings = ThinScrollbar(box, self.cv_settings, self._px(6), BG, auto=True)
         self.f_set_rows = ttk.Frame(self.cv_settings)
-        self.f_set_rows.columnconfigure(1, weight=1)
         rows_win = self.cv_settings.create_window(0, 0, window=self.f_set_rows, anchor="nw")
-        self.cv_settings.bind("<Configure>", lambda e: self.cv_settings.itemconfigure(rows_win, width=e.width), add="+")
+        self.cv_settings.bind("<Configure>", lambda e: (self.cv_settings.itemconfigure(rows_win, width=e.width),
+                                                        self._settings_wrap(e.width)), add="+")
         self.f_set_rows.bind("<Configure>", lambda e: self.cv_settings.configure(scrollregion=self.cv_settings.bbox("all")), add="+")
         win.bind("<MouseWheel>", self.sb_settings.wheel, add="+")      # only this window: the plugin's body has its own
         self._set_widgets = []
@@ -491,99 +489,120 @@ class SettingsMixin:
             self._fill_text(t_credits, self._credits_segments())
 
     def _settings_draw(self, rows):
-        """The rows of _settings_rows as widgets in the scrolled frame: a model's head line, then its files in the columns
-        0 mark, 1 path (with the folder), 2 size, 3 download, 4 chain (another file of yours)."""
+        """The rows of _settings_rows as widgets in the scrolled frame, one frame per row: a model's head line, then its files
+        (mark and path on the left, size and the download and chain symbols packed at the right edge first, so a narrow
+        window shortens or wraps the path and never lets the symbols cover it)."""
         for w in getattr(self, "_set_widgets", []):
             try:
                 w.destroy()
             except (tk.TclError, AttributeError):
                 pass
         self._set_widgets = []
+        self._wrap_labels = []
         parent = getattr(self, "f_set_rows", None)
         if parent is None:
             return
         made = self._set_widgets
-        wrap = self._px(SETTINGS_W - 120)
-        parent.columnconfigure(2, minsize=self._px(64))        # size, download and chain: a tight group at the right edge
-        parent.columnconfigure(3, minsize=self._px(24))
-        parent.columnconfigure(4, minsize=self._px(24))
+        parent.columnconfigure(0, weight=1)
+        slot = self._px(24)
 
-        def label(text, style, r, c=1, span=1, padx=(0, 0), pady=(0, 0), sticky="w", **kw):
-            lb = ttk.Label(parent, text=text, style=SET_STYLES.get(style, "SetText.TLabel"), **kw)
-            lb.grid(row=r, column=c, columnspan=span, sticky=sticky, padx=padx, pady=pady)
-            made.append(lb)
+        def line():
+            f = ttk.Frame(parent)
+            f.grid(row=len(made), column=0, sticky="ew")
+            made.append(f)
+            return f
 
-        def icon(kind, tip, command, r, c, menu=None):
-            b = ttk.Button(parent, image=self._icon(kind, px=SET_ICON_PX), style="Link.TButton", command=command)
-            b.grid(row=r, column=c, sticky="e", padx=(4, 0))
-            made.append(b)
+        def label(box, text, style, side="left", padx=(0, 0), pady=(0, 0), wrap=0, **kw):
+            lb = ttk.Label(box, text=text, style=SET_STYLES.get(style, "SetText.TLabel"), **kw)
+            lb.pack(side=side, padx=padx, pady=pady)
+            if wrap:                                    # follows the width of the window (see _settings_wrap)
+                lb.configure(justify="left")
+                self._wrap_labels.append((lb, wrap))
+            return lb
+
+        def icon(box, kind, tip, command, menu=None):
+            b = ttk.Button(box, image=self._icon(kind, px=SET_ICON_PX), style="Link.TButton", command=command)
+            b.pack(side="right", padx=(4, 0))
             Tooltip(b, tip)
             if menu is not None:
                 b.bind("<Button-3>", menu, add="+")
 
-        r = 0
         for row in rows:
             kind = row[0]
             if kind == "error":
-                label(row[1], "bad", r, 0, 5)
-                label(row[2], "muted", r + 1, 0, 5, pady=(0, 8), wraplength=wrap, justify="left")
-                r += 2
+                box = line()
+                label(box, row[1], "bad", padx=(0, 0))
+                box = line()
+                label(box, row[2], "muted", pady=(0, 8), wrap=self._px(20))
             elif kind == "intro":
-                label(row[1], "muted", r, 0, 5, pady=(0, 4), wraplength=wrap, justify="left")
-                r += 1
+                label(line(), row[1], "muted", pady=(0, 4), wrap=self._px(20))
             elif kind == "model":
                 _k, _key, name, state, focus = row
                 mark, style = STATE_MARK[state]
-                label(mark, style, r, 0, pady=(10, 2))
-                label(name + "   " + STATE_TEXT[state] + ("   ◀" if focus else ""), "head", r, 1, 4, pady=(10, 2))
-                r += 1
+                box = line()
+                label(box, mark, style, pady=(10, 2))
+                label(box, name + "   " + STATE_TEXT[state] + ("   ◀" if focus else ""), "head", padx=(8, 0), pady=(10, 2))
             elif kind == "file":
                 f = row[1]
                 ok = f["found"] is not None
-                label("✓" if ok else "✗", "ok" if ok else ("bad" if f["level"] == "required" else "note"), r, 0, padx=(8, 6))
-                label(f["path"] + ("   optional" if f["level"] == "optional" and not f.get("use") else ""), "muted" if ok else "", r)
-                if f["size"] and not ok:
-                    label(f["size"], "muted", r, 2, padx=(8, 0), sticky="e", anchor="e")
+                box = line()
+                # the symbols first: pack gives the space to what is packed first, the path takes what is left
+                icon(box, "link", "Use another file of yours for this one: opens the list of the files ComfyUI has.",
+                     lambda n=f["name"]: self._choose_for(n))
                 if f["url"] and not ok:
-                    icon("save", f"Download ({f['size'] or 'size unknown'}). Right-click: copy the download link.",
-                         lambda u=f["url"]: webbrowser.open(u), r, 3, menu=lambda e, u=f["url"]: self._link_menu(e, u))
-                icon("link", "Use another file of yours for this one: opens the list of the files ComfyUI has.",
-                     lambda n=f["name"]: self._choose_for(n), r, 4)
-                r += 1
+                    icon(box, "save", f"Download ({f['size'] or 'size unknown'}). Right-click: copy the download link.",
+                         lambda u=f["url"]: webbrowser.open(u), menu=lambda e, u=f["url"]: self._link_menu(e, u))
+                else:
+                    ttk.Frame(box, width=slot, height=1).pack(side="right", padx=(4, 0))
+                lb = ttk.Label(box, text=f["size"] if (f["size"] and not ok) else "", style=SET_STYLES["muted"], width=8, anchor="e")
+                lb.pack(side="right")
+                label(box, "✓" if ok else "✗", "ok" if ok else ("bad" if f["level"] == "required" else "note"), padx=(8, 6))
+                label(box, f["path"] + ("   (optional)" if f["level"] == "optional" and not f.get("use") else ""),
+                      "muted" if ok else "", wrap=self._px(130))
                 extra = [(f["use"], "muted")] if f.get("use") else []
                 if ok and f["found"] != f["name"]:
                     extra.append((f"your file: {f['found']}", "muted"))
                 if f["note"]:
                     extra.append((f["note"], "muted"))
                 for text, style in extra:
-                    label(text, style, r, 1, 4, padx=(12, 0), wraplength=wrap, justify="left")
-                    r += 1
+                    label(line(), text, style, padx=(36, 0), wrap=self._px(60))
             elif kind == "node":
                 _k, cls, pack, url = row
-                label("✗", "bad", r, 0, padx=(8, 6))
-                label(f"node {cls}" + (f"   → {pack}" if pack else ""), "", r, 1, 3)
+                box = line()
                 if url:
-                    icon("link", f"Get {pack or 'the node pack'}: opens its page.", lambda u=url: webbrowser.open(u), r, 4)
-                r += 1
+                    icon(box, "link", f"Get {pack or 'the node pack'}: opens its page.", lambda u=url: webbrowser.open(u))
+                label(box, "✗", "bad", padx=(8, 6))
+                label(box, f"node {cls}" + (f"   → {pack}" if pack else ""), "", wrap=self._px(120))
             elif kind == "head":
-                label(row[1], "head", r, 0, 5, pady=(14, 2))
-                r += 1
+                label(line(), row[1], "head", pady=(14, 2))
             elif kind == "links":          # the head of "Linked files" with its Undo and Reset
-                label(row[1], "head", r, 0, 3, pady=(14, 2))
-                bar = ttk.Frame(parent)
-                bar.grid(row=r, column=3, columnspan=2, sticky="e", pady=(14, 2))
-                made.append(bar)
-                self.b_link_undo = ttk.Button(bar, text="Undo", command=self._link_undo)
-                self.b_link_undo.pack(side="left")
-                Tooltip(self.b_link_undo, "Takes back the last change of the links.")
-                self.b_link_reset = ttk.Button(bar, text="Reset to startup", command=self._link_reset)
-                self.b_link_reset.pack(side="left", padx=(6, 0))
+                box = line()
+                self.b_link_reset = ttk.Button(box, text="Reset to startup", command=self._link_reset, style="SetSmall.TButton")
+                self.b_link_reset.pack(side="right", pady=(14, 2))
                 Tooltip(self.b_link_reset, "All links as they were when the plugin started.")
+                self.b_link_undo = ttk.Button(box, text="Undo", command=self._link_undo, style="SetSmall.TButton")
+                self.b_link_undo.pack(side="right", padx=(0, 6), pady=(14, 2))
+                Tooltip(self.b_link_undo, "Takes back the last change of the links.")
+                label(box, row[1], "head", pady=(14, 2))
                 self._link_buttons()
-                r += 1
             elif kind == "line":
-                label(row[1], row[2], r, 0, 5, padx=(8, 0))
-                r += 1
+                label(line(), row[1], row[2], padx=(8, 0), wrap=self._px(40))
+        self._settings_wrap()
+
+    def _settings_wrap(self, width: int | None = None):
+        """Wrapping labels follow the window: the width of the list minus what stands beside them."""
+        cv = getattr(self, "cv_settings", None)
+        try:
+            w = width or cv.winfo_width()
+        except (tk.TclError, AttributeError):
+            return
+        if not isinstance(w, int) or w < 50:
+            w = self._px(SETTINGS_W - 40)
+        for lb, margin in getattr(self, "_wrap_labels", []):
+            try:
+                lb.configure(wraplength=max(self._px(120), w - margin))
+            except tk.TclError:
+                pass
 
     def _link_menu(self, e, url: str):
         """Right-click on a download symbol: copy its link (user 30.10.)."""

@@ -41,7 +41,7 @@ def rows_text(app) -> str:
             out.append(f"{row[2]}  {ui_settings.STATE_TEXT[row[3]]}" + ("  \u25C0" if row[4] else ""))
         elif kind == "file":
             d = row[1]
-            out.append(("\u2713 " if d["found"] is not None else "\u2717 ") + d["path"] + ("  optional" if d["level"] == "optional" else "")
+            out.append(("\u2713 " if d["found"] is not None else "\u2717 ") + d["path"] + ("  (optional)" if d["level"] == "optional" else "")
                        + (f"  (your file: {d['found']})" if d["found"] not in (None, d["name"]) else "")
                        + (f"  {d['size']}" if d["size"] else "") + (f"  {d['note']}" if d["note"] else "")
 )
