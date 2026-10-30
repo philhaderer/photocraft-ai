@@ -17,3 +17,14 @@ Stand 2026-10-26. Das ist eine Beschreibung, noch nichts davon ist im Plugin geb
 - Box-Format im Array `elements`: `bbox = [ymin, xmin, ymax, xmax]` auf einer Skala 0 bis 1000, Felder `type` ("obj" oder "text"), `desc`, optional `text`. Farbpaletten ignoriert Flux 3 (Farben in die Beschreibung).
 - Es ist nicht geklärt, ob man die Boxen von außen (das Plugin per API) in `CreateBoundingBoxes` geben kann: der Knoten hat eine Eingabe `bboxes` (JSON, Boxen oder Elements), aber auch einen Editor-Zustand. Das muss mit einem echten Lauf geprüft werden. Alternative: das Plugin baut die Layout-Tabelle selbst und lässt `CreateBoundingBoxes` weg.
 - Idee für PhotoCraft (Entscheidung steht aus): die PhotoCraft-Auswahl ist die Box. Jeder Slot bekommt einen Marker-Knopf "Auswahl als Platz für dieses Bild", dazu eine Beschreibung. Aus Slot und Box baut das Plugin den Satz im obigen Muster.
+
+## Ergebnis des Textlaufs (30.10., ComfyUI 0.42.0, ohne Sampling, ohne GPU)
+
+Graph: `CreateBoundingBoxes` (1600 x 1200) -> `Flux3LayoutPrompt` -> `PreviewAny`, per `/prompt` geschickt. Skript im Scratchpad der Sitzung, nicht im Repo.
+- **Die API nimmt die Boxen von außen an.** Eingabe `bboxes` von `CreateBoundingBoxes` als JSON-String. Zwei Formen laufen:
+  - Pixel-Form: `[{"x":100,"y":300,"width":400,"height":500,"metadata":{"type":"obj","desc":"a green tent","text":"","palette":[]}}]` (Pixel auf der Fläche width x height). Das passt zur PhotoCraft-Auswahl.
+  - Elements-Form: `[{"type":"obj","bbox":[ymin,xmin,ymax,xmax],"desc":"a tent"}]` (Skala 0 bis 1000); `"type":"text"` mit `"text":"HELLO"` wird zu `desc: sign "HELLO"`.
+- **Stolperstein:** `editor_state` ist Pflicht, und eine leere Liste `[]` lehnt die API als „Bad linked input“ ab. Es geht mit `{"__value__": []}`.
+- **Ausgabe von `Flux3LayoutPrompt`:** der Prompt, ein Leerzeichen, dann die Tabelle als JSON-Text, z. B. `... in his mouth [{"id": "obj_1", "bbox": [250, 62, 667, 312], "desc": "a green tent"}]`. `bbox` ist `[ymin, xmin, ymax, xmax]` auf 0 bis 1000, aus der Pixel-Box umgerechnet (300/1200, 100/1600 ...). Ohne `metadata.desc` bleibt `desc` leer.
+- **Folge:** Das Plugin kann die Boxen aus der PhotoCraft-Auswahl in Pixeln an `CreateBoundingBoxes` übergeben (Option 1), oder die Tabelle selbst als Text anhängen und beide Knoten weglassen (Option 2: gleiches Ergebnis, ein Knoten weniger, aber das Format hängt dann am Plugin, nicht an ComfyUI).
+- **Nicht geprüft:** ob Flux 3 mit solchen Boxen ein gutes Bild macht (kein Sampling gelaufen), und ob der Prompt-Upsampler die Tabelle erhält.
