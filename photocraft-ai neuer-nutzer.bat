@@ -5,7 +5,7 @@ rem Test start as a NEW USER: the plugin gets its own data folder (data\neuer-nu
 rem nothing of your settings, presets and last model. Your real data folder is not touched.
 rem Option "without models": the plugin acts as if ComfyUI had no model files (ComfyUI itself is not changed).
 rem Close PhotoCraft first: it is started here with the test folder's own token and exchange folder.
-if not defined PHOTOCRAFT set "PHOTOCRAFT=C:\programs\photocraft-0.15.1-windows-x64-portable\photocraft.exe"
+if not defined PHOTOCRAFT set "PHOTOCRAFT=C:\programs\photocraft-0.17.0-windows-x64-portable\photocraft.exe"
 if not defined PCC_PORT set "PCC_PORT=7878"
 set "DATA=%~dp0data\neuer-nutzer"
 set "XCH=%DATA%\exchange"
