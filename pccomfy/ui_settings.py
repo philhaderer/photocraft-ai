@@ -569,16 +569,15 @@ class SettingsMixin(DownloadMixin):
                 icon(box, "link", "Use another file of yours for this one: opens the list of the files ComfyUI has.",
                      lambda n=f["name"]: self._choose_for(n))
                 dl = f["dl"]
-                if dl:                                  # queued or loading: a bar and a cross instead of size and disk symbol
+                if dl:                                  # loading: a bar and a cross instead of size and disk symbol
                     cancel = ttk.Button(box, text="\u2715", style="Link.TButton", width=2,
                                         command=lambda n=f["name"]: self.download_cancel(n))
                     cancel.pack(side="right", padx=(4, 0))
                     Tooltip(cancel, "Stop this download. What is loaded stays, loading it again goes on where it stopped.")
-                    lb = ttk.Label(box, text="queued" if dl["state"] == "queued" else "", style=SET_STYLES["muted"], width=8, anchor="e")
+                    lb = ttk.Label(box, text="", style=SET_STYLES["muted"], width=8, anchor="e")
                     lb.pack(side="right")
                     bar = ttk.Progressbar(box, length=self._px(90), maximum=max(dl["total"], 1), value=dl["done"])
-                    if dl["state"] != "queued":
-                        bar.pack(side="right", padx=(8, 4))
+                    bar.pack(side="right", padx=(8, 4))
                     self._dl_widgets[f["name"]] = {"bar": bar, "label": lb}
                     self._dl_paint(f["name"])
                 else:

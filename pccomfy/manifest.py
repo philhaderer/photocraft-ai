@@ -135,7 +135,7 @@ _LIST += [
     File("birefnet.safetensors", "bg_removal", _HF + "Comfy-Org/BiRefNet/resolve/main/background_removal/birefnet.safetensors",
          "optional: \"Cut out\" in the reference slots; licence: MIT", size=444473596),
 ]
-_TAESD = "https://github.com/madebyollin/taesd/raw/main/"
+_TAESD = "https://raw.githubusercontent.com/madebyollin/taesd/main/"      # not github.com: its certificate chain fails in Windows Python
 _LIVE = "optional: sharper live preview (without it ComfyUI shows coarse colours); "
 _LIST += [
     # live preview decoders (T3a, user 29.10.: optional, linked here; whether they are better is tested live)

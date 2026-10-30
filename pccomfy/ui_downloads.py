@@ -1,8 +1,8 @@
 """The download symbols of the settings window (14c step 5): one file, or "all missing" of a model.
 
 The file goes into the sub-folder of its kind in ComfyUI's ``models`` folder (``comfydir.py`` finds it, the window asks once if it
-cannot), after an OK that names file, size and target. The loading runs in one worker thread (``downloads.py``); progress, end and
-errors come back as "download" events. Files that need a login (gated) or come from another site open their page in the browser.
+cannot), after an OK that names file, size and target. Every file loads in its own thread, all at the same time (``downloads.py``);
+progress, end and errors come back as "download" events. Files that need a login (gated) or come from another site open their page in the browser.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from pathlib import Path
 from . import comfydir, downloads, manifest
 from .gui_common import *  # noqa: F401,F403
 
-DIRECT_HOSTS = ("huggingface.co", "github.com")      # the plugin loads from these itself (Civitai: its page opens)
+DIRECT_HOSTS = ("huggingface.co", "githubusercontent.com")      # the plugin loads from these itself (Civitai: its page opens)
 
 
 def browser_only(f) -> bool:
@@ -31,21 +31,16 @@ class DownloadMixin:
     # ---------- state ----------
 
     def _dl_init(self):
-        self._dl: dict[str, dict] = {}              # file name -> {"file", "target", "done", "total", "phase", "cancel"} (queued and running)
-        self._dl_order: list[str] = []              # the queue, the running one first
+        self._dl: dict[str, dict] = {}              # file name -> {"file", "target", "done", "total", "phase", "cancel"} (running)
         self._dl_restart: set[str] = set()          # loaded, but ComfyUI does not list it yet
         self._dl_widgets: dict[str, dict] = {}      # file name -> the progress widgets of its row
-        self._dl_thread = None
-        self._dl_lock = threading.Lock()
         self._comfy_root: Path | None = None        # found for this session
 
     def _dl_info(self, name: str) -> dict | None:
-        """For a row: None, or {"state": queued / loading / verifying, "done", "total"}."""
+        """For a row: None, or {"state": loading / verifying, "done", "total"}."""
         st = self._dl.get(name)
         if st is None:
             return None
-        if name not in self._dl_order[:1]:
-            return {"state": "queued", "done": 0, "total": 0}
         return {"state": "verifying" if st["phase"] == "verifying" else "loading", "done": st["done"], "total": st["total"]}
 
     # ---------- where the files go ----------
@@ -108,7 +103,7 @@ class DownloadMixin:
         self._dl_add([(f, target)])
 
     def download_missing(self, key: str):
-        """The disk symbol in a model's head: every file of it that is missing."""
+        """The disk symbol in a model's head: every file of it that is missing (all of them load at the same time)."""
         if self.inv is None:
             return
         row = next((r for r in self.inv.rows() if r["key"] == key), None)
@@ -143,59 +138,35 @@ class DownloadMixin:
     def _dl_add(self, pairs):
         for f, target in pairs:
             self._dl[f.name] = {"file": f, "target": target, "done": 0, "total": f.size, "phase": "downloading", "cancel": threading.Event()}
-            self._dl_order.append(f.name)
-        self._dl_pump()
+            threading.Thread(target=self._dl_work, args=(f.name,), daemon=True).start()
         self._settings_fill()
 
     def download_cancel(self, name: str):
-        """The cross of a row: stops the running one (its loaded part stays for a later resume) or takes a queued one out."""
+        """The cross of a row: stops it (what is loaded stays for a later resume)."""
         st = self._dl.get(name)
+        if st is not None:
+            st["cancel"].set()
+
+    def _dl_work(self, name: str):
+        put, st = self.events.put, self._dl.get(name)
         if st is None:
             return
-        st["cancel"].set()
-        if name not in self._dl_order[:1]:          # not started: gone at once
-            self._dl.pop(name, None)
-            self._dl_order = [n for n in self._dl_order if n != name]
-            self._settings_fill()
+        f, last = st["file"], [0.0]
 
-    # ---------- the worker ----------
-
-    def _dl_pump(self):
-        with self._dl_lock:
-            if self._dl_thread is not None:
-                return
-            self._dl_thread = threading.Thread(target=self._dl_work, daemon=True)
-            self._dl_thread.start()
-
-    def _dl_work(self):
-        put = self.events.put
-        while True:
-            with self._dl_lock:
-                name = next((n for n in list(self._dl_order) if n in self._dl and not self._dl[n]["cancel"].is_set()), None)
-                if name is None:
-                    self._dl_thread = None
-                    return
-            st = self._dl.get(name)
-            if st is None:
-                continue
-            f, last = st["file"], [0.0]
-
-            def progress(done, total, phase, name=name, last=last):
-                now = time.monotonic()
-                if now - last[0] >= 0.15 or done >= total:
-                    last[0] = now
-                    put(("download", ("progress", name, done, total, phase)))
-            try:
-                downloads.download(f.url, st["target"], size=f.size, sha256=f.sha256, progress=progress, cancel=st["cancel"].is_set)
-                put(("download", ("end", name, "ok", "")))
-            except downloads.Cancelled:
-                put(("download", ("end", name, "cancelled", "")))
-            except downloads.DownloadError as e:
-                put(("download", ("end", name, "error", str(e))))
-            except Exception as e:      # noqa: BLE001  (a worker must not die silently)
-                put(("download", ("end", name, "error", f"Unexpected: {e}")))
-            while name in self._dl_order and name in self._dl:      # wait until the window took the end (keeps the order right)
-                time.sleep(0.05)
+        def progress(done, total, phase):
+            now = time.monotonic()
+            if now - last[0] >= 0.15 or done >= total:
+                last[0] = now
+                put(("download", ("progress", name, done, total, phase)))
+        try:
+            downloads.download(f.url, st["target"], size=f.size, sha256=f.sha256, progress=progress, cancel=st["cancel"].is_set)
+            put(("download", ("end", name, "ok", "")))
+        except downloads.Cancelled:
+            put(("download", ("end", name, "cancelled", "")))
+        except downloads.DownloadError as e:
+            put(("download", ("end", name, "error", str(e))))
+        except Exception as e:      # noqa: BLE001  (a worker must not die silently)
+            put(("download", ("end", name, "error", f"Unexpected: {e}")))
 
     def _download_event(self, data):
         kind, name = data[0], data[1]
@@ -208,7 +179,6 @@ class DownloadMixin:
             return
         _k, _n, result, text = data
         self._dl.pop(name, None)
-        self._dl_order = [n for n in self._dl_order if n != name]
         if result == "ok":
             self._dl_restart.add(name)
             self._status(f"Loaded {name}. If ComfyUI does not list it, restart ComfyUI.")
@@ -227,6 +197,6 @@ class DownloadMixin:
         try:
             w["bar"].configure(maximum=max(total, 1), value=info["done"])
             pct = f"{round(100 * info['done'] / total)} %" if total else size_text(info["done"])
-            w["label"].configure(text={"verifying": "checking", "queued": "queued"}.get(info["state"], pct))
+            w["label"].configure(text="checking" if info["state"] == "verifying" else pct)
         except (tk.TclError, KeyError):      # noqa: F405
             pass
