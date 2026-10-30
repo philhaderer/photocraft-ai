@@ -101,7 +101,7 @@ def main():
     assert app._hint_text == models.DESCRIBE_TIP
     app.v_mode.set("edit")
     app._on_mode()
-    assert app._hint_text == models.EDIT_TIP + " " + models.EDIT_AGAIN    # the tip under the prompt in Edit whole image (Flux 3)
+    assert app._hint_text == models.EDIT_TIP + " " + models.EDIT_AGAIN    # the tip under the prompt in Edit Canvas (Flux 3)
     assert app.v_workflow.get() == "flux3-klein-edit.json" and app.t_prompt.get("1.0", "end").strip() == ""
     app.t_prompt.insert("1.0", "make it night")
     app.v_mode.set("upscale")
@@ -189,7 +189,7 @@ def main():
     assert app.t_prompt["highlightbackground"] == gui.ACCENT
     app.v_mode.set("edit")
     app._on_model()
-    assert app._hint_text.startswith(models.EDIT_TIP)   # Edit whole image: the tip under the prompt, also orange
+    assert app._hint_text.startswith(models.EDIT_TIP)   # Edit Canvas: the tip under the prompt, also orange
     app.v_mode.set("txt2img")
     app._on_model()
     assert app._hint_text == models.T2I_TIP             # Text to image: says that a new image is added, also orange

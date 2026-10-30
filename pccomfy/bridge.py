@@ -527,7 +527,7 @@ class Bridge:
         editor = is_editor(wf_paths)
 
         if req.mode == "edit" and not (wf_paths[0] and editor):
-            raise BridgeError("Edit whole image needs an instruction-based edit workflow (Fibo, Qwen Image 2.1 Edit, Flux 2/3 Klein edit).")
+            raise BridgeError("Edit Canvas needs an instruction-based edit workflow (Fibo, Qwen Image 2.1 Edit, Flux 2/3 Klein edit).")
         if req.mode == "edit" and not p.prompt.strip():
             raise BridgeError("Describe the edit in the prompt (it applies to the whole picture).")
         if req.mode == "txt2img" and not p.prompt.strip():

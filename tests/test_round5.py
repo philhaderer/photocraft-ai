@@ -57,12 +57,12 @@ def main():
         app.v_mode.set(mode)
         app._on_model()
 
-    # Layer mask: hidden for Text to image, Edit whole image (every model) and Expand image; shown for Fill
+    # Layer mask: hidden for Text to image, Edit Canvas (every model) and Expand image; shown for Fill
     lm = rec(app.f_lm, "pack_forget")
     for key in ("qwen", "flux2", "flux3", "fibo"):
         lm.clear()
         pick(key, "edit")
-        assert lm, (key, "layer mask must be hidden in Edit whole image")
+        assert lm, (key, "layer mask must be hidden in Edit Canvas")
     for key in ("qwen", "flux2", "flux3", "moss", "fibo", "krea2"):
         lm.clear()
         pick(key, "outpaint")
@@ -292,7 +292,7 @@ def main():
     for k in back: back[k].clear()
     pick("flux3", "edit")
     assert all(back.values())
-    # Flux 3 restore prompt without "people" (an older copy in the field is replaced); a tip under the prompt in Edit whole image
+    # Flux 3 restore prompt without "people" (an older copy in the field is replaced); a tip under the prompt in Edit Canvas
     assert "people" not in models.FLUX3_DEFAULT and models.FLUX3_DEFAULT_OLD in models.STOCK_PROMPTS
     for key in ("qwen", "fibo"):
         assert models.BY_KEY[key].modes["edit"].prompt_tip == models.EDIT_TIP, key

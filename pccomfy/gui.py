@@ -442,7 +442,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.f_scale = ttk.Frame(r)
         # the factor as four small switches (user 29.10.): the chosen one is orange; a new document is said in the tooltip
         scale_tip = "How much larger the result is. Upscale opens it as a new document."
-        lb = ttk.Label(self.f_scale, text="Upscale factor", style="Muted.TLabel")
+        lb = ttk.Label(self.f_scale, text="Upscale factor")
         lb.grid(row=0, column=0, sticky="w")
         Tooltip(lb, scale_tip)
         f_sw = ttk.Frame(self.f_scale)
@@ -594,14 +594,14 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         foot.pack(fill="x", side="bottom", padx=10, pady=6)
         self.lbl_conn, self.lbl_dot = conn_status(foot)        # "ComfyUI ●": green = connected, red = not
         self.lbl_conn.pack(side="left")
-        # Refresh = a flat circle arrow beside the dot, Reset = the text link "Defaults" (PLAN item 7, option A of the user 29.10.)
+        # Refresh = a flat circle arrow beside the dot, Reset = the small button "Set Page to Defaults" (user 30.10.)
         b_refresh = self.b_refresh = ttk.Button(foot, image=self._icon("refresh", px=GEAR_PX), style="Link.TButton",
                                                 command=self.refresh)
         b_refresh.pack(side="left", padx=FOOT_REFRESH_PADX)
         Tooltip(b_refresh, "Refresh: reads PhotoCraft's and ComfyUI's state again: connection, installed LoRAs, samplers, text models, workflows.")
-        b_reset = self.b_reset = ttk.Button(foot, text="Defaults", style="Link.TButton", command=self.reset_settings)
+        b_reset = self.b_reset = ttk.Button(foot, text="Set Page to Defaults", style="Small.TButton", command=self.reset_settings)
         b_reset.pack(side="left", padx=FOOT_RESET_PADX)
-        Tooltip(b_reset, "Back to the startup settings of this tab and function.")
+        Tooltip(b_reset, "Back to the startup settings of the chosen model and function. Other models and functions keep what they have.")
         self._build_settings(foot)      # the gear at the right end of this row (ui_settings.py)
 
         for cb in (self.cb_lm, self.cb_sampler, self.cb_sched):

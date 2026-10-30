@@ -29,7 +29,7 @@ MODE_LABELS = [
     ("outpaint", "Expand image"),
     ("inpaint", "Fill Selection"),
     ("remove", "Remove Selection"),
-    ("edit", "Edit whole image"),
+    ("edit", "Edit Canvas"),
     ("multi_edit", "Multi Image Edit"),
     ("upscale", "Upscale (new file)"),
     ("refine", "Refine (same size)"),
