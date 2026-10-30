@@ -4,6 +4,7 @@ Verlauf nach Datum, neuester Stand oben. Alles liegt in `next`. Die vollen Texte
 
 ## 30.10.
 
+- **Fill-Masken-Testrunde** (`test/fill-mask-round`, `fix/fill-mask-rate-outline`; Anleitung `docs/tests/fill-mask-testrunde.md`): vier Varianten in `pccomfy/fillmask.py` (noch nicht im Plugin); Stufe 1 `tests/test_fill_mask_variants.py` (144 Fälle je Variante, alle Regeln erfüllt, keine Variante läuft an einer Bildkante aus); Stufe 2 `tests/live_fill_mask.py` (160 Läufe, Messung, Blindbewertung mit 4 Kacheln), Bewertungsfenster am Bildschirm des Users geprüft.
 - **Verlauf der letzten 20 Läufe** (Punkt 13, OpenFill T3b, `feat/run-history`; Entscheidungen des Users: Uhr-Symbol im Header, alles laden mit neuem Seed, LLM-Text mit Enhance aus). `pccomfy/history.py` speichert je fertigem Lauf alle Einstellungen (`_collect`) in `data/history.json`; Laden über `_apply_settings`, Prompt mit Strg+Z-Schritt. Test `tests/test_run_history.py`; mit echtem Tk (verstecktes Fenster) geprüft.
 - Aufräumen der Planungsdokumente: PLAN.md nur noch offen + Entscheidungen, dieser Verlauf neu, Handoff als Technik-Anleitung, ideas.md nur offene Ideen, fertige Recherchen nach `docs/archiv/`. `photocraft-ai 0.15.1.bat` entfernt (Wunsch des Users). Alte, gemergte Branches und der Ordner `lanes/` gelöscht.
 
