@@ -62,6 +62,7 @@ FLUX2_REFINE_PROMPTS = (
 )
 FIBO_REFINE = "relight the scene to natural lighting"   # Fibo Refine's old prompt (now FLUX2_DEFAULT, user 28.10.); kept as a stock text
 FILL_TIP = "Draw a selection and prompt e.g. “a red flower”. Hide layers from previous results before running again."   # wording from the user (28.10.)
+QWEN_SMALL = "Small selections don't work well with Qwen."   # user 30.10.: small fills came out shifted (helikopter.psd)
 REMOVE_NAME_TIP = "Optional: name what to remove (\"the dog\")."
 REMOVE_AGAIN = "If the first try didn't work, try removing it a second time."   # Fibo Remove, idea of the user (28.10.)
 MULTI_TIP = "You can start with a white image and use the reference images below to place them on the canvas."
@@ -99,7 +100,7 @@ QWEN = Model(
         "edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=False, layer_mask="none"), prompt_tip=EDIT_TIP),
         "multi_edit": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=False, layer_mask="none"), prompt_tip=MULTI_TIP, run_as="edit"),
         # soft: opaque over the selection, fading out to the crop's side (Bridge: soft_layer_mask; Fill mask test round 30.10.)
-        "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=False, feather_pct=4.0), prompt_tip=FILL_TIP),
+        "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=False, feather_pct=4.0), prompt_tip=FILL_TIP + " " + QWEN_SMALL),
         "outpaint": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=False, layer_mask="none")),   # = the old "auto"
         "remove": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=False, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
     },
