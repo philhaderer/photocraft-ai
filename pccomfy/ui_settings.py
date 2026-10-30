@@ -546,13 +546,15 @@ class SettingsMixin:
 
     def _link_expected_picked(self):
         """The expected file changed: "Current file" says what the plugin uses for it now, "New file" offers the installed
-        files of its kind (the expected name first: choosing it removes a link). Nothing changes before "Relink"."""
+        files of its kind (the expected file first when it is installed itself: choosing it removes a link; a missing one is
+        not offered, user 30.10.). Nothing changes before "Relink"."""
         exp = self.v_link_exp.get()
         f = manifest.FILES.get(exp)
         _names, lists = self._link_choices()
         avail = list(lists.get(f.kind, [])) if f is not None else []
-        if exp and f is not None:
-            avail = [exp] + [n for n in avail if n != exp]
+        own = inventory.resolve(f.name, avail, None, f.aliases) if (exp and f is not None) else None
+        if own:                 # the expected file itself is installed (perhaps under another case or sub-folder)
+            avail = [own] + [n for n in avail if n != own]
         self.cb_link_act["values"] = avail
         self.v_link_act.set("")
         found = self.inv.found(exp) if (self.inv is not None and exp) else None
