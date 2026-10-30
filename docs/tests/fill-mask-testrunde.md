@@ -84,5 +84,19 @@ Das schreibt `ergebnis.md` in den Ordner der Runde (`data\fill-mask-test\<Zeit>\
 
   Messung: Die gerade Kante des Ausschnitts springt nur bei Dichte 5 %, bei Qwen deutlich (im Mittel 11, höchstens 62 Stufen). Qwen verschiebt oder verkleinert manchmal den ganzen Ausschnitt: Dann zeigt Dichte 5 % einen Fremdkörper, „bis zum Ausschnittrand“ Doppelbilder im Übergang. Bei Fibo springt sie kaum (höchstens 2 Stufen, Seam-Korrektur).
 - **Runde 2** (`--round 2`, `data/fill-mask-test/20261030-082758`, 16 Läufe): die 8 Fälle, deren Prompt oder Auswahl laut deinen Notizen nicht zum Test passte, mit beiden Modellen. Neue Prompts (Bär, Aufnäher, Vogel auf der Schulter, gelber Schal), Stehlampe bis zum Boden, Klavier ganz in der Auswahl, ganzes Kind markiert, Drachen im Himmel neben dem Gesicht, neuer Seed. Ergebnis: 8 von 16 Fällen „alle gut“. Bestes, wo es Unterschiede gab: Fibo Dichte 5 % (4×), Qwen „bis zum Ausschnittrand“ (2×). „Füllung am Bildrand weich“: schmal 6, breit 6, bis zum Ausschnittrand 3, Dichte 5 % 0.
-- **Runde 3** (`--round 3`, 4 Läufe): Zimmer oben flach und quer über dem Klavier mit „a framed painting of flowers hanging on the wall“ (Qwen hatte bei „a framed picture“ die Szene selbst ins Bild gemalt); der Bär in einer eigenen, größeren Auswahl links („a brown bear standing on the ground“).
+- **Runde 3** (`--round 3`, 4 Läufe): Zimmer oben flach und quer über dem Klavier mit „a framed painting of flowers hanging on the wall“ (Qwen hatte bei „a framed picture“ die Szene selbst ins Bild gemalt); der Bär in einer eigenen, größeren Auswahl links („a brown bear standing on the ground“). `data/fill-mask-test/20261030-084618`. Ergebnis: Diesmal passten beide Fälle (Blumenbild statt wiederholter Szene, Bär frei auf dem Hang). 3 von 4 Fällen „alle gut“; bei Fibo „Zimmer oben“ sind Dichte 5 %, „bis zum Ausschnittrand“ und breit gut, breit mit leichter weicher Kante, schmal mit weicher Kante.
+
+## Ergebnis (30.10.)
+
+Über alle drei Runden (60 Läufe, nur die Fälle, die du als geeignet bewertet hast):
+
+- **„Bis zum Ausschnittrand“** ist bei beiden Modellen am häufigsten gut (Runde 1: Fibo 13 von 15, Qwen 11 von 12) und an der Ausschnittkante immer sauber. „Füllung am Bildrand weich“ wurde bei ihr seltener angekreuzt als bei schmal und breit.
+- **Dichte 5 %** (heutiger Start) ist bei Fibo genauso gut und wurde nie als weich markiert, bei Qwen aber deutlich schwächer: Qwen malt den Ausschnitt manchmal verschoben, und Dichte 5 % zeigt ihn dann ganz (gerade Kante sichtbar, im schlimmsten Fall ein Fremdkörper).
+- **Schmal** (die Maske von heute bei Dichte 100 %) ist am seltensten gut und wurde am häufigsten als weich markiert; **breit (3×)** liegt dazwischen.
+- Ein Fehler wie am 28.10. (Füllung an der Bildkante weich durch die Maskenform) trat nicht auf (Stufe 1). Was du als „weich“ markiert hast, ist eine Füllung, die über die Auswahl hinausragt und vom weichen Rand angeschnitten wird.
+
+**Optionen für den Einbau** (Entscheidung im nächsten Chat):
+- **A (empfohlen):** „bis zum Ausschnittrand“ für Fill mit Qwen und Fibo; Mask density startet bei 100 % (der Regler bleibt).
+- **B:** je Modell: Fibo bleibt bei Dichte 5 %, Qwen bekommt „bis zum Ausschnittrand“.
+- **C:** alles bleibt wie heute.
 - Die Testbilder liegen seit 30.10. in `C:\programs\testpics3\resized_1280px` (vorher A:). ComfyUI benutzt wieder seine eigenen Input- und Output-Ordner; das Plugin hängt davon nicht ab (es spricht nur über ComfyUIs HTTP-Schnittstelle).
