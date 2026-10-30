@@ -211,7 +211,9 @@ TABS: dict[str, TabSpec] = {
         optional=("lighttaew2_1.safetensors",)),          # live preview of the Wan 2.1 latent
     "moss": TabSpec(
         required=("moss_image_sft_int8_convrot.safetensors", "qwen3.5_9b_w4a8_gptq.safetensors", "flux2-vae_small.safetensors"),
-        optional=("Moss\\lora_dmd2.safetensors", "Moss\\lenovo_moss.safetensors", _TAEF2)),
+        # Text to image starts with the UltraReal LoRA on: a file the start values use is required (user 30.10.)
+        modes={"txt2img": ModeSpec(requires=("Moss\\lenovo_moss.safetensors",))},
+        optional=("Moss\\lora_dmd2.safetensors", _TAEF2)),
 }
 
 
