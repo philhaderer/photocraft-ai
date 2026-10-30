@@ -115,10 +115,12 @@ class Request:
     preset: str = ""                     # name of the preset used: the layers are named "<preset> #<run_no>"
     preview: bool = False                # live preview: ComfyUI sends the sampler's frames to Bridge.on_preview (T3a)
     run_no: int = 0                      # running number of this preset's runs (kept by the window)
+    bbox: bool = False                   # Multi Image Edit (Flux 3): the selection is the box <obj_1> (BBOX switch); no selection = a normal run
     group_name: str = ""                 # several results: the name of the layer group they go into ("Fill Selection 3");
                                          # empty = "<mode> variants"
 
 
+BBOX_SENTENCE = "Place the result in <obj_1>."   # added to the prompt when BBOX is on and the text has no <obj_1> (user 30.10.)
 PLACEHOLDER = "<DESCRIBE THE IMAGE>"
 
 
@@ -544,7 +546,8 @@ class Bridge:
         if req.mode != "upscale":   # Upscale only opens a new document: nothing to undo in this one
             self._snapshot(orig_name)   # one click back to here, however many history steps the run adds
         doc = pc.document()
-        if req.mode in ("edit", "txt2img") and doc.get("hasSelection"):
+        box_sel = bool(req.bbox and req.mode == "edit" and doc.get("hasSelection"))   # BBOX: the selection stays, it is the box
+        if req.mode in ("edit", "txt2img") and doc.get("hasSelection") and not box_sel:
             pc.execute("select.all")     # these work on the whole picture: show it (the selection is then the whole canvas)
 
         keep = None  # outpaint: where the original image lies in the extended canvas
@@ -573,10 +576,16 @@ class Bridge:
             # gives a broken picture (a whole creek of ducks); at 1.0 the same instruction edits the picture correctly
             p.denoise = 1.0
 
-        src = mask = None
+        src = mask = layout = None
         if req.mode != "txt2img" or has_sel:
             progress(0.05, "Exporting the image from PhotoCraft", phase="prepare")
-            src, mask = self._export(orig, tag, need_mask=has_sel)
+            src, mask = self._export(orig, tag, need_mask=has_sel or box_sel)
+            layout = None      # BBOX: (box in document pixels, document size); the mask itself is not used further
+            if box_sel:
+                obj = imaging.mask_bbox(mask)
+                mask = None
+                if obj is not None:
+                    layout = ((obj.x, obj.y, obj.w, obj.h), (W, H))
             if keep is not None:
                 if editor:
                     grey = any(grey_outpaint(w) for w in wf_paths)
@@ -651,6 +660,8 @@ class Bridge:
             suffix = f" [{label}]" if label else ""
             self.pipeline = "workflow" if wf else req.mode
             gp = p
+            if layout and wf and "<obj_1>" not in p.prompt:
+                gp = dataclasses.replace(p, prompt=(p.prompt.rstrip() + " " + BBOX_SENTENCE).strip())
             if keep is not None and editor:
                 gp = dataclasses.replace(p, prompt=outpaint_prompt(p.prompt, req.enhance, keep, (W, H), wf))
             if removal:   # fixed instruction, the text model is bypassed
@@ -670,7 +681,7 @@ class Bridge:
                     gp = dataclasses.replace(gp, seed=(gp.seed + 7919 * attempt) % (2**31),
                                              prompt=remove_prompt(mask.crop(region.pil()), attempt, req.remove_target))
                     p.seed = gp.seed
-                graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name, force_plain=marked and not (fill and req.enhance and prompt_phase_nodes(workflows.load_template(wf))))
+                graph, out_node = self._graph(req, gp, image_name, mask_name, wf, ref_name, force_plain=marked and not (fill and req.enhance and prompt_phase_nodes(workflows.load_template(wf))), layout=layout)
                 self._save_graph(graph)
                 self._log_run(req, gp, wf, attempt)
                 live = req.preview and self.on_preview is not None
@@ -994,7 +1005,7 @@ class Bridge:
         return tpl
 
     def _graph(self, req: Request, p, image_name, mask_name, wf: str | None = None, ref_name: "str | list[str] | None" = None,
-               force_plain: bool = False):
+               force_plain: bool = False, layout: tuple | None = None):
         if wf:
             tpl = workflows.load_template(wf)
             if not req.enhance or force_plain:
@@ -1020,8 +1031,10 @@ class Bridge:
             names = getattr(self, "_real_lora_names", None)
             if names:
                 tpl = names(tpl)
-            return workflows.apply_template(tpl, p, image_name, mask_name, ref_name,
-                                            ref_first=False)
+            graph, out = workflows.apply_template(tpl, p, image_name, mask_name, ref_name, ref_first=False)
+            if layout:
+                workflows.add_layout(graph, *layout)
+            return graph, out
         if not p.checkpoint:
             raise BridgeError("Pick a model (checkpoint) or a custom workflow.")
         if req.mode == "txt2img":
