@@ -4,9 +4,13 @@ window, from a desktop shortcut with PhotoCraft's icon (Windows; user 28.10., op
     python -m pccomfy shortcut --photocraft "C:\\programs\\photocraft-0.17.0-windows-x64-portable\\photocraft.exe"
 
 creates the shortcut "PhotoCraft AI" on the desktop; it runs `photocraft-ai.pyw --photocraft <path>` with pythonw.exe.
+Without --photocraft the exe is searched in the usual places (find_photocraft), else asked once; setup-windows.bat does this
+at its end (user 30.10.).
 """
 from __future__ import annotations
 
+import os
+import re
 import subprocess
 import sys
 import time
@@ -106,10 +110,55 @@ def create_shortcut(exe: str, name: str = NAME, folder: str | None = None) -> Pa
     return Path(out.stdout.strip().splitlines()[-1])
 
 
-def main_shortcut(exe: str, name: str = NAME) -> int:
+def _version(folder: Path) -> tuple:
+    """The numbers in a folder name ("photocraft-0.17.0-windows-x64-portable" -> (0, 17, 0, 64)), to take the newest."""
+    return tuple(int(n) for n in re.findall(r"\d+", folder.name))
+
+
+def find_photocraft(roots: list[Path] | None = None) -> str | None:
+    """photocraft.exe in the usual places: next to this folder (portable copies), Program Files, the user's Programs
+    folder, Downloads and Desktop. Several copies: the one with the highest version in its folder name."""
+    if roots is None:
+        home = Path.home()
+        env = [os.environ.get(k) for k in ("ProgramFiles", "ProgramFiles(x86)")]
+        roots = [ROOT.parent] + [Path(e) for e in env if e] + [Path(os.environ.get("LOCALAPPDATA", home)) / "Programs",
+                                                              home / "Downloads", home / "Desktop"]
+    found = []
+    for root in roots:
+        try:
+            for d in root.iterdir():
+                if d.is_dir() and "photocraft" in d.name.lower() and (d / "photocraft.exe").is_file():
+                    found.append(d)
+        except OSError:
+            continue
+    return str(max(found, key=_version) / "photocraft.exe") if found else None
+
+
+def ask_photocraft() -> str | None:
+    """No copy found: ask for photocraft.exe once (a file dialog); None when nothing is chosen or there is no Tk."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        path = filedialog.askopenfilename(title="Where is photocraft.exe?", filetypes=[("PhotoCraft", "photocraft.exe")])
+        root.destroy()
+        return path or None
+    except Exception:  # noqa: BLE001  (no Tk: nothing to ask with)
+        return None
+
+
+def main_shortcut(exe: str | None = None, name: str = NAME) -> int:
     if sys.platform != "win32":
         print("Only on Windows.")
         return 1
+    if not exe:
+        exe = find_photocraft() or ask_photocraft()
+        if not exe:
+            print("photocraft.exe not found. Create the shortcut later: python -m pccomfy shortcut --photocraft <photocraft.exe>")
+            return 1
+        print(f"PhotoCraft: {exe}")
     if not Path(exe).exists():
         print(f"PhotoCraft not found: {exe}")
         return 1

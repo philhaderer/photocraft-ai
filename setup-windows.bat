@@ -21,7 +21,10 @@ set "PIPARGS=--user"
 if errorlevel 1 goto :pipfail
 (echo %PYRUN%)>"%~dp0data\python.txt"
 echo.
-echo Setup done. Start the bridge with photocraft-ai.bat
+echo Creating the desktop shortcut "PhotoCraft AI" ...
+"%PYRUN%" -m pccomfy shortcut
+echo.
+echo Setup done. Start PhotoCraft with the desktop shortcut "PhotoCraft AI" (or photocraft-ai.bat).
 pause
 exit /b 0
 

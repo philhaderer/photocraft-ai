@@ -99,8 +99,32 @@ def cli_checks():
     assert called == [(EXE, "PhotoCraft AI")]
 
 
+def find_checks():
+    tmp = Path(tempfile.mkdtemp())
+    assert launcher.find_photocraft([tmp]) is None
+    for name in ("photocraft-0.16.0-windows-x64-portable", "photocraft-0.17.0-windows-x64-portable", "photocraft-comfyui-bridge"):
+        (tmp / name).mkdir()
+    for name in ("photocraft-0.16.0-windows-x64-portable", "photocraft-0.17.0-windows-x64-portable"):
+        (tmp / name / "photocraft.exe").write_bytes(b"")
+    (tmp / "photocraft-0.99.0-nothing-here").mkdir()          # no exe inside: ignored
+    assert launcher.find_photocraft([tmp / "missing", tmp]) == str(tmp / "photocraft-0.17.0-windows-x64-portable" / "photocraft.exe")
+    # no --photocraft: found, then used (the .lnk itself is not made here)
+    made = []
+    old = launcher.create_shortcut, launcher.find_photocraft, launcher.ask_photocraft
+    launcher.find_photocraft = lambda: EXE
+    launcher.create_shortcut = lambda exe, name=launcher.NAME, folder=None: made.append(exe) or Path("x.lnk")
+    try:
+        if sys.platform == "win32":
+            assert launcher.main_shortcut(None) in (0, 1) and (made == [EXE] or not Path(EXE).exists())
+        launcher.find_photocraft, launcher.ask_photocraft = (lambda: None), (lambda: None)
+        assert launcher.main_shortcut(None) == 1               # nothing found, nothing chosen: a message, no crash
+    finally:
+        launcher.create_shortcut, launcher.find_photocraft, launcher.ask_photocraft = old
+
+
 def main():
     args_checks()
+    find_checks()
     start_checks()
     shortcut_checks()
     cli_checks()
