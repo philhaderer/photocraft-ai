@@ -237,7 +237,7 @@ TABS: dict[str, TabSpec] = {
     "fibo": TabSpec(
         required=("fibo2_edit_turbo_int8_convrot.safetensors", "qwen3vl_4b_int8_convrot.safetensors", _UPS),
         modes={"multi_edit": _CUT},
-        optional=("qwen3.5_9b_int8_convrot.safetensors", _TAEF2)),      # the native VGL prompt writer (LLM prompt enhancement)
+        optional=("qwen3.5_9b_int8_convrot.safetensors", _TAEF2)),      # the prompt writer (LLM prompt enhancement)
     "krea2": TabSpec(
         required=("krea2_turbo_int8_convrot.safetensors", "qwen3vl_4b_fp8_scaled.safetensors", "qwen_image_vae.safetensors"),
         optional=("lighttaew2_1.safetensors",)),          # live preview of the Wan 2.1 latent
@@ -298,7 +298,6 @@ def mode_nodes(key: str, mode: str) -> tuple:
 NODE_PACKS = (
     ("AUSBOSS_NODES_", "ComfyUI-AusBoss (version 2.13.0 or newer)", "https://github.com/ausboss/ComfyUI-AusBoss"),
     ("SeedVR2", "ComfyUI itself (SeedVR2 nodes): update ComfyUI", "https://github.com/comfyanonymous/ComfyUI"),
-    ("VGLBionic", "ComfyUI-VGL-Bionic (not published yet)", ""),
 )
 
 
