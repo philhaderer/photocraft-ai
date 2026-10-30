@@ -27,9 +27,9 @@ def browser_only(f) -> bool:
 def site_hint(f) -> str:
     """The orange note of a file that cannot be loaded by the plugin: where to go and where to put it."""
     if "gated" in f.note.lower():
-        return "Needs a website: log in at Hugging Face and accept the licence. The disk symbol opens the page."
+        return "Log in at Hugging Face and accept the licence. The disk symbol opens the page."
     host = urllib.parse.urlsplit(f.url).hostname or "the website"
-    return f"Needs a website: the disk symbol opens {host} in your browser. Save the file in {f.target}."
+    return f"The disk symbol opens {host} in your browser. Save the file in {f.target}."
 
 
 def size_text(n: int) -> str:

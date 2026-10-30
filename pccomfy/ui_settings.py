@@ -333,6 +333,7 @@ class SettingsMixin(DownloadMixin):
                              if len(miss) > 1 else None))
                 rows.append(("enable", row["key"], row["label"]))
                 rows.append(("modes", row["key"], self._mode_cover(row["key"])))
+                rows.append(("head", "Needs these models:"))
                 for f, found, level in row["files"]:
                     rows.append(("file", self._file_data(f, found, level)))
                 for c in row["status"].nodes:
