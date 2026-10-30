@@ -13,7 +13,9 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import manifest, models
+from . import manifest, models, workflows
+
+BUNDLED_WORKFLOWS_DIR = Path(__file__).resolve().parent.parent / "workflows"
 
 LIST_KINDS = tuple(manifest.KINDS)       # unet, clip, vae, lora, preview
 
@@ -82,7 +84,7 @@ class Inventory:
     # ---------- tabs and modes ----------
 
     def mode_status(self, key: str, mode: str) -> Status:
-        miss = self.missing(manifest.mode_required(key, mode))
+        miss = self.missing(mode_files(key, mode))
         nodes = self.missing_nodes(manifest.mode_nodes(key, mode))
         opt = self.missing(manifest.mode_optional(key, mode))
         return Status("missing" if (miss or nodes) else "ready", miss, opt, nodes)
@@ -208,12 +210,67 @@ def _one(f: manifest.File) -> str:
     return s
 
 
+_SWITCH_CACHE: dict = {}
+
+
+def mode_files(key: str, mode: str) -> tuple:
+    """Everything a mode needs to run with its standard settings: the manifest's list plus what the switches that start on need."""
+    return tuple(dict.fromkeys(manifest.mode_required(key, mode) + default_switch_files(key, mode)))
+
+
+def default_switch_files(key: str, mode: str) -> tuple:
+    """The files a mode needs only because its STANDARD settings switch something on: the speed LoRA (the window's `turbo`,
+    on unless the mode's start values say otherwise) and the stages that start on (SeedVR2, a realism LoRA ...). A model is
+    offered only when its standard settings can run (user 30.10.); a switch that starts off needs its files only once the user
+    turns it on (the switch is then greyed out while they are missing). Read from the bundled workflow of the mode."""
+    if (key, mode) in _SWITCH_CACHE:
+        return _SWITCH_CACHE[(key, mode)]
+    out: list = []
+    m = models.BY_KEY.get(key)
+    spec = m.modes.get(mode) if m else None
+    if spec is not None:
+        try:
+            tpl = workflows.load_template(BUNDLED_WORKFLOWS_DIR / spec.workflow)
+        except (OSError, ValueError, KeyError):
+            tpl = None
+        if tpl is not None:
+            subs = []
+            if spec.settings.get("turbo", True):
+                subs.append(workflows.lora_subgraph(tpl))
+            for i, st in enumerate(workflows.stage_info(tpl)[:3]):
+                if spec.settings.get(("stage_on", "stage2_on", "stage3_on")[i], st["default_on"]):
+                    subs.append(workflows.stage_subgraph(tpl, st["id"]))
+            for sub in subs:
+                out += [name for _kind, name in _loader_files(sub)]
+    _SWITCH_CACHE[(key, mode)] = result = tuple(dict.fromkeys(n for n in out if n in manifest.FILES))
+    return result
+
+
+def _loader_files(graph: dict) -> list[tuple[str, str]]:
+    """(kind, file name) of every model loader in a graph, the AusBoss LoRA loader's JSON list included."""
+    loaders = {cls: (kind, fld) for kind, (cls, fld, _f) in manifest.KINDS.items() if cls}
+    out = []
+    for node in graph.values():
+        if not isinstance(node, dict):
+            continue
+        cls, inp = node.get("class_type", ""), node.get("inputs") or {}
+        if cls in loaders and isinstance(inp.get(loaders[cls][1]), str):
+            out.append((loaders[cls][0], inp[loaders[cls][1]]))
+        elif isinstance(inp.get("loras"), str):
+            try:
+                out += [("lora", r["name"]) for r in json.loads(inp["loras"]) if isinstance(r, dict) and r.get("enabled", True)
+                        and isinstance(r.get("name"), str)]
+            except ValueError:
+                pass
+    return out
+
+
 def preflight(inv: Inventory | None, key: str, mode: str) -> list[str]:
     """What stops a run of this tab and mode, as readable lines (empty = go). A tab that is not in the manifest (a workflow
     of your own) and an inventory that was never read (ComfyUI not reachable) never stop anything."""
     if inv is None or key not in manifest.TABS:
         return []
-    lines = [f"missing: {_one(f)}" for f in inv.missing(manifest.mode_required(key, mode))]
+    lines = [f"missing: {_one(f)}" for f in inv.missing(mode_files(key, mode))]
     lines += [f"missing node {c}" + (f": install {p[0]}" + (f" ({p[1]})" if p[1] else "") if (p := manifest.node_pack(c)) else "")
               for c in inv.missing_nodes(manifest.mode_nodes(key, mode))]
     return lines
