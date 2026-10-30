@@ -7,7 +7,8 @@ from pccomfy.bridge import Bridge, after_prompt_nodes, prompt_phase_nodes
 ROOT = Path(__file__).resolve().parent.parent
 g = json.loads((ROOT / "workflows" / "fibo2-edit.json").read_text(encoding="utf-8"))
 assert prompt_phase_nodes(g) >= {"10", "11", "12"} and "7" in after_prompt_nodes(g)
-assert prompt_phase_nodes(json.loads((ROOT / "workflows" / "fibo2-t2i.json").read_text(encoding="utf-8"))) == set()
+assert prompt_phase_nodes(json.loads((ROOT / "workflows" / "fibo2-t2i.json").read_text(encoding="utf-8"))) >= {"20", "21", "22"}   # writer since 30.10.
+assert prompt_phase_nodes(json.loads((ROOT / "workflows" / "flux3-klein-edit.json").read_text(encoding="utf-8"))) == set()
 
 
 class FakeComfy:
