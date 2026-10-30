@@ -47,6 +47,14 @@ def main():
     assert comfydir.root_from_process(r"C:\nowhere\python.exe", "python x.py") is None
     assert comfydir.find_root("http://example.org:8188") is None                   # only a local server is looked up
 
+    # ---- the "ComfyUI without models" test start loads into a sandbox folder of the test user, never into ComfyUI's
+    os.environ["PCCOMFY_SIMULATE_NO_MODELS"] = "1"
+    try:
+        sand = ts.make_app().models_dir(ask=False)
+        assert sand == ts.cfgmod.CONFIG_DIR / "test-downloads" and sand.is_dir()
+    finally:
+        del os.environ["PCCOMFY_SIMULATE_NO_MODELS"]
+
     # ---- the buttons
     mdir = Path(tempfile.mkdtemp())
     os.environ["PCCOMFY_MODELS_DIR"] = str(mdir)
