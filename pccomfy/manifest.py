@@ -14,7 +14,7 @@ against the user's working copy by size and, where the name was not unique, by S
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 # kind -> (loader node class, input field, folder inside ComfyUI's models folder)
 KINDS = {
@@ -37,6 +37,7 @@ class File:
     note: str = ""                  # licence, gated, "likely, not confirmed" ...
     aliases: tuple = ()             # other names the same file is known under
     size: int = 0                   # bytes, as the source serves it (0 = not known)
+    sha256: str = ""                # the SHA-256 the source publishes ("" = none published); set from _SHA256 below
 
     @property
     def size_text(self) -> str:
@@ -137,12 +138,45 @@ _LIVE = "optional: sharper live preview (without it ComfyUI shows coarse colours
 _LIST += [
     # live preview decoders (T3a, user 29.10.: optional, linked here; whether they are better is tested live)
     File("taef2_decoder.pth", "preview", _TAESD + "taef2_decoder.pth", _LIVE + "licence: MIT (madebyollin/taesd)",
-         aliases=("taef2_decoder.safetensors",), size=2580000),
+         aliases=("taef2_decoder.safetensors",), size=2704756),
     File("taeqi2_1_decoder.pth", "preview", _TAESD + "taeqi2_1_decoder.pth", _LIVE + "licence: MIT (madebyollin/taesd)",
-         aliases=("taeqi2_1_decoder.safetensors",), size=14600000),
+         aliases=("taeqi2_1_decoder.safetensors",), size=15314938),
     File("lighttaew2_1.safetensors", "preview", _HF + "lightx2v/Autoencoders/resolve/main/lighttaew2_1.safetensors",
-         _LIVE + "licence: Apache 2.0 (lightx2v/Autoencoders)", aliases=("lighttaew2_1.pth",), size=45300000),
+         _LIVE + "licence: Apache 2.0 (lightx2v/Autoencoders)", aliases=("lighttaew2_1.pth",), size=45274004),
 ]
+# SHA-256 as Hugging Face (LFS) and Civitai publish them, read from their APIs on 2026-10-30 without downloading; the
+# sizes above matched too. The TAESD decoders on GitHub have none published (the download checks their size only).
+_SHA256 = {
+    'flux3-image-klein-int8-convrot.safetensors': "847d8933548afd93df4af2cac2498e70891bf28d9dae06d695f536992e168fe2",
+    'flux-2-klein-9b_int8_convrot.safetensors': "bd041cec0d7955d6fcbaef952ba6ebe37af9f7d032ec927657e7777f21f5c522",
+    'qwen_image_2.1_int8_convrot.safetensors': "cb74113cb03faecd79611b01fd7fd642f0aa60d6f0b95086abee214d75eaa57d",
+    'fibo2_edit_turbo_int8_convrot.safetensors': "1f6fa7c499191f405467123f655f11762661eaa5bd479d1da8f161398ef72c3b",
+    'krea2_turbo_int8_convrot.safetensors': "8e4eeda70dd5037ab1ba2bef6b417f9f901e26093117cf397f741fc1fdaaf3f1",
+    'moss_image_sft_int8_convrot.safetensors': "b4d1475bc7eeffd7b809e82ea13a1fba1fb85c4e18365af3813722faa5c0fe4f",
+    'seedvr2_3b_int8_convrot.safetensors': "c3dec8bcc5916843a8a858572970597462e1f2dc598d6dfd818f6cd40f53a157",
+    'qwen_3_8b_fp8mixed.safetensors': "abad16806e0cbabc54e0325d6565847443fe396d5f0be38bb3cd3fe75a1201d6",
+    'qwen3vl_4b_int8_convrot.safetensors': "32de113cbf8282b02cbff0794b637b9d6676da09314a1db5a30bcea9bf4ee01c",
+    'qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors': "e5d85a7421d197bf5a12474511936ecabce19a833252f16e9310a983194a4458",
+    'qwen3vl_8b_fp8_scaled.safetensors': "4ba424cf62e51392e4d1a39933e803706f4e823c1065f36aaf149c6453f66bcd",
+    'qwen3vl_8b_int8_convrot.safetensors': "8bfd0f6e12abf2d2d697ecc888e5e90b0d6741d6708f05799f53afa560452e8f",
+    'qwen3.5_9b_w4a8_gptq.safetensors': "4cc6a1543ad2061806da46f35f90cadb4801dcba246c44782cf42ec0feb6407c",
+    'qwen3.5_9b_int8_convrot.safetensors': "32e3787472f708fa5f83624acbf5ef23f7fc89c439e05065ea57cfe5a97f025a",
+    'qwen3vl_4b_fp8_scaled.safetensors': "54bd5144df0bbc25dd6ccadfcb826b521445a1b06ae5a42570bdd2974ca87094",
+    'flux2-vae.safetensors': "d64f3a68e1cc4f9f4e29b6e0da38a0204fe9a49f2d4053f0ec1fa1ca02f9c4b5",
+    'flux2-vae_small.safetensors': "d8d52ba036475f5fb07c8b435e176d3d97ebfa82f0d1a1c317f9cc1e25bd013b",
+    'qwen_image_2.1_vae_bf16.safetensors': "bb21f7473051e1ac368515dd3f2e15cd44d7a11748ee8823e1ddca3e4876b7c9",
+    'qwen_image_vae.safetensors': "a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f",
+    'seedvr2_ema_vae_fp16.safetensors': "20678548f420d98d26f11442d3528f8b8c94e57ee046ef93dbb7633da8612ca1",
+    'qwen\\qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors': "208dd43250e1e01467ba190572ae2e7107a7870ec1ff026bc65f791fa1e80e95",
+    'Flux 2\\ultra_real_v4.safetensors': "df2307852d99e103917e6bc60e58da8971769bf716dee443f10b201fcee6ca18",
+    'Flux 3\\flux-3-image-klein-restore.safetensors': "7b758f5c1d494da7675dbebd8309f36c3dcaf4aa67a3349f667403c7a681187e",
+    'Flux 3\\flux-3-image-klein-outpaint.safetensors': "25385da7f6bfac0c18513e52729dc29f96cda543f0d086df9e5dda3842dede83",
+    'Moss\\lora_dmd2.safetensors': "7683fe1fb51f73f5d690f24dd6b7f46f31ab9a9873729a854ac5c9a420ffe6f2",
+    'Moss\\lenovo_moss.safetensors': "f28ab12e33e60146c8740a86730385cf5ba488e9f6eda50b14383d6ddbf300fb",
+    'birefnet.safetensors': "9ab37426bf4de0567af6b5d21b16151357149139362e6e8992021b8ce356a154",
+    'lighttaew2_1.safetensors': "8666e769f449f2d955651564bcadb0c5e12461b50480e67b7241f32c15f11a19",
+}
+_LIST = [replace(f, sha256=_SHA256.get(f.name, "")) for f in _LIST]
 FILES: dict[str, File] = {f.name: f for f in _LIST}
 
 
