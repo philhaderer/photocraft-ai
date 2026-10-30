@@ -29,6 +29,11 @@ SET_STYLES = {"head": "SetHead.TLabel", "ok": "SetOk.TLabel", "bad": "SetBad.TLa
               "muted": "SetMuted.TLabel"}
 
 
+def licence_of(note: str) -> str:
+    """Only the licence part of a manifest note ("optional: sharper ...; licence: MIT (...)" -> "licence: MIT (...)")."""
+    return next((p.strip() for p in note.split(";") if p.strip().startswith("licence")), note)
+
+
 def file_path(f) -> str:
     """Where a file lies inside ComfyUI's models folder, as the window shows it: "/loras/Flux 3/flux-3-...safetensors"."""
     return "/" + f.folder + "/" + f.name.replace("\\", "/")
@@ -46,6 +51,7 @@ class SettingsMixin:
     _last_model = ""
     _refreshing = False         # inside StateMixin._apply_refresh (its "open on the first model" step is not wanted here)
     _startup_checked = False    # the first reading after start has been looked at (a last model that is gone is let go once)
+    _live_off_missing = False   # "Live preview" was switched off because the model's preview decoder is missing
 
     # ---------- build (one call at the end of App._build) ----------
 
@@ -152,6 +158,7 @@ class SettingsMixin:
     def _update_mode_radios(self):
         super()._update_mode_radios()
         self._update_tabs()                 # a model chip turns red when its files for the chosen function are missing
+        self._update_live_preview()
         m = self._model()
         if m is None or self.inv is None:
             return
@@ -159,6 +166,28 @@ class SettingsMixin:
             s = self.inv.mode_status(m.key, key)
             if s.state == "missing":
                 self.tt_modes[key].text += "\n\n" + inventory.tooltip_text(s, _LABELS.get(key, key))
+
+    def _update_live_preview(self):
+        """ "Live preview" needs the model's preview decoder: while it is missing the switch is off and cannot be clicked
+        (user 30.10.); once the file is there it is on again, as at every start."""
+        m = self._model()
+        dec = manifest.preview_decoder(m.key) if m is not None else ""
+        missing = bool(dec) and self.inv is not None and self.inv.found(dec) is None
+        cb = getattr(self, "cb_live", None)
+        if cb is None:
+            return
+        if missing:
+            if not self._live_off_missing:
+                self._live_off_missing = True
+                self.v_live.set(False)
+            cb.configure(state="disabled")
+            self.tt_live.text = LIVE_TIP + f"\n\nNeeds {dec}: download it in the settings (gear), under Additional models."
+        else:
+            if self._live_off_missing:
+                self._live_off_missing = False
+                self.v_live.set(True)
+            cb.configure(state="normal")
+            self.tt_live.text = LIVE_TIP
 
     # ---------- no model chosen ----------
 
@@ -303,6 +332,12 @@ class SettingsMixin:
                 for c in row["status"].nodes:
                     pack = manifest.node_pack(c)
                     rows.append(("node", c, pack[0] if pack else "", pack[1] if pack else ""))
+            rows.append(("head", "Additional models (used by several models)"))
+            for f, found, use, keys in self.inv.additional_rows():
+                rows.append(("file", {"name": f.name, "path": file_path(f), "found": found, "level": "optional",
+                                      "size": f.size_text, "url": f.url, "use": f"{use}: " + ", ".join(models.SHORT[k] for k in keys),
+                                      "note": licence_of(f.note) if found is None else "",
+                                      "disk": (self._disk.get(f.name) or [""])[0] if found is None else ""}))
         links = cfgmod.model_map()
         rows.append(("head", "Linked files (the plugin uses your file for its expected one)"))
         if links:
@@ -338,10 +373,9 @@ class SettingsMixin:
         if self.inv is None:
             return [], {}
         names = []
-        for row in self.inv.rows():
-            for f, _found, _level in row["files"]:
-                if f.name not in names:
-                    names.append(f.name)
+        for f in [f for row in self.inv.rows() for f, _found, _level in row["files"]] + [r[0] for r in self.inv.additional_rows()]:
+            if f.name not in names:
+                names.append(f.name)
         return names, self.inv.lists
 
     # ---------- the overlay window ----------
@@ -560,7 +594,7 @@ class SettingsMixin:
                 f = row[1]
                 ok = f["found"] is not None
                 label("✓" if ok else "✗", "ok" if ok else ("bad" if f["level"] == "required" else "note"), r, 0, padx=(8, 6))
-                label(f["path"] + ("   optional" if f["level"] == "optional" else ""), "muted" if ok else "", r)
+                label(f["path"] + ("   optional" if f["level"] == "optional" and not f.get("use") else ""), "muted" if ok else "", r)
                 if f["size"] and not ok:
                     label(f["size"], "muted", r, 2, padx=(8, 0), sticky="e")
                 if f["url"] and not ok:
@@ -568,7 +602,7 @@ class SettingsMixin:
                          lambda u=f["url"]: webbrowser.open(u), r, 3, menu=lambda e, u=f["url"]: self._link_menu(e, u))
                 icon("link", "Use another file of yours for this one.", lambda n=f["name"]: self._choose_for(n), r, 4)
                 r += 1
-                extra = []
+                extra = [(f["use"], "muted")] if f.get("use") else []
                 if ok and f["found"] != f["name"]:
                     extra.append((f"your file: {f['found']}", "muted"))
                 if f["note"]:

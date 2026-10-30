@@ -179,9 +179,15 @@ class Inventory:
             out.append({
                 "key": m.key, "label": m.label, "status": st,
                 "files": [(manifest.FILES[n], self.found(n), "required") for n in names if n in manifest.FILES]
-                         + [(manifest.FILES[n], self.found(n), "optional") for n in opt if n in manifest.FILES],
+                         + [(manifest.FILES[n], self.found(n), "optional") for n in opt
+                            if n in manifest.FILES and manifest.FILES[n].kind not in manifest.ADDITIONAL_KINDS],
             })
         return out
+
+    def additional_rows(self) -> list[tuple]:
+        """The helpers several models share ("Additional models"): (file, found, what it is for, model keys using it)."""
+        return [(f, self.found(f.name), manifest.ADDITIONAL_KINDS[f.kind], manifest.used_by(f.name))
+                for f in manifest.FILES.values() if f.kind in manifest.ADDITIONAL_KINDS and manifest.used_by(f.name)]
 
 
 # ---------- reading ComfyUI ----------

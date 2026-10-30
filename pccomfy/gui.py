@@ -537,8 +537,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         fl.pack(fill="x", pady=(2, 0))
         self.cb_live = ttk.Checkbutton(fl, text="Live preview", variable=self.v_live)
         self.cb_live.pack(side="left")
-        Tooltip(self.cb_live, "Shows the picture while it is being made, under the plugin. It goes away when the result "
-                              "is in PhotoCraft.")
+        self.tt_live = Tooltip(self.cb_live, LIVE_TIP)
 
         bf = self.f_go = ttk.Frame(r)   # Generate, Cancel, Undo, Redo: above the line over "Prompt", under the functions
         bf.pack(fill="x", padx=10, pady=(6, 2), before=self.sep_prompt)

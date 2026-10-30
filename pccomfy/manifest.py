@@ -25,6 +25,8 @@ KINDS = {
     "preview": ("", "", "vae_approx"),       # live preview decoders (TAESD): no loader node, ComfyUI lists /models/vae_approx
     "bg_removal": ("LoadBackgroundRemovalModel", "bg_removal_name", "background_removal"),   # "Cut out" in the reference slots
 }
+# helpers several models share, listed apart in the settings window as "Additional models" (user 30.10.), with their use
+ADDITIONAL_KINDS = {"bg_removal": "Cut out in Multi Image Edit", "preview": "Live preview"}
 KIND_LABEL = {"unet": "Diffusion model", "clip": "Text encoder", "vae": "VAE", "lora": "LoRA", "preview": "Preview decoder",
               "bg_removal": "Background removal"}
 
@@ -249,6 +251,24 @@ TABS: dict[str, TabSpec] = {
         modes={"txt2img": ModeSpec(requires=("Moss\\lenovo_moss.safetensors",))},
         optional=("Moss\\lora_dmd2.safetensors", _TAEF2)),
 }
+
+
+def used_by(name: str) -> list[str]:
+    """The models (keys, in the order of TABS) whose list names this file, as a required or optional one."""
+    out = []
+    for key, t in TABS.items():
+        names = set(t.required) | set(t.optional)
+        for ms in t.modes.values():
+            names |= set(ms.requires) | set(ms.optional)
+        if name in names:
+            out.append(key)
+    return out
+
+
+def preview_decoder(key: str) -> str:
+    """The live preview decoder (TAESD) of a model: "" when it has none."""
+    t = TABS.get(key)
+    return next((n for n in (t.optional if t else ()) if n in FILES and FILES[n].kind == "preview"), "")
 
 
 def tab_required(key: str) -> tuple:

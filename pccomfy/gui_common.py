@@ -621,6 +621,7 @@ NA_RED = "#ff6b6b"      # text of a tab that is not available (model files missi
 DISABLED = "#8e8e8e"   # text of a greyed-out control: clearly darker than MUTED, so it reads as "not available here"
 SCALE_MODES = ("upscale", "refine")   # these run only with an upscale workflow (a node titled pc:upscale)
 NO_LLM_MODES = ("outpaint", "remove") + SCALE_MODES   # no "LLM prompt enhancement" row: fixed or ready-made prompts (user 30.10.)
+LIVE_TIP = "Shows the picture while it is being made, under the plugin. It goes away when the result is in PhotoCraft."
 ERROR, ERROR_TEXT = "#e5484d", "#ffc2c2"
 DONE_GREEN = "#39A95D"      # only the word "Done" above the bar
 def _dpi_aware() -> None:
@@ -756,6 +757,7 @@ __all__ = [
     "DISABLED",
     "SCALE_MODES",
     "NO_LLM_MODES",
+    "LIVE_TIP",
     "ERROR",
     "ERROR_TEXT",
     "DONE_GREEN",
