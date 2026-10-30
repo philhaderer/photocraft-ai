@@ -35,6 +35,8 @@ answers "401" until then.
 | Flux 2\ultra_real_v4.safetensors | loras\Flux 2 | 166 MB | [Civitai 2462105, version KL9_V4](https://civitai.com/api/download/models/2846977) (vizsumit) | Civitai: commercial use and derivatives allowed, no credit needed | Civitai may ask to log in |
 | Moss\lora_dmd2.safetensors | loras\Moss | 1.2 GB | [lodestones/MOSS-Image-Base-8-steps-dmd](https://huggingface.co/lodestones/MOSS-Image-Base-8-steps-dmd/resolve/main/lora_dmd2.safetensors) | Apache 2.0 | no |
 | Moss\lenovo_moss.safetensors | loras\Moss | 65 MB | [Danrisi/lenovo_moss](https://huggingface.co/Danrisi/lenovo_moss/resolve/main/lenovo_moss.safetensors) (also Civitai 1662740) | HF: Apache 2.0; Civitai: credit required, no derivatives | no |
+| Flux 3\flux-3-image-klein-restore.safetensors | loras\Flux 3 | 161 MB | [ausboss/FLUX-3-Image-Klein-Restore-LoRA](https://huggingface.co/ausboss/FLUX-3-Image-Klein-Restore-LoRA/resolve/main/flux-3-image-klein-restore.safetensors) (added 30.10., size matches the user's copy) | FLUX Kommunity License | no |
+| birefnet.safetensors | background_removal | 444 MB | [Comfy-Org/BiRefNet](https://huggingface.co/Comfy-Org/BiRefNet/resolve/main/background_removal/birefnet.safetensors) (added 30.10., size matches the user's copy) | MIT | no |
 
 ## Findings
 
