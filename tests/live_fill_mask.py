@@ -40,7 +40,7 @@ import numpy as np  # noqa: E402
 from PIL import Image, ImageDraw, ImageFilter  # noqa: E402
 
 from pccomfy import config as cfgmod, fillmask, imaging, models, workflows  # noqa: E402
-from pccomfy.bridge import Bridge, Request, fill_prompt, outline_width, prompt_phase_nodes  # noqa: E402
+from pccomfy.bridge import Bridge, Request, fill_prompt, has_tag, outline_width, prompt_phase_nodes  # noqa: E402
 from pccomfy.comfy import ComfyUI  # noqa: E402
 
 BASE = cfgmod.CONFIG_DIR / "fill-mask-test"
@@ -111,7 +111,7 @@ class Runner:
     def fill(self, model, im, mask, prompt, ctx):
         """One Fill run as the bridge does it with an editor: crop around the selection, red outline, the fixed wrapper
         around the text, the model, Fibo's seam correction. Returns the result (the size of the crop), region and bbox."""
-        mdl = models.MODELS[model]
+        mdl = models.BY_KEY[model]
         spec = mdl.modes["inpaint"]
         st = spec.settings
         wf = str(ROOT / "workflows" / spec.workflow)
@@ -126,7 +126,7 @@ class Runner:
         tag = f"{model}-{time.time_ns() % 10**9}"
         iname = self.b.comfy.upload_image(marked, f"fillmask-{tag}-image.png")
         mname = None
-        if workflows.has_tag(tpl, "mask"):
+        if has_tag(tpl, "mask"):
             m = imaging.prepare_mask(sel, st.get("mask_grow", 8), st.get("mask_blur", 8)).resize((gw, gh), Image.BILINEAR)
             mname = self.b.comfy.upload_image(m.convert("RGB"), f"fillmask-{tag}-mask.png")
         req = Request(mode="inpaint", workflow=wf, enhance=st.get("enhance", True), turbo=st.get("turbo", True),
