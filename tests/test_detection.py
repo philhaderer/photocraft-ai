@@ -135,7 +135,7 @@ def test_status():
     lists["lora"].remove("Flux 3\\flux-3-image-klein-restore.safetensors")
     i2 = inventory.Inventory(lists, nodes=inv.nodes)
     st = i2.tab_status("flux3")
-    assert st.state == "partial" and list(st.detail) == ["upscale"], st
+    assert st.state == "missing" and list(st.detail) == ["upscale"], st      # one function lacks its files: the model is locked
     assert i2.mode_status("flux3", "edit").state == "ready" and i2.mode_status("flux3", "upscale").state == "missing"
     assert [f.name for f in i2.mode_status("flux3", "upscale").missing] == ["Flux 3\\flux-3-image-klein-restore.safetensors"]
 
@@ -153,10 +153,11 @@ def test_status():
     assert st.state == "missing" and [f.name for f in st.missing] == ["qwen3vl_8b_int8_convrot.safetensors"], st
     assert "edit" in st.detail and "txt2img" in st.detail
 
-    # every mode missing its own file = the tab is missing (Flux 2 with no Ultra-real LoRA is only partial)
+    # every mode missing its own file = the tab is missing (Flux 2 with no Ultra-real LoRA: Upscale and Refine lack it, the model is locked)
     lists = full_lists()
     lists["lora"].remove("Flux 2\\ultra_real_v4.safetensors")
-    assert inventory.Inventory(lists, nodes=inv.nodes).tab_status("flux2").state == "partial"
+    st = inventory.Inventory(lists, nodes=inv.nodes).tab_status("flux2")
+    assert st.state == "missing" and set(st.detail) == {"upscale", "refine"}, st
 
     # a missing AusBoss node blocks Flux 3 Upscale, and the message names the pack
     i4 = inventory.Inventory(full_lists(), nodes={"SomethingElse"})
@@ -262,7 +263,7 @@ def test_comfy_reading():
     raw = c.inventory_raw()
     assert raw["unet"] == lists["unet"] and raw["lora"] == lists["lora"] and raw["nodes"] == {"UNETLoader", "AUSBOSS_NODES_Seed"}
     inv = inventory.fetch(c, {"x": "y"})
-    assert inv.tab_status("flux3").state == "partial" or inv.tab_status("flux3").state == "ready"
+    assert inv.tab_status("flux3").state == "missing" and "upscale" in inv.tab_status("flux3").detail   # the fake lists two node classes only
     assert inv.mapping == {"x": "y"}
     os.environ["PCCOMFY_SIMULATE_NO_MODELS"] = "1"      # the new-user test start: ComfyUI answers, but has no model files
     try:
