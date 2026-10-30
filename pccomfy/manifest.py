@@ -23,8 +23,10 @@ KINDS = {
     "vae": ("VAELoader", "vae_name", "vae"),
     "lora": ("LoraLoaderModelOnly", "lora_name", "loras"),
     "preview": ("", "", "vae_approx"),       # live preview decoders (TAESD): no loader node, ComfyUI lists /models/vae_approx
+    "bg_removal": ("LoadBackgroundRemovalModel", "bg_removal_name", "background_removal"),   # "Cut out" in the reference slots
 }
-KIND_LABEL = {"unet": "Diffusion model", "clip": "Text encoder", "vae": "VAE", "lora": "LoRA", "preview": "Preview decoder"}
+KIND_LABEL = {"unet": "Diffusion model", "clip": "Text encoder", "vae": "VAE", "lora": "LoRA", "preview": "Preview decoder",
+              "bg_removal": "Background removal"}
 
 
 @dataclass(frozen=True)
@@ -114,6 +116,9 @@ _LIST = [
          _QWEN21 + "loras/qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors", "licence: Qwen research licence", size=913314512),
     File("Flux 2\\ultra_real_v4.safetensors", "lora", "https://civitai.com/api/download/models/2846977",
          "Civitai 'UltraReal - Moss, Krea2, Klein9b' by vizsumit, version KL9_V4 (Civitai may ask to log in)", size=165705592),
+    File("Flux 3\\flux-3-image-klein-restore.safetensors", "lora",
+         _HF + "ausboss/FLUX-3-Image-Klein-Restore-LoRA/resolve/main/flux-3-image-klein-restore.safetensors",
+         "Flux 3 Upscale: ausboss' restore LoRA (on at 0.5), FLUX Kommunity License", size=160697064),
     File("Flux 3\\flux-3-image-klein-outpaint.safetensors", "lora",
          _HF + "ausboss/FLUX-3-Image-Klein-Outpaint-LoRA/resolve/main/flux-3-image-klein-outpaint.safetensors",
          "Flux 3 Expand: ausboss' outpaint LoRA, FLUX Kommunity License", size=160697104),
@@ -121,6 +126,11 @@ _LIST = [
          "licence: Apache 2.0", size=1189176800),
     File("Moss\\lenovo_moss.safetensors", "lora", _HF + "Danrisi/lenovo_moss/resolve/main/lenovo_moss.safetensors",
          "Lenovo UltraReal by Danrisi (also on Civitai, model 1662740)", size=64527960),
+]
+_LIST += [
+    # the reference slots' "Cut out" button (ComfyUI's own BiRefNet nodes)
+    File("birefnet.safetensors", "bg_removal", _HF + "Comfy-Org/BiRefNet/resolve/main/background_removal/birefnet.safetensors",
+         "optional: \"Cut out\" in the reference slots; licence: MIT", size=444473596),
 ]
 _TAESD = "https://github.com/madebyollin/taesd/raw/main/"
 _LIVE = "optional: sharper live preview (without it ComfyUI shows coarse colours); "
@@ -157,6 +167,7 @@ _FLUX3_UP_NODES = ("AUSBOSS_NODES_TiledUpscale", "AUSBOSS_NODES_TiledUpscaleStit
 _ULTRA = ("Flux 2\\ultra_real_v4.safetensors",)
 _UPSAMPLER = "qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors"
 _TAEF2 = "taef2_decoder.pth"            # live preview of the Flux 2 latent: Flux 2, Flux 3, Fibo, MOSS
+_CUT = ModeSpec(optional=("birefnet.safetensors",))     # Multi Image Edit: "Cut out" in the reference slots
 
 TABS: dict[str, TabSpec] = {
     "flux3": TabSpec(
@@ -164,8 +175,10 @@ TABS: dict[str, TabSpec] = {
         modes={
             "txt2img": ModeSpec(optional=(_UPSAMPLER,)),
             "outpaint": ModeSpec(requires=("Flux 3\\flux-3-image-klein-outpaint.safetensors",)),
-            "upscale": ModeSpec(requires=("seedvr2_3b_int8_convrot.safetensors", "seedvr2_ema_vae_fp16.safetensors"),
+            "upscale": ModeSpec(requires=("seedvr2_3b_int8_convrot.safetensors", "seedvr2_ema_vae_fp16.safetensors",
+                                          "Flux 3\\flux-3-image-klein-restore.safetensors"),
                                 nodes=_FLUX3_UP_NODES),
+            "multi_edit": _CUT,
         },
         optional=(_TAEF2,)),
     "flux2": TabSpec(
@@ -174,6 +187,7 @@ TABS: dict[str, TabSpec] = {
             "txt2img": ModeSpec(optional=(_UPSAMPLER,)),
             "upscale": ModeSpec(requires=_ULTRA),
             "refine": ModeSpec(requires=_ULTRA),
+            "multi_edit": _CUT,
         },
         optional=(_TAEF2,)),
     "qwen": TabSpec(
@@ -184,12 +198,13 @@ TABS: dict[str, TabSpec] = {
             "edit": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),
             "inpaint": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),
             "outpaint": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),
-            "multi_edit": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),      # runs the edit graph
+            "multi_edit": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",), optional=_CUT.optional),   # runs the edit graph
             "remove": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),
         },
         optional=("qwen\\qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors", "taeqi2_1_decoder.pth")),
     "fibo": TabSpec(
         required=("fibo2_edit_turbo_int8_convrot.safetensors", "qwen3vl_4b_int8_convrot.safetensors", _UPS),
+        modes={"multi_edit": _CUT},
         optional=("qwen3.5_9b_int8_convrot.safetensors", _TAEF2)),      # the native VGL prompt writer (LLM prompt enhancement)
     "krea2": TabSpec(
         required=("krea2_turbo_int8_convrot.safetensors", "qwen3vl_4b_fp8_scaled.safetensors", "qwen_image_vae.safetensors"),
