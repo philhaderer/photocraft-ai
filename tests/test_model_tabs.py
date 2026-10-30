@@ -255,8 +255,8 @@ def main():
     assert models.ranking_text("edit") == "Ranking: not set yet." and models.ranking_text("img2img") == ""
     assert app.tt_modes["remove"].text.startswith("Ranking: 1. Fibo, 2. Qwen")
     assert all(k in models.SHORT for k in models.BY_KEY) and all(k in models.BY_KEY for r in models.RANKING.values() for k in r)
-    # Fibo Refine starts with Sharpen 30 %, Fibo Text to image with 20 % (user 28.10.); the box shows the percent
-    for mode, want in (("refine", 0.3), ("txt2img", 0.2)):
+    # Fibo Refine starts with Sharpen 10 % (user 30.10.), Fibo Text to image with 20 % (user 28.10.); the box shows the percent
+    for mode, want in (("refine", 0.1), ("txt2img", 0.2)):
         app.v_sharpen.set(0.0)
         app.v_model.set("fibo")
         app.v_mode.set(mode)
