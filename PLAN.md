@@ -14,6 +14,9 @@ Stand 2026-10-30. Der Plan ist freigegeben. Abschnitt 3 ist die Arbeitsliste in 
 
 Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir geprüft.
 
+**Neu vom 30.10.**
+- **Verlauf der letzten 20 Läufe (Punkt 13):** Uhr-Symbol im Header links von „Copy canvas“; die Liste zeigt „Uhrzeit  Name · Modell: Prompt-Anfang“. Ein Klick lädt alle Einstellungen des Laufs mit neuem Seed und startet nichts; hat das LLM den Prompt geschrieben, kommt dessen Text zurück und Enhance ist aus. Strg+Z im Prompt-Feld holt den alten Text zurück. Abgebrochene und fehlerhafte Läufe kommen nicht in die Liste.
+
 **Neu vom 29.10.**
 - **L3 Fenster-Politur (Punkt 11):** Doppelklick auf den Header klappt ein und aus; Rechtsklick auf einen Modell-Chip: „Favourite for <Funktion>“ (Haken im Menü) und „Hide this model“; im Zahnrad-Fenster, Tab „Models“, Haken „Shown in the plugin“; Symbol „Copy canvas“ im Header (sichtbare Ebenen als ein Bild in die Zwischenablage).
 - **Live-Vorschau (Punkt 12):** läuft sie je Modell? Fenster bei 380 px? Haken „Live preview“ am Ende der Advanced settings. Später: A/B grobe Farben gegen TAESD-Dateien (Download nur mit deiner Erlaubnis).
@@ -75,7 +78,6 @@ Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir gepr
 Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher Optionen nennen. Die Punkte behalten ihre alten Nummern.
 
 **Als Nächstes**
-13. **Verlauf der letzten 20 Läufe**, Lauf erneut laden (OpenFill T3b, Details `ideas.md`): Ort, Umfang (nur Prompt oder alle Einstellungen, Seed fest oder neu) mit dir klären.
 14. **Modell-Manager von OpenFill vergleichen** (T4): sobald du das Repo geladen hast; Ergebnis als Gegenüberstellung mit Empfehlung (übernehmen / anpassen / weglassen).
 
 **Offen aus den Testrunden**

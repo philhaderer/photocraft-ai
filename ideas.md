@@ -1,5 +1,5 @@
 # Todo: Ideen aus OpenFill (Recherche 2026-10-26)
-Eingeplant in `PLAN.md`, Abschnitt 3 (T3b = Punkt 13, T4 = Punkt 14, Geparkt = „Geparkt“). Diese Datei bleibt die Detailbeschreibung der offenen Ideen.
+Eingeplant in `PLAN.md`, Abschnitt 3 (T4 = Punkt 14, Geparkt = „Geparkt“). Diese Datei bleibt die Detailbeschreibung der offenen Ideen.
 Quelle: github.com/beckettharriman/openfill (Apache-2.0, nur Doku gelesen, kein Code).
 Regel: an Entscheidungen Optionen nennen, nicht still wählen. Ein Commit je Änderung, nie pushen.
 
@@ -7,8 +7,9 @@ Regel: an Entscheidungen Optionen nennen, nicht still wählen. Ein Commit je Än
 - T1 PhotoCraft-Befehle prüfen: erledigt 27.10. (`docs/photocraft-befehle.md`).
 - T2 Seam-Korrektur: gebaut 28.10., je Modell entschieden 29.10. (Fibo immer, Flux nie, Qwen mit Haken).
 - T3a Live-Vorschau: gebaut 29.10. (Punkt 12); offen nur der Live-Test und das A/B grobe Farben gegen TAESD.
+- T3b Verlauf der letzten 20 Läufe: gebaut 30.10. (Punkt 13; Uhr im Header, alles mit neuem Seed, LLM-Text mit Enhance aus). Der alte Text steht unten noch als Beschreibung.
 
-## T3b Verlauf der letzten 20 Läufe, Lauf erneut laden (beschlossen)
+## T3b Verlauf der letzten 20 Läufe, Lauf erneut laden (gebaut 30.10.)
 Basis: data/exchange/runs.jsonl hat schon Funktion, Workflow, Seed, Größe, Prompt. Erweitern um Tab, Negativ-Prompt, Schalter, Regler, LLM-Haken.
 Entscheidungen (Optionen nennen):
  - Wo: Dropdown neben Reset / kleines Popup / Liste unter dem Prompt.

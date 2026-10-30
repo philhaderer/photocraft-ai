@@ -9,7 +9,7 @@ Zweck: wie man in diesem Repo arbeitet und prüft. Regeln und Arbeitsweise stehe
 - Remotes: `origin` = Upstream (nie pushen), `private` = <https://github.com/philhaderer/photocraft-ai> (nur auf Wunsch: `git push private next:main`).
 - Tags: `backup-2026-10-26` (6df02df, vor Phase 0), `vor-claude-code` (65e955f).
 - In PowerShell mehrzeilige Commit-Nachrichten mit `git commit -F <datei>` (Datei im Scratchpad).
-- Tests: `python tests/run_all.py` (64 Dateien, alle grün, ca. 30 s). Python des Nutzers: Pfad in `data/python.txt`.
+- Tests: `python tests/run_all.py` (65 Dateien, alle grün, ca. 30 s). Python des Nutzers: Pfad in `data/python.txt`.
 - Diagnose: `data/exchange/last-graph.json` (letzter Graph), `data/exchange/runs.jsonl` (eine Zeile je Lauf); ComfyUI-Historie über `http://127.0.0.1:8188/history`.
 
 ## 2. Umgebung
