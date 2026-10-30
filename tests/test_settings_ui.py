@@ -390,7 +390,7 @@ def main():
     finally:
         t.tk.Toplevel, gui.winlink.available, gui.winlink.Win32Api = saved
 
-    # a preset that needs a model with missing files says so (the loader uses this; see docs/entscheidungen-L1.md)
+    # a preset that needs a model with missing files says so (the loader uses this; see docs/archiv/entscheidungen-L1.md)
     app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(vae="qwen_image_vae.safetensors"), NODES), "_yaml": [], "_disk": {}})
     note = app.preset_blocked({"workflow": "krea2-turbo-t2i.json", "mode": "txt2img"})
     assert note == "Krea 2 Turbo is missing files: qwen_image_vae.safetensors (see settings)", note

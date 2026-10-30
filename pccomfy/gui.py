@@ -129,7 +129,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         pad = {"padx": 10, "pady": 4}
 
         # the head: the functions first (big buttons with a symbol, two per row), the models below them (small outlined
-        # chips, three per row; a model that cannot do the chosen function is greyed out). See docs/ux-funktion-zuerst.md.
+        # chips, three per row; a model that cannot do the chosen function is greyed out). See docs/archiv/ux-funktion-zuerst.md.
         # the header above the functions (user 29.10.): as high as a function button, empty for now (the user's picture
         # comes later into f_logo); on its right the minimise button. Minimised, only this header stays (option A)
         self.f_header = ttk.Frame(r)

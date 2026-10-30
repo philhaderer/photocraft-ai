@@ -2,7 +2,7 @@
 
 **Entscheidung des Users 27.10.: Option A, Inter.** Gebaut: Kopie der Windows-Dateien (Inter 3.019, offizieller Build, Regular und SemiBold, zusammen ca. 630 KB) in `pccomfy/assets/fonts/` mit `OFL-Inter.txt`; Laden in `pccomfy/fonts.py`; eine Stufe kleiner (gemessen: „Multi Image Edit“ 85 statt 87 px bei 9 pt, Zeilenhöhe 15 statt 17 px bei 10 pt); Fett = SemiBold. `PCCOMFY_NO_INTER=1` zeigt zum Vergleich Segoe UI.
 
-Stand 2026-10-27. Vergleichsblatt: `docs/ui-schriften.png` (mit Tk gezeichnet, so wie das Plugin Text darstellt, auf `PANEL` `#282828`, 9 und 10 pt). Heute: `FONT = "Segoe UI"` (gui_common.py), Größen 9, 10 und 11 pt.
+Stand 2026-10-27. Vergleichsblatt: `docs/archiv/ui-schriften.png` (mit Tk gezeichnet, so wie das Plugin Text darstellt, auf `PANEL` `#282828`, 9 und 10 pt). Heute: `FONT = "Segoe UI"` (gui_common.py), Größen 9, 10 und 11 pt.
 
 ## Befund
 
