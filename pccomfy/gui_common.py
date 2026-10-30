@@ -355,6 +355,8 @@ class ThinScrollbar:
         try:
             if e.widget.winfo_class() in ("Text", "Listbox", "TCombobox", "ComboboxPopdownFrame"):
                 return
+            if e.widget.winfo_toplevel() is not self.canvas.winfo_toplevel():    # another window (the settings) scrolls itself
+                return
         except Exception:
             pass
         self.canvas.yview_scroll(-1 if e.delta > 0 else 1, "units")

@@ -21,8 +21,17 @@ from .gui_theme import ICON_PX
 
 _LABELS = dict(MODE_LABELS)      # noqa: F405
 EMPTY_TEXT = {"choose": "Choose a function", "none_linked": "Link your model in the settings"}
-PICK_TEXT = "Choose another file…"     # next to every file in the settings window (C.13, wording chosen by the user)
 STATE_TEXT = {"ready": "ready", "partial": "some functions need files", "missing": "files missing"}
+STATE_MARK = {"ready": ("\u25CF", "ok"), "partial": ("\u25D0", "note"), "missing": ("\u25CB", "bad")}
+SETTINGS_W, SETTINGS_H = 760, 700      # the settings window at first (before the display scaling); then the size it was closed at
+SET_ICON_PX = 16                       # the download and chain symbols next to a file
+SET_STYLES = {"head": "SetHead.TLabel", "ok": "SetOk.TLabel", "bad": "SetBad.TLabel", "note": "SetNote.TLabel",
+              "muted": "SetMuted.TLabel"}
+
+
+def file_path(f) -> str:
+    """Where a file lies inside ComfyUI's models folder, as the window shows it: "/loras/Flux 3/flux-3-...safetensors"."""
+    return "/" + f.folder + "/" + f.name.replace("\\", "/")
 GEAR_PX = round(ICON_PX * 0.6)     # the gear: about 60 % of the other button icons, flat without a button background (user 28.10.)
 FOOT_REFRESH_PADX, FOOT_RESET_PADX = (4, 0), (12, 0)     # footer: the refresh arrow close to the ComfyUI dot, "Defaults" apart
 
@@ -272,79 +281,46 @@ class SettingsMixin:
 
     # ---------- the overlay: content as plain data (tested without Tk) ----------
 
-    def _settings_segments(self) -> list[tuple]:
-        """The overlay text as (text, style, url) pieces; style is head / ok / bad / muted / note / link, or "pick": a link
-        that chooses another installed file for the expected one named in the third field."""
-        seg: list[tuple] = []
-        add = lambda text, style="", url="": seg.append((text, style, url))  # noqa: E731
+    def _settings_rows(self) -> list[tuple]:
+        """The "Models" tab as rows (kind, data), drawn by _settings_draw; no Tk here. Kinds: "error" (text, detail), "intro"
+        (text), "model" (key, label, state, focus), "file" (a dict, see below), "node" (class, pack, url), "head" (text),
+        "line" (text, style). A file row: expected name, path with its folder ("/vae/flux2-vae.safetensors"), found (your
+        file's name or None), level (required / optional), size text, download url, note, found on disk (a path or "")."""
+        rows: list[tuple] = []
         if self.inv is None:
-            add("ComfyUI could not be read.\n", "bad")
-            add((self._inv_error or "Not connected yet.") + "\nStart ComfyUI, then click the refresh arrow (⟳) at the bottom of the plugin.\n\n", "muted")
+            rows.append(("error", "ComfyUI could not be read.", (self._inv_error or "Not connected yet.")
+                         + "\nStart ComfyUI, then click the refresh arrow (⟳) at the bottom of the plugin."))
         else:
-            add("Installed models\n", "head")
-            add("ComfyUI reads its model folders only when it starts: after copying a file, restart ComfyUI and click the refresh arrow (⟳) at the bottom of the plugin.\n\n", "muted")
+            rows.append(("intro", "ComfyUI reads its model folders only when it starts: after copying a file, restart ComfyUI "
+                                  "and click the refresh arrow (⟳) at the bottom of the plugin."))
             for row in self.inv.rows():
-                st = row["status"]
-                mark = {"ready": ("● ", "ok"), "partial": ("◐ ", "note"), "missing": ("○ ", "bad")}[st.state]
-                add(mark[0], mark[1])
-                add(row["label"], "head")
-                add("  " + STATE_TEXT[st.state] + ("   ◀" if row["key"] == self._settings_focus else "") + "\n", "muted")
+                rows.append(("model", row["key"], row["label"], row["status"].state, row["key"] == self._settings_focus))
                 for f, found, level in row["files"]:
-                    if found is not None:
-                        add("    ✓ ", "ok")
-                        add(f.name + ("" if found == f.name else f"  (your file: {found})") + ("   optional" if level == "optional" else ""), "muted")
-                        add("   ", "")
-                        add(PICK_TEXT, "pick", f.name)
-                        add("\n", "")
-                        continue
-                    add("    ✗ ", "bad" if level == "required" else "note")
-                    add(f.name, "")
-                    add(("   optional" if level == "optional" else "") + f"   → ComfyUI\\{f.target}", "muted")
-                    if f.url:
-                        add("   ", "")
-                        add("download", "link", f.url)
-                        if f.size_text:
-                            add(f"  ({f.size_text})", "muted")
-                    add("   ", "")
-                    add(PICK_TEXT, "pick", f.name)
-                    add("\n", "")
-                    if f.note:
-                        add("        " + f.note + "\n", "muted")
-                    for p in self._disk.get(f.name, [])[:1]:
-                        add(f"        found on disk: {p}  (restart ComfyUI to list it)\n", "note")
-                for c in st.nodes:
+                    disk = (self._disk.get(f.name) or [""])[0] if found is None else ""
+                    rows.append(("file", {"name": f.name, "path": file_path(f), "found": found, "level": level,
+                                          "size": f.size_text, "url": f.url, "note": f.note if found is None else "",
+                                          "disk": disk}))
+                for c in row["status"].nodes:
                     pack = manifest.node_pack(c)
-                    add("    ✗ ", "bad")
-                    add(f"node {c}", "")
-                    if pack:
-                        add("   → " + pack[0], "muted")
-                        if pack[1]:
-                            add("   ", "")
-                            add("get it", "link", pack[1])
-                    add("\n", "")
-                add("\n", "")
+                    rows.append(("node", c, pack[0] if pack else "", pack[1] if pack else ""))
         links = cfgmod.model_map()
-        add("Linked files (the plugin uses your file for its expected one)\n", "head")
+        rows.append(("head", "Linked files (the plugin uses your file for its expected one)"))
         if links:
-            for k, v in sorted(links.items()):
-                add(f"    {k}  →  {v}\n", "muted")
+            rows += [("line", f"{k}  →  {v}", "muted") for k, v in sorted(links.items())]
         else:
-            add(f"    none. Use “{PICK_TEXT}” next to a file.\n", "muted")
-        add("\n", "")
-        add("ComfyUI folders (extra_model_paths.yaml)\n", "head")
+            rows.append(("line", "none. Use the chain symbol next to a file.", "muted"))
+        rows.append(("head", "ComfyUI folders (extra_model_paths.yaml)"))
         path = cfgmod.extra_paths_file()
         if not path:
-            add("    No file chosen. Choose ComfyUI's extra_model_paths.yaml to see where your model folders are.\n", "muted")
+            rows.append(("line", "No file chosen. Choose ComfyUI's extra_model_paths.yaml to see where your model folders are.", "muted"))
         else:
-            add(f"    {path}\n", "muted")
+            rows.append(("line", path, "muted"))
             if not self._yaml_sections:
-                add("    Nothing readable in it.\n", "bad")
+                rows.append(("line", "Nothing readable in it.", "bad"))
             for sec in self._yaml_sections:
-                add(f"    [{sec['name']}]\n", "")
-                for key, paths in sec["folders"].items():
-                    for p in paths:
-                        add(f"      {key}: {p}\n", "muted")
-        return seg
+                rows.append(("line", f"[{sec['name']}]", ""))
+                rows += [("line", f"    {key}: {p}", "muted") for key, paths in sec["folders"].items() for p in paths]
+        return rows
 
     def _credits_segments(self) -> list[tuple]:
         """The "Credits" tab: who made the code, nodes and models the plugin builds on (links)."""
@@ -399,7 +375,8 @@ class SettingsMixin:
         try:
             win.transient(self.root)
             x = self.root.winfo_rootx() + self.root.winfo_width() + 8
-            win.geometry(f"{self._px(560)}x{self._px(700)}+{x}+{self.root.winfo_rooty()}")
+            w, h = self._settings_size()
+            win.geometry(f"{w}x{h}+{x}+{self.root.winfo_rooty()}")
         except (tk.TclError, TypeError):
             pass
         win.protocol("WM_DELETE_WINDOW", self._settings_close)
@@ -416,17 +393,17 @@ class SettingsMixin:
         self.nb_settings = nb
 
         # which models the plugin shows (user 29.10.): after installing, all are shown; untick to hide one (the right-click
-        # menu of a chip hides too, only here a model comes back)
+        # menu of a chip hides too, only here a model comes back). One row, its label on the left (user 30.10.)
         shown = ttk.Frame(tab_models)
         shown.pack(fill="x", side="top", pady=(0, 6))
-        ttk.Label(shown, text="Shown in the plugin", style="Muted.TLabel").grid(row=0, column=0, columnspan=3, sticky="w")
+        ttk.Label(shown, text="Enable models in plugin", style="Muted.TLabel").pack(side="left", padx=(0, 12))
         hidden = cfgmod.hidden_tabs()
         self._shown_vars = {}
-        for i, m in enumerate(models.MODELS):
+        for m in models.MODELS:
             var = tk.BooleanVar(value=m.key not in hidden)
             cb = ttk.Checkbutton(shown, text=models.SHORT[m.key], variable=var,
                                  command=lambda k=m.key, v=var: self._set_model_hidden(k, not v.get()))
-            cb.grid(row=1 + i // 3, column=i % 3, sticky="w", padx=(0, 16), pady=2)
+            cb.pack(side="left", padx=(0, 12))
             Tooltip(cb, "Untick to hide this model in the plugin, tick to show it again.")
             self._shown_vars[m.key] = var
 
@@ -456,15 +433,35 @@ class SettingsMixin:
         self.b_link_reset = ttk.Button(btns, text="Reset to startup", command=self._link_reset)
         self.b_link_reset.pack(side="left", padx=(6, 0))
         Tooltip(self.b_link_reset, "All links as they were when the plugin started.")
-        by = ttk.Button(link, text="Choose extra_model_paths.yaml\u2026", command=self._choose_yaml)
+        by = ttk.Button(link, text="Choose extra_model_paths.yaml…", command=self._choose_yaml)
         by.grid(row=5, column=0, columnspan=3, sticky="w", pady=(8, 0))
         Tooltip(by, "ComfyUI's extra_model_paths.yaml: shows where your model folders are and which files lie there. Read only.")
         bc = ttk.Button(link, text="Clear", command=lambda: self.settings_set_yaml(""))
         bc.grid(row=5, column=3, sticky="e", pady=(8, 0))
 
-        self.t_settings = self._settings_text(tab_models)
+        # the model files: one row per file in fixed columns (mark, path, size, symbols), in a canvas that scrolls (user 30.10.)
+        box = ttk.Frame(tab_models)
+        box.pack(fill="both", expand=True)
+        self.cv_settings = tk.Canvas(box, bg=BG, highlightthickness=0, bd=0)
+        self.cv_settings.pack(side="left", fill="both", expand=True)
+        self.sb_settings = ThinScrollbar(box, self.cv_settings, self._px(6), BG, auto=True)
+        self.f_set_rows = ttk.Frame(self.cv_settings)
+        self.f_set_rows.columnconfigure(1, weight=1)
+        rows_win = self.cv_settings.create_window(0, 0, window=self.f_set_rows, anchor="nw")
+        self.cv_settings.bind("<Configure>", lambda e: self.cv_settings.itemconfigure(rows_win, width=e.width), add="+")
+        self.f_set_rows.bind("<Configure>", lambda e: self.cv_settings.configure(scrollregion=self.cv_settings.bbox("all")), add="+")
+        win.bind("<MouseWheel>", self.sb_settings.wheel, add="+")      # only this window: the plugin's body has its own
+        self._set_widgets = []
+
         self.t_credits = self._settings_text(tab_credits)
         self._settings_fill()
+
+    def _settings_size(self) -> tuple[int, int]:
+        """The window's size: the one it had when it was last closed, else about 760 x 700 (user 30.10.: wider, remembered)."""
+        saved = cfgmod.get_setting("settings_size")
+        if isinstance(saved, list) and len(saved) == 2 and all(isinstance(v, int) and v >= 300 for v in saved):
+            return saved[0], saved[1]
+        return self._px(SETTINGS_W), self._px(SETTINGS_H)
 
     def _settings_text(self, parent):
         body = ttk.Frame(parent)
@@ -494,12 +491,18 @@ class SettingsMixin:
     def _settings_close(self):
         win, self._settings_win = self._settings_win, None
         try:
+            w, h = win.winfo_width(), win.winfo_height()
+            if isinstance(w, int) and isinstance(h, int) and w >= 300 and h >= 300 and [w, h] != cfgmod.get_setting("settings_size"):
+                cfgmod.set_setting("settings_size", [w, h])      # the size you gave it comes back next time (user 30.10.)
+        except (tk.TclError, AttributeError):
+            pass
+        try:
             win.destroy()
         except (tk.TclError, AttributeError):
             pass
 
     def _settings_fill(self):
-        self._fill_text(self.t_settings, self._settings_segments())
+        self._settings_draw(self._settings_rows())
         t_credits = getattr(self, "t_credits", None)
         if t_credits is not None:
             self._fill_text(t_credits, self._credits_segments())
@@ -508,6 +511,100 @@ class SettingsMixin:
         if self.v_link_exp.get() not in exp:
             self.v_link_exp.set(exp[0] if exp else "")
         self._link_expected_picked()
+
+    def _settings_draw(self, rows):
+        """The rows of _settings_rows as widgets in the scrolled frame: a model's head line, then its files in the columns
+        0 mark, 1 path (with the folder), 2 size, 3 download, 4 chain (another file of yours)."""
+        for w in getattr(self, "_set_widgets", []):
+            try:
+                w.destroy()
+            except (tk.TclError, AttributeError):
+                pass
+        self._set_widgets = []
+        parent = getattr(self, "f_set_rows", None)
+        if parent is None:
+            return
+        made = self._set_widgets
+        wrap = self._px(SETTINGS_W - 120)
+
+        def label(text, style, r, c=1, span=1, padx=(0, 0), pady=(0, 0), sticky="w", **kw):
+            lb = ttk.Label(parent, text=text, style=SET_STYLES.get(style, "TLabel"), **kw)
+            lb.grid(row=r, column=c, columnspan=span, sticky=sticky, padx=padx, pady=pady)
+            made.append(lb)
+
+        def icon(kind, tip, command, r, c, menu=None):
+            b = ttk.Button(parent, image=self._icon(kind, px=SET_ICON_PX), style="Link.TButton", command=command)
+            b.grid(row=r, column=c, sticky="e", padx=(8, 0))
+            made.append(b)
+            Tooltip(b, tip)
+            if menu is not None:
+                b.bind("<Button-3>", menu, add="+")
+
+        r = 0
+        for row in rows:
+            kind = row[0]
+            if kind == "error":
+                label(row[1], "bad", r, 0, 5)
+                label(row[2], "muted", r + 1, 0, 5, pady=(0, 8), wraplength=wrap, justify="left")
+                r += 2
+            elif kind == "intro":
+                label(row[1], "muted", r, 0, 5, pady=(0, 4), wraplength=wrap, justify="left")
+                r += 1
+            elif kind == "model":
+                _k, _key, name, state, focus = row
+                mark, style = STATE_MARK[state]
+                label(mark, style, r, 0, pady=(10, 2))
+                label(name + "   " + STATE_TEXT[state] + ("   ◀" if focus else ""), "head", r, 1, 4, pady=(10, 2))
+                r += 1
+            elif kind == "file":
+                f = row[1]
+                ok = f["found"] is not None
+                label("✓" if ok else "✗", "ok" if ok else ("bad" if f["level"] == "required" else "note"), r, 0, padx=(8, 6))
+                label(f["path"] + ("   optional" if f["level"] == "optional" else ""), "muted" if ok else "", r)
+                if f["size"] and not ok:
+                    label(f["size"], "muted", r, 2, padx=(8, 0), sticky="e")
+                if f["url"] and not ok:
+                    icon("save", f"Download ({f['size'] or 'size unknown'}). Right-click: copy the download link.",
+                         lambda u=f["url"]: webbrowser.open(u), r, 3, menu=lambda e, u=f["url"]: self._link_menu(e, u))
+                icon("link", "Use another file of yours for this one.", lambda n=f["name"]: self._choose_for(n), r, 4)
+                r += 1
+                extra = []
+                if ok and f["found"] != f["name"]:
+                    extra.append((f"your file: {f['found']}", "muted"))
+                if f["note"]:
+                    extra.append((f["note"], "muted"))
+                if f["disk"]:
+                    extra.append((f"found on disk: {f['disk']}  (restart ComfyUI to list it)", "note"))
+                for text, style in extra:
+                    label(text, style, r, 1, 4, padx=(12, 0), wraplength=wrap, justify="left")
+                    r += 1
+            elif kind == "node":
+                _k, cls, pack, url = row
+                label("✗", "bad", r, 0, padx=(8, 6))
+                label(f"node {cls}" + (f"   → {pack}" if pack else ""), "", r, 1, 3)
+                if url:
+                    icon("link", f"Get {pack or 'the node pack'}: opens its page.", lambda u=url: webbrowser.open(u), r, 4)
+                r += 1
+            elif kind == "head":
+                label(row[1], "head", r, 0, 5, pady=(14, 2))
+                r += 1
+            elif kind == "line":
+                label(row[1], row[2], r, 0, 5, padx=(8, 0))
+                r += 1
+
+    def _link_menu(self, e, url: str):
+        """Right-click on a download symbol: copy its link (user 30.10.)."""
+        menu = tk.Menu(self._settings_win or self.root, tearoff=0)
+        menu.add_command(label="Copy download link", command=lambda: self._copy_text(url, "Download link copied."))
+        try:
+            menu.tk_popup(e.x_root, e.y_root)
+        finally:
+            menu.grab_release()
+
+    def _copy_text(self, text: str, msg: str):
+        self.root.clipboard_clear()
+        self.root.clipboard_append(text)
+        self._status(msg)
 
     def _fill_text(self, t, segments):
         try:
