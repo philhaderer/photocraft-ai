@@ -320,12 +320,14 @@ class SettingsMixin(DownloadMixin):
         if self.inv is not None:                 # one paragraph (user 31.10.)
             info += (" ComfyUI reads its model folders only when it starts: after copying a file, restart ComfyUI "
                      "and click the refresh arrow (⟳) at the bottom of the plugin.")
+        info += (" A model is offered in the plugin only when the files for its standard settings are there; a function whose "
+                 "standard settings need a missing file is greyed out.")
         rows.append(("intro", info))
         rows += [("line", f"{k}  →  {v}", "muted") for k, v in sorted(links.items())]
         if self.inv is None:
             rows.append(("error", "ComfyUI could not be read.", (self._inv_error or "Not connected yet.")
                          + "\nStart ComfyUI, then click the refresh arrow (⟳) at the bottom of the plugin."))
-            rows += [("enable", m.key, m.label) for m in models.MODELS]
+            rows += [("enable", m.key, m.label, True) for m in models.MODELS]
         else:
             for row in self.inv.rows():
                 miss = [f for f, found, _lv in row["files"] if found is None and f.url]
@@ -333,7 +335,7 @@ class SettingsMixin(DownloadMixin):
                 rows.append(("model", row["key"], row["label"], row["status"].state, row["key"] == self._settings_focus,
                              {"count": len(direct), "site": len(miss) - len(direct), "size": size_text(sum(f.size for f in direct))}
                              if len(miss) > 1 else None))
-                rows.append(("enable", row["key"], row["label"]))
+                rows.append(("enable", row["key"], row["label"], row["status"].state != "missing"))
                 rows.append(("modes", row["key"], self._mode_cover(row["key"])))
                 rows.append(("line", manifest.describe_line(row["key"], self.inv.has), "muted"))
                 rows.append(("head", "Needs these models:"))
@@ -650,12 +652,20 @@ class SettingsMixin(DownloadMixin):
                 label(box, name + "   " + STATE_TEXT[state] + ("   \u25C0" if focus else ""), "head", padx=(8, 0), pady=(6, 2))
             elif kind == "enable":
                 key = row[1]
+                usable = row[3] if len(row) > 3 else True
                 var = self._shown_vars[key]
+                var.set(key not in cfgmod.hidden_tabs() if usable else False)     # a model without its files is not in the plugin
                 cb = ttk.Checkbutton(line(), text="Show this model in the plugin", variable=var, style="SetText.TCheckbutton",
                                      command=lambda k=key, v=var: self._set_model_hidden(k, not v.get()))
                 cb.pack(side="left", pady=(0, 4))
                 made.append(cb)
-                Tooltip(cb, "Untick to hide this model in the plugin, tick to show it again.")
+                if usable:
+                    Tooltip(cb, "Untick to hide this model in the plugin, tick to show it again.")
+                else:
+                    cb.configure(state="disabled")
+                    Tooltip(cb, "This model can be shown only when the files for its standard settings are there (see below).")
+                    label(line(), "Not offered in the plugin yet: the files for its standard settings are missing (✗ below). "
+                                  "Get them, restart ComfyUI and click the refresh arrow.", "note", padx=(8, 0), pady=(0, 4), wrap=self._px(60))
             elif kind == "modes":
                 label(line(), "Covers these modes:", "head", pady=(4, 2))
                 grid = ttk.Frame(line())
