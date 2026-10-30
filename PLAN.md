@@ -12,24 +12,14 @@ Stand 2026-10-30. Der Plan ist freigegeben. Abschnitt 3 ist die Arbeitsliste in 
 
 ## 1. Wartet auf deinen Live-Test
 
-Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir geprüft.
+Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir geprüft. (Live-Test vom 30.10. bestanden: Fill-Maske, Verlauf, Punkt 11 und 12, Describe, Seam-Korrektur, Fensterkopf, Slots, Zahnrad-Fenster; Liste in `docs/erledigt.md`.)
 
-**Neu vom 30.10.**
-- **Fill-Maske „bis zum Ausschnittrand“ (Option A):** Fill mit Qwen und Fibo: voll deckend über der Auswahl und dem Edge-feather-Rand, danach weich bis genau zum Rand des Ausschnitts (an der Bildkante kein Auslaufen). Mask density startet bei 100 % (vorher 5 %), der Regler bleibt. „Show feather“ zeigt dieselbe Maske. Neu: Edge feather 0 % ist nicht mehr hart; für eine harte Kante Layer mask „hard“ wählen.
-- **Verlauf der letzten 20 Läufe (Punkt 13):** Uhr-Symbol im Header links von „Copy canvas“; die Liste zeigt „Uhrzeit  Name · Modell: Prompt-Anfang“. Ein Klick lädt alle Einstellungen des Laufs mit neuem Seed und startet nichts; hat das LLM den Prompt geschrieben, kommt dessen Text zurück und Enhance ist aus. Strg+Z im Prompt-Feld holt den alten Text zurück. Abgebrochene und fehlerhafte Läufe kommen nicht in die Liste.
-
-**Neu vom 29.10.**
-- **L3 Fenster-Politur (Punkt 11):** Doppelklick auf den Header klappt ein und aus; Rechtsklick auf einen Modell-Chip: „Favourite for <Funktion>“ (Haken im Menü) und „Hide this model“; im Zahnrad-Fenster, Tab „Models“, Haken „Shown in the plugin“; Symbol „Copy canvas“ im Header (sichtbare Ebenen als ein Bild in die Zwischenablage).
-- **Live-Vorschau (Punkt 12):** läuft sie je Modell? Fenster bei 380 px? Haken „Live preview“ am Ende der Advanced settings. Später: A/B grobe Farben gegen TAESD-Dateien (Download nur mit deiner Erlaubnis).
-- **Describe mit Zufalls-Seed:** zweimal hintereinander auf demselben Slot gibt einen neuen Text; sonst kommt die alte Beschreibung ohne neuen Lauf. Dazu: letzte Beschreibung weiß an der Stelle der orangen Meldung mit Kopier-Symbol; Tag unter dem Slot weiß in dunkler Box.
-- **Seam-Korrektur je Modell:** Fibo korrigiert immer (eine Ebene, ohne „[raw]“); Flux 2/3 nie; Qwen und eigene Workflows mit dem Haken „Seam correction (A/B)“.
-- **Flux 3 Expand mit Outpaint-LoRA:** Bilder aus dem A/B-Test bewerten (`docs/tests/flux3-expand-lora.md`) und im echten Fenster prüfen.
-- **Fensterkopf und Fußzeile:** Header mit Minimieren-Knopf (eingeklappt bleibt nur der Header, Chevron zum Aufklappen); Refresh als ⟳ neben dem ComfyUI-Punkt, „Defaults“ als Textknopf (Abstände, Größe bei 150 %).
-- **Kleinere Punkte:** Prompt-Box hüpft nicht mehr beim Größerziehen; kein Flackern bei wenig Platz; Upscale factor als vier Schalter 1.5x bis 4x; Prompt-Auswahl (z. B. Flux 2 Refine „Default“) als kleine Schalter; Context in Prozent; Checkbox im PhotoCraft-Look (orange angehakt); Seed in den Advanced settings; Variants als „×2 ▾“ am Generate-Knopf; Pfeile der Zahlenfelder größer; Prompt-Feld mit dünnem Scrollbalken; Tipp mit orangem Info-Symbol.
-- **Slots (Multi Image Edit):** Auge öffnet die Vorschau neben dem Plugin; Bild aus einem Slot in die Prompt-Box ziehen fügt das Tag dort ein, wo man loslässt; Klick auf das Tag hängt es ans Prompt-Ende; Slot-Symbole kleiner (19 px); Hinweis nennt `<image1>` für das PhotoCraft-Bild.
+**Neu vom 30.10. (Nachmittag)**
+- **LLM-Zeile unter dem Prompt:** „LLM prompt enhancement“ steht überall direkt unter dem negativen Prompt, über Upscale factor und LoRA-Schaltern; ohne Modellnamen (der steht nur im Tooltip). Turbo-/LoRA-Haken bündig links.
+- **Qwen Text to image** startet ohne LLM.
+- **Zahnrad-Fenster:** „New file“ bietet die erwartete Datei nur noch an, wenn sie da ist; neu in der Liste: Restore-LoRA (Flux 3 Upscale, Pflicht), BiRefNet (Cut out, optional), UltraReal-LoRA für MOSS Text to image jetzt Pflicht.
 
 **Älter (28.10.), noch nicht ausdrücklich bestätigt**
-- **Zahnrad-Fenster (Punkt 15a):** „Choose another file…“ → Relink, Undo, Reset to startup; Tabs „Models“ und „Credits“.
 - **Mask density:** Regler in PhotoCraft 0.17+ (Fill startet seit 30.10. bei 100 %, Option A). Danach willst du ihn auch bei anderen Funktionen (z. B. Expand) ausprobieren.
 - **Fibo Expand** mit neuem Satz („Replace the white area on the …“; im A/B 30 von 30 gefüllt).
 - **Zahlenfelder:** Klick setzt den Cursor, Doppelklick markiert nur die Zahl, Pfeiltasten (0,05 bzw. 1 %), LoRA-Felder nur Zahlen, „%“ bleibt stehen.
@@ -80,9 +70,16 @@ Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir gepr
 Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher Optionen nennen. Die Punkte behalten ihre alten Nummern.
 
 **Als Nächstes**
-14. **Modell-Manager** (Vergleich mit OpenFill fertig 30.10., `docs/openfill-modellmanager.md`): deine Entscheidungen zu den Vorschlägen dort abwarten, dann einzeln bauen.
+**Als Nächstes: Modell-Manager (Punkt 14, Vergleich `docs/openfill-modellmanager.md`)**, je Schritt ein Branch, in dieser Reihenfolge:
+- **14a Qwen-Encoder-Blindtest** (gebaut 30.10., `tests/live_qwen_encoder.py`, 12 Läufe): laufen lassen (GPU, mit deiner Erlaubnis), du bewertest blind. Ist int8_convrot gleich gut: Edit-Workflow auf convrot umstellen, `qwen3vl_8b_fp8_scaled` fällt bei Qwen weg (10,6 GB weniger Download).
+- **14b Prüfsummen ins Manifest:** SHA-256 jeder Datei aus der Hugging-Face-API (`?blobs=true`) bzw. Civitai, ohne Download; ein Test prüft, dass jede Datei mit Link eine Prüfsumme und Größe hat. Grundlage für 14c.
+- **14c „Download all missing“ je Modell** (Symbol rechts vom Modell im Zahnrad, Tooltip mit der Größe): eigenes Modul `downloads.py` nur mit der Python-Standardbibliothek (keine neue Abhängigkeit): Download in eine `.part`-Datei, Fortsetzen nach Abbruch, Größe und SHA-256 prüfen, erst dann umbenennen; freien Platz vorher prüfen; Fortschritt und Abbrechen im Zahnrad-Fenster; danach Hinweis „ComfyUI neu starten“. Gesperrte Dateien (Flux 3 Klein, Upsampler): Panel mit 4 Schritten wie OpenFill (Seite öffnen, Lizenz annehmen, Token anlegen, einfügen); Token nur an huggingface.co, nie im Log. **Zu entscheiden:** Zielordner, Civitai-Datei (UltraReal).
+- **14d VRAM-Knopf** (Zahnrad): VRAM aus ComfyUI (`/system_stats`), RAM und freier Platz aus Windows; je Modell „läuft gut / langsamer (Systemspeicher) / zu groß“ nach OpenFills Rechnung (größte Modelldatei + 1,5 bis 2,5 GB; Text-Encoder laden nacheinander). Nur 16 GB ist gemessen, alles andere steht als „geschätzt“ da. **Zu entscheiden:** wo und wie es angezeigt wird.
+- **14e Dateien am Kopf erkennen:** `.safetensors`-Kopf lesen (nur die Tensor-Liste, nie Pickle-Dateien), um umbenannte Dateien in „New file“ als Vorschlag zu markieren („sieht aus wie …“). Kleinster Nutzen, zuletzt.
+- **Später (nach Release 1):** GGUF (Loader im Graph tauschen, ComfyUI-GGUF als Abhängigkeit) für 8-GB-Nutzer.
 
 **Offen aus den Testrunden**
+- **Edge feather bei Fill** (du bist unsicher, 30.10.): später als Testrunde anlegen (z. B. 0 %, Startwert, doppelt; blind), auch ob 0 % wieder hart sein soll.
 - **Ranking** für die noch offenen Funktionen (Abschnitt 2), wenn du es nennst.
 
 **Danach**
