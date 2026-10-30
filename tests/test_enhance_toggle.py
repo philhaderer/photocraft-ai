@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT))
 from pccomfy import workflows  # noqa: E402
 
 WF = ROOT / "workflows"
-TEXT_MODELS = ("TextGenerate", "VGLBionicEditPrompt", "PreviewAny")
+TEXT_MODELS = ("TextGenerate", "PreviewAny")
 
 
 def links_resolve(g):
@@ -32,7 +32,7 @@ def main():
         assert enc["inputs"]["prompt"] == "make the jacket red", enc
         assert links_resolve(off), name
         assert out in off and workflows.bypass_prompt_writer(off, p.prompt) == off  # output kept, idempotent
-        assert any(n["class_type"] == "TextGenerate" or n["class_type"] == "VGLBionicEditPrompt" for n in g.values())  # input untouched
+        assert any(n["class_type"] == "TextGenerate" for n in g.values())  # input untouched
     # a workflow without a text model is left alone
     tpl = workflows.load_template(WF / "flux3-klein-edit.json")
     g, _ = workflows.apply_template(tpl, p, "img.png", None)
