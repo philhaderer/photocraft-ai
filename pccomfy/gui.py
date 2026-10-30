@@ -532,11 +532,6 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.cb_seam.pack(side="left")
         Tooltip(self.cb_seam, "Evens out a lighter or darker rim where the result meets your picture. Test: each result "
                               "comes twice, “[seam fix]” on top and “[raw]” hidden below it.")
-        fl = self.f_live = ttk.Frame(self.f_post)   # the last row of the finishing options, for every function
-        fl.pack(fill="x", pady=(2, 0))
-        self.cb_live = ttk.Checkbutton(fl, text="Live preview", variable=self.v_live)
-        self.cb_live.pack(side="left")
-        self.tt_live = Tooltip(self.cb_live, LIVE_TIP)
 
         bf = self.f_go = ttk.Frame(r)   # Generate, Cancel, Undo, Redo: above the line over "Prompt", under the functions
         bf.pack(fill="x", padx=10, pady=(6, 2), before=self.sep_prompt)
@@ -601,6 +596,10 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         b_reset = self.b_reset = ttk.Button(foot, text="Set Page to Defaults", style="Small.TButton", command=self.reset_settings)
         b_reset.pack(side="left", padx=FOOT_RESET_PADX)
         Tooltip(b_reset, "Back to the startup settings of the chosen model and function. Other models and functions keep what they have.")
+        # Live preview sits beside "Set Page to Defaults" (user 30.10.); greyed out while the model's preview decoder is missing
+        self.cb_live = ttk.Checkbutton(foot, text="Live preview", variable=self.v_live)
+        self.cb_live.pack(side="left", padx=FOOT_RESET_PADX)
+        self.tt_live = Tooltip(self.cb_live, LIVE_TIP)
         self._build_settings(foot)      # the gear at the right end of this row (ui_settings.py)
 
         for cb in (self.cb_lm, self.cb_sampler, self.cb_sched):

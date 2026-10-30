@@ -351,8 +351,8 @@ class RunMixin:
         self.root.after(100, self._poll)
 
     def _show_preview(self, im):
-        """A live preview frame: as wide as the window (at most square), above the status line. The area appears with the
-        first frame and the window grows with it; minimised, nothing is shown."""
+        """A live preview frame: as wide as the window and at most PREVIEW_MAX_H high (a tall picture stays narrower), above
+        the status line. The area appears with the first frame and the window grows with it; minimised, nothing is shown."""
         if getattr(self, "_minimized", False):
             return
         try:
@@ -360,7 +360,11 @@ class RunMixin:
         except (tk.TclError, TypeError, ValueError):
             w = self._px(MIN_W - 20)
         from PIL import ImageOps
-        shown = ImageOps.contain(im, (w, w))
+        try:
+            screen_h = int(self.root.winfo_screenheight())
+        except (tk.TclError, TypeError, ValueError):
+            screen_h = 1080
+        shown = ImageOps.contain(im, (w, max(1, min(self._px(PREVIEW_MAX_H), round(screen_h * 0.35)))))
         self._preview_photo = icons.photo(self.root, None, "", 0, image=shown)     # Tk drops an image Python no longer holds
         self.lbl_preview.configure(image=self._preview_photo)
         if not self.f_preview.winfo_manager():
