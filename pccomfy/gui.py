@@ -403,9 +403,9 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         af = ttk.Frame(self.adv_body)
         af.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(2, 0))
         # Seed sits in the Advanced settings beside Steps and CFG (user 29.10.)
-        items = [("Steps", self._spin(af, self.v_steps, 1, 150, 1, 5)),
-                 ("CFG", self._spin(af, self.v_cfg, 1, 30, 0.5, 5)),
-                 ("Seed (-1 random)", self._spin(af, self.v_seed, -1, 2**31 - 1, 1, 11)),
+        items = [("Steps", self._spin(af, self.v_steps, 1, 150, 1, 3)),
+                 ("CFG", self._spin(af, self.v_cfg, 1, 30, 0.5, 3)),
+                 ("Seed (-1 random)", self._spin(af, self.v_seed, -1, 2**31 - 1, 1, 9)),
                  ("Denoise", self._spin(af, self.v_denoise, 0.05, 1.0, 0.05, 5))]
         # Denoise is not shown (the user, 28.10.: "there is no use for it"): the widget stays ungridded, so the workflow's /
         # the function's value, presets, Reset and the requests work as before
@@ -545,7 +545,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.b_go.pack(side="left", fill="y")
         Tooltip(self.b_go, "Generate (Ctrl+Enter)")
         # Variants are part of Generate (user 29.10.): a narrow orange piece on its right, like a split button; a click
-        # opens the choice 1 to 8. It shows "×n ▾", at 1 only "▾"
+        # opens the choice 1 to 8. It shows "×n ▾", also at 1
         self.w_variants = ttk.Button(bf, style="Split.Accent.TButton", width=0, command=self._variants_menu)
         self.w_variants.pack(side="left", fill="y", padx=(1, 0))
         Tooltip(self.w_variants, "Variants: how many pictures one Generate makes (1 to 8).")
@@ -559,9 +559,9 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.b_stop.pack(side="left", fill="y", padx=(6, 0))
         self._icons.update({"undo": self._icon("undo"), "redo": self._icon("redo")})
         self.b_undo = ttk.Button(bf, image=self._icons["undo"], style="Icon.TButton", command=self.undo_edit)
-        self.b_undo.pack(side="left", fill="y", padx=(6, 0))
         self.b_redo = ttk.Button(bf, image=self._icons["redo"], style="Icon.TButton", command=self.redo_edit)
-        self.b_redo.pack(side="left", fill="y", padx=(6, 0))
+        self.b_redo.pack(side="right", fill="y", padx=(6, 0))     # Undo and Redo at the right edge (user 30.10.), the rest stays left
+        self.b_undo.pack(side="right", fill="y", padx=(6, 0))
         Tooltip(self.b_redo, "Brings the AI edit back after an Undo.")
         Tooltip(self.b_undo, "Back to the state before the last generation.")
 

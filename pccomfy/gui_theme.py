@@ -10,7 +10,8 @@ from . import icons
 ICON_PX = 20       # the window's button icons (vector, icons.py) before the display scaling; the slot icons have their own (19, refslots.py)
 HINT_ICON_PX = 14  # the info icon in front of the tip under the prompt: about one text line high
 FN_GAP = 8         # room between a function symbol and its text (ttk has no gap option: the symbol gets it on its right)
-SPIN_PX = 21       # the chevrons of the spin boxes (50 % larger than the first 14): cut flat, so the field keeps its height
+SPIN_PX = 19       # the chevrons of the spin boxes (90 % of the former 21, user 30.10.): cut flat, so the field keeps its height
+SPIN_GAP = 3       # px between the up and the down chevron (user 30.10.: 2 to 3)
 CHECK_PX = 16      # the checkbox square (PhotoCraft's, measured from docs/design/photocraft-checkbox.png at 150 %)
 CHECK_GAP = 6      # room between the checkbox and its text
 
@@ -152,11 +153,13 @@ class ThemeMixin:
             imgs = {(up, c): icons.photo(self.root, "", c, px, icons.spin_arrow(up, c, px))
                     for up in (True, False) for c in (FG, ACCENT, DISABLED)}
             self._spin_imgs = imgs          # Tk drops an image Python no longer holds
+            gap = self._px(SPIN_GAP)
             for up, name in ((True, "Chev.uparrow"), (False, "Chev.downarrow")):
                 if name not in s.element_names():
+                    # the gap between the two chevrons sits below the upper one; left, top, right, bottom
+                    pad = (self._px(3), self._px(1), self._px(3), gap if up else self._px(1))
                     s.element_create(name, "image", imgs[(up, FG)], ("disabled", imgs[(up, DISABLED)]),
-                                     ("pressed", imgs[(up, ACCENT)]), ("active", imgs[(up, ACCENT)]),
-                                     padding=(self._px(3), self._px(1)))
+                                     ("pressed", imgs[(up, ACCENT)]), ("active", imgs[(up, ACCENT)]), padding=pad)
             s.layout("TSpinbox", [("Spinbox.field", {"side": "top", "sticky": "we", "children": [
                 ("null", {"side": "right", "sticky": "", "children": [
                     ("Chev.uparrow", {"side": "top", "sticky": "e"}), ("Chev.downarrow", {"side": "bottom", "sticky": "e"})]}),
