@@ -34,9 +34,12 @@ class ThemeMixin:
         s.configure("TLabel", background=BG, foreground=FG)
         s.configure("Muted.TLabel", foreground=MUTED, font=font(9))
         # the rows of the settings window (ui_settings.py): a bold model line, green / red / orange marks, grey details
+        # only the headings are bold; everything else in the window is one size smaller (user 31.10.)
         s.configure("SetHead.TLabel", foreground=FG, font=font(10, bold=True))
+        s.configure("SetText.TLabel", foreground=FG, font=font(9))
+        s.configure("SetText.TCheckbutton", font=font(9))
         for name, colour in (("SetOk", DONE_GREEN), ("SetBad", ERROR_TEXT), ("SetNote", ACCENT), ("SetMuted", MUTED)):
-            s.configure(f"{name}.TLabel", foreground=colour)
+            s.configure(f"{name}.TLabel", foreground=colour, font=font(9))
         s.configure("TNotebook", background=BG, borderwidth=0, tabmargins=(0, 4, 0, 0))     # the tabs of the settings window
         s.configure("TNotebook.Tab", background=PANEL, foreground=FG, padding=(14, 4), borderwidth=0)
         s.map("TNotebook.Tab", background=[("selected", ACCENT), ("active", "#5f5f5f")], foreground=[("selected", "#1b1b1b")])

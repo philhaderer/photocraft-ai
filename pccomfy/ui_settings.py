@@ -410,14 +410,14 @@ class SettingsMixin:
         # menu of a chip hides too, only here a model comes back). One row, its label on the left (user 30.10.)
         shown = ttk.Frame(tab_models)
         shown.pack(fill="x", side="top", pady=(0, 6))
-        ttk.Label(shown, text="Enable models in plugin", style="Muted.TLabel").grid(row=0, column=0, sticky="nw", padx=(0, 12))
+        ttk.Label(shown, text="Enable models in plugin", style="SetHead.TLabel").pack(side="left", padx=(0, 12))
         hidden = cfgmod.hidden_tabs()
         self._shown_vars = {}
-        for i, m in enumerate(models.MODELS):          # the full names, three to a line (user 31.10.)
+        for m in models.MODELS:                        # the full names in one row, in the small settings font (user 31.10.)
             var = tk.BooleanVar(value=m.key not in hidden)
-            cb = ttk.Checkbutton(shown, text=m.label, variable=var,
+            cb = ttk.Checkbutton(shown, text=m.label, variable=var, style="SetText.TCheckbutton",
                                  command=lambda k=m.key, v=var: self._set_model_hidden(k, not v.get()))
-            cb.grid(row=i // 3, column=1 + i % 3, sticky="w", padx=(0, 12))
+            cb.pack(side="left", padx=(0, 10))
             Tooltip(cb, "Untick to hide this model in the plugin, tick to show it again.")
             self._shown_vars[m.key] = var
 
@@ -504,15 +504,18 @@ class SettingsMixin:
             return
         made = self._set_widgets
         wrap = self._px(SETTINGS_W - 120)
+        parent.columnconfigure(2, minsize=self._px(64))        # size, download and chain: a tight group at the right edge
+        parent.columnconfigure(3, minsize=self._px(24))
+        parent.columnconfigure(4, minsize=self._px(24))
 
         def label(text, style, r, c=1, span=1, padx=(0, 0), pady=(0, 0), sticky="w", **kw):
-            lb = ttk.Label(parent, text=text, style=SET_STYLES.get(style, "TLabel"), **kw)
+            lb = ttk.Label(parent, text=text, style=SET_STYLES.get(style, "SetText.TLabel"), **kw)
             lb.grid(row=r, column=c, columnspan=span, sticky=sticky, padx=padx, pady=pady)
             made.append(lb)
 
         def icon(kind, tip, command, r, c, menu=None):
             b = ttk.Button(parent, image=self._icon(kind, px=SET_ICON_PX), style="Link.TButton", command=command)
-            b.grid(row=r, column=c, sticky="e", padx=(8, 0))
+            b.grid(row=r, column=c, sticky="e", padx=(4, 0))
             made.append(b)
             Tooltip(b, tip)
             if menu is not None:
@@ -540,7 +543,7 @@ class SettingsMixin:
                 label("✓" if ok else "✗", "ok" if ok else ("bad" if f["level"] == "required" else "note"), r, 0, padx=(8, 6))
                 label(f["path"] + ("   optional" if f["level"] == "optional" and not f.get("use") else ""), "muted" if ok else "", r)
                 if f["size"] and not ok:
-                    label(f["size"], "muted", r, 2, padx=(8, 0), sticky="e")
+                    label(f["size"], "muted", r, 2, padx=(8, 0), sticky="e", anchor="e")
                 if f["url"] and not ok:
                     icon("save", f"Download ({f['size'] or 'size unknown'}). Right-click: copy the download link.",
                          lambda u=f["url"]: webbrowser.open(u), r, 3, menu=lambda e, u=f["url"]: self._link_menu(e, u))
