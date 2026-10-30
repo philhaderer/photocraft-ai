@@ -2,6 +2,10 @@
 
 Verlauf nach Datum, neuester Stand oben. Alles liegt in `next`. Die vollen Texte von damals (Aufgaben, Befunde, Optionen) stehen in `docs/archiv/PLAN-2026-10-29.md` und `docs/archiv/HANDOFF-2026-10-28.md`, Einzelheiten zu jedem Commit in `git log next`. Was noch auf den Live-Test wartet, steht in `PLAN.md`, Abschnitt 1.
 
+## 30.10. (Sitzung am Abend)
+
+- **14a Qwen-Encoder-Blindtest** (`tests/live_qwen_encoder.py`, 12 Läufe, 3,1 min): alle 6 Paare „gleich gut“. Der Qwen-Edit-Workflow lädt jetzt `qwen3vl_8b_int8_convrot` (`feat/qwen-edit-int8-encoder`); `qwen3vl_8b_fp8_scaled` fällt weg. 14c Schritt 6 (Token-Panel) gestrichen, 14d auf später.
+
 ## 31.10.
 
 - **Zahnrad-Fenster, Modell-Manager 14c Schritt 3 bis 5** (`feat/settings-chain-picker`, `feat/downloads`, `feat/download-buttons`, `feat/download-sandbox`, `fix/parallel-downloads-and-tls`): Ketten-Symbol öffnet eine Liste der ComfyUI-Dateien der Art (ähnlichster Name zuerst, „Unlink“ zuletzt); die `extra_model_paths.yaml`-Funktion ist entfernt (ComfyUI listet Standardordner, YAML-Ordner und Symlinks selbst). `pccomfy/downloads.py` (nur Standardbibliothek: `.part`, Fortsetzen, Größe und SHA-256, freier Platz, Abbrechen, Token nur an huggingface.co), `comfydir.py` (ComfyUI-Ordner über den Prozess am Port, sonst einmal fragen), `ui_downloads.py` (Disk-Symbol je Datei und „alle fehlenden“ je Modell, OK-Fenster, Balken, ✕, parallel). Teststart „ComfyUI ohne Modelle“ lädt in `data
