@@ -364,7 +364,7 @@ class RunMixin:
             screen_h = int(self.root.winfo_screenheight())
         except (tk.TclError, TypeError, ValueError):
             screen_h = 1080
-        shown = ImageOps.contain(im, (w, max(1, min(self._px(PREVIEW_MAX_H), round(screen_h * 0.35)))))
+        shown = ImageOps.contain(im, (w, max(1, min(self._px(PREVIEW_MAX_H), round(screen_h * 0.245)))))
         self._preview_photo = icons.photo(self.root, None, "", 0, image=shown)     # Tk drops an image Python no longer holds
         self.lbl_preview.configure(image=self._preview_photo)
         if not self.f_preview.winfo_manager():
