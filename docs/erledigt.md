@@ -4,6 +4,8 @@ Verlauf nach Datum, neuester Stand oben. Alles liegt in `next`. Die vollen Texte
 
 ## 30.10. (Sitzung am Abend)
 
+- **14e Dateien am Kopf erkennen** (`feat/safetensors-header`, `pccomfy/sthead.py`, `tests/test_sthead.py`): das Ketten-Menü im Zahnrad-Fenster hängt „(looks like <Datei>)“ an umbenannte Kopien von Manifest-Dateien (Größe + gültiger Kopf) und „(incomplete?)“ an Dateien, denen Bytes fehlen; Treffer der erwarteten Datei stehen oben.
+
 - **14a Qwen-Encoder-Blindtest** (`tests/live_qwen_encoder.py`, 12 Läufe, 3,1 min): alle 6 Paare „gleich gut“. Der Qwen-Edit-Workflow lädt jetzt `qwen3vl_8b_int8_convrot` (`feat/qwen-edit-int8-encoder`); `qwen3vl_8b_fp8_scaled` fällt weg. 14c Schritt 6 (Token-Panel) gestrichen, 14d auf später.
 - **Regel „Standardeinstellungen“** (`feat/default-settings-files`): `inventory.default_switch_files` liest aus dem Workflow, welche Dateien die beim Start eingeschalteten Schalter brauchen; zusammen mit dem Manifest entscheidet das, ob ein Modell/eine Funktion angeboten wird. Im Zahnrad-Fenster ist der Haken „Show this model in the plugin“ bei fehlenden Dateien grau und aus, mit orangem Hinweis; der Einleitungstext oben nennt die Regel.
 - **Feinschliff Gruppe 9** (`feat/optional-switch-files`): Flux 3 Upscale läuft ohne die SeedVR2-Dateien und -Knoten (Schalter startet aus, Dateien jetzt optional); ein Schalter (SeedVR2-Stufe, Speed-LoRA), dessen Dateien oder Knoten fehlen, ist grau mit den Namen im Tooltip; geladene Einstellungen, die ihn einschalten wollen, schalten ihn aus und sagen warum (`tests/test_optional_switches.py`).
