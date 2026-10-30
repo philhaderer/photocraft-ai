@@ -9,7 +9,7 @@ symbol (`fn-<key>` in pccomfy/icons.py; Image → image, only for a workflow of 
 | `outpaint.png` | Expand image |
 | `inpaint.png` | Fill Selection |
 | `remove.png` | Remove Selection |
-| `edit.png` | Edit whole image |
+| `edit.png` | Edit Canvas |
 | `multi_edit.png` | Multi Image Edit |
 | `upscale.png` | Upscale (new file) |
 | `refine.png` | Refine (same size) |

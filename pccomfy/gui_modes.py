@@ -331,7 +331,8 @@ class ModeMixin:
         self.v_preset.set("")
         self.v_lora_str.set(1.0)
         self._lora_wf = None                     # the LoRA slider starts at the value the workflow ships with (else 1.0)
-        self._ctx = {"inpaint": FILL_CONTEXT}
+        self._ctx.pop(self.v_mode.get(), None)      # only this function forgets its Context value; the others keep theirs
+        self._ctx.setdefault("inpaint", FILL_CONTEXT)
         self.v_context.set(self._ctx.get(self.v_mode.get(), d["context"]))
         self._ctx_mode = self.v_mode.get()
         self._vals_key = None                    # steps / CFG / sampler / scheduler are read from the workflow again

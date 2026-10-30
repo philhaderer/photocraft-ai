@@ -1,4 +1,4 @@
-"""Edit whole image: the whole picture goes in, a selection is ignored, a prompt is required, the edit workflows are valid.
+"""Edit Canvas: the whole picture goes in, a selection is ignored, a prompt is required, the edit workflows are valid.
 
     python tests/test_edit_mode.py
 """
@@ -70,7 +70,7 @@ def main():
     b2.comfy = T.FakeComfy()
     b2.run(req)
     assert "outline" in b2.comfy.graphs[0]["8"]["inputs"]["prompt"].lower() or "red" in b2.comfy.graphs[0]["8"]["inputs"]["prompt"].lower()
-    # Edit whole image with a part selected: the selection becomes the whole canvas
+    # Edit Canvas with a part selected: the selection becomes the whole canvas
     pc, res = run("qwen-image-21-edit.json", with_sel=True)
     assert any(c == "select.all" for c, _ in pc.log), "selection not widened to the whole picture"
     print("ALL OK (edit mode)")
