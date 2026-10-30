@@ -11,8 +11,9 @@ pccomfy/fillmask.py over the same result:
     crop_fade  fades out to the crop's sides (the attempt of 28.10., checked at the canvas edges)
     wide       a soft edge three times as wide
 
-Cases: 4 pictures x 5 positions (a free spot in the middle; left edge, top edge, top-left and bottom-right corner, each
-touching the canvas edge) x rectangle and hard lasso x Context 0.4 and 0.8 x Fibo and Qwen, one seed; every model with its Fill start values
+Cases (cut to a quarter, user 30.10.): 4 pictures x 5 positions (a free spot in the middle; left edge, top edge, top-left
+and bottom-right corner, each touching the canvas edge) x Fibo and Qwen = 40 runs, one seed, Context 0.4; rectangle and
+hard lasso take turns, so every picture and position gets both; every model with its Fill start values
 (Edge feather, base resolution; Fibo with its seam correction). Measured for every picture: the jump at the crop's sides
 inside the picture, and how much of what the model changed outside the selection stays visible. Then rate blind: 40
 cases (each picture, position and model once), the four variants side by side in random order; pick the best and tick
@@ -67,7 +68,7 @@ OBJECTS = {
 }
 MODELS = ["fibo", "qwen"]
 SHAPES = ["rect", "lasso"]
-CONTEXTS = [0.4, 0.8]
+CONTEXT = 0.4                                      # the Fill start value (user 30.10.: the round cut to a quarter)
 SEED = 11
 MAX_SIDE = 1280
 ISSUES = ["Schatten/Rand der Füllung abgeschnitten", "Gerade Kante des Ausschnitts sichtbar",
@@ -187,36 +188,29 @@ def cmd_run(a):
         im.thumbnail((MAX_SIDE, MAX_SIDE))
         pics[n] = im
     cases, n_done, t_start = {}, 0, time.time()
-    total = len(MODELS) * len(PICTURES) * len(POSITIONS) * len(SHAPES) * len(CONTEXTS)
+    total = len(MODELS) * len(PICTURES) * len(POSITIONS)
     for model in MODELS:                 # one model after the other: each is loaded once
-        for name, im in pics.items():
-            for pos in POSITIONS:
-                for shape in SHAPES:
-                    mask = selection(im.size, pos, shape, name)
-                    for ctx in CONTEXTS:
-                        n_done += 1
-                        t0 = time.time()
-                        cid = f"{len(cases) + 1:03d}"
-                        rgb, region, bbox, pct = r.fill(model, im, mask, OBJECTS[name][pos], ctx)
-                        rgb.save(out / "ergebnisse" / f"{cid}.png")
-                        sel = mask.crop(region.pil())
-                        variants = {}
-                        for v in fillmask.VARIANTS:
-                            m, dens = fillmask.layer_mask(v, mask, region, bbox, pct)
-                            fillmask.composite(im, rgb, region, m, dens).save(out / "bilder" / f"{cid}-{v}.png")
-                            variants[v] = measure(im, rgb, region, sel, fillmask.effective(m, dens))
-                        cases[cid] = {"bild": name, "position": pos, "form": shape, "context": ctx, "modell": model,
-                                      "prompt": OBJECTS[name][pos], "feather_pct": pct,
-                                      "region": [region.x, region.y, region.w, region.h], "messung": variants}
-                        print(f"{n_done}/{total} {model} {name[:22]} {pos} {shape} ctx {ctx}: {time.time() - t0:.0f} s", flush=True)
-    # the blind part: each picture, position and model once, the shape and Context taking turns
-    rate, k = [], 0
-    for cid, c in cases.items():
-        want = (SHAPES[k % 2], CONTEXTS[(k // 2) % 2])
-        if (c["form"], c["context"]) == want:
-            rate.append(cid)
-        if c["form"] == SHAPES[-1] and c["context"] == CONTEXTS[-1]:
-            k += 1                        # the next picture/position: the next combination
+        for i, (name, im) in enumerate(pics.items()):
+            for j, pos in enumerate(POSITIONS):
+                shape = SHAPES[(i + j) % 2]      # rectangle and lasso take turns: every picture and position gets both
+                ctx = CONTEXT
+                mask = selection(im.size, pos, shape, name)
+                n_done += 1
+                t0 = time.time()
+                cid = f"{len(cases) + 1:03d}"
+                rgb, region, bbox, pct = r.fill(model, im, mask, OBJECTS[name][pos], ctx)
+                rgb.save(out / "ergebnisse" / f"{cid}.png")
+                sel = mask.crop(region.pil())
+                variants = {}
+                for v in fillmask.VARIANTS:
+                    m, dens = fillmask.layer_mask(v, mask, region, bbox, pct)
+                    fillmask.composite(im, rgb, region, m, dens).save(out / "bilder" / f"{cid}-{v}.png")
+                    variants[v] = measure(im, rgb, region, sel, fillmask.effective(m, dens))
+                cases[cid] = {"bild": name, "position": pos, "form": shape, "context": ctx, "modell": model,
+                              "prompt": OBJECTS[name][pos], "feather_pct": pct,
+                              "region": [region.x, region.y, region.w, region.h], "messung": variants}
+                print(f"{n_done}/{total} {model} {name[:22]} {pos} {shape}: {time.time() - t0:.0f} s", flush=True)
+    rate = list(cases)                    # the blind part: every case
     rng = random.Random(7)
     rng.shuffle(rate)
     shown = {cid: rng.sample(list(fillmask.VARIANTS), len(fillmask.VARIANTS)) for cid in rate}
