@@ -19,7 +19,8 @@ Search the whole folder for the exact words you see in the window, e.g. `Covers 
 | Names of the functions, the Live preview tip (`LIVE_TIP`), the "LLM" button tip (`LLM_TIP`), other shared texts | `pccomfy\gui_common.py` |
 | Main window: labels, buttons and most tooltips | `pccomfy\gui.py` |
 | Prompt area (LLM line, "LLM" button, negative prompt), LoRA rows | `pccomfy\gui_prompt.py`, `pccomfy\gui_lora.py` |
-| Reference slots of Multi Image Edit | `pccomfy\refslots.py` |
+| Reference slots of Multi Image Edit, the BBOX switch and its tip (`BBOX_CHECK_TIP`, `BBOX_TIP`) | `pccomfy\refslots.py` |
+| The sentence BBOX adds to the prompt (`BBOX_SENTENCE`) | `pccomfy\bridge.py` |
 | History list (clock in the header): "Erase history", "No runs yet." | `pccomfy\gui_run.py` |
 | Right-click menu on a model (Save current settings, Load default settings, Favourite, Hide) | `pccomfy\gui_modes.py` |
 | GitHub start page | `README.md` (change it only when you ask Claude) |
