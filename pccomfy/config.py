@@ -162,6 +162,25 @@ def set_favorite(mode: str, tab: str | None) -> None:
     set_setting("favorites", f or None)
 
 
+# Saved page settings: the right-click menu on a model chip ("Save current settings for this mode and model").
+
+def saved_page(model: str, mode: str) -> dict:
+    """The settings the user saved for this model and function ({} = none); they replace the starting settings."""
+    s = get_setting("saved_pages", {})
+    page = s.get(f"{model}|{mode}") if isinstance(s, dict) else None
+    return dict(page) if isinstance(page, dict) else {}
+
+
+def set_saved_page(model: str, mode: str, settings: dict | None) -> None:
+    s = get_setting("saved_pages", {})
+    s = dict(s) if isinstance(s, dict) else {}
+    if settings:
+        s[f"{model}|{mode}"] = settings
+    else:
+        s.pop(f"{model}|{mode}", None)
+    set_setting("saved_pages", s or None)
+
+
 def hidden_tabs() -> set:
     h = get_setting("hidden_tabs", [])
     return {str(x) for x in h} if isinstance(h, list) else set()

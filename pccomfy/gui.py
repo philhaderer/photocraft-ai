@@ -600,7 +600,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         Tooltip(b_refresh, "Refresh: reads PhotoCraft's and ComfyUI's state again: connection, installed LoRAs, samplers, text models, workflows.")
         b_reset = self.b_reset = ttk.Button(foot, text="Set Page to Defaults", style="Small.TButton", command=self.reset_settings)
         b_reset.pack(side="left", padx=FOOT_RESET_PADX)
-        Tooltip(b_reset, "Back to the startup settings of the chosen model and function. Other models and functions keep what they have.")
+        Tooltip(b_reset, "Back to the starting settings of the chosen model and function (the ones you saved with a right-click on the model, else the standard ones). Other models and functions keep what they have.")
         # Live preview sits beside "Set Page to Defaults" (user 30.10.); greyed out while the model's preview decoder is missing
         self.cb_live = ttk.Checkbutton(foot, text="Live preview", variable=self.v_live)
         self.cb_live.pack(side="left", padx=FOOT_RESET_PADX)
