@@ -4,6 +4,7 @@ Verlauf nach Datum, neuester Stand oben. Alles liegt in `next`. Die vollen Texte
 
 ## 30.10.
 
+- **Verlauf der letzten 20 Läufe** (Punkt 13, OpenFill T3b, `feat/run-history`; Entscheidungen des Users: Uhr-Symbol im Header, alles laden mit neuem Seed, LLM-Text mit Enhance aus). `pccomfy/history.py` speichert je fertigem Lauf alle Einstellungen (`_collect`) in `data/history.json`; Laden über `_apply_settings`, Prompt mit Strg+Z-Schritt. Test `tests/test_run_history.py`; mit echtem Tk (verstecktes Fenster) geprüft.
 - Aufräumen der Planungsdokumente: PLAN.md nur noch offen + Entscheidungen, dieser Verlauf neu, Handoff als Technik-Anleitung, ideas.md nur offene Ideen, fertige Recherchen nach `docs/archiv/`. `photocraft-ai 0.15.1.bat` entfernt (Wunsch des Users). Alte, gemergte Branches und der Ordner `lanes/` gelöscht.
 
 ## 29.10.
