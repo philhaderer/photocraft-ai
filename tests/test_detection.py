@@ -70,6 +70,20 @@ def test_manifest():
         assert m.requires, m.key
 
 
+def test_checksums():
+    """What the downloader (PLAN 14c) checks a file against: every file with a link has its exact size; every file from
+    Hugging Face or Civitai has the SHA-256 the source publishes (the TAESD decoders on GitHub have none)."""
+    import re
+    for f in manifest.FILES.values():
+        if not f.url:
+            continue
+        assert f.size > 0, (f.name, "no size")
+        if "huggingface.co/" in f.url or "civitai.com/" in f.url:
+            assert re.fullmatch(r"[0-9a-f]{64}", f.sha256), (f.name, "no SHA-256")
+        else:
+            assert f.sha256 == "", f.name
+
+
 def test_workflows_covered():
     """Every model file a shipped workflow loads is known to the manifest for that tab and mode (required or optional)."""
     for m in models.MODELS:
@@ -339,6 +353,7 @@ def test_find_on_disk():
 
 def main():
     test_manifest()
+    test_checksums()
     test_workflows_covered()
     test_resolve()
     test_status()
