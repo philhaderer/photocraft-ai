@@ -53,6 +53,7 @@ Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir gepr
 - MOSS Text to image: CFG 3.0, 35 Steps, ohne DMD2 (Blindtest 29.10.). Qwen startet ohne Turbo, Qwen-Slotzahl 8.
 
 **Fenster**
+- Kein Tooltip zur runden Auswahl (30.10.).
 - Fensterkopf: Funktion zuerst (große Buttons mit Symbol), Modelle darunter als Chips. Minimieren = Einklappen zum Header (Knopf oder Doppelklick).
 - Rechtsklick auf Modell-Chip: Favorit (Haken im Menü, kein Zeichen am Chip), Modell ausblenden; zurückholen nur im Zahnrad-Fenster. Workflow-JSON speichern verworfen.
 - Settings-Fenster mit Tabs „Models“ und „Credits“; weitere Tabs später.
@@ -79,14 +80,13 @@ Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir gepr
 Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher Optionen nennen. Die Punkte behalten ihre alten Nummern.
 
 **Als Nächstes**
-14. **Modell-Manager von OpenFill vergleichen** (T4): sobald du das Repo geladen hast; Ergebnis als Gegenüberstellung mit Empfehlung (übernehmen / anpassen / weglassen).
+14. **Modell-Manager** (Vergleich mit OpenFill fertig 30.10., `docs/openfill-modellmanager.md`): deine Entscheidungen zu den Vorschlägen dort abwarten, dann einzeln bauen.
 
 **Offen aus den Testrunden**
-- **Tooltip zur runden Auswahl:** ob einer dazukommt, ist offen.
 - **Ranking** für die noch offenen Funktionen (Abschnitt 2), wenn du es nennst.
 
 **Danach**
-15. **Flux-3-Boxen** (Entscheidung offen: A Textlauf von `Flux3LayoutPrompt` zuerst, B Knoten in den Workflow, C nur von Hand; Notizen `docs/flux3-bbox-workflow-notes.md`).
+15. **Flux-3-Boxen** (entschieden 30.10.: **A**, zuerst ein Textlauf von `Flux3LayoutPrompt`; Notizen `docs/flux3-bbox-workflow-notes.md`).
 16. **L4 Inhalte:** Krea-Style-Chooser, Tipps, tägliche Tooltips, Tutorial-PSDs.
 17. **Easy Mode** (`easymode.py`).
 18. **Release:** neues Repo, Credits (Upstream, Lucide-Icons, Inter-Schrift (OFL), Modelle, Danrisi), README-Windows, Prüfung auf 16 GB; `photocraft-ai.bat` (zeigt noch auf 0.14.0) an die aktuelle PhotoCraft-Version angleichen. Start für andere Nutzer: Verknüpfung als Standard, Autostart als Schalter im Zahnrad prüfen (Code liegt bereit, Einzelheiten `docs/erledigt.md`, 28.10.). Am saubersten wäre ein Start durch PhotoCraft selbst (Einstellung `generatorEnabled`): bei den PhotoCraft-Entwicklern nachfragen.
