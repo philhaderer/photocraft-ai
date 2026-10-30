@@ -34,7 +34,7 @@ class RunMixin:
                        context=min(1.0, max(0.0, round(float(self.v_context.get()) * 20) / 20)),   # the slider's range and steps (an old saved 2.0 too) mask_grow=int(self.v_grow.get()),
                        mask_blur=int(self.v_blur.get()),
                        overlap=int(self.v_overlap.get()), variants=int(self.v_variants.get()),
-                       fooocus=bool(self.v_fooocus.get()), enhance=bool(self.v_enhance.get()) and self.v_mode.get() != "outpaint",
+                       fooocus=bool(self.v_fooocus.get()), enhance=bool(self.v_enhance.get()) and self.v_mode.get() not in NO_LLM_MODES,
                        turbo=bool(self.v_turbo.get()), scale=self._scale(),
                        lora_strength=(round(float(self.v_lora_str.get()), 2) if self._has_lora_switch() else None),
                        stage_on=bool(self.v_stage.get()) or not self._stage_label(), stages_off=self._stages_off(), stage_strengths=self._stage_strengths(), sampler_override=self._sampler_override(), doc_tag=self._doc_tag(), loras=[tuple(x) for x in self._loras()], sharpen=0.0 if self.v_mode.get() == "outpaint" else round(float(self.v_sharpen.get()), 2), match=round(float(self.v_match.get()), 2), detail=round(float(self.v_detail.get()), 2) if self.v_mode.get() in SCALE_MODES else 1.0,

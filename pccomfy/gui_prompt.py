@@ -65,7 +65,7 @@ class PromptMixin:
             t.bind(seq, fn)
 
     def _show_enhance_box(self, on: bool):
-        """The "LLM prompt enhancement" row (with the copy button): not in Expand image. It sits directly under the negative
+        """The "LLM prompt enhancement" row (with the copy button): not in Expand, Remove, Refine and Upscale (NO_LLM_MODES). It sits directly under the negative
         prompt, above the Upscale factor and the LoRA switches (user 30.10.)."""
         shown = bool(self.f_enh.winfo_manager())
         if on and not shown:
