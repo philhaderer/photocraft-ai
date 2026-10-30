@@ -294,6 +294,25 @@ def mode_nodes(key: str, mode: str) -> tuple:
     return t.modes[mode].nodes if t and mode in t.modes else ()
 
 
+# The "LLM" button under the prompt describes the picture with the text model the chosen model already uses (user 30.10.),
+# so nobody downloads another one. Image input checked live 30.10. for all of these. The last one is the fallback.
+_DESCRIBE_FALLBACK = "qwen3.5_9b_int8_convrot.safetensors"
+DESCRIBE_WRITERS = {
+    "fibo": ("qwen3.5_9b_int8_convrot.safetensors",),
+    "qwen": ("qwen3.5_9b_w4a8_gptq.safetensors",),
+    "moss": ("qwen3.5_9b_w4a8_gptq.safetensors",),
+    "flux2": ("qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors",),
+    "flux3": ("qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors",),
+    "krea2": ("qwen3vl_4b_fp8_scaled.safetensors",),
+}
+
+
+def describe_writers(model_key: str) -> tuple[str, ...]:
+    """The text model files that can describe a picture for this model, best first (its own writer, then the fallback)."""
+    own = DESCRIBE_WRITERS.get(model_key, ())
+    return own + tuple(n for n in (_DESCRIBE_FALLBACK,) if n not in own)
+
+
 # node class prefix -> (pack, where to get it). Only what the shipped workflows use.
 NODE_PACKS = (
     ("AUSBOSS_NODES_", "ComfyUI-AusBoss (version 2.13.0 or newer)", "https://github.com/ausboss/ComfyUI-AusBoss"),

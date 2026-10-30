@@ -319,6 +319,10 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.b_clear = ttk.Button(self.f_ptop, image=self._icons["clear"], style="Link.TButton", command=self._clear_prompt)   # flat: the row keeps its height
         self.b_clear.pack(side="right")
         Tooltip(self.b_clear, "Delete the prompt (Ctrl+Z in the field brings it back).")
+        # "LLM" left of the bin (user 30.10.): the model's own text model describes the picture, the text is added to the prompt
+        self.b_llm = ttk.Button(self.f_ptop, text="LLM", style="Small.TButton", command=self.describe_canvas)
+        self.b_llm.pack(side="right", padx=(0, 6))
+        self.tt_llm = Tooltip(self.b_llm, LLM_TIP)
         self.f_pchoice = ttk.Frame(self.f_ptop)
         self.f_pchoice.pack(side="left", padx=(10, 0))
         self.v_pchoice = tk.StringVar(value="")

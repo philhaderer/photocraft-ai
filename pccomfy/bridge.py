@@ -891,6 +891,22 @@ class Bridge:
         progress(1.0, "Described")
         return text
 
+    def describe_canvas(self, clip: str = "", progress: Progress | None = None) -> str:
+        """The "LLM" button: what the active document shows (all visible layers as one picture), in a sentence or two, written
+        by the text model file `clip` (empty: the workflow's own)."""
+        pc = self.pc.connect()
+        orig = pc.session().get("active")
+        if orig is None:
+            raise BridgeError("Open a document in PhotoCraft first.")
+        tag = uuid.uuid4().hex[:8]
+        try:
+            src, _ = self._export(orig, f"{tag}-describe", need_mask=False)
+            return self.describe_image(imaging.to_rgb(src), progress, clip=clip)
+        except PhotoCraftError as e:
+            raise BridgeError(str(e)) from None
+        finally:
+            self._cleanup()
+
     def describe_scene(self, progress: Progress | None = None) -> str:
         """Krea 2 / MOSS Expand (Describe button): the surroundings of the active picture without its main subject, as the
         prompt (SCENE_QUESTION). Only the original is described, not the empty margin: where content_box finds it, else

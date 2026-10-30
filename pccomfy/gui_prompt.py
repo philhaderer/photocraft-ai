@@ -1,6 +1,7 @@
 """The prompt field: editor keys, hints, ready-made prompts, enhance and negative boxes. (moved out of gui.py unchanged; see PLAN.md, phase 0)."""
 from __future__ import annotations
 
+from . import manifest
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
 
@@ -123,6 +124,7 @@ class PromptMixin:
         text = (spec.prompt_tip if spec and spec.prompt_tip else "") or (EXPAND_HINT if mode == "outpaint" else "")
         on = bool(text)
         self._hint_text = text
+        self._update_llm_button()
         self.t_prompt.configure(highlightbackground=ACCENT if on else "#454545", highlightthickness=2 if on else 1)
         if on:
             self.lbl_hint.configure(text=text)
@@ -176,6 +178,74 @@ class PromptMixin:
             t.insert("1.0", box["text"])
             t.edit_separator()
             self._status("Described. Edit the text as you like, then Generate.")
+        self.root.after(200, check)
+
+    def _llm_file(self) -> str:
+        """The text model file the LLM button uses: the first of the model's describe writers that ComfyUI lists ("" = none)."""
+        m = self._model()
+        if m is None or self.inv is None:
+            return ""
+        for name in manifest.describe_writers(m.key):
+            found = self.inv.found(name)
+            if found:
+                return found
+        return ""
+
+    def _update_llm_button(self):
+        """The LLM button is grey while no function is chosen, the prompt is switched off (Remove object) or the model's text
+        model is missing; the tooltip says which file."""
+        b = getattr(self, "b_llm", None)
+        if b is None:
+            return
+        m = self._model()
+        off = str(self.t_prompt.cget("state")) == "disabled"
+        if m is None or off:
+            b.configure(state="disabled")
+            self.tt_llm.text = LLM_TIP
+        elif self.inv is not None and not self._llm_file():
+            b.configure(state="disabled")
+            self.tt_llm.text = LLM_TIP + f"\n\nNeeds {manifest.describe_writers(m.key)[0]}: download it in the settings (gear)."
+        else:
+            b.configure(state="normal")
+            self.tt_llm.text = LLM_TIP
+
+    def describe_canvas(self):
+        """The LLM button: the model's text model describes the picture in PhotoCraft (Bridge.describe_canvas); the text goes
+        to the end of the prompt after a line break, in one undo step (Ctrl+Z in the field takes it away)."""
+        import threading
+        if getattr(self, "_describing", False) or (self.worker and self.worker.is_alive()):
+            return
+        clip = self._llm_file()
+        self._describing = True
+        self.b_llm.configure(state="disabled")
+        self._status("Describing the picture …")
+        box: dict = {}
+
+        def work():
+            try:
+                box["text"] = self.bridge.describe_canvas(clip)
+            except Exception as e:   # PhotoCraft or ComfyUI not running, no text model ...
+                box["error"] = str(e)
+
+        threading.Thread(target=work, daemon=True).start()
+
+        def check():
+            if "text" not in box and "error" not in box:
+                self.root.after(200, check)
+                return
+            self._describing = False
+            self._update_llm_button()
+            if "error" in box:
+                self._status("Describe failed: " + box["error"], error=True)
+                return
+            t = self.t_prompt
+            t.edit_separator()
+            if t.get("1.0", "end").strip():
+                t.insert("end-1c", "\n" + box["text"])
+            else:
+                t.insert("1.0", box["text"])
+            t.edit_separator()
+            self._status("Described. The text is at the end of the prompt.")
         self.root.after(200, check)
 
     def _copy_enhanced(self):
