@@ -15,6 +15,7 @@ Stand 2026-10-30. Der Plan ist freigegeben. Abschnitt 3 ist die Arbeitsliste in 
 Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir geprüft.
 
 **Neu vom 30.10.**
+- **Fill-Maske „bis zum Ausschnittrand“ (Option A):** Fill mit Qwen und Fibo: voll deckend über der Auswahl und dem Edge-feather-Rand, danach weich bis genau zum Rand des Ausschnitts (an der Bildkante kein Auslaufen). Mask density startet bei 100 % (vorher 5 %), der Regler bleibt. „Show feather“ zeigt dieselbe Maske. Neu: Edge feather 0 % ist nicht mehr hart; für eine harte Kante Layer mask „hard“ wählen.
 - **Verlauf der letzten 20 Läufe (Punkt 13):** Uhr-Symbol im Header links von „Copy canvas“; die Liste zeigt „Uhrzeit  Name · Modell: Prompt-Anfang“. Ein Klick lädt alle Einstellungen des Laufs mit neuem Seed und startet nichts; hat das LLM den Prompt geschrieben, kommt dessen Text zurück und Enhance ist aus. Strg+Z im Prompt-Feld holt den alten Text zurück. Abgebrochene und fehlerhafte Läufe kommen nicht in die Liste.
 
 **Neu vom 29.10.**
@@ -29,7 +30,7 @@ Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir gepr
 
 **Älter (28.10.), noch nicht ausdrücklich bestätigt**
 - **Zahnrad-Fenster (Punkt 15a):** „Choose another file…“ → Relink, Undo, Reset to startup; Tabs „Models“ und „Credits“.
-- **Mask density:** Fill mit Qwen und Fibo startet bei 5 % (PhotoCraft 0.17+). Danach willst du ihn auch bei anderen Funktionen (z. B. Expand) ausprobieren.
+- **Mask density:** Regler in PhotoCraft 0.17+ (Fill startet seit 30.10. bei 100 %, Option A). Danach willst du ihn auch bei anderen Funktionen (z. B. Expand) ausprobieren.
 - **Fibo Expand** mit neuem Satz („Replace the white area on the …“; im A/B 30 von 30 gefüllt).
 - **Zahlenfelder:** Klick setzt den Cursor, Doppelklick markiert nur die Zahl, Pfeiltasten (0,05 bzw. 1 %), LoRA-Felder nur Zahlen, „%“ bleibt stehen.
 - **Kleine Verbesserungen vom 28.10.:** Fibo-Sharpen-Startwerte (Refine 30 %, Text to image 20 %), Fibo Refine mit Default-Prompt und „Mix source/new image“, zweiter Satz im Fill-Tipp, Trennlinie über der Statuszeile, Zahnrad-Klick schließt das Fenster wieder, Zahnrad kleiner ohne dunklen Hintergrund, Denoise ausgeblendet, allgemeine Funktions-Tooltips.
@@ -59,7 +60,7 @@ Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir gepr
 - Fortschrittsbalken bleibt orange. Runde Radios gibt es nicht (PhotoCraft hat keine), stattdessen kleine Schalter.
 
 **Masken und Regler**
-- Layer mask nur soft / hard / none. Fill Qwen/Fibo „soft“ = Auswahl voll deckend, weicher Rand nur außen.
+- Layer mask nur soft / hard / none. Fill Qwen/Fibo „soft“ = Auswahl voll deckend, weicher Rand nur außen, läuft bis zum Ausschnittrand aus (Option A, 30.10.); Mask density startet bei 100 %.
 - Regler-Reihenfolge: Sharpen, Match colours, Context, Edge feather, Layer mask mit „Show feather“. „Image and mask“ ausgeblendet. Denoise ausgeblendet.
 - Startwerte: Qwen Fill 0.4 / 4 %, Qwen und Fibo Remove 0.4 / 10 %, Fibo Fill Context 0.4. Jeder Start setzt den Startwert der Funktion (kein Merken).
 - Kein eigener Modus für Rechteck und Lasso. Fibo mit glatter Auswahl bleibt, wie es ist. Referenz: Fibo, Rechteck, soft, 6,5 % Feather.
@@ -78,11 +79,9 @@ Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir gepr
 Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher Optionen nennen. Die Punkte behalten ihre alten Nummern.
 
 **Als Nächstes**
-- **Fill-Maske einbauen** (Testrunde fertig 30.10., Ergebnis in `docs/tests/fill-mask-testrunde.md`, Abschnitt „Ergebnis“): zuerst dir die Optionen vorlegen, dann den Sieger in `bridge.soft_layer_mask` einbauen (die Varianten liegen in `pccomfy/fillmask.py`). Optionen: **A** „bis zum Ausschnittrand“ für Fill mit Qwen und Fibo, Mask density startet bei 100 % (empfohlen: bei beiden Modellen am häufigsten gut, sauber an der Ausschnittkante); **B** je Modell: Fibo bleibt bei Dichte 5 % (bei Fibo gleich gut), Qwen bekommt „bis zum Ausschnittrand“; **C** bleibt wie heute.
 14. **Modell-Manager von OpenFill vergleichen** (T4): sobald du das Repo geladen hast; Ergebnis als Gegenüberstellung mit Empfehlung (übernehmen / anpassen / weglassen).
 
 **Offen aus den Testrunden**
-- **Fill-Maske neu** (Befund 28.10.): die schmale weiche Kante schneidet bei Fill den Rand der Füllung und ihren Schatten ab. Ein erster Versuch (Maske läuft bis zum Rand des Ausschnitts aus) war „viel besser“, wurde aber zurückgenommen (an Bildkanten weich, ohne Regler nicht testbar). **Testrunde gebaut 30.10.** (`docs/tests/fill-mask-testrunde.md`): vier Masken-Varianten (heute schmal, heute Dichte 5 %, bis zum Ausschnittrand, breit 3×). Stufe 1 ohne GPU erledigt: Alle halten die Regeln ein, keine läuft an einer Bildkante aus. **Stufe 2 erledigt 30.10.** (drei Runden, 60 Läufe, alle blind bewertet): Einbau steht oben unter „Als Nächstes“.
 - **Tooltip zur runden Auswahl:** ob einer dazukommt, ist offen.
 - **Ranking** für die noch offenen Funktionen (Abschnitt 2), wenn du es nennst.
 

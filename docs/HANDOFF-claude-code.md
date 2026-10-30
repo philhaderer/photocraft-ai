@@ -34,7 +34,7 @@ Zweck: wie man in diesem Repo arbeitet und prüft. Regeln und Arbeitsweise stehe
 - **Masken:** hart über `layer.layerMask.revealSelection` (verbraucht die Auswahl, danach `select.reselect`); weich über eine Hilfsebene mit der Maske als Transparenz, `select.loadSelection {channel: "transparency"}`, `revealSelection`. Die Auswahl des Nutzers sichert `_keep_selection` in einem Kanal. Mask density über `layer.layerMask.edit` (0.17+).
 - **Varianten-Gruppe:** `Bridge._group` (`layer.new.groupFromLayers`), Name aus `Request.group_name`.
 - **Feather-Vorschau:** `Bridge.show_feather` / `hide_feather` (Quick Mask; Kanal `pccomfy-preview-<tag>`; das Dokument wird über Position UND Kanal gefunden, weil zwei Dokumente gleich heißen können). Gleiche Maske wie der Lauf: `bridge.soft_layer_mask`.
-- **Fill-Maske:** `imaging.outer_feather` (innen voll, Rand außen, Breite = Edge feather); Remove nutzt `auto_feather`. Eine geglättete Auswahl (`imaging.is_soft`) bleibt, wie sie ist. Expand-Maske für Krea/MOSS: `imaging.outpaint_mask`.
+- **Fill-Maske:** `fillmask.crop_fade` (seit 30.10., Option A: innen voll, Edge feather voll, dann weich bis zum Ausschnittrand, nicht zur Bildkante); Remove nutzt `auto_feather`. Eine geglättete Auswahl (`imaging.is_soft`) bleibt, wie sie ist. Expand-Maske für Krea/MOSS: `imaging.outpaint_mask`.
 - **Seam-Korrektur:** `imaging.seam_correct`, je Modell über `Model.seam`.
 - **Layer mask:** `LAYER_MASKS` = soft, selection (hard), none; `layer_mask_key` macht aus altem „auto“ „soft“.
 
