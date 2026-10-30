@@ -34,6 +34,15 @@ def add(path: Path, entry: dict, keep: int = KEEP) -> list[dict]:
     return runs
 
 
+def clear(path: Path) -> None:
+    """Erase the history: the file is written empty (a file that cannot be written is left alone)."""
+    try:
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        Path(path).write_text("[]", encoding="utf-8")
+    except OSError:
+        pass
+
+
 def entry(title: str, model: str, settings: dict, llm: str = "", now: float | None = None) -> dict:
     """One run: when, its name as in PhotoCraft ("Fill Selection 3"), the model, every setting and the text model's prompt."""
     return {"time": time.strftime("%Y-%m-%d %H:%M", time.localtime(now)), "title": title, "model": model,

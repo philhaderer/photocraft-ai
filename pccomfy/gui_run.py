@@ -5,6 +5,7 @@ from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
 from . import icons
 from . import history as runhistory
+from .listpopup import ListPopup
 
 
 class RunMixin:
@@ -205,23 +206,27 @@ class RunMixin:
         if ok and e:
             runhistory.add(cfgmod.HISTORY_FILE, e)
 
-    def _history_menu(self):
-        """A click on the clock: the last 20 runs, newest first, opening under the button."""
-        menu = self.m_history
-        menu.delete(0, "end")
+    def _history_rows(self) -> list[tuple[str, object, str]]:
+        """The rows of the list: "Erase history" first, then the last 20 runs, newest first (listpopup.py kinds)."""
         runs = runhistory.load(cfgmod.HISTORY_FILE)
-        for e in runs:
-            menu.add_command(label=runhistory.label(e), command=lambda e=e: self.load_history(e))
+        rows = [("Erase history", self.erase_history, "action" if runs else "disabled")]
+        rows += [(runhistory.label(e), lambda e=e: self.load_history(e), "item") for e in runs]
         if not runs:
-            menu.add_command(label="No runs yet.", state="disabled")
-        b = self.b_history
-        try:
-            menu.tk_popup(b.winfo_rootx(), b.winfo_rooty() + b.winfo_height())
-        finally:
-            try:
-                menu.grab_release()
-            except Exception:
-                pass
+            rows.append(("No runs yet.", None, "disabled"))
+        return rows
+
+    def _history_menu(self):
+        """A click on the clock: the list under the button; with the mouse wheel and a scroll bar when it is long. A second
+        click on the clock closes it."""
+        old, self._history_popup = self._history_popup, None
+        if old is not None and not old.closed:
+            old.close()
+            return
+        self._history_popup = ListPopup(self.root, self.b_history, self._history_rows(), scale=getattr(self, "ui", 1.0))
+
+    def erase_history(self):
+        runhistory.clear(cfgmod.HISTORY_FILE)
+        self._status("History erased.")
 
     def load_history(self, e: dict):
         """A run from the clock's menu back into the window: every setting, a new seed, the text model's prompt with Enhance
