@@ -15,7 +15,6 @@ Stand 2026-10-30. Der Plan ist freigegeben. Abschnitt 3 ist die Arbeitsliste in 
 Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir geprüft.
 
 **Neu vom 30.10.**
-- **Fill-Masken-Testrunde, Stufe 2:** starten, blind bewerten, auswerten (drei Befehle in `docs/tests/fill-mask-testrunde.md`).
 - **Verlauf der letzten 20 Läufe (Punkt 13):** Uhr-Symbol im Header links von „Copy canvas“; die Liste zeigt „Uhrzeit  Name · Modell: Prompt-Anfang“. Ein Klick lädt alle Einstellungen des Laufs mit neuem Seed und startet nichts; hat das LLM den Prompt geschrieben, kommt dessen Text zurück und Enhance ist aus. Strg+Z im Prompt-Feld holt den alten Text zurück. Abgebrochene und fehlerhafte Läufe kommen nicht in die Liste.
 
 **Neu vom 29.10.**
@@ -79,10 +78,11 @@ Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir gepr
 Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher Optionen nennen. Die Punkte behalten ihre alten Nummern.
 
 **Als Nächstes**
+- **Fill-Maske einbauen** (Testrunde fertig 30.10., Ergebnis in `docs/tests/fill-mask-testrunde.md`, Abschnitt „Ergebnis“): zuerst dir die Optionen vorlegen, dann den Sieger in `bridge.soft_layer_mask` einbauen (die Varianten liegen in `pccomfy/fillmask.py`). Optionen: **A** „bis zum Ausschnittrand“ für Fill mit Qwen und Fibo, Mask density startet bei 100 % (empfohlen: bei beiden Modellen am häufigsten gut, sauber an der Ausschnittkante); **B** je Modell: Fibo bleibt bei Dichte 5 % (bei Fibo gleich gut), Qwen bekommt „bis zum Ausschnittrand“; **C** bleibt wie heute.
 14. **Modell-Manager von OpenFill vergleichen** (T4): sobald du das Repo geladen hast; Ergebnis als Gegenüberstellung mit Empfehlung (übernehmen / anpassen / weglassen).
 
 **Offen aus den Testrunden**
-- **Fill-Maske neu** (Befund 28.10.): die schmale weiche Kante schneidet bei Fill den Rand der Füllung und ihren Schatten ab. Ein erster Versuch (Maske läuft bis zum Rand des Ausschnitts aus) war „viel besser“, wurde aber zurückgenommen (an Bildkanten weich, ohne Regler nicht testbar). **Testrunde gebaut 30.10.** (`docs/tests/fill-mask-testrunde.md`): vier Masken-Varianten (heute schmal, heute Dichte 5 %, bis zum Ausschnittrand, breit 3×). Stufe 1 ohne GPU erledigt: Alle halten die Regeln ein, keine läuft an einer Bildkante aus. **Stufe 2 wartet auf dich:** 40 echte Läufe (auf ein Viertel gekürzt, ca. 12–15 Min.), dann alle 40 Fälle blind bewerten. Danach baue ich den Sieger ein.
+- **Fill-Maske neu** (Befund 28.10.): die schmale weiche Kante schneidet bei Fill den Rand der Füllung und ihren Schatten ab. Ein erster Versuch (Maske läuft bis zum Rand des Ausschnitts aus) war „viel besser“, wurde aber zurückgenommen (an Bildkanten weich, ohne Regler nicht testbar). **Testrunde gebaut 30.10.** (`docs/tests/fill-mask-testrunde.md`): vier Masken-Varianten (heute schmal, heute Dichte 5 %, bis zum Ausschnittrand, breit 3×). Stufe 1 ohne GPU erledigt: Alle halten die Regeln ein, keine läuft an einer Bildkante aus. **Stufe 2 erledigt 30.10.** (drei Runden, 60 Läufe, alle blind bewertet): Einbau steht oben unter „Als Nächstes“.
 - **Tooltip zur runden Auswahl:** ob einer dazukommt, ist offen.
 - **Ranking** für die noch offenen Funktionen (Abschnitt 2), wenn du es nennst.
 
