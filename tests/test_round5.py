@@ -83,7 +83,9 @@ def main():
     assert all(sharp) and all(match) and enh
     assert app._request().sharpen == 0.0 and app._request().enhance is False
     # no LLM row either where the prompt is fixed or ready-made: Remove, Refine, Upscale (user 30.10.)
-    for key, mode in (("fibo", "remove"), ("fibo", "refine"), ("flux2", "refine"), ("flux3", "upscale"), ("qwen", "remove")):
+    # ... and where the workflow has no text model (Edit, Fill, Multi Image Edit of Flux / Qwen): hidden, not greyed out
+    for key, mode in (("fibo", "remove"), ("fibo", "refine"), ("flux2", "refine"), ("flux3", "upscale"), ("qwen", "remove"),
+                      ("flux3", "edit"), ("flux2", "multi_edit"), ("qwen", "inpaint"), ("qwen", "edit")):
         enh.clear()
         pick(key, mode)
         app.v_enhance.set(True)
