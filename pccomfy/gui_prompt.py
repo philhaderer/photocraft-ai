@@ -65,14 +65,19 @@ class PromptMixin:
             t.bind(seq, fn)
 
     def _show_enhance_box(self, on: bool):
-        """The "LLM prompt enhancement" row (with the copy button): not in Expand image."""
+        """The "LLM prompt enhancement" row (with the copy button): not in Expand image. It sits directly under the negative
+        prompt, above the Upscale factor and the LoRA switches (user 30.10.)."""
         shown = bool(self.f_enh.winfo_manager())
         if on and not shown:
-            self.f_enh.pack(fill="x", padx=10, pady=(6, 0), before=self.f_adv)
+            self.f_enh.pack(fill="x", padx=10, pady=(6, 0), after=self.f_neg)
         elif not on and shown:
             self.f_enh.pack_forget()
         if on != shown and getattr(self, "_sized", False):
             self._fit_height()
+
+    def _below_prompt(self):
+        """What the next box under the prompt goes after: the LLM row when it is shown, else the negative prompt."""
+        return self.f_enh if self.f_enh.winfo_manager() else self.f_neg
 
     def _prompt_text(self) -> str:
         """The prompt to save: in Remove object the field is empty, the user's own text is kept aside."""

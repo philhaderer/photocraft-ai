@@ -20,7 +20,7 @@ class ModeMixin:
         mode = self.v_mode.get()
         self._switch_context(mode)
         if mode == "upscale":
-            self.f_scale.pack(fill="x", padx=10, pady=4, after=self.f_neg)      # at the top of the block, above the LoRA
+            self.f_scale.pack(fill="x", padx=10, pady=4, after=self._below_prompt())   # under the LLM row, above the LoRA
         else:
             self.f_scale.pack_forget()
         if mode in SCALE_MODES:              # also Fibo Refine, which runs as Edit (user 28.10.)
@@ -596,9 +596,10 @@ class ModeMixin:
         has_writer = self._has_text_model() and self.v_mode.get() != "remove"  # this mode: fixed instruction
         self.cb_enhance.configure(state="normal" if has_writer else "disabled")
         llm = next((m for m in (writer_model(t) for t in self._wf_templates()) if m), "")
-        self.tt_enhance.text = ENHANCE_TIP + (f"\nText model: {llm}" if llm else "")
         name = next((n for n in (writer_name(t) for t in self._wf_templates()) if n), "")
-        self.cb_enhance.configure(text="LLM prompt enhancement" + (f" ({name})" if name else ""))
+        # the model's name only in the tooltip, never in the checkbox (user 30.10.)
+        self.tt_enhance.text = ENHANCE_TIP + (f"\nText model: {name}" if name else "") + (f"\n{llm}" if " " in llm and llm != name else "")
+        self.cb_enhance.configure(text="LLM prompt enhancement")
         has_lora = self._has_lora_switch()
         self.cb_turbo.configure(state="normal" if has_lora else "disabled", text=self._lora_label())
         for w in (self.cb_turbo, self.f_lora):      # no LoRA of its own in this workflow: nothing to show (no greyed-out box)

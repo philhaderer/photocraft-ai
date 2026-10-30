@@ -184,7 +184,7 @@ class LoraMixin:
         want = bool(has_lora or stages)
         shown = bool(self.f_opts.winfo_manager())
         if want and not shown:
-            self.f_opts.pack(fill="x", padx=10, pady=4, after=self.f_scale if self.f_scale.winfo_manager() else self.f_neg)
+            self.f_opts.pack(fill="x", padx=10, pady=4, after=self.f_scale if self.f_scale.winfo_manager() else self._below_prompt())
         elif not want and shown:
             self.f_opts.pack_forget()
         if want != shown and getattr(self, "_sized", False):

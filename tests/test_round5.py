@@ -177,11 +177,11 @@ def main():
     assert dict(gui.MODE_LABELS)["inpaint"] == "Fill Selection" and gui.SHORT_MODES["inpaint"] == "Fill Selection"
     assert sorted(p.name for p in (t.ROOT / "workflows").glob("fibo2*")) == ["fibo2-edit.json", "fibo2-t2i.json"]
     assert not any("bionic" in p.read_text(encoding="utf-8").lower() for p in (t.ROOT / "workflows").glob("*.json"))
-    # the LoRA / stage box sits directly under the negative prompt, a light line above Advanced
+    # the LoRA / stage box sits under the LLM row (or the negative prompt when that row is hidden), a light line above Advanced
     packs = rec(app.f_opts, "pack")
     app.f_opts.winfo_manager = lambda: ""
     app._update_options_box(True, [])
-    assert packs and packs[0][1].get("after") is app.f_neg, packs
+    assert packs and packs[0][1].get("after") is app._below_prompt() and app._below_prompt() in (app.f_enh, app.f_neg), packs
     assert app.sep_adv is not None
 
     # Restore LoRA (AusBoss loader): the name is matched against the server's list; a missing file is an error, never a silent skip
@@ -299,10 +299,10 @@ def main():
     from pccomfy import gui_theme
     assert app.lbl_hint_icon["image"] == app._icon("info", gui.ACCENT, px=gui_theme.HINT_ICON_PX)
 
-    # the Upscale factor sits directly under the negative prompt, above the LoRA box
+    # the Upscale factor sits under the LLM row (the negative prompt when that row is hidden), above the LoRA box
     scale_pack = rec(app.f_scale, "pack")
     pick("flux3", "upscale")
-    assert scale_pack and scale_pack[-1][1].get("after") is app.f_neg, scale_pack
+    assert scale_pack and scale_pack[-1][1].get("after") is app._below_prompt(), scale_pack
     packs2 = rec(app.f_opts, "pack")
     app.f_scale.winfo_manager = lambda: "pack"
     app.f_opts.winfo_manager = lambda: ""
