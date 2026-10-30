@@ -138,7 +138,7 @@ def main():
 
     # Layer names: the model's "Edit" is not doubled
     pick("fibo", "edit")
-    assert app._layer_prefix() == "Fibo 2.0 Edit"
+    assert app._layer_prefix() == "Fibo 2.0 Edit Turbo"
     pick("flux3", "edit")
     assert app._layer_prefix() == "Flux 3 Klein Edit"
     pick("flux3", "remove")
