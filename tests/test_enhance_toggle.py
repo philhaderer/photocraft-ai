@@ -21,9 +21,9 @@ def links_resolve(g):
 
 def main():
     p = workflows.GenParams(prompt="make the jacket red")
-    for name in ("fibo2-edit.json",):
+    for name in ("fibo2-edit.json", "fibo2-t2i.json"):
         tpl = workflows.load_template(WF / name)
-        g, out = workflows.apply_template(tpl, p, "img.png", "mask.png")
+        g, out = workflows.apply_template(tpl, p, None if "t2i" in name else "img.png", None if "t2i" in name else "mask.png")
         assert workflows.prompt_writers(g), name
         off = workflows.bypass_prompt_writer(g, p.prompt)
         assert not workflows.prompt_writers(off), name
