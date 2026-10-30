@@ -114,6 +114,18 @@ def grow_box(b: Box, canvas: tuple[int, int], context: float, min_px: int = 32) 
     return Box(x0, y0, x1 - x0, y1 - y0)
 
 
+def box_margin_mask(box: Box, canvas: tuple[int, int], margin: float, feather_pct: float) -> Image.Image:
+    """Layer mask for a result that may only count around `box`: the box grown by `margin` (share of its width and
+    height) on every side, clipped to the canvas, soft edge by `feather_pct` of the grown box's shorter side. Canvas size."""
+    W, H = canvas
+    dx, dy = round(box.w * margin), round(box.h * margin)
+    x0, y0 = max(0, box.x - dx), max(0, box.y - dy)
+    x1, y1 = min(W, box.x + box.w + dx), min(H, box.y + box.h + dy)
+    m = Image.new("L", (W, H), 0)
+    m.paste(255, (x0, y0, x1, y1))
+    return auto_feather(m, feather_radius(x1 - x0, y1 - y0, feather_pct))
+
+
 def gen_size(w: int, h: int, base: int, multiple: int = 16, max_upscale: float = 2.0) -> tuple[int, int]:
     """Generation size with an area of ~base², the crop's aspect ratio, rounded to a multiple of `multiple`."""
     scale = math.sqrt((base * base) / float(w * h))

@@ -6,6 +6,8 @@ bridge run against the PhotoCraft simulator and the fake ComfyUI of test_referen
 import json
 import sys
 import tempfile
+
+import numpy as np
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -16,11 +18,11 @@ from pccomfy.bridge import Request  # noqa: E402
 WF = str(t.ROOT / "workflows" / "flux3-klein-edit.json")
 
 
-def run(prompt, bbox=True, with_sel=True):
+def run(prompt, bbox=True, with_sel=True, layer_mask="auto"):
     tmp = tempfile.mkdtemp()
     pc, _, b = t.make(tmp, with_sel=with_sel)
     b.comfy = t.FakeComfy()
-    req = Request(mode="edit", workflow=WF, bbox=bbox, enhance=False)
+    req = Request(mode="edit", workflow=WF, bbox=bbox, enhance=False, layer_mask=layer_mask)
     req.params = workflows.GenParams(prompt=prompt, seed=7)
     res = b.run(req)
     return pc, b, res
@@ -61,6 +63,25 @@ def main():
     assert lay["inputs"]["prompt"] == "replace the tent with a dog " + bridge.BBOX_SENTENCE, lay["inputs"]["prompt"]
     assert pc.doc.sel is not None, "BBOX must leave the user's selection as it is"
     assert res["layers"]
+
+    # the layer mask: the box grown by 50 % on every side, soft edge; a hard picture-sized layer without it
+    from pccomfy import imaging  # noqa: E402
+    box = imaging.Box(x, y, w, h)
+    m = imaging.box_margin_mask(box, (t.W, t.H), bridge.BBOX_MARGIN, 0.0)
+    a = np.asarray(m)
+    gx0, gy0 = max(0, x - w // 2), max(0, y - h // 2)
+    gx1, gy1 = min(t.W, x + w + w // 2), min(t.H, y + h + h // 2)
+    assert a[gy0:gy1, gx0:gx1].min() == 255 and a.sum() == 255 * (gx1 - gx0) * (gy1 - gy0)
+    soft = imaging.box_margin_mask(box, (t.W, t.H), bridge.BBOX_MARGIN, 20.0)
+    s_ = np.asarray(soft)
+    assert s_[(y + h // 2), (x + w // 2)] == 255 and 0 < s_[gy0, (x + w // 2)] < 255
+    assert s_[0, 0] == 0
+    n_masked = lambda pc_: sum(1 for l in pc_.doc.layers if l.get("mask") is not None)
+    pc, b, res = run("replace the tent with a dog")
+    assert n_masked(pc) >= 1, "BBOX with auto layer mask must give the result a layer mask"
+    assert pc.doc.sel is not None, "the selection must come back after the soft mask used it"
+    pc, b, res = run("replace the tent with a dog", layer_mask="none")
+    assert n_masked(pc) == 0, "layer mask none = no mask"
 
     # the user's own <obj_1> is left alone
     pc, b, res = run("replace the tent <obj_1> with a dog")
