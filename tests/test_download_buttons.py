@@ -18,6 +18,8 @@ gui = t.gui
 NODES = ts.NODES
 SMALL = "taef2_decoder.pth"                       # Hugging Face, not gated
 GATED = "flux3-image-klein-int8-convrot.safetensors"
+ULTRA = "Flux 2" + chr(92) + "ultra_real_v4.safetensors"          # a Civitai LoRA: its page opens instead
+UPS = "qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors"      # gated at Hugging Face: its page opens instead
 
 
 def drain(app, until=lambda: False, limit=200):
@@ -63,6 +65,8 @@ def main():
     lists["preview"] = []
     lists["vae"].remove("flux2-vae_small.safetensors")
     lists["unet"].remove("moss_image_sft_int8_convrot.safetensors")
+    lists["lora"].remove(ULTRA)
+    lists["clip"].remove(UPS)
     lists["vae"].remove("flux2-vae.safetensors")
     app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists, NODES)})
     app.open_settings()
@@ -130,6 +134,33 @@ def main():
         assert app._dl == {} and not (mdir / "vae" / missing[0]).exists()
         done = [n for n in missing if any(mdir.rglob(Path(n.replace("\\", "/")).name))]
         assert len(done) == len(missing) - 1 and missing[0] not in done, (done, missing)
+        # "all missing" does not forget the files that need a website: they are named in the OK window and open in the browser
+        rows = {d["name"]: d for d in ts.file_rows(app)}
+        assert rows[ULTRA]["browser"] and rows[ULTRA]["hint"].startswith("Needs a website") and "civitai.com" in rows[ULTRA]["hint"]
+        assert "models" + chr(92) + "loras" + chr(92) + "Flux 2" in rows[ULTRA]["hint"] and "licence" in rows[UPS]["hint"]
+        head = next(r for r in app._settings_rows() if r[0] == "model" and r[1] == "flux2")
+        assert head[5]["count"] == 1 and head[5]["site"] == 2          # the VAE loads, the upsampler and the LoRA open their page
+        asked = []
+        t.mb.askokcancel = lambda title, msg, **k: asked.append(msg) or True
+        opened.clear()
+        fake_gate.set()
+        app.download_missing("flux2")
+        assert sorted(opened) == sorted([manifest.FILES[ULTRA].url, manifest.FILES[UPS].url]), opened
+        assert "open in your browser" in asked[0] and ULTRA in asked[0] and "flux2-vae.safetensors" in asked[0]
+        drain(app, until=lambda: not app._dl)
+        assert (mdir / "vae" / "flux2-vae.safetensors").exists()
+
+        # the tabs: rows split per model, the functions each model covers
+        top, per, extra = app._settings_sections(app._settings_rows())
+        assert [r[0] for r in top] == ["links", "intro"] and set(per) == {m.key for m in ts.models.MODELS}
+        assert per["krea2"][0][0] == "model" and per["krea2"][1][0] == "enable" and per["krea2"][2][0] == "modes"
+        assert extra[0][0] == "head" and all(r[0] in ("head", "file") for r in extra)
+        cover = {m: st for m, _l, st, _tip in app._mode_cover("krea2")}
+        assert cover["txt2img"] == "ready" and cover["inpaint"] == "none" and "img2img" not in cover
+        assert {st for _m, _l, st, _t in app._mode_cover("qwen")} == {"ready", "none"}
+        app._settings_close()
+        app.open_settings(focus="moss")
+        assert app._settings_focus == "moss" and set(app._set_pages) == {m.key for m in ts.models.MODELS} | {"additional"}
     finally:
         ui_downloads.downloads.download = real
         del os.environ["PCCOMFY_MODELS_DIR"]
