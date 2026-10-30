@@ -28,6 +28,9 @@ class Menu:
     def add_command(self, **k):
         self.items.append(("command", k))
 
+    def add_separator(self):
+        self.items.append(("sep", {}))
+
     def tk_popup(self, *a):
         pass
 
@@ -71,9 +74,12 @@ def main():
 
     # the menu: favourite for the chosen function (ticked when it is the favourite), hide
     app._chip_menu("fibo", Ev())
-    (kind, fav), (kind2, hide) = app.m_chip.items
-    assert kind == "check" and fav["label"] == "Favourite for Fill Selection" and fav["state"] == "normal"
-    assert kind2 == "command" and hide["label"] == "Hide this model"
+    assert [(kind, it.get("label")) for kind, it in app.m_chip.items] == [
+        ("command", "Save current settings for this mode and model"), ("command", "Load default settings"), ("sep", None),
+        ("check", "Favourite for Fill Selection"), ("command", "Hide this model")]
+    fav = app.m_chip.items[3][1]
+    assert fav["state"] == "normal" and app.m_chip.items[0][1]["state"] == "disabled"      # Fibo is not the chosen model: no saving
+    assert app.m_chip.items[1][1]["state"] == "normal"
     assert app.v_chip_fav.get() is False
     app.v_chip_fav.set(True)
     fav["command"]()
@@ -81,14 +87,15 @@ def main():
     app._chip_menu("fibo", Ev())
     assert app.v_chip_fav.get() is True                   # ticked now
     app._chip_menu("flux3", Ev())                         # Flux 3 cannot fill: no favourite for it
-    assert app.m_chip.items[0][1]["state"] == "disabled" and app.v_chip_fav.get() is False
+    assert app.m_chip.items[3][1]["state"] == "disabled" and app.v_chip_fav.get() is False
+    assert app.m_chip.items[1][1]["state"] == "disabled"                                  # Flux 3 has no Fill: nothing to load
 
     # the favourite comes before the model last used when the function picks its model
     app._mode_model["inpaint"] = "qwen"
     assert app._model_for_mode("inpaint") == "fibo"
     app._chip_menu("fibo", Ev())
     app.v_chip_fav.set(False)                             # untick (Tk flips the variable, then runs the command)
-    app.m_chip.items[0][1]["command"]()
+    app.m_chip.items[3][1]["command"]()
     assert cfgmod.favorites() == {} and app._model_for_mode("inpaint") == "qwen"
 
     # hide a chip that is not chosen: it leaves the row, the others close up

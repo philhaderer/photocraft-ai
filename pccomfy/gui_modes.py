@@ -126,6 +126,12 @@ class ModeMixin:
         menu = self.m_chip
         menu.delete(0, "end")
         self.v_chip_fav.set(cfgmod.favorites().get(mode) == key)
+        here = self.v_model.get() == key and mode in m.modes          # saving takes the window as it is: only for the chosen model
+        menu.add_command(label="Save current settings for this mode and model", state="normal" if here else "disabled",
+                         command=lambda: self._save_page(key))
+        menu.add_command(label="Load default settings", state="normal" if mode in m.modes else "disabled",
+                         command=lambda: self._load_default_page(key))
+        menu.add_separator()
         menu.add_checkbutton(label=f"Favourite for {dict(MODE_LABELS).get(mode, mode)}", variable=self.v_chip_fav,
                              state="normal" if mode in m.modes else "disabled",
                              command=lambda: cfgmod.set_favorite(mode, key if self.v_chip_fav.get() else None))
@@ -137,6 +143,27 @@ class ModeMixin:
                 menu.grab_release()
             except Exception:
                 pass
+
+    def _save_page(self, key: str):
+        """The window's settings (not the prompt, the seed or the page itself) become the starting settings of this model and
+        function: every time the page opens, and with "Set Page to Defaults", they come back (user 30.10.)."""
+        mode = self.v_mode.get()
+        try:
+            s = {k: v for k, v in self._collect().items() if k not in PAGE_NOT_SAVED}
+        except (tk.TclError, ValueError, TypeError) as e:
+            self._status(f"Could not save the settings: {e}", error=True)
+            return
+        cfgmod.set_saved_page(key, mode, s)
+        self._status(f"Saved the settings for {dict(MODE_LABELS).get(mode, mode)} with {models.BY_KEY[key].label}.")
+
+    def _load_default_page(self, key: str):
+        """Forget the settings saved for this model and function and go back to the factory ones (shown at once when this
+        model is chosen)."""
+        mode = self.v_mode.get()
+        cfgmod.set_saved_page(key, mode, None)
+        if self.v_model.get() == key:
+            self.reset_settings()
+        self._status(f"Default settings for {dict(MODE_LABELS).get(mode, mode)} with {models.BY_KEY[key].label}.")
 
     def _set_model_hidden(self, key: str, hidden: bool):
         """Hide or show a model chip. Hiding the chosen model chooses another one for the function (_model_for_mode), else
@@ -215,6 +242,7 @@ class ModeMixin:
             s["workflow"] = spec.workflow
         elif not force:
             s.pop("enhance", None)       # same workflow: the "LLM prompt enhancement" checkbox keeps what you set (Expand ignores it)
+        s.update(cfgmod.saved_page(m.key, mode))      # settings the user saved for this page (chip menu) replace the starting ones
         self._switch_context(mode)   # first: the context memory belongs to the mode, the defaults below overwrite its value
         self._apply_settings(s)
         t = self.t_prompt
