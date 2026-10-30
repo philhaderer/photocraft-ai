@@ -654,7 +654,7 @@ class SettingsMixin(DownloadMixin):
                 made.append(cb)
                 Tooltip(cb, "Untick to hide this model in the plugin, tick to show it again.")
             elif kind == "modes":
-                label(line(), "Covers these functions", "head", pady=(4, 2))
+                label(line(), "Covers these modes:", "head", pady=(4, 2))
                 grid = ttk.Frame(line())
                 grid.pack(fill="x")
                 made.append(grid)
