@@ -310,6 +310,7 @@ class SettingsMixin:
         rows: list[tuple] = []
         links = cfgmod.model_map()
         rows.append(("links", "Linked files"))
+        rows.append(("line", "Use your own file instead of an expected one. Click the chain symbol next to a file and pick yours.", "muted"))
         rows += [("line", f"{k}  →  {v}", "muted") for k, v in sorted(links.items())]
         if self.inv is None:
             rows.append(("error", "ComfyUI could not be read.", (self._inv_error or "Not connected yet.")
