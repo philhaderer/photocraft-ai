@@ -111,7 +111,7 @@ class Runner:
     def fill(self, model, im, mask, prompt, ctx):
         """One Fill run as the bridge does it with an editor: crop around the selection, red outline, the fixed wrapper
         around the text, the model, Fibo's seam correction. Returns the result (the size of the crop), region and bbox."""
-        mdl = models.MODELS[model]
+        mdl = models.BY_KEY[model]
         spec = mdl.modes["inpaint"]
         st = spec.settings
         wf = str(ROOT / "workflows" / spec.workflow)
