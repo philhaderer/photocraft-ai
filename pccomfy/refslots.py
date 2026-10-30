@@ -322,6 +322,8 @@ class RefSlotsMixin:
         req = super()._request()
         req.refs = self._refs_for(req.mode)     # the descriptions are already in the prompt field (Describe writes them there)
         req.bbox = self._bbox_on() and req.mode == "edit"
+        if req.bbox:
+            req.layer_mask = "soft"     # Flux 3's start value for this mode is "none" and the row is hidden: BBOX needs the margin mask
         return req
 
     def _bbox_on(self) -> bool:

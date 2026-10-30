@@ -375,6 +375,7 @@ def main():
     app.v_bbox.set(True)
     app._refs_bbox_changed()
     assert seen[-1] == "tip on" and app._request().bbox is True and "<obj_1>" in refslots.BBOX_TIP
+    assert app._request().layer_mask == "soft"      # BBOX: the margin mask, whatever the mode's start value (live finding 30.10.: "none" gave a whole new picture)
     pick("flux3", "edit")
     assert seen[-2:] == ["box off", "tip off"] or seen[-1] == "box off"
     assert app._request().bbox is False
