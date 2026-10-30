@@ -145,15 +145,6 @@ def set_model_map(m: dict) -> None:
     set_setting("model_map", dict(m) or None)
 
 
-def extra_paths_file() -> str:
-    """The extra_model_paths.yaml the user pointed the overlay at ("" = none)."""
-    return str(get_setting("extra_paths_file", "") or "")
-
-
-def set_extra_paths_file(path: str) -> None:
-    set_setting("extra_paths_file", path or None)
-
-
 # Favourites and hidden tabs: the right-click menu (lane L3) and Easy Mode read and write them only through these.
 
 def favorites() -> dict:

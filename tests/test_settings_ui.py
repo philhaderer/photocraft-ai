@@ -1,5 +1,4 @@
-"""The settings overlay, greyed tabs and modes, the click on a greyed tab, the preflight before Generate, linking files,
-the extra_model_paths.yaml. Run against the stubbed Tk of test_gui_presets (no display needed).
+"""The settings overlay, greyed tabs and modes, the click on a greyed tab, the preflight before Generate, linking files. Run against the stubbed Tk of test_gui_presets (no display needed).
 
     python tests/test_settings_ui.py
 """
@@ -45,7 +44,7 @@ def rows_text(app) -> str:
             out.append(("\u2713 " if d["found"] is not None else "\u2717 ") + d["path"] + ("  optional" if d["level"] == "optional" else "")
                        + (f"  (your file: {d['found']})" if d["found"] not in (None, d["name"]) else "")
                        + (f"  {d['size']}" if d["size"] else "") + (f"  {d['note']}" if d["note"] else "")
-                       + (f"  found on disk: {d['disk']}  (restart ComfyUI to list it)" if d["disk"] else ""))
+)
         elif kind == "node":
             out.append(f"node {row[1]}  {row[2]}")
         elif kind == "error":
@@ -83,7 +82,7 @@ NODES = {n for tab in manifest.TABS.values() for s in tab.modes.values() for n i
 def test_start_state():
     refresh = {"comfy": True}
     full = lambda: inventory.Inventory(td.full_lists(), NODES)       # noqa: E731
-    det = lambda inv: {"_detect": True, "_inv": inv, "_yaml": [], "_disk": {}}      # noqa: E731
+    det = lambda inv: {"_detect": True, "_inv": inv}      # noqa: E731
 
     # the very first start: no model is chosen, the old "open on the first model" step does not run
     cfgmod.save_state({})
@@ -146,7 +145,7 @@ class Seen:
 
 
 def test_empty_view():
-    det = lambda inv: {"_detect": True, "_inv": inv, "_yaml": [], "_disk": {}}      # noqa: E731
+    det = lambda inv: {"_detect": True, "_inv": inv}      # noqa: E731
     cfgmod.save_state({})
     app = make_app()
     shown = {n: Seen() for n in ("f_tabs", "lbl_empty", "f_scrollbox", "lbl_conn", "b_refresh", "b_reset")}
@@ -222,7 +221,7 @@ def main():
     assert [k for k, rb in app.rb_tabs.items() if rb["state"] == "normal"] == [m.key for m in models.MODELS if "edit" in m.modes]   # models that cannot edit are
 
     # a full install: nothing is grey, no extra tooltip text
-    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(td.full_lists(), NODES), "_yaml": [], "_disk": {}})
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(td.full_lists(), NODES)})
     assert all(rb["style"] == "Chip.Toolbutton" for rb in app.rb_tabs.values())
     assert app.tt_tabs["flux3"].text == models.FLUX3.tip
     assert app.comfy.name_fixer is not None
@@ -230,7 +229,7 @@ def main():
 
     # SeedVR2 missing: Flux 3 stays a normal chip for Edit; for Upscale its chip turns red, the tooltip says why
     inv = inventory.Inventory(lists_without(unet="seedvr2_3b_int8_convrot.safetensors"), NODES)
-    app._apply_refresh({"_detect": True, "_inv": inv, "_yaml": [], "_disk": {}})
+    app._apply_refresh({"_detect": True, "_inv": inv})
     assert app.rb_tabs["flux3"]["style"] == "Chip.Toolbutton"
     assert app.rb_modes["upscale"]["state"] == "normal" and app.rb_modes["edit"]["state"] == "normal"
     app.v_mode.set("upscale"); app._update_mode_radios()
@@ -244,7 +243,7 @@ def main():
 
     # Krea 2's VAE missing: the tab is grey, its tooltip says what; the Flux 3 tab is still the selected one
     inv = inventory.Inventory(lists_without(vae="qwen_image_vae.safetensors"), NODES)
-    app._apply_refresh({"_detect": True, "_inv": inv, "_yaml": [], "_disk": {}})
+    app._apply_refresh({"_detect": True, "_inv": inv})
     assert app.rb_tabs["krea2"]["style"] == "Missing.Chip.Toolbutton" and app.rb_tabs["flux3"]["style"] == "Chip.Toolbutton"
     assert app.tt_tabs["krea2"].text == models.KREA2.tip + "\n\nMissing: qwen_image_vae.safetensors. Set in settings (gear)."
     assert app.rb_modes["upscale"]["state"] == "normal"            # the SeedVR2 problem is gone with the new reading
@@ -284,7 +283,7 @@ def main():
     app.v_model.set("")
     app.generate()
     assert called == ["krea2", ""]
-    app._apply_refresh({"_detect": True, "_inv": None, "_inv_error": "No connection to ComfyUI", "_yaml": [], "_disk": {}})
+    app._apply_refresh({"_detect": True, "_inv": None, "_inv_error": "No connection to ComfyUI"})
     assert app.inv is None and app.comfy.name_fixer is None and all(rb["style"] == "Chip.Toolbutton" for rb in app.rb_tabs.values())
     app.v_model.set("krea2")
     app.generate()
@@ -311,7 +310,7 @@ def main():
 
     # the rows: a missing file has its download link and size, a missing node names its pack, the credits are links
     inv = inventory.Inventory(lists_without(unet="seedvr2_3b_int8_convrot.safetensors"), {"SeedVR2Preprocess"})
-    app._apply_refresh({"_detect": True, "_inv": inv, "_yaml": [], "_disk": {"seedvr2_3b_int8_convrot.safetensors": ["D:/models/diffusion_models/seedvr2_3b_int8_convrot.safetensors"]}})
+    app._apply_refresh({"_detect": True, "_inv": inv})
     seed = next(d for d in file_rows(app) if d["name"] == "seedvr2_3b_int8_convrot.safetensors")
     assert seed["url"] == manifest.FILES[seed["name"]].url and seed["size"] == "3.5 GB" and seed["path"] == "/diffusion_models/" + seed["name"]
     nodes = [row for row in app._settings_rows() if row[0] == "node"]
@@ -326,7 +325,6 @@ def main():
     links = [u for _t, style, u in app._credits_segments() if style == "link"]
     assert all(u.startswith("https://") for u in links) and len(links) >= len(manifest.CONTRIBUTORS)
     joined = rows_text(app) + "".join(s for s, _st, _u in app._credits_segments())
-    assert "found on disk: D:/models/diffusion_models/seedvr2" in joined
     assert "Peszemeszek" in joined and "optional" in joined and "(as " not in joined
 
     # Live preview: off and greyed out while the model's preview decoder is missing, on again once it is there (user 30.10.)
@@ -334,79 +332,44 @@ def main():
     app._last_model = "flux3"
     app._on_model()
     assert app.v_live.get() is True and app.cb_live["state"] == "normal"
-    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(preview="taef2_decoder.pth"), NODES), "_yaml": [], "_disk": {}})
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(preview="taef2_decoder.pth"), NODES)})
     assert app.v_live.get() is False and app.cb_live["state"] == "disabled" and "taef2_decoder.pth" in app.tt_live.text
-    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(td.full_lists(), NODES), "_yaml": [], "_disk": {}})
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(td.full_lists(), NODES)})
     assert app.v_live.get() is True and app.cb_live["state"] == "normal" and app.tt_live.text == gui.LIVE_TIP
 
     # link a file of another name: the tab turns ready at once and graphs get the real name
     lists = td.full_lists()
     lists["vae"].remove("flux2-vae.safetensors")
     lists["vae"].append("my_vae.safetensors")
-    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists, NODES), "_yaml": [], "_disk": {}})
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists, NODES)})
     assert app.rb_tabs["flux3"]["style"] == "Missing.Chip.Toolbutton" and app.rb_tabs["fibo"]["style"] == "Missing.Chip.Toolbutton"
     app.open_settings()
-    exp, avail = app._link_choices()
-    assert "flux2-vae.safetensors" in exp and "my_vae.safetensors" in avail["vae"]
-    # the chain next to every file (found or missing): it sets the boxes to that file
-    picks = [d["name"] for d in file_rows(app)]
-    assert picks and set(picks) == set(exp), (len(picks), len(exp))
-    app._choose_for("flux2-vae.safetensors")
-    assert app.v_link_exp.get() == "flux2-vae.safetensors" and "my_vae.safetensors" in app.cb_link_act["values"]
-    app.v_link_exp.set("flux2-vae.safetensors")
-    app._link_expected_picked()
-    assert "my_vae.safetensors" in app.cb_link_act["values"] and "flux3-image-klein-int8-convrot.safetensors" not in app.cb_link_act["values"]
-    assert "flux2-vae.safetensors" not in app.cb_link_act["values"] and app.v_link_cur.get() == "missing"   # missing: not offered
-    app.v_link_exp.set("qwen_image_vae.safetensors")       # an installed expected file comes first (choosing it unlinks)
-    app._link_expected_picked()
-    assert app.cb_link_act["values"][0] == "qwen_image_vae.safetensors", app.cb_link_act["values"]
-    app.v_link_exp.set("flux2-vae.safetensors")
-    app._link_expected_picked()
-    app.v_link_act.set("my_vae.safetensors")
-    assert cfgmod.model_map() == {}                       # choosing alone changes nothing: only "Relink" does
-    app._link_models()
-    assert cfgmod.model_map() == {"flux2-vae.safetensors": "my_vae.safetensors"}
-    assert app.v_link_cur.get() == "my_vae.safetensors  (linked)" and app.b_link_undo["state"] == "normal"
+    # the chain next to every file (found or missing) lists the other files of its kind, the most similar name first
+    cands = app._link_candidates("flux2-vae.safetensors")
+    assert "my_vae.safetensors" in cands and "flux3-image-klein-int8-convrot.safetensors" not in cands
+    assert "flux2-vae.safetensors" not in cands and cands[0] == "flux2-vae_small.safetensors", cands     # the nearest name first
+    assert "qwen_image_vae.safetensors" in cands and "qwen_image_vae.safetensors" not in app._link_candidates("qwen_image_vae.safetensors")
+    assert app._link_candidates("no-such-file") == []
+    app._link_models("flux2-vae.safetensors", "my_vae.safetensors")       # one click on an entry links at once
+    assert cfgmod.model_map() == {"flux2-vae.safetensors": "my_vae.safetensors"} and app.b_link_undo["state"] == "normal"
     app._link_undo()                                      # Undo: back to no link
     assert cfgmod.model_map() == {} and app.b_link_undo["state"] == "disabled"
-    app.v_link_act.set("my_vae.safetensors")
-    app._link_models()
+    app._link_models("flux2-vae.safetensors", "my_vae.safetensors")
     app._link_reset()                                     # Reset: the links of the start (none here)
     assert cfgmod.model_map() == {} and app.b_link_reset["state"] == "disabled"
     assert app.b_link_undo["state"] == "disabled"        # Undo takes back relinks only, not the reset
-    app.v_link_act.set("my_vae.safetensors")
-    app._link_models()
+    app._link_models("flux2-vae.safetensors", "my_vae.safetensors")
     assert cfgmod.model_map() == {"flux2-vae.safetensors": "my_vae.safetensors"}
     assert "/vae/flux2-vae.safetensors  (your file: my_vae.safetensors)" in rows_text(app)
     assert app.rb_tabs["flux3"]["style"] == "Chip.Toolbutton" and app.inv.tab_status("flux3").state == "ready"
     g = {"1": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae.safetensors"}}}
     app.comfy.name_fixer(g)
     assert g["1"]["inputs"]["vae_name"] == "my_vae.safetensors"
-    assert "flux2-vae.safetensors  \u2192  my_vae.safetensors" in rows_text(app)
-    app.v_link_exp.set("flux2-vae.safetensors")
-    app._unlink_model()
+    assert "flux2-vae.safetensors  →  my_vae.safetensors" in rows_text(app)
+    assert any(r[0] == "links" for r in app._settings_rows()) and not any("extra_model_paths" in str(r) for r in app._settings_rows())
+    app._link_models("flux2-vae.safetensors", "")         # "Unlink" in the list
     assert cfgmod.model_map() == {} and app.rb_tabs["flux3"]["style"] == "Missing.Chip.Toolbutton"
-    app._link_models()          # nothing chosen below: nothing happens
     app._settings_close()
-
-    # extra_model_paths.yaml: choosing a file reads it in a thread and the result arrives as an event
-    base = Path(tempfile.mkdtemp())
-    (base / "models" / "vae").mkdir(parents=True)
-    (base / "models" / "vae" / "flux2-vae.safetensors").write_bytes(b"")
-    ypath = base / "extra_model_paths.yaml"
-    ypath.write_text(f"comfyui:\n    base_path: {base.as_posix()}\n    vae: models/vae\n", encoding="utf-8")
-    app.settings_set_yaml(str(ypath))
-    assert cfgmod.extra_paths_file() == str(ypath)
-    kind, data = app.events.get(timeout=10)
-    assert kind == "refresh" and data["_detect"] and "_inv" not in data
-    app._apply_refresh(data)
-    assert app._yaml_sections[0]["folders"]["vae"] == [(base / "models" / "vae").as_posix()]
-    joined = rows_text(app)
-    assert str(ypath) in joined and "found on disk:" in joined and "restart ComfyUI to list it" in joined
-    app.settings_set_yaml("")
-    kind, data = app.events.get(timeout=10)
-    app._apply_refresh(data)
-    assert cfgmod.extra_paths_file() == "" and app._yaml_sections == [] and "No file chosen" in rows_text(app)
 
     # the settings window is an owned window of the bridge window (hidden / minimised / closed with it), never "always on top"
     class RecWin(t.Widget):
@@ -444,7 +407,7 @@ def main():
         t.tk.Toplevel, gui.winlink.available, gui.winlink.Win32Api = saved
 
     # a preset that needs a model with missing files says so (the loader uses this; see docs/archiv/entscheidungen-L1.md)
-    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(vae="qwen_image_vae.safetensors"), NODES), "_yaml": [], "_disk": {}})
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(vae="qwen_image_vae.safetensors"), NODES)})
     note = app.preset_blocked({"workflow": "krea2-turbo-t2i.json", "mode": "txt2img"})
     assert note == "Krea 2 Turbo is missing files: qwen_image_vae.safetensors (see settings)", note
     assert app.preset_blocked({"workflow": "flux3-klein-edit.json", "mode": "edit"}) == ""
@@ -460,10 +423,10 @@ def main():
     assert (app.v_model.get(), app.v_mode.get(), app.v_workflow.get()) == before, before
     assert "Not applied: Krea 2 Turbo is missing files: qwen_image_vae.safetensors" in app.v_status.get(), app.v_status.get()
     pp.unlink()
-    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(unet="seedvr2_3b_int8_convrot.safetensors"), NODES), "_yaml": [], "_disk": {}})
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(unet="seedvr2_3b_int8_convrot.safetensors"), NODES)})
     assert app.preset_blocked({"workflow": "flux3-klein-upscale.json", "mode": "upscale"}).startswith("Flux 3 Klein Edit is missing files: seedvr2_3b")
     assert app.preset_blocked({"workflow": "flux3-klein-edit.json", "mode": "edit"}) == ""      # the same tab, another mode: fine
-    app._apply_refresh({"_detect": True, "_inv": None, "_inv_error": "x", "_yaml": [], "_disk": {}})
+    app._apply_refresh({"_detect": True, "_inv": None, "_inv_error": "x"})
     assert app.preset_blocked({"workflow": "krea2-turbo-t2i.json", "mode": "txt2img"}) == ""
 
     # a normal PhotoCraft/ComfyUI refresh still goes through the old path

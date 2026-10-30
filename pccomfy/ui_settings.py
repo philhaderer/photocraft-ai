@@ -8,10 +8,11 @@
 * ``generate``: the preflight; a missing file stops the run with one clear line (file, folder, link).
 
 The gear button next to the tabs opens the overlay: what is installed per tab, links to download, "link a file of another
-name", the extra_model_paths.yaml, and the credits. All decisions live in ``inventory.py`` and ``manifest.py`` (no Tk there).
+name", and the credits. All decisions live in ``inventory.py`` and ``manifest.py`` (no Tk there).
 """
 from __future__ import annotations
 
+import difflib
 import webbrowser
 
 from . import inventory, manifest
@@ -44,8 +45,6 @@ FOOT_REFRESH_PADX, FOOT_RESET_PADX = (4, 0), (12, 0)     # footer: the refresh a
 class SettingsMixin:
     inv = None                  # inventory.Inventory of the last successful reading (None = ComfyUI not read / not reachable)
     _inv_error = ""
-    _yaml_sections: list = []
-    _disk: dict = {}
     _settings_win = None
     _settings_focus = None
     _last_model = ""
@@ -64,7 +63,7 @@ class SettingsMixin:
         style.configure("Missing.Tab.Toolbutton", foreground=NA_RED)      # a tab that is not available: red text, the background of an inactive tab
         self.b_gear = ttk.Button(foot, image=self._icon("gear", px=GEAR_PX), style="Link.TButton", command=self.toggle_settings)
         self.b_gear.pack(side="right")
-        Tooltip(self.b_gear, "Settings: which model files ComfyUI has, links to get the missing ones, ComfyUI folders, credits.")
+        Tooltip(self.b_gear, "Settings: which model files ComfyUI has, links to get the missing ones, credits.")
         style.configure("Empty.TLabel", foreground=MUTED, font=font(11))
         self.v_empty = tk.StringVar(value="")
         self.lbl_empty = ttk.Label(self.root, textvariable=self.v_empty, style="Empty.TLabel", anchor="center", justify="center",
@@ -78,18 +77,15 @@ class SettingsMixin:
         super().refresh()
         self._detect_async()
 
-    def _detect_async(self, reread: bool = True):
-        mapping, path, comfy = cfgmod.model_map(), cfgmod.extra_paths_file(), self.comfy
+    def _detect_async(self):
+        mapping, comfy = cfgmod.model_map(), self.comfy
 
         def work():
             res = {"_detect": True}
-            if reread:
-                try:
-                    res["_inv"], res["_inv_error"] = inventory.fetch(comfy, mapping), ""
-                except ComfyError as e:
-                    res["_inv"], res["_inv_error"] = None, str(e)
-            sections = inventory.read_extra_paths(path) if path else []
-            res["_yaml"], res["_disk"] = sections, (inventory.find_on_disk(sections) if sections else {})
+            try:
+                res["_inv"], res["_inv_error"] = inventory.fetch(comfy, mapping), ""
+            except ComfyError as e:
+                res["_inv"], res["_inv_error"] = None, str(e)
             self.events.put(("refresh", res))
         threading.Thread(target=work, daemon=True).start()
 
@@ -101,11 +97,7 @@ class SettingsMixin:
             finally:
                 self._refreshing = False
             return
-        self._yaml_sections, self._disk = info.get("_yaml", []), info.get("_disk", {})
-        if "_inv" in info:
-            self._set_inventory(info["_inv"], info.get("_inv_error", ""))
-        elif self._settings_win is not None:
-            self._settings_fill()
+        self._set_inventory(info["_inv"], info.get("_inv_error", ""))
 
     def _set_inventory(self, inv, err: str = ""):
         self.inv, self._inv_error = inv, err
@@ -325,10 +317,8 @@ class SettingsMixin:
             for row in self.inv.rows():
                 rows.append(("model", row["key"], row["label"], row["status"].state, row["key"] == self._settings_focus))
                 for f, found, level in row["files"]:
-                    disk = (self._disk.get(f.name) or [""])[0] if found is None else ""
                     rows.append(("file", {"name": f.name, "path": file_path(f), "found": found, "level": level,
-                                          "size": f.size_text, "url": f.url, "note": f.note if found is None else "",
-                                          "disk": disk}))
+                                          "size": f.size_text, "url": f.url, "note": f.note if found is None else ""}))
                 for c in row["status"].nodes:
                     pack = manifest.node_pack(c)
                     rows.append(("node", c, pack[0] if pack else "", pack[1] if pack else ""))
@@ -336,25 +326,13 @@ class SettingsMixin:
             for f, found, use, keys in self.inv.additional_rows():
                 rows.append(("file", {"name": f.name, "path": file_path(f), "found": found, "level": "optional",
                                       "size": f.size_text, "url": f.url, "use": f"{use}: " + ", ".join(models.SHORT[k] for k in keys),
-                                      "note": licence_of(f.note) if found is None else "",
-                                      "disk": (self._disk.get(f.name) or [""])[0] if found is None else ""}))
+                                      "note": licence_of(f.note) if found is None else ""}))
         links = cfgmod.model_map()
-        rows.append(("head", "Linked files (the plugin uses your file for its expected one)"))
+        rows.append(("links", "Linked files (the plugin uses your file for its expected one)"))
         if links:
             rows += [("line", f"{k}  →  {v}", "muted") for k, v in sorted(links.items())]
         else:
             rows.append(("line", "none. Use the chain symbol next to a file.", "muted"))
-        rows.append(("head", "ComfyUI folders (extra_model_paths.yaml)"))
-        path = cfgmod.extra_paths_file()
-        if not path:
-            rows.append(("line", "No file chosen. Choose ComfyUI's extra_model_paths.yaml to see where your model folders are.", "muted"))
-        else:
-            rows.append(("line", path, "muted"))
-            if not self._yaml_sections:
-                rows.append(("line", "Nothing readable in it.", "bad"))
-            for sec in self._yaml_sections:
-                rows.append(("line", f"[{sec['name']}]", ""))
-                rows += [("line", f"    {key}: {p}", "muted") for key, paths in sec["folders"].items() for p in paths]
         return rows
 
     def _credits_segments(self) -> list[tuple]:
@@ -368,15 +346,17 @@ class SettingsMixin:
             add(f"  {what}\n", "muted")
         return seg
 
-    def _link_choices(self) -> tuple[list[str], dict]:
-        """(the expected file names that can be linked: every file of the list, installed files per kind)."""
-        if self.inv is None:
-            return [], {}
-        names = []
-        for f in [f for row in self.inv.rows() for f, _found, _level in row["files"]] + [r[0] for r in self.inv.additional_rows()]:
-            if f.name not in names:
-                names.append(f.name)
-        return names, self.inv.lists
+    def _link_candidates(self, expected: str) -> list[str]:
+        """The files ComfyUI lists for the kind of ``expected`` that can stand in for it (itself left out), the ones with a
+        name most like it first. ComfyUI's own list: it knows its folders, the default one, the extra ones and links."""
+        f = manifest.FILES.get(expected)
+        if f is None or self.inv is None:
+            return []
+        avail = list(self.inv.lists.get(f.kind, []))
+        own = inventory.resolve(f.name, avail, None, f.aliases)
+        base = lambda n: n.replace("\\", "/").rpartition("/")[2].lower()      # noqa: E731
+        return sorted((n for n in avail if n != own),
+                      key=lambda n: -difflib.SequenceMatcher(None, base(n), base(f.name)).ratio())
 
     # ---------- the overlay window ----------
 
@@ -441,38 +421,6 @@ class SettingsMixin:
             Tooltip(cb, "Untick to hide this model in the plugin, tick to show it again.")
             self._shown_vars[m.key] = var
 
-        # another file for an expected one: nothing changes until "Relink"; Undo and Reset go back
-        link = ttk.Frame(tab_models)
-        link.pack(fill="x", side="bottom", pady=(6, 0))
-        link.columnconfigure(1, weight=1)
-        self.v_link_exp, self.v_link_act = tk.StringVar(value=""), tk.StringVar(value="")
-        self.v_link_cur = tk.StringVar(value="")
-        ttk.Label(link, text="Use another file", style="Muted.TLabel").grid(row=0, column=0, columnspan=4, sticky="w")
-        for r, text in ((1, "Expected file"), (2, "Current file"), (3, "New file")):
-            ttk.Label(link, text=text, style="Muted.TLabel").grid(row=r, column=0, sticky="w", padx=(0, 8), pady=2)
-        self.cb_link_exp = ttk.Combobox(link, textvariable=self.v_link_exp, state="readonly", width=34)
-        self.cb_link_exp.grid(row=1, column=1, columnspan=3, sticky="ew", pady=2)
-        self.cb_link_exp.bind("<<ComboboxSelected>>", lambda e: self._link_expected_picked())
-        ttk.Label(link, textvariable=self.v_link_cur).grid(row=2, column=1, columnspan=3, sticky="w", pady=2)
-        self.cb_link_act = ttk.Combobox(link, textvariable=self.v_link_act, state="readonly", width=34)
-        self.cb_link_act.grid(row=3, column=1, columnspan=3, sticky="ew", pady=2)
-        btns = ttk.Frame(link)
-        btns.grid(row=4, column=0, columnspan=4, sticky="w", pady=(4, 0))
-        self.b_relink = ttk.Button(btns, text="Relink", command=self._link_models)
-        self.b_relink.pack(side="left")
-        Tooltip(self.b_relink, "Use the new file wherever the plugin expects the expected one. Choosing the expected file itself removes the link.")
-        self.b_link_undo = ttk.Button(btns, text="Undo", command=self._link_undo)
-        self.b_link_undo.pack(side="left", padx=(6, 0))
-        Tooltip(self.b_link_undo, "Takes back the last change of the links.")
-        self.b_link_reset = ttk.Button(btns, text="Reset to startup", command=self._link_reset)
-        self.b_link_reset.pack(side="left", padx=(6, 0))
-        Tooltip(self.b_link_reset, "All links as they were when the plugin started.")
-        by = ttk.Button(link, text="Choose extra_model_paths.yaml…", command=self._choose_yaml)
-        by.grid(row=5, column=0, columnspan=3, sticky="w", pady=(8, 0))
-        Tooltip(by, "ComfyUI's extra_model_paths.yaml: shows where your model folders are and which files lie there. Read only.")
-        bc = ttk.Button(link, text="Clear", command=lambda: self.settings_set_yaml(""))
-        bc.grid(row=5, column=3, sticky="e", pady=(8, 0))
-
         # the model files: one row per file in fixed columns (mark, path, size, symbols), in a canvas that scrolls (user 30.10.)
         box = ttk.Frame(tab_models)
         box.pack(fill="both", expand=True)
@@ -489,6 +437,7 @@ class SettingsMixin:
 
         self.t_credits = self._settings_text(tab_credits)
         self._settings_fill()
+        self._detect_async()       # a model copied in since the last reading is listed when the window opens (if ComfyUI sees it)
 
     def _settings_size(self) -> tuple[int, int]:
         """The window's size: the one it had when it was last closed, else about 760 x 700 (user 30.10.: wider, remembered)."""
@@ -540,11 +489,6 @@ class SettingsMixin:
         t_credits = getattr(self, "t_credits", None)
         if t_credits is not None:
             self._fill_text(t_credits, self._credits_segments())
-        exp, _lists = self._link_choices()
-        self.cb_link_exp["values"] = exp
-        if self.v_link_exp.get() not in exp:
-            self.v_link_exp.set(exp[0] if exp else "")
-        self._link_expected_picked()
 
     def _settings_draw(self, rows):
         """The rows of _settings_rows as widgets in the scrolled frame: a model's head line, then its files in the columns
@@ -600,15 +544,14 @@ class SettingsMixin:
                 if f["url"] and not ok:
                     icon("save", f"Download ({f['size'] or 'size unknown'}). Right-click: copy the download link.",
                          lambda u=f["url"]: webbrowser.open(u), r, 3, menu=lambda e, u=f["url"]: self._link_menu(e, u))
-                icon("link", "Use another file of yours for this one.", lambda n=f["name"]: self._choose_for(n), r, 4)
+                icon("link", "Use another file of yours for this one: opens the list of the files ComfyUI has.",
+                     lambda n=f["name"]: self._choose_for(n), r, 4)
                 r += 1
                 extra = [(f["use"], "muted")] if f.get("use") else []
                 if ok and f["found"] != f["name"]:
                     extra.append((f"your file: {f['found']}", "muted"))
                 if f["note"]:
                     extra.append((f["note"], "muted"))
-                if f["disk"]:
-                    extra.append((f"found on disk: {f['disk']}  (restart ComfyUI to list it)", "note"))
                 for text, style in extra:
                     label(text, style, r, 1, 4, padx=(12, 0), wraplength=wrap, justify="left")
                     r += 1
@@ -621,6 +564,19 @@ class SettingsMixin:
                 r += 1
             elif kind == "head":
                 label(row[1], "head", r, 0, 5, pady=(14, 2))
+                r += 1
+            elif kind == "links":          # the head of "Linked files" with its Undo and Reset
+                label(row[1], "head", r, 0, 3, pady=(14, 2))
+                bar = ttk.Frame(parent)
+                bar.grid(row=r, column=3, columnspan=2, sticky="e", pady=(14, 2))
+                made.append(bar)
+                self.b_link_undo = ttk.Button(bar, text="Undo", command=self._link_undo)
+                self.b_link_undo.pack(side="left")
+                Tooltip(self.b_link_undo, "Takes back the last change of the links.")
+                self.b_link_reset = ttk.Button(bar, text="Reset to startup", command=self._link_reset)
+                self.b_link_reset.pack(side="left", padx=(6, 0))
+                Tooltip(self.b_link_reset, "All links as they were when the plugin started.")
+                self._link_buttons()
                 r += 1
             elif kind == "line":
                 label(row[1], row[2], r, 0, 5, padx=(8, 0))
@@ -675,24 +631,6 @@ class SettingsMixin:
 
     # ---------- link a file of another name ----------
 
-    def _link_expected_picked(self):
-        """The expected file changed: "Current file" says what the plugin uses for it now, "New file" offers the installed
-        files of its kind (the expected file first when it is installed itself: choosing it removes a link; a missing one is
-        not offered, user 30.10.). Nothing changes before "Relink"."""
-        exp = self.v_link_exp.get()
-        f = manifest.FILES.get(exp)
-        _names, lists = self._link_choices()
-        avail = list(lists.get(f.kind, [])) if f is not None else []
-        own = inventory.resolve(f.name, avail, None, f.aliases) if (exp and f is not None) else None
-        if own:                 # the expected file itself is installed (perhaps under another case or sub-folder)
-            avail = [own] + [n for n in avail if n != own]
-        self.cb_link_act["values"] = avail
-        self.v_link_act.set("")
-        found = self.inv.found(exp) if (self.inv is not None and exp) else None
-        mapped = cfgmod.model_map().get(exp)
-        self.v_link_cur.set("" if not exp else (f"{mapped}  (linked)" if mapped else (found or "missing")))
-        self._link_buttons()
-
     def _link_buttons(self):
         try:
             self.b_link_undo.configure(state="normal" if self._map_undo else "disabled")
@@ -701,35 +639,32 @@ class SettingsMixin:
             pass
 
     def _choose_for(self, expected: str):
-        """The link next to a file: the boxes below are set to it and the list of the installed files of its kind opens
-        (ComfyUI's own list: it only knows its folders). The choice takes effect only with "Relink"."""
-        self.v_link_exp.set(expected)
-        self._link_expected_picked()
-        if not self.cb_link_act["values"]:
-            self._status("ComfyUI lists no file of this kind. Copy yours into its folder and restart ComfyUI.", error=True)
+        """The chain next to a file: a list of the files ComfyUI has for its kind, the most similar first, "Unlink" last when
+        the file is linked. A click links at once (Undo and Reset are in "Linked files")."""
+        cands, mapped = self._link_candidates(expected), cfgmod.model_map().get(expected)
+        if not cands and not mapped:
+            self._status("ComfyUI lists no other file of this kind. Copy yours into its folder and restart ComfyUI.", error=True)
             return
+        menu = tk.Menu(self._settings_win or self.root, tearoff=0)
+        for n in cands:
+            menu.add_command(label=("✓ " if n == mapped else "") + n, command=lambda n=n: self._link_models(expected, n))
+        if mapped:
+            if cands:
+                menu.add_separator()
+            menu.add_command(label="Unlink (use the expected file again)", command=lambda: self._link_models(expected, ""))
+        win = self._settings_win or self.root
         try:
-            self.cb_link_act.focus_set()
-            self.cb_link_act.tk.call("ttk::combobox::Post", self.cb_link_act)
-        except (tk.TclError, AttributeError):
-            pass
+            menu.tk_popup(win.winfo_pointerx(), win.winfo_pointery())
+        finally:
+            menu.grab_release()
 
-    def _link_models(self):
-        """ "Relink": the new file is used from now on (the expected file itself removes the link)."""
-        exp, act = self.v_link_exp.get(), self.v_link_act.get()
-        if not exp or not act:
-            return
+    def _link_models(self, expected: str, actual: str):
+        """The plugin uses ``actual`` from now on for ``expected`` ("" removes the link)."""
         before = cfgmod.model_map()
-        cfgmod.set_model_link(exp, "" if act == exp else act)
+        cfgmod.set_model_link(expected, actual)
         if cfgmod.model_map() != before:
             self._map_undo.append(before)
-        self._after_link_change("Linked: " + (f"{exp} \u2192 {act}." if act != exp else f"{exp} is used again."))
-
-    def _unlink_model(self):
-        exp = self.v_link_exp.get()
-        if exp:
-            self.v_link_act.set(exp)
-            self._link_models()
+        self._after_link_change("Linked: " + (f"{expected} → {actual}." if actual else f"{expected} is used again."))
 
     def _link_undo(self):
         if self._map_undo:
@@ -746,22 +681,4 @@ class SettingsMixin:
         if self.inv is not None:
             self.inv.mapping = cfgmod.model_map()
             self._set_inventory(self.inv, self._inv_error)      # statuses, tabs and the overlay follow at once
-        try:
-            self._link_expected_picked()
-        except (AttributeError, tk.TclError):
-            pass
         self._status(msg)
-
-    # ---------- extra_model_paths.yaml ----------
-
-    def _choose_yaml(self):
-        from tkinter import filedialog
-        path = filedialog.askopenfilename(parent=self._settings_win or self.root, title="ComfyUI's extra_model_paths.yaml",
-                                          filetypes=[("YAML", "*.yaml *.yml"), ("All files", "*.*")])
-        if path:
-            self.settings_set_yaml(path)
-
-    def settings_set_yaml(self, path: str):
-        """Also the entry for a dropped file later (tkinterdnd2 is not part of this lane)."""
-        cfgmod.set_extra_paths_file(str(path or ""))
-        self._detect_async(reread=False)
