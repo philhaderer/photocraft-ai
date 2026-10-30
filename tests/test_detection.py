@@ -138,12 +138,13 @@ def test_status():
     st = inventory.Inventory(lists, nodes=inv.nodes).tab_status("flux3")
     assert st.state == "missing" and [f.name for f in st.missing] == ["flux3-image-klein-int8-convrot.safetensors"]
 
-    # Qwen: the text-to-image text encoder is another file than the edit one
+    # Qwen: one Qwen3-VL 8B file serves every mode (the edit graph uses int8_convrot too since 31.10.); without it the tab is out
     lists = full_lists()
     lists["clip"].remove("qwen3vl_8b_int8_convrot.safetensors")
     i3 = inventory.Inventory(lists, nodes=inv.nodes)
     st = i3.tab_status("qwen")
-    assert st.state == "partial" and list(st.detail) == ["txt2img"]
+    assert st.state == "missing" and [f.name for f in st.missing] == ["qwen3vl_8b_int8_convrot.safetensors"], st
+    assert "edit" in st.detail and "txt2img" in st.detail
 
     # every mode missing its own file = the tab is missing (Flux 2 with no Ultra-real LoRA is only partial)
     lists = full_lists()

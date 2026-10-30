@@ -94,8 +94,6 @@ _LIST = [
          "also in Comfy-Org/Fibo-2.0 and the FLUX.3 Klein repo", size=4858559240),
     File("qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors", "clip",
          _BFL3 + "text_encoders/qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors", _GATED_BFL, size=6724090780),
-    File("qwen3vl_8b_fp8_scaled.safetensors", "clip",
-         _HF + "Comfy-Org/Qwen3-VL/resolve/main/text_encoders/qwen3vl_8b_fp8_scaled.safetensors", "licence: Apache 2.0", size=10588637512),
     File("qwen3vl_8b_int8_convrot.safetensors", "clip", _QWEN21 + "text_encoders/qwen3vl_8b_int8_convrot.safetensors",
          "licence: Apache 2.0 (also in Comfy-Org/Qwen3-VL)", size=9350798360),
     File("qwen3.5_9b_w4a8_gptq.safetensors", "clip", _MOSS + "text_encoders/qwen3.5_9b_w4a8_gptq.safetensors",
@@ -159,7 +157,6 @@ _SHA256 = {
     'qwen_3_8b_fp8mixed.safetensors': "abad16806e0cbabc54e0325d6565847443fe396d5f0be38bb3cd3fe75a1201d6",
     'qwen3vl_4b_int8_convrot.safetensors': "32de113cbf8282b02cbff0794b637b9d6676da09314a1db5a30bcea9bf4ee01c",
     'qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors': "e5d85a7421d197bf5a12474511936ecabce19a833252f16e9310a983194a4458",
-    'qwen3vl_8b_fp8_scaled.safetensors': "4ba424cf62e51392e4d1a39933e803706f4e823c1065f36aaf149c6453f66bcd",
     'qwen3vl_8b_int8_convrot.safetensors': "8bfd0f6e12abf2d2d697ecc888e5e90b0d6741d6708f05799f53afa560452e8f",
     'qwen3.5_9b_w4a8_gptq.safetensors': "4cc6a1543ad2061806da46f35f90cadb4801dcba246c44782cf42ec0feb6407c",
     'qwen3.5_9b_int8_convrot.safetensors': "32e3787472f708fa5f83624acbf5ef23f7fc89c439e05065ea57cfe5a97f025a",
@@ -229,13 +226,12 @@ TABS: dict[str, TabSpec] = {
     "qwen": TabSpec(
         required=("qwen_image_2.1_int8_convrot.safetensors", "qwen_image_2.1_vae_bf16.safetensors"),
         modes={
-            # the text-to-image graph loads another text encoder than the edit graph
             "txt2img": ModeSpec(requires=("qwen3vl_8b_int8_convrot.safetensors",), optional=("qwen3.5_9b_w4a8_gptq.safetensors",)),
-            "edit": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),
-            "inpaint": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),
-            "outpaint": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),
-            "multi_edit": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",), optional=_CUT.optional),   # runs the edit graph
-            "remove": ModeSpec(requires=("qwen3vl_8b_fp8_scaled.safetensors",)),
+            "edit": ModeSpec(requires=("qwen3vl_8b_int8_convrot.safetensors",)),
+            "inpaint": ModeSpec(requires=("qwen3vl_8b_int8_convrot.safetensors",)),
+            "outpaint": ModeSpec(requires=("qwen3vl_8b_int8_convrot.safetensors",)),
+            "multi_edit": ModeSpec(requires=("qwen3vl_8b_int8_convrot.safetensors",), optional=_CUT.optional),   # runs the edit graph
+            "remove": ModeSpec(requires=("qwen3vl_8b_int8_convrot.safetensors",)),
         },
         optional=("qwen\\qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors", "taeqi2_1_decoder.pth")),
     "fibo": TabSpec(
