@@ -51,8 +51,10 @@ class DownloadMixin:
     # ---------- where the files go ----------
 
     def models_dir(self, ask: bool = True) -> Path | None:
-        """ComfyUI's ``models`` folder: the test override, the folder you chose once, the one of the running ComfyUI, else ask."""
+        """ComfyUI's ``models`` folder: the test override (the "without models" test start uses a sandbox folder), the folder you chose once, the one of the running ComfyUI, else ask."""
         env = os.environ.get("PCCOMFY_MODELS_DIR")
+        if not env and os.environ.get("PCCOMFY_SIMULATE_NO_MODELS"):      # the "ComfyUI without models" test start: a sandbox folder
+            env = str(cfgmod.CONFIG_DIR / "test-downloads")                # noqa: F405
         if env:
             p = Path(env)
             p.mkdir(parents=True, exist_ok=True)
