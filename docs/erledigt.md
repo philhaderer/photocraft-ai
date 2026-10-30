@@ -5,6 +5,7 @@ Verlauf nach Datum, neuester Stand oben. Alles liegt in `next`. Die vollen Texte
 ## 30.10. (Sitzung am Abend)
 
 - **14a Qwen-Encoder-Blindtest** (`tests/live_qwen_encoder.py`, 12 Läufe, 3,1 min): alle 6 Paare „gleich gut“. Der Qwen-Edit-Workflow lädt jetzt `qwen3vl_8b_int8_convrot` (`feat/qwen-edit-int8-encoder`); `qwen3vl_8b_fp8_scaled` fällt weg. 14c Schritt 6 (Token-Panel) gestrichen, 14d auf später.
+- **Feinschliff Gruppe 1** (`feat/polish-texts`): „Choose a model“, „Edit Canvas“, „Upscale factor“ in normaler Schriftgröße, „Set Page to Defaults“ als kleiner Knopf (setzt nur Modell und Funktion zurück). Fibo-LLM-Tooltip gekürzt, `VGLBionic`-Hinweis entfernt (`fix/fibo-tooltip-vgl`).
 
 ## 31.10.
 
