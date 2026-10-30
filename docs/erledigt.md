@@ -5,6 +5,7 @@ Verlauf nach Datum, neuester Stand oben. Alles liegt in `next`. Die vollen Texte
 ## 30.10. (Sitzung am Abend)
 
 - **14a Qwen-Encoder-Blindtest** (`tests/live_qwen_encoder.py`, 12 Läufe, 3,1 min): alle 6 Paare „gleich gut“. Der Qwen-Edit-Workflow lädt jetzt `qwen3vl_8b_int8_convrot` (`feat/qwen-edit-int8-encoder`); `qwen3vl_8b_fp8_scaled` fällt weg. 14c Schritt 6 (Token-Panel) gestrichen, 14d auf später.
+- **Feinschliff Gruppe 3** (`feat/history-list`): der Verlauf (Uhr im Kopf) ist eine eigene Liste (`pccomfy/listpopup.py`) mit Mausrad und dünnem Scrollbalken ab ca. 10 Zeilen; erste Zeile „Erase history“; zweiter Klick auf die Uhr schließt.
 - **Feinschliff Gruppe 2 und 10** (`feat/polish-sizes`, `feat/auto-shortcut`): Pfeile 90 % mit 3 px Abstand, Steps/CFG 3 Zeichen breit, Seed 9, Undo/Redo rechts, „×1“ am Generate-Stück; `setup-windows.bat` legt die Desktop-Verknüpfung an (sucht `photocraft.exe`, fragt sonst einmal). Bildeingang der Schreibermodelle für den LLM-Knopf geprüft.
 - **Feinschliff Gruppe 1** (`feat/polish-texts`): „Choose a model“, „Edit Canvas“, „Upscale factor“ in normaler Schriftgröße, „Set Page to Defaults“ als kleiner Knopf (setzt nur Modell und Funktion zurück). Fibo-LLM-Tooltip gekürzt, `VGLBionic`-Hinweis entfernt (`fix/fibo-tooltip-vgl`).
 
