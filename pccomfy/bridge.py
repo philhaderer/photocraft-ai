@@ -33,7 +33,7 @@ from typing import Callable
 import numpy as np
 from PIL import Image
 
-from . import imaging, refslots, workflows
+from . import fillmask, imaging, refslots, workflows
 from .comfy import ComfyUI
 from .photocraft import PhotoCraft, PhotoCraftError
 
@@ -181,14 +181,12 @@ def soft_layer_mask(req: "Request", wf_paths: list, mask: "Image.Image", region:
         sel = bbox or region
         radius = imaging.feather_radius(sel.w, sel.h, req.feather_pct)
         if req.mode == "inpaint" and not req.remove:
-            # Fill: the new object stays fully opaque up to the selection's edge, the soft edge lies outside it (live
-            # test 28.10.: a soft edge across the selection line made the fill's outer edge soft). It stops before
-            # the redrawn crop ends, else the crop's straight edge would show (not where the crop meets the canvas edge)
+            # Fill: opaque over the selection and Edge feather around it, then a smooth fade that reaches 0 exactly at
+            # the crop's sides inside the picture, none towards the canvas edge (Fill mask test round 30.10.: most
+            # often good with Qwen and Fibo, clean at the crop's side; the narrow edge cut off the fill and its shadow)
             W, H = mask.size
-            room = [bbox.x - region.x if region.x > 0 else radius, bbox.y - region.y if region.y > 0 else radius,
-                    region.x + region.w - (bbox.x + bbox.w) if region.x + region.w < W else radius,
-                    region.y + region.h - (bbox.y + bbox.h) if region.y + region.h < H else radius] if bbox else [radius]
-            return imaging.outer_feather(mask.crop(region.pil()), min([radius] + room))
+            inner = (region.x > 0, region.y > 0, region.x + region.w < W, region.y + region.h < H)
+            return fillmask.crop_fade(mask.crop(region.pil()), radius, inner)
         return imaging.auto_feather(mask.crop(region.pil()), radius)
     # the same soft mask the model got: the result blends exactly where the model blended it
     return imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
@@ -678,8 +676,8 @@ class Bridge:
         if lm_mode == "soft":
             layer_mask = soft_layer_mask(req, wf_paths, mask, region, bbox)
         mode = lm_mode
-        # the soft mask's density in PhotoCraft (Fill starts at 5 %: the soft edge cut off the fill's edge and its shadow,
-        # user 28.10.); 100 % = the mask as it is, nothing to set
+        # the soft mask's density in PhotoCraft (the slider; every function starts at 100 % since the Fill mask test
+        # round 30.10.); 100 % = the mask as it is, nothing to set
         density = int(req.mask_density) if (layer_mask is not None and req.mask_density < 100) else None
         sel_small = None   # the new area in the size the model drew it, for "match colours"
         if req.match > 0 and req.mode in ("inpaint", "outpaint") and mask is not None and results and results[0][1]:

@@ -95,7 +95,7 @@ Das schreibt `ergebnis.md` in den Ordner der Runde (`data\fill-mask-test\<Zeit>\
 - **Schmal** (die Maske von heute bei Dichte 100 %) ist am seltensten gut und wurde am häufigsten als weich markiert; **breit (3×)** liegt dazwischen.
 - Ein Fehler wie am 28.10. (Füllung an der Bildkante weich durch die Maskenform) trat nicht auf (Stufe 1). Was du als „weich“ markiert hast, ist eine Füllung, die über die Auswahl hinausragt und vom weichen Rand angeschnitten wird.
 
-**Optionen für den Einbau** (Entscheidung im nächsten Chat):
+**Optionen für den Einbau** (entschieden 30.10.: **A**, eingebaut in `bridge.soft_layer_mask`):
 - **A (empfohlen):** „bis zum Ausschnittrand“ für Fill mit Qwen und Fibo; Mask density startet bei 100 % (der Regler bleibt).
 - **B:** je Modell: Fibo bleibt bei Dichte 5 %, Qwen bekommt „bis zum Ausschnittrand“.
 - **C:** alles bleibt wie heute.

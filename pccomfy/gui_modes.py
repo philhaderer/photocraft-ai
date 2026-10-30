@@ -210,7 +210,7 @@ class ModeMixin:
         # a mode without a Context of its own starts at the function's default, not at what the tab before had
         # (Fibo Fill showed 0.4 after Qwen and 0.2 after Reset)
         s.setdefault("context", FILL_CONTEXT if mode == "inpaint" else self._ctx_default)
-        s.setdefault("mask_density", 100)      # likewise: Fill's 5 % does not travel to the next function
+        s.setdefault("mask_density", 100)      # likewise: a density set by hand does not travel to the next function
         if not keep:
             s["workflow"] = spec.workflow
         elif not force:
