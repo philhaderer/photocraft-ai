@@ -205,7 +205,7 @@ FIBO = Model(
         "txt2img": Mode("fibo2-t2i.json", dict(base_res=1224, layer_mask="none", enhance=False, sharpen=0.2), prompt_tip=T2I_TIP),   # Sharpen 20 % (user 28.10.)
         "edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=EDIT_TIP),
         "multi_edit": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False), prompt_tip=MULTI_TIP, run_as="edit"),
-        "refine": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False, sharpen=0.3), FLUX2_DEFAULT, run_as="edit",
+        "refine": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False, sharpen=0.1), FLUX2_DEFAULT, run_as="edit",
                        prompt_tip=DESCRIBE_TIP + " Change the prompt for other edits."),   # Sharpen 30 % (user 28.10.)
         "inpaint": Mode("fibo2-edit.json", dict(base_res=1024, context=0.4, layer_mask="soft", feather_pct=10.0, enhance=False), prompt_tip=FILL_TIP),   # as Qwen Fill; Context 0.4 from the test round 28.10.
         "outpaint": Mode("fibo2-edit.json", dict(base_res=1024, layer_mask="none", enhance=False)),
