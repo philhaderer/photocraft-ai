@@ -618,6 +618,7 @@ BG, PANEL, FG, MUTED, ACCENT = "#535353", "#282828", "#eeeeee", "#cfcfcf", "#f28
 NA_RED = "#ff6b6b"      # text of a tab that is not available (model files missing); 5.3 : 1 on PANEL
 DISABLED = "#8e8e8e"   # text of a greyed-out control: clearly darker than MUTED, so it reads as "not available here"
 SCALE_MODES = ("upscale", "refine")   # these run only with an upscale workflow (a node titled pc:upscale)
+NO_LLM_MODES = ("outpaint", "remove") + SCALE_MODES   # no "LLM prompt enhancement" row: fixed or ready-made prompts (user 30.10.)
 ERROR, ERROR_TEXT = "#e5484d", "#ffc2c2"
 DONE_GREEN = "#39A95D"      # only the word "Done" above the bar
 def _dpi_aware() -> None:
@@ -752,6 +753,7 @@ __all__ = [
     "ACCENT",
     "DISABLED",
     "SCALE_MODES",
+    "NO_LLM_MODES",
     "ERROR",
     "ERROR_TEXT",
     "DONE_GREEN",

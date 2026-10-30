@@ -47,7 +47,7 @@ class ModeMixin:
             self.f_sharp.pack_forget()
         else:
             self._pack_post(self.f_sharp)
-        self._show_enhance_box(not expand)
+        self._show_enhance_box(mode not in NO_LLM_MODES)
         self._update_prompt_hint()
         self._sync_prompt_field(mode)
         self._update_feather_state()
@@ -593,7 +593,7 @@ class ModeMixin:
             self.cb_fooocus.grid_remove()
         # the text model applies to custom workflows (nodes tagged pc:clip), not to the built-in graph, and only
         # while the prompt enhancement is on
-        has_writer = self._has_text_model() and self.v_mode.get() != "remove"  # this mode: fixed instruction
+        has_writer = self._has_text_model() and self.v_mode.get() not in NO_LLM_MODES  # fixed or ready-made prompts
         self.cb_enhance.configure(state="normal" if has_writer else "disabled")
         llm = next((m for m in (writer_model(t) for t in self._wf_templates()) if m), "")
         name = next((n for n in (writer_name(t) for t in self._wf_templates()) if n), "")

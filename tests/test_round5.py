@@ -82,6 +82,13 @@ def main():
     pick("fibo", "outpaint")
     assert all(sharp) and all(match) and enh
     assert app._request().sharpen == 0.0 and app._request().enhance is False
+    # no LLM row either where the prompt is fixed or ready-made: Remove, Refine, Upscale (user 30.10.)
+    for key, mode in (("fibo", "remove"), ("fibo", "refine"), ("flux2", "refine"), ("flux3", "upscale"), ("qwen", "remove")):
+        enh.clear()
+        pick(key, mode)
+        app.v_enhance.set(True)
+        assert enh and app._request().enhance is False, (key, mode)
+    pick("fibo", "outpaint")
     app.v_sharpen.set(0.4)
     assert app._request().sharpen == 0.0                       # not applied in Expand ...
     app._save_state(app._request())
