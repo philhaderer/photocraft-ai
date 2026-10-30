@@ -255,6 +255,26 @@ def sharpen(im: Image.Image, amount: float) -> Image.Image:
     return im.filter(ImageFilter.UnsharpMask(radius=r, percent=int(min(1.0, amount) * 150), threshold=2))
 
 
+def match_outside(gen: Image.Image, ref: Image.Image, outside: Image.Image, max_ratio: float = 1.25) -> Image.Image:
+    """BBOX: the model redrew the whole picture with slightly different colours, but only the box zone is used. Per channel,
+    brightness and contrast of `gen` are fitted (mean and spread, spread ratio kept within 1/max_ratio..max_ratio) so that the
+    part beyond the box zone (`outside`, white = reference pixels) matches the original `ref` there; applied to all of `gen`.
+    Returns `gen` unchanged when the reference part is too small (< 5 % of the picture)."""
+    size = gen.size
+    o = np.asarray(outside.convert("L").resize(size, Image.NEAREST)) > 127
+    if o.mean() < 0.05:
+        return gen
+    g = np.asarray(gen.convert("RGB"), dtype=np.float32)
+    r = np.asarray(ref.convert("RGB").resize(size, Image.BILINEAR), dtype=np.float32)
+    out = g.copy()
+    for c in range(3):
+        gm, gs = float(g[..., c][o].mean()), float(g[..., c][o].std())
+        rm, rs = float(r[..., c][o].mean()), float(r[..., c][o].std())
+        k = min(max_ratio, max(1.0 / max_ratio, rs / gs)) if gs > 1.0 else 1.0
+        out[..., c] = (g[..., c] - gm) * k + rm
+    return Image.fromarray(np.clip(out + 0.5, 0, 255).astype(np.uint8), "RGB")
+
+
 def match_saturation(gen: Image.Image, ref: Image.Image, mask: Image.Image, strength: float) -> Image.Image:
     """Tames colours that are louder than their surroundings: the new area (`mask`, white = new) is compared with a ring of
     the original picture (`ref`) around it, by the mean HSV saturation. If the new area is more saturated, the saturation

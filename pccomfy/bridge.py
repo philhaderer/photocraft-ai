@@ -120,7 +120,7 @@ class Request:
                                          # empty = "<mode> variants"
 
 
-BBOX_MARGIN = 0.5   # BBOX layer mask: the box grown by this share of its size on every side (big test 30.10.: with 40 % nearly every object stayed whole)
+BBOX_MARGIN = 0.15  # BBOX layer mask: the box grown by this share of its size on every side (user 30.10.: 50 % was far too big; big test: 40 % kept nearly every object whole, 0 % cut larger ones)
 BBOX_SENTENCE = "Place the result in <obj_1>."   # added to the prompt when BBOX is on and the text has no <obj_1> (user 30.10.)
 PLACEHOLDER = "<DESCRIBE THE IMAGE>"
 
@@ -734,6 +734,10 @@ class Bridge:
         sel_small = None   # the new area in the size the model drew it, for "match colours"
         if req.match > 0 and req.mode in ("inpaint", "outpaint") and mask is not None and results and results[0][1]:
             sel_small = mask.crop(region.pil()).resize(results[0][1][0].size, Image.NEAREST)
+        outside_small = None   # BBOX: the part of the picture beyond the layer mask, in the size the model drew it (colour reference)
+        if obj_box is not None and results and results[0][1]:
+            far = imaging.box_margin_mask(obj_box, (W, H), BBOX_MARGIN + 0.1, 0.0)
+            outside_small = far.resize(results[0][1][0].size, Image.NEAREST).point(lambda v: 255 if v < 128 else 0)
         seam_mask = None   # seam correction: the new area in the size the model drew it (white = new)
         if (req.seam or req.seam_fixed) and req.mode in ("inpaint", "outpaint") and mask is not None and results and results[0][1]:
             seam_mask = mask.crop(region.pil()).resize(results[0][1][0].size, Image.BILINEAR)
@@ -757,6 +761,8 @@ class Bridge:
                 rgb = raw.convert("RGB")
                 if req.match > 0 and sel_small is not None:
                     rgb = imaging.match_saturation(rgb, crop_plain, sel_small, req.match)
+                if outside_small is not None:     # BBOX: Flux 3 redraws the whole picture with slightly different colours
+                    rgb = imaging.match_outside(rgb, crop_plain, outside_small)
                 # A/B: the raw result first (it ends up hidden below), then the corrected one on top of it;
                 # always on: only the corrected one, named as a plain result
                 pairs = [("", rgb)]
