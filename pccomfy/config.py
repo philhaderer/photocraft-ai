@@ -30,6 +30,7 @@ EXCHANGE_DIR = CONFIG_DIR / "exchange" if os.name == "nt" else Path("~/.cache/pc
 CONFIG_FILE = CONFIG_DIR / "config.toml"
 STATE_FILE = CONFIG_DIR / "state.json"
 SETTINGS_FILE = CONFIG_DIR / "settings.json"     # what the settings overlay and the tab menu save (model map, favourites ...)
+HISTORY_FILE = CONFIG_DIR / "history.json"       # the last 20 runs (the clock in the header, history.py)
 
 DEFAULTS = {
     "photocraft": {

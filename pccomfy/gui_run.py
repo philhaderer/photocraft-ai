@@ -4,6 +4,7 @@ from __future__ import annotations
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
 from . import icons
+from . import history as runhistory
 
 
 class RunMixin:
@@ -117,6 +118,7 @@ class RunMixin:
             req.group_name = f"{SHORT_MODES.get(self.v_mode.get(), self.v_mode.get())} {req.run_no}"   # "Fill Selection 3"
             self.state["runs"] = runs
         self._save_state(req)
+        self._history_begin(req)
         if getattr(self, "_fprev_on", False):   # the run ends the feather preview first (Bridge._run): the button follows
             if getattr(self, "_fprev_after", None):
                 self.root.after_cancel(self._fprev_after)
@@ -182,6 +184,64 @@ class RunMixin:
                 self.events.put(("note-error", f"Unexpected error: {type(e).__name__}: {e}"))
         self.worker = threading.Thread(target=work, daemon=True)
         self.worker.start()
+
+    # ---------- the last runs (the clock in the header, history.py) ----------
+
+    def _history_begin(self, req):
+        """Generate was clicked: keep every setting of the window for the history; written once the run is done."""
+        try:
+            settings = self._collect()
+        except (tk.TclError, ValueError, TypeError):
+            self._hist_run = None
+            return
+        m = self._model()
+        title = req.group_name or SHORT_MODES.get(self.v_mode.get(), self.v_mode.get())
+        self._hist_run = runhistory.entry(title, m.label if m else "", settings)
+
+    def _history_end(self, ok: bool):
+        """The run is over: a finished one goes in front of the last runs; a cancelled or failed one is left out."""
+        e, self._hist_run = getattr(self, "_hist_run", None), None
+        if ok and e:
+            runhistory.add(cfgmod.HISTORY_FILE, e)
+
+    def _history_menu(self):
+        """A click on the clock: the last 20 runs, newest first, opening under the button."""
+        menu = self.m_history
+        menu.delete(0, "end")
+        runs = runhistory.load(cfgmod.HISTORY_FILE)
+        for e in runs:
+            menu.add_command(label=runhistory.label(e), command=lambda e=e: self.load_history(e))
+        if not runs:
+            menu.add_command(label="No runs yet.", state="disabled")
+        b = self.b_history
+        try:
+            menu.tk_popup(b.winfo_rootx(), b.winfo_rooty() + b.winfo_height())
+        finally:
+            try:
+                menu.grab_release()
+            except Exception:
+                pass
+
+    def load_history(self, e: dict):
+        """A run from the clock's menu back into the window: every setting, a new seed, the text model's prompt with Enhance
+        off when there was one (user 30.10.). Nothing starts; Ctrl+Z in the prompt field brings the old text back."""
+        s = runhistory.settings_to_load(e)
+        prompt, negative = str(s.pop("prompt", "")), str(s.pop("negative", ""))
+        notes = self._apply_settings(s)
+        if str(self.t_prompt.cget("state")) == "disabled":      # Remove object: the field is empty, the text is kept aside
+            self._prompt_kept = prompt
+        else:
+            self.t_prompt.edit_separator()
+            self.t_prompt.delete("1.0", "end")
+            self.t_prompt.insert("1.0", prompt)
+            self.t_prompt.edit_separator()
+        self.t_neg.delete("1.0", "end")
+        self.t_neg.insert("1.0", negative)
+        name = e.get("title") or "the run"
+        if notes:
+            self._status(f"Loaded “{name}”, but: {', '.join(notes)}.", error=True)
+        else:
+            self._status(f"Loaded “{name}” with a new seed. Click Generate to run it.")
 
     # ---------- feather preview ----------
 
@@ -265,9 +325,12 @@ class RunMixin:
                     self.b_undo.configure(state="normal")
                     self.b_redo.configure(state="normal")
                     self.b_stop.configure(state="disabled")
+                    self._history_end(ok)
                 elif kind == "vgl":
                     self._last_vgl = str(data or "")      # not shown in the window; the copy button next to the LLM checkbox takes it
                     self.b_copy.configure(state="normal" if self._last_vgl.strip() else "disabled")
+                    if getattr(self, "_hist_run", None):
+                        self._hist_run["llm"] = self._last_vgl.strip()
                 elif kind == "refresh":
                     self._apply_refresh(data)
                 elif kind == "feather":
