@@ -3,8 +3,9 @@
 ``Inventory`` holds one cached reading of the four loader lists (and the node classes) from ComfyUI's /object_info.
 Everything here is plain Python, so the tests run it against a fake ComfyUI answer.
 
-Statuses: ``ready`` (nothing missing), ``partial`` (a tab with some modes missing files: those modes are greyed out,
-the tab stays usable) and ``missing`` (the tab's own files are missing, or no mode can run).
+Statuses: ``ready`` (nothing missing) and ``missing`` (the tab's own files are missing, or ANY of its modes lacks a file its
+standard settings need: the whole model is locked, so every function of an offered model has been tested with its standard
+settings; user 30.10.). ``partial`` is no longer produced.
 """
 from __future__ import annotations
 
@@ -103,9 +104,7 @@ class Inventory:
             return Status("ready", (), opt)
         files = tuple(dict.fromkeys(f for s in bad.values() for f in s.missing))
         nodes = tuple(dict.fromkeys(c for s in bad.values() for c in s.nodes))
-        if len(bad) == len(per):
-            return Status("missing", files, opt, nodes, bad)
-        return Status("partial", files, opt, nodes, bad)
+        return Status("missing", files, opt, nodes, bad)           # one function without its files locks the model
 
     # ---------- a whole workflow graph ----------
 

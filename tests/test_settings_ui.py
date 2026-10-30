@@ -227,10 +227,11 @@ def main():
     assert app.comfy.name_fixer is not None
     assert app._preflight() == []
 
-    # the Restore LoRA missing: Flux 3 stays a normal chip for Edit; for Upscale its chip turns red, the tooltip says why
+    # the Restore LoRA missing: one function lacks the files of its standard settings, so the whole model is locked (red chip
+    # for every function, user 30.10.); its tooltip says which function needs what
     inv = inventory.Inventory(lists_without(lora="Flux 3__flux-3-image-klein-restore.safetensors"), NODES)
     app._apply_refresh({"_detect": True, "_inv": inv})
-    assert app.rb_tabs["flux3"]["style"] == "Chip.Toolbutton"
+    assert app.rb_tabs["flux3"]["style"] == "Missing.Chip.Toolbutton" and inv.tab_status("flux3").state == "missing"
     assert app.rb_modes["upscale"]["state"] == "normal" and app.rb_modes["edit"]["state"] == "normal"
     app.v_mode.set("upscale"); app._update_mode_radios()
     assert app.rb_tabs["flux3"]["style"] == "Missing.Chip.Toolbutton" and app.rb_tabs["qwen"]["state"] == "disabled"

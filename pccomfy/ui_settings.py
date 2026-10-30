@@ -122,6 +122,8 @@ class SettingsMixin(DownloadMixin):
         if st.state == "partial":
             return "\n".join(inventory.tooltip_text(s, _LABELS.get(mode, mode)) for mode, s in st.detail.items())
         if st.state == "missing":
+            if st.detail:       # some functions lack files: the model is locked, the tooltip names each function
+                return "\n".join(inventory.tooltip_text(s, _LABELS.get(mode, mode)) for mode, s in st.detail.items())
             return inventory.tooltip_text(st)
         if st.optional_missing:
             return "Not installed (optional): " + ", ".join(f.name for f in st.optional_missing[:3])
@@ -144,12 +146,11 @@ class SettingsMixin(DownloadMixin):
                 tt.text = m.tip + (("\n\n" + extra) if extra else "")
 
     def _model_usable(self, key: str, mode: str) -> bool:
-        """Has ComfyUI the files this model needs for this function (for the whole model when it cannot do the function)?"""
+        """Has ComfyUI the files this model needs? The whole model counts, not only the chosen function: a model with one
+        function lacking its files is locked (user 30.10.), so nothing is offered that was not tested with its standard settings."""
         if self.inv is None:
             return True
-        m = models.BY_KEY.get(key)
-        st = self.inv.mode_status(key, mode) if (m is not None and mode in m.modes) else self.inv.tab_status(key)
-        return st.state != "missing"
+        return self.inv.tab_status(key).state != "missing"
 
     def _update_mode_radios(self):
         super()._update_mode_radios()
