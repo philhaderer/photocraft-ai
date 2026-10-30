@@ -316,11 +316,28 @@ def main():
     assert seed["url"] == manifest.FILES[seed["name"]].url and seed["size"] == "3.5 GB" and seed["path"] == "/diffusion_models/" + seed["name"]
     nodes = [row for row in app._settings_rows() if row[0] == "node"]
     assert any(n[1] == "AUSBOSS_NODES_TiledUpscale" and n[3] == "https://github.com/ausboss/ComfyUI-AusBoss" for n in nodes)
+    # BiRefNet and the preview decoders stand once, under "Additional models", with what they are for (user 30.10.)
+    extra = {d["name"]: d for d in file_rows(app) if d.get("use")}
+    assert set(extra) == {n for n, f in manifest.FILES.items() if f.kind in ("bg_removal", "preview")}, set(extra)
+    assert extra["birefnet.safetensors"]["use"] == "Cut out in Multi Image Edit: Flux 3, Flux 2, Qwen, Fibo"
+    assert extra["taef2_decoder.pth"]["use"] == "Live preview: Flux 3, Flux 2, Fibo, MOSS"
+    assert sum(d["name"] == "taef2_decoder.pth" for d in file_rows(app)) == 1          # not again under each model
+    assert "Additional models (used by several models)" in rows_text(app)
     links = [u for _t, style, u in app._credits_segments() if style == "link"]
     assert all(u.startswith("https://") for u in links) and len(links) >= len(manifest.CONTRIBUTORS)
     joined = rows_text(app) + "".join(s for s, _st, _u in app._credits_segments())
     assert "found on disk: D:/models/diffusion_models/seedvr2" in joined
     assert "Peszemeszek" in joined and "optional" in joined and "(as " not in joined
+
+    # Live preview: off and greyed out while the model's preview decoder is missing, on again once it is there (user 30.10.)
+    app.v_model.set("flux3")
+    app._last_model = "flux3"
+    app._on_model()
+    assert app.v_live.get() is True and app.cb_live["state"] == "normal"
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(preview="taef2_decoder.pth"), NODES), "_yaml": [], "_disk": {}})
+    assert app.v_live.get() is False and app.cb_live["state"] == "disabled" and "taef2_decoder.pth" in app.tt_live.text
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(td.full_lists(), NODES), "_yaml": [], "_disk": {}})
+    assert app.v_live.get() is True and app.cb_live["state"] == "normal" and app.tt_live.text == gui.LIVE_TIP
 
     # link a file of another name: the tab turns ready at once and graphs get the real name
     lists = td.full_lists()
