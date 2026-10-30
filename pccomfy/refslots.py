@@ -20,8 +20,7 @@ MAX_SIDE = 1024                      # the longest side of a reference image sen
 DEFAULT_BACKGROUND = (128, 128, 128)
 
 BBOX_CHECK_TIP = "Your selection becomes a box named <obj_1> in the prompt. Without a selection the run is a normal Multi Image Edit."
-BBOX_TIP = ("BBOX: your selection is the box <obj_1>. Say what goes there, e.g. \"replace the tent <obj_1> with <ref_image_1> a little dog\". "
-            "If the prompt has no <obj_1>, the plugin adds \"Place the result in <obj_1>.\"")
+BBOX_TIP = "Place a rectangle on the canvas and simply name the object in the prompt. E.g.: \"car\""
 
 
 # ---- rewriting the image names in the prompt when the model changes ----
