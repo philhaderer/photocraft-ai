@@ -9,6 +9,7 @@ always-on-top flag (no switch). Also: a function's Context does not depend on th
 """
 import shutil
 import sys
+import threading
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -111,6 +112,21 @@ def main():
     assert app.lbl_context.cget("text") == "40 %"
     app.v_context.set(1.6)                     # an old saved value beyond the slider
     assert app._request().context == 1.0
+    # Defaults also works while a run is on (user 30.10.); Generate and Variants stay grey until the run is done
+    app = make()
+    go(app, "qwen", "inpaint")
+    app.v_context.set(0.9)
+    app.v_seed.set(123)
+    app.worker = threading.Thread(target=lambda: None)
+    app.worker.is_alive = lambda: True
+    app._running = True                        # as generate() sets it
+    app.b_go.configure(state="disabled")
+    app.w_variants.configure(state="disabled")
+    app.reset_settings()
+    assert app.v_context.get() == 0.4 and app.v_seed.get() == -1
+    assert app.b_go["state"] == "disabled" and app.w_variants["state"] == "disabled"
+    go(app, "fibo", "inpaint")                 # a tab change during the run keeps it grey too
+    assert app.w_variants["state"] == "disabled"
     shutil.rmtree(t.TMP, ignore_errors=True)
     print("ok")
 
