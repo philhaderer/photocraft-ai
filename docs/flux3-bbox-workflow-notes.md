@@ -28,3 +28,11 @@ Graph: `CreateBoundingBoxes` (1600 x 1200) -> `Flux3LayoutPrompt` -> `PreviewAny
 - **Ausgabe von `Flux3LayoutPrompt`:** der Prompt, ein Leerzeichen, dann die Tabelle als JSON-Text, z. B. `... in his mouth [{"id": "obj_1", "bbox": [250, 62, 667, 312], "desc": "a green tent"}]`. `bbox` ist `[ymin, xmin, ymax, xmax]` auf 0 bis 1000, aus der Pixel-Box umgerechnet (300/1200, 100/1600 ...). Ohne `metadata.desc` bleibt `desc` leer.
 - **Folge:** Das Plugin kann die Boxen aus der PhotoCraft-Auswahl in Pixeln an `CreateBoundingBoxes` übergeben (Option 1), oder die Tabelle selbst als Text anhängen und beide Knoten weglassen (Option 2: gleiches Ergebnis, ein Knoten weniger, aber das Format hängt dann am Plugin, nicht an ComfyUI).
 - **Nicht geprüft:** ob Flux 3 mit solchen Boxen ein gutes Bild macht (kein Sampling gelaufen), und ob der Prompt-Upsampler die Tabelle erhält.
+
+## Echter Lauf (30.10., Flux 3 Klein, Seed 7, 15 Steps; Bilder in `data/flux3-bbox-test/`, nicht im Repo)
+
+Aufbau wie im Plugin: Graph aus `flux3-klein-edit.json` mit `workflows.add_layout`, Referenz in Slot 1, Prompt nur „clock“ (+ „Place the result in <obj_1>.“). Vier realistische Szenen (Flux 3 Text to image: Wohnzimmer, Küche, Büro, Altstadtgasse), zwei Uhren als Referenz; Vergleich ohne Box (Kontrolle).
+- **Die Box funktioniert:** In allen 4 Szenen sitzt die Uhr in der Box (Wohnzimmer über dem Sideboard, Küche an der Wand neben den Regalen, Büro oben an der Wand, Gasse an der Fassade). Ohne Box setzt Flux 3 die Uhr irgendwohin: auf das Sideboard, groß vor den Herd, auf den Laptop-Bildschirm; in der Gasse gar nicht sichtbar.
+- **Test mit der Schlichtbild-Szene (Haus, Fuchs):** eigener `<obj_1>` im Prompt und der angehängte Satz geben beide den Fuchs in die Box.
+- **Nachteil: das ganze Bild ändert sich ein wenig.** Mittlere Abweichung außerhalb der Box (0 bis 255): 4,5 bis 14,6 mit Box, 6 bis 13 ohne (Kontrolle). Sichtbar: Möbel, Teppich, Fenster leicht anders; in der Schlichtszene wanderte das Haus. Das ist Flux 3 selbst, nicht die Box.
+- **Abhilfe getestet (nur am Bild, nicht im Plugin):** das Ergebnis nur innerhalb der Box (Rechteck, weicher Rand ca. 12 px) über das Original legen; der Rest bleibt bildgleich, die Uhr sieht gleich aus.
