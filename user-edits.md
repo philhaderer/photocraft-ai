@@ -20,6 +20,7 @@ Search the whole folder for the exact words you see in the window, e.g. `Covers 
 | Main window: labels, buttons and most tooltips | `pccomfy\gui.py` |
 | Prompt area (LLM line, negative prompt), LoRA rows | `pccomfy\gui_prompt.py`, `pccomfy\gui_lora.py` |
 | Reference slots of Multi Image Edit | `pccomfy\refslots.py` |
+| History list (clock in the header): "Erase history", "No runs yet." | `pccomfy\gui_run.py` |
 | GitHub start page | `README.md` (change it only when you ask Claude) |
 
 Not here: `README.pl.md` is upstream and stays as it is.
