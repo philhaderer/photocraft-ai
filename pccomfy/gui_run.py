@@ -415,6 +415,8 @@ class RunMixin:
         elif phase == "image":
             step = (msg or "").split("…")[0].strip()
             text = "Generating · " + (step if phase_fraction >= 0 and step else secs)
+        elif phase == "stage":
+            text = f"{msg} · {secs}" if secs else (msg or "Working")
         elif phase == "place":
             text = "Placing the result"
         else:
