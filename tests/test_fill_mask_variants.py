@@ -5,7 +5,8 @@ Edge feather and Context values, against fixed rules:
     1  the selection is fully opaque, also where it meets the canvas edge
     2  no fade towards the canvas edge (the fault of 28.10.: the fill went soft at a picture edge)
     3  a side of the crop inside the picture: crop_fade 0, narrow/wide at most a trace (printed), density5 >= 95 %
-    4  narrow is exactly what the plugin does today (bridge.soft_layer_mask); corners fade like edges (narrow, wide)
+    4  crop_fade is exactly what the plugin does since 30.10. (bridge.soft_layer_mask); corners fade like edges
+       (narrow, wide)
 
     python tests/test_fill_mask_variants.py
 """
@@ -82,7 +83,7 @@ def check(pos, shape, pct, ctx, report):
         else:
             assert top <= 16, f"rule 3: {case}: {top} at the crop's side"
             report[v] = max(report.get(v, 0), top)
-        if v == "narrow":                                                                 # rule 4: the plugin's own mask
+        if v == "crop_fade":                                                              # rule 4: the plugin's own mask
             today = soft_layer_mask(Request(mode="inpaint", workflow=FIBO, feather_pct=pct), [FIBO], mask, region, bbox)
             assert np.array_equal(np.asarray(today), np.asarray(m)), f"rule 4: {case}"
 

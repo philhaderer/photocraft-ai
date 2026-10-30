@@ -1,5 +1,6 @@
-"""Mask density: Fill with Qwen and Fibo starts at 5 %, everything else at 100 %; the run sets it on the new layer's soft
-mask in PhotoCraft (layer.layerMask.edit, PhotoCraft 0.17+), 100 % sets nothing (stubbed Tk, PhotoCraft and ComfyUI).
+"""Mask density: every function starts at 100 % (Fill with Qwen and Fibo started at 5 % until the Fill mask test round of
+30.10.); the run sets the slider's value on the new layer's soft mask in PhotoCraft (layer.layerMask.edit, PhotoCraft
+0.17+), 100 % sets nothing (stubbed Tk, PhotoCraft and ComfyUI).
 
 User 28.10.: the fills looked better with the layer mask's density turned down in PhotoCraft.
 
@@ -38,10 +39,11 @@ def gui_checks():
     app = ra.make()
     for model in ("qwen", "fibo"):
         ra.go(app, model, "inpaint")
-        assert app.v_density.get() == 5, (model, app.v_density.get())
-        assert app._request().mask_density == 5
+        assert app.v_density.get() == 100, (model, app.v_density.get())    # Fill mask test round 30.10.: 100 %
+        assert app._request().mask_density == 100
+        app.v_density.set(30)
         ra.go(app, model, "remove")
-        assert app.v_density.get() == 100, (model, app.v_density.get())    # Fill's 5 % does not travel on
+        assert app.v_density.get() == 100, (model, app.v_density.get())    # a hand-set density does not travel on
     # shown and greyed out together with Edge feather
     ra.go(app, "qwen", "inpaint")
     assert app.w_density["state"] == "normal"
@@ -52,7 +54,7 @@ def gui_checks():
     app.v_lmask.set(ra.gui.LAYER_MASKS["soft"])
     app.v_density.set(40)
     app.reset_settings()
-    assert app.v_density.get() == 5
+    assert app.v_density.get() == 100
     app.v_density.set(37)
     assert app._collect()["mask_density"] == 37
     app._apply_settings({"mask_density": 60})

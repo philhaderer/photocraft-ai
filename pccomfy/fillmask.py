@@ -1,15 +1,17 @@
-"""Layer-mask variants for Fill with an instruction editor (Qwen, Fibo), for the Fill mask test round (PLAN, "Fill-Maske
-neu"; user 30.10.). Not used by the plugin yet: the round compares them, the winner goes into bridge.soft_layer_mask.
+"""Layer-mask variants for Fill with an instruction editor (Qwen, Fibo), from the Fill mask test round (PLAN, "Fill-Maske
+neu"; user 30.10.). The winner, crop_fade, is the plugin's Fill mask (bridge.soft_layer_mask, user 30.10.: option A);
+the others stay for the live test round (tests/live_fill_mask.py).
 
 Qwen and Fibo never see the mask: they redraw the whole crop around the selection, and PhotoCraft blends the result in
 through the layer mask. So one generation can be shown with every variant; the masks are built here, the size of the
 crop (`region`), from the selection mask of the whole picture.
 
-    narrow     as today: opaque over the selection, a soft edge outside it, as wide as Edge feather (stops before the crop
-               ends; bridge.soft_layer_mask itself)
-    density5   the same mask at 5 % density (today's Fill start value): the whole crop shows at 95 % or more
+    narrow     the mask before 30.10.: opaque over the selection, a soft edge outside it, as wide as Edge feather (stops
+               before the crop ends)
+    density5   the same mask at 5 % density (the Fill start value before 30.10.): the whole crop shows at 95 % or more
     crop_fade  opaque over the selection and Edge feather around it, then a smooth fade reaching 0 at the crop's sides
                inside the picture (the attempt of 28.10.); no fade where the crop meets the canvas edge
+               (bridge.soft_layer_mask itself since 30.10.)
     wide       as narrow, three times as wide (still stopping before the crop ends)
 
 Rules every variant keeps (tests/test_fill_mask_variants.py): the selection is fully opaque, also where it meets the
