@@ -82,7 +82,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 14. **Modell-Manager von OpenFill vergleichen** (T4): sobald du das Repo geladen hast; Ergebnis als Gegenüberstellung mit Empfehlung (übernehmen / anpassen / weglassen).
 
 **Offen aus den Testrunden**
-- **Fill-Maske neu** (Befund 28.10.): die schmale weiche Kante schneidet bei Fill den Rand der Füllung und ihren Schatten ab. Ein erster Versuch (Maske läuft bis zum Rand des Ausschnitts aus) war „viel besser“, wurde aber zurückgenommen (an Bildkanten weich, ohne Regler nicht testbar). **Testrunde gebaut 30.10.** (`docs/tests/fill-mask-testrunde.md`): vier Masken-Varianten (heute schmal, heute Dichte 5 %, bis zum Ausschnittrand, breit 3×). Stufe 1 ohne GPU erledigt: Alle halten die Regeln ein, keine läuft an einer Bildkante aus. **Stufe 2 wartet auf dich:** 160 echte Läufe (ca. 50 Min.), dann 40 Fälle blind bewerten. Danach baue ich den Sieger ein.
+- **Fill-Maske neu** (Befund 28.10.): die schmale weiche Kante schneidet bei Fill den Rand der Füllung und ihren Schatten ab. Ein erster Versuch (Maske läuft bis zum Rand des Ausschnitts aus) war „viel besser“, wurde aber zurückgenommen (an Bildkanten weich, ohne Regler nicht testbar). **Testrunde gebaut 30.10.** (`docs/tests/fill-mask-testrunde.md`): vier Masken-Varianten (heute schmal, heute Dichte 5 %, bis zum Ausschnittrand, breit 3×). Stufe 1 ohne GPU erledigt: Alle halten die Regeln ein, keine läuft an einer Bildkante aus. **Stufe 2 wartet auf dich:** 40 echte Läufe (auf ein Viertel gekürzt, ca. 12–15 Min.), dann alle 40 Fälle blind bewerten. Danach baue ich den Sieger ein.
 - **Tooltip zur runden Auswahl:** ob einer dazukommt, ist offen.
 - **Ranking** für die noch offenen Funktionen (Abschnitt 2), wenn du es nennst.
 

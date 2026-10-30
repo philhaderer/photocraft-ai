@@ -1,6 +1,6 @@
 # Fill-Masken-Testrunde (30.10.)
 
-Warum: Bei Fill mit Qwen und Fibo schneidet der schmale weiche Rand von heute den Rand der Füllung und ihren Schatten ab (28.10.). Mit Dichte 5 % (heutiger Startwert) ist dagegen fast der ganze neu gemalte Ausschnitt sichtbar, und seine gerade Kante kann sich zeigen. Der Versuch vom 28.10. (Maske läuft bis zum Rand des Ausschnitts aus) wurde zurückgenommen, weil die Füllung an einer Bildkante weich wurde. Vor einem neuen Anlauf deshalb ein großer Test (deine Entscheidungen vom 30.10.: zwei Stufen, alle vier Varianten, mittlere Runde, Bilder aus `A:\testpics3\resized_1280px`).
+Warum: Bei Fill mit Qwen und Fibo schneidet der schmale weiche Rand von heute den Rand der Füllung und ihren Schatten ab (28.10.). Mit Dichte 5 % (heutiger Startwert) ist dagegen fast der ganze neu gemalte Ausschnitt sichtbar, und seine gerade Kante kann sich zeigen. Der Versuch vom 28.10. (Maske läuft bis zum Rand des Ausschnitts aus) wurde zurückgenommen, weil die Füllung an einer Bildkante weich wurde. Vor einem neuen Anlauf deshalb ein großer Test (deine Entscheidungen vom 30.10.: zwei Stufen, alle vier Varianten, Bilder aus `A:\testpics3\resized_1280px`; die Runde danach auf ein Viertel gekürzt).
 
 Qwen und Fibo sehen die Maske beim Generieren nicht. Darum gibt es je Fall **eine** Generierung, und alle vier Masken werden auf dasselbe Ergebnis gelegt:
 
@@ -28,7 +28,7 @@ Der Code der Varianten steht in `pccomfy/fillmask.py`. Das Plugin selbst ist unv
 
 **Bilder** (aus `A:\testpics3\resized_1280px`): Zimmer mit Klavierrahmen (`IMG_20240522_194039_1`), Waldschlucht (`IMG_20240921_102651`), Wand mit Ukulelen (`IMG_20241001_155006`), Weg im Freien (`IMG_20241123_142913`).
 
-**Positionen:** Mitte (je Bild eine freie Stelle), linke Kante, obere Kante, Ecke oben links, Ecke unten rechts. Die Auswahl ist 26 % der Bildbreite × 32 % der Bildhöhe groß und berührt bei den Kanten- und Eckpositionen die Bildkante. Jede Position gibt es als Rechteck und als harten Lasso (ohne Glättung: Eine geglättete Auswahl lässt das Plugin ohnehin, wie sie ist). Übersicht aller Auswahlen mit den Objekten: `data/fill-mask-test/vorschau-auswahlen.png`.
+**Positionen:** Mitte (je Bild eine freie Stelle), linke Kante, obere Kante, Ecke oben links, Ecke unten rechts. Die Auswahl ist 26 % der Bildbreite × 32 % der Bildhöhe groß und berührt bei den Kanten- und Eckpositionen die Bildkante. Rechteck und harter Lasso (ohne Glättung: Eine geglättete Auswahl lässt das Plugin ohnehin, wie sie ist) wechseln sich je Bild und Position ab, sodass jedes Bild und jede Position beide Formen bekommt. Fibo und Qwen bekommen im selben Fall dieselbe Auswahl. Übersicht aller Auswahlen mit den Objekten: `data/fill-mask-test/vorschau-auswahlen.png`.
 
 **Objekte** (Dinge, die Schatten werfen):
 
@@ -39,7 +39,7 @@ Der Code der Varianten steht in `pccomfy/fillmask.py`. Das Plugin selbst ist unv
 | Ukulelen | a framed landscape painting on the wall | a tall floor lamp | a round wall clock | a wall shelf with books | a potted plant on the floor |
 | Weg | a park bench beside the path | a red mailbox on a post | a hot air balloon | a red kite in the sky | a dog sitting on the grass |
 
-**Umfang:** 4 Bilder × 5 Positionen × 2 Formen × Context 0.4 und 0.8 × Fibo und Qwen = **160 Läufe**, 1 Seed, je Modell mit den Fill-Startwerten (Edge feather Fibo 10 %, Qwen 4 %; Fibo mit Seam-Korrektur). Geschätzt etwa 50 Minuten, die GPU ist in der Zeit belegt.
+**Umfang** (auf ein Viertel gekürzt, Wunsch des Users 30.10.): 4 Bilder × 5 Positionen × Fibo und Qwen = **40 Läufe**, 1 Seed, Context 0.4, je Modell mit den Fill-Startwerten (Edge feather Fibo 10 %, Qwen 4 %; Fibo mit Seam-Korrektur). Geschätzt etwa 12 bis 15 Minuten, die GPU ist in der Zeit belegt.
 
 ### Starten
 
@@ -57,7 +57,7 @@ Am Ende steht „DONE … cases, 40 to rate“.
 .venv\Scripts\python.exe tests\live_fill_mask.py rate
 ```
 
-Es sind 40 Fälle: jedes Bild, jede Position und jedes Modell einmal (Form und Context wechseln sich ab). Je Fall siehst du die vier Varianten nebeneinander, in zufälliger Reihenfolge und ohne Namen, als Ausschnitt um die Auswahl herum (die Seiten des neu gemalten Bereichs sind mit drin).
+Es sind alle 40 Fälle: jedes Bild, jede Position und jedes Modell einmal. Je Fall siehst du die vier Varianten nebeneinander, in zufälliger Reihenfolge und ohne Namen, als Ausschnitt um die Auswahl herum (die Seiten des neu gemalten Bereichs sind mit drin).
 
 - **1 / 2 / 3 / 4** = bestes Bild, **← / →** blättern, **O** zeigt die Auswahl als orange Linie, **V** zeigt das ganze Bild.
 - Unter jedem Bild ankreuzen, was nicht stimmt: Schatten/Rand der Füllung abgeschnitten, gerade Kante des Ausschnitts sichtbar, Farb-/Helligkeitsfleck um die Auswahl, Füllung am Bildrand weich. Eine Notiz, wenn nötig.
@@ -69,4 +69,4 @@ Es sind 40 Fälle: jedes Bild, jede Position und jedes Modell einmal (Form und C
 .venv\Scripts\python.exe tests\live_fill_mask.py summary
 ```
 
-Das schreibt `ergebnis.md` in den Ordner der Runde (`data\fill-mask-test\<Zeit>\`). Darin stehen die Messung über alle 160 Fälle (Sprung an den Seiten des Ausschnitts, Anteil der Änderungen außerhalb der Auswahl, der sichtbar bleibt), die Blindbewertung je Modell und Variante und das beste Bild je Position. Danach einfach „Fertig“ sagen; ich lese den Ordner selbst und lege dir die Optionen für den Einbau vor.
+Das schreibt `ergebnis.md` in den Ordner der Runde (`data\fill-mask-test\<Zeit>\`). Darin stehen die Messung über alle 40 Fälle (Sprung an den Seiten des Ausschnitts, Anteil der Änderungen außerhalb der Auswahl, der sichtbar bleibt), die Blindbewertung je Modell und Variante und das beste Bild je Position. Danach einfach „Fertig“ sagen; ich lese den Ordner selbst und lege dir die Optionen für den Einbau vor.
