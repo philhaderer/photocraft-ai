@@ -689,6 +689,18 @@ def set_stage_strengths(graph: dict, values: dict) -> dict:
     return g
 
 
+def stage_subgraph(graph: dict, nid: str) -> dict:
+    """The nodes one switchable stage owns: itself and the nodes it removes or rewires (SeedVR2's loaders and nodes, a LoRA)."""
+    spec = graph.get(nid, {}).get("_meta", {}).get("pc_stage_off", {})
+    ids = {str(nid)} | {str(r) for r in spec.get("remove", [])} | {str(r) for r in spec.get("rewire", [])}
+    return {i: graph[i] for i in ids if i in graph}
+
+
+def lora_subgraph(graph: dict) -> dict:
+    """The speed LoRA loaders the window can switch off (pc:lora)."""
+    return {str(i): graph[str(i)] for i in lora_switches(graph)}
+
+
 def lora_tip(graph: dict) -> str:
     """The hint of the workflow's pc:lora loader (`pc_lora_tip` in its _meta): what the LoRA does and its best strength."""
     for nid in lora_switches(graph):

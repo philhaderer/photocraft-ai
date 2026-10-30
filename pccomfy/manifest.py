@@ -195,8 +195,7 @@ class TabSpec:
 
 _UPS = "flux2-vae.safetensors"
 _FLUX3_UP_NODES = ("AUSBOSS_NODES_TiledUpscale", "AUSBOSS_NODES_TiledUpscaleStitch", "AUSBOSS_NODES_LoraLoader",
-                   "AUSBOSS_NODES_Seed", "AUSBOSS_NODES_Text", "AUSBOSS_NODES_MathExpression", "AUSBOSS_NODES_ImageResize",
-                   "SeedVR2Preprocess", "SeedVR2Conditioning", "SeedVR2PostProcessing")
+                   "AUSBOSS_NODES_Seed", "AUSBOSS_NODES_Text", "AUSBOSS_NODES_MathExpression", "AUSBOSS_NODES_ImageResize")
 _ULTRA = ("Flux 2\\ultra_real_v4.safetensors",)
 _UPSAMPLER = "qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors"
 _TAEF2 = "taef2_decoder.pth"            # live preview of the Flux 2 latent: Flux 2, Flux 3, Fibo, MOSS
@@ -209,8 +208,10 @@ TABS: dict[str, TabSpec] = {
         modes={
             "txt2img": ModeSpec(optional=(_UPSAMPLER,)),
             "outpaint": ModeSpec(requires=("Flux 3\\flux-3-image-klein-outpaint.safetensors",)),
-            "upscale": ModeSpec(requires=("seedvr2_3b_int8_convrot.safetensors", "seedvr2_ema_vae_fp16.safetensors",
-                                          "Flux 3\\flux-3-image-klein-restore.safetensors"),
+            # SeedVR2 pre-cleaning is a switch that starts off: the mode runs without its files (they are optional and the
+            # switch is greyed out while they are missing, user 30.10.)
+            "upscale": ModeSpec(requires=("Flux 3\\flux-3-image-klein-restore.safetensors",),
+                                optional=("seedvr2_3b_int8_convrot.safetensors", "seedvr2_ema_vae_fp16.safetensors"),
                                 nodes=_FLUX3_UP_NODES),
             "multi_edit": _CUT,
         },

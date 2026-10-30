@@ -123,14 +123,21 @@ def test_status():
     st = inventory.Inventory(lists, nodes=inv.nodes).tab_status("moss")
     assert st.state == "ready" and [f.name for f in st.optional_missing] == ["Moss\\lora_dmd2.safetensors"]
 
-    # SeedVR2 missing: Flux 3 stays usable, only Upscale is greyed
+    # SeedVR2 missing: Flux 3 Upscale still works (its SeedVR2 pre-cleaning starts off); only the switch needs the files
     lists = full_lists()
     lists["unet"].remove("seedvr2_3b_int8_convrot.safetensors")
+    i2 = inventory.Inventory(lists, nodes=inv.nodes)
+    assert i2.tab_status("flux3").state == "ready"
+    assert i2.mode_status("flux3", "upscale").state == "ready"
+    assert [f.name for f in i2.mode_status("flux3", "upscale").optional_missing] == ["seedvr2_3b_int8_convrot.safetensors"]
+    # the Restore LoRA is on at the start: without it Upscale is greyed
+    lists = full_lists()
+    lists["lora"].remove("Flux 3\\flux-3-image-klein-restore.safetensors")
     i2 = inventory.Inventory(lists, nodes=inv.nodes)
     st = i2.tab_status("flux3")
     assert st.state == "partial" and list(st.detail) == ["upscale"], st
     assert i2.mode_status("flux3", "edit").state == "ready" and i2.mode_status("flux3", "upscale").state == "missing"
-    assert [f.name for f in i2.mode_status("flux3", "upscale").missing] == ["seedvr2_3b_int8_convrot.safetensors"]
+    assert [f.name for f in i2.mode_status("flux3", "upscale").missing] == ["Flux 3\\flux-3-image-klein-restore.safetensors"]
 
     # the Flux 3 diffusion model missing: the whole tab is out
     lists = full_lists()
@@ -152,7 +159,7 @@ def test_status():
     assert inventory.Inventory(lists, nodes=inv.nodes).tab_status("flux2").state == "partial"
 
     # a missing AusBoss node blocks Flux 3 Upscale, and the message names the pack
-    i4 = inventory.Inventory(full_lists(), nodes={"SeedVR2Preprocess"})
+    i4 = inventory.Inventory(full_lists(), nodes={"SomethingElse"})
     ms = i4.mode_status("flux3", "upscale")
     assert ms.state == "missing" and "AUSBOSS_NODES_TiledUpscale" in ms.nodes
     assert any("ComfyUI-AusBoss" in ln for ln in inventory.preflight(i4, "flux3", "upscale"))
