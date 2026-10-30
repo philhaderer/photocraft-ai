@@ -4,6 +4,8 @@ Verlauf nach Datum, neuester Stand oben. Alles liegt in `next`. Die vollen Texte
 
 ## 30.10. (Sitzung am Abend)
 
+- **Punkt 15 Flux-3-Boxen** (`feat/flux3-bbox`, `tests/test_bbox.py`): Textlauf der Knoten (API nimmt Boxen als JSON an, `editor_state` = `{"__value__": []}`), danach Haken „BBOX“ in Multi Image Edit bei Flux 3: die Auswahl wird die Box `<obj_1>`, `workflows.add_layout` setzt `CreateBoundingBoxes` und `Flux3LayoutPrompt` vor den Prompt-Knoten, fehlt `<obj_1>` im Prompt, kommt „Place the result in <obj_1>.“ dazu. Noch kein echter Lauf.
+
 - **14e Dateien am Kopf erkennen** (`feat/safetensors-header`, `pccomfy/sthead.py`, `tests/test_sthead.py`): das Ketten-Menü im Zahnrad-Fenster hängt „(looks like <Datei>)“ an umbenannte Kopien von Manifest-Dateien (Größe + gültiger Kopf) und „(incomplete?)“ an Dateien, denen Bytes fehlen; Treffer der erwarteten Datei stehen oben.
 
 - **14a Qwen-Encoder-Blindtest** (`tests/live_qwen_encoder.py`, 12 Läufe, 3,1 min): alle 6 Paare „gleich gut“. Der Qwen-Edit-Workflow lädt jetzt `qwen3vl_8b_int8_convrot` (`feat/qwen-edit-int8-encoder`); `qwen3vl_8b_fp8_scaled` fällt weg. 14c Schritt 6 (Token-Panel) gestrichen, 14d auf später.
