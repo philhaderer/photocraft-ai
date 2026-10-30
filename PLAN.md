@@ -45,6 +45,7 @@ Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir gepr
 ## 2. Deine Entscheidungen (gelten weiter)
 
 **Release und Ablauf**
+- Regel (30.10.): Ein Modell ist im Plugin nur anwählbar, wenn die Dateien für seine Standardeinstellungen da sind (Pflichtdateien des Reiters plus Dateien der Schalter, die beim Start an sind: Speed-LoRA, Stufen). Schalter, die beim Start aus sind, brauchen ihre Dateien erst, wenn der Nutzer sie einschaltet; fehlen sie, ist der Schalter grau. Das Zahnrad-Fenster sagt es oben und am Modell (Haken grau, orange Zeile). `inventory.default_switch_files` liest das aus dem Workflow, ein Test hält es mit dem Manifest zusammen.
 - Release 1: nur 16 GB getestet (int8-ConvRot-Dateien), 8-GB-Empfehlungen nur als Doku, nur Windows. AusBoss bleibt Abhängigkeit.
 - Veröffentlichung: neues Repo ohne Upstream-Verlauf, Credits Pflicht, erst kurz vor dem Release.
 - Easy Mode zuletzt. Fast Mode gestrichen. PhotoCraft 0.16 ist seit 28.10. deine Hauptversion.
