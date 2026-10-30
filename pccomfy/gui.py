@@ -244,7 +244,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.b_copy.pack(side="left", padx=(8, 0))
         self.tt_copy = Tooltip(self.b_copy, "Copy the prompt the text model wrote in the last run.")
         self.cb_turbo = ttk.Checkbutton(mf, text="LoRA", variable=self.v_turbo, command=self._on_turbo)
-        self.cb_turbo.grid(row=1, column=1, sticky="w", padx=6, pady=(4, 0))
+        self.cb_turbo.grid(row=1, column=1, sticky="w", padx=(0, 6), pady=(4, 0))   # flush left like the LLM row (user 30.10.)
         self.tt_turbo = Tooltip(self.cb_turbo, LORA_TIP)
 
         self.f_lora = ttk.Frame(mf)    # strength of that LoRA: on the right of its checkbox, like every slider
@@ -261,7 +261,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.stage_scales, self.stage_lbls = [], []     # a stage that is a LoRA (MOSS' Lenovo) also has a strength slider
         for i, var in enumerate(self.stage_vars):
             cb = ttk.Checkbutton(mf, text="Stage", variable=var, command=self._update_stage_scales)
-            cb.grid(row=3 + i, column=1, sticky="w", padx=6, pady=(2, 0))
+            cb.grid(row=3 + i, column=1, sticky="w", padx=(0, 6), pady=(2, 0))
             self.stage_tips.append(Tooltip(cb, STAGE_TIP))
             self.stage_cbs.append(cb)
             sf = ttk.Frame(mf)
@@ -377,7 +377,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._on_match()
         self.f_neg = ttk.Frame(r)
         self.f_neg.pack(fill="x", padx=10, pady=(6, 0))     # directly under the prompt
-        self.f_enh.pack(fill="x", padx=10, pady=(6, 0))
+        self.f_enh.pack(fill="x", padx=10, pady=(6, 0))     # the LLM row: directly under the negative prompt (user 30.10.)
         self.v_neg_open = tk.BooleanVar(value=bool(self.state.get("neg_open", False)))
         self.btn_neg = ttk.Button(self.f_neg, command=self._toggle_negative, style="Link.TButton")
         self.btn_neg.pack(anchor="w")
@@ -399,7 +399,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         Tooltip(self.b_addlora, "Adds an extra LoRA (strength 0 to 1.5).")
         self.f_xl_rows = ttk.Frame(self.f_xl)
         self.f_xl_rows.pack(fill="x")
-        mf.pack(fill="x", padx=10, pady=4, after=self.f_neg)     # the LoRA / stage box: directly under the negative prompt
+        mf.pack(fill="x", padx=10, pady=4, after=self.f_enh)     # the LoRA / stage box: under the LLM row
         af = ttk.Frame(self.adv_body)
         af.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(2, 0))
         # Seed sits in the Advanced settings beside Steps and CFG (user 29.10.)

@@ -55,7 +55,7 @@ def main():
     app._on_model()
     assert app.v_mode.get() == "txt2img" and app.v_workflow.get() == "moss-image-t2i.json" and app.v_res.get() == 1280
     assert app.v_enhance.get() is False and "Qwen 3.5 9B" in app.tt_enhance.text      # which text model writes the prompt (starts off)
-    assert app.cb_enhance["text"] == "LLM prompt enhancement (Qwen 3.5 9B)"
+    assert app.cb_enhance["text"] == "LLM prompt enhancement" and "Qwen 3.5 9B" in app.tt_enhance.text   # name only in the tooltip
     assert app.v_turbo.get() is False and app.cb_turbo["text"].startswith("DMD2") and app.v_lora_str.get() == 1.0   # DMD2 starts off (user 29.10.)
     assert list(models.MOSS.modes) == ["txt2img"]                                                       # Fill off (not good enough), Expand parked 29.10.
     assert [c["text"] for c in app.stage_cbs] == ["UltraReal LoRA", "Skip-layer guidance (SLG)", "Stage"]
@@ -120,7 +120,7 @@ def main():
     app.v_mode.set("inpaint")
     app._on_model()
     assert app.v_workflow.get() == "fibo2-edit.json" and app.v_enhance.get() is False
-    assert app.cb_enhance["text"] == "LLM prompt enhancement (Qwen 3.5 9B)"
+    assert app.cb_enhance["text"] == "LLM prompt enhancement" and "Qwen 3.5 9B" in app.tt_enhance.text   # name only in the tooltip
     app.v_enhance.set(True)
     app.v_mode.set("edit")
     app._on_mode()
