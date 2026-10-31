@@ -141,7 +141,7 @@ class RunMixin:
         runs = sweep_requests(req, parse_list(self.v_cmp_res.get(), int), parse_list(self.v_cmp_ctx.get(), float))
         if len(runs) > 1:
             if req.params.seed is None or req.params.seed < 0:
-                req.params.seed = random.randint(0, 2**31 - 1)   # one seed for the whole series: only the value differs
+                req.params.seed = random.randint(0, 10**8 - 1)   # one seed for the whole series: only the value differs
 
         def work():
             try:

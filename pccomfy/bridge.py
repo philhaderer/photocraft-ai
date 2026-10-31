@@ -417,7 +417,7 @@ class Bridge:
         p = req.params
         p.prompt = strip_placeholder(p.prompt)   # the unedited "<DESCRIBE THE IMAGE>" of a preset is no instruction
         if p.seed is None or p.seed < 0:
-            p.seed = random.randint(0, 2**31 - 1)
+            p.seed = random.randint(0, 10**8 - 1)      # at most 8 digits: it fits the seed field
         p.batch = max(1, int(req.variants))
         tag = uuid.uuid4().hex[:8]
         _wfs = workflows.resolve(req.workflow) if req.workflow else [None]

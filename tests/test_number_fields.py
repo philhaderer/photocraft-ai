@@ -22,6 +22,12 @@ def main():
     assert ok("1", "5", "5") and ok("1", "3", "0.3") and ok("1", ",", "0,") and ok("1", "12", "12")
     assert not ok("1", "a", "a") and not ok("1", "%", "5%") and not ok("1", ".", "0.5.") and not ok("1", ",", "0.5,")
     assert not ok("1", "-", "-") and not ok("1", " ", "5 ")
+    st, cf, sd = gui.steps_typed_ok, gui.cfg_typed_ok, gui.seed_typed_ok     # input limits (user 1.11.)
+    assert st("1", "3", "3") and st("1", "5", "35") and not st("1", "5", "355") and not st("1", "a", "a") and st("0", "5", "3")
+    assert cf("1", "9", "9") and cf("1", ".", "9.") and cf("1", "5", "9.5") and cf("1", ",", "4,") and not cf("1", "5", "9.55")
+    assert not cf("1", "1", "12") and not cf("1", "a", "a") and not cf("1", ".", "9..") and cf("0", "5", "")
+    assert sd("1", "-", "-") and sd("1", "1", "-1") and sd("1", "7", "12345678") and not sd("1", "9", "123456789")
+    assert not sd("1", "-", "1-") and not sd("1", "a", "a") and sd("0", "9", "1234")
     p = gui.parse_number
     assert p("0,2") == 0.2 and p("0.2") == 0.2 and p("35 %") == 35 and p(" 12,5 ") == 12.5 and p("abc") is None and p("") is None
 

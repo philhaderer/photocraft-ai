@@ -426,9 +426,9 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         af = ttk.Frame(self.adv_body)
         af.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(2, 0))
         # Seed sits in the Advanced settings beside Steps and CFG (user 29.10.)
-        items = [("Steps", self._spin(af, self.v_steps, 1, 150, 1, 3)),
-                 ("CFG", self._spin(af, self.v_cfg, 1, 30, 0.5, 3)),
-                 ("Seed (-1 random)", self._spin(af, self.v_seed, -1, 2**31 - 1, 1, 9)),
+        items = [("Steps", self._spin(af, self.v_steps, 1, 99, 1, 3, steps_typed_ok)),
+                 ("CFG", self._spin(af, self.v_cfg, 1, 9.9, 0.5, 3, cfg_typed_ok)),
+                 ("Seed (-1 random)", self._spin(af, self.v_seed, -1, 10**SEED_DIGITS - 1, 1, 9, seed_typed_ok)),
                  ("Denoise", self._spin(af, self.v_denoise, 0.05, 1.0, 0.05, 5))]
         # Denoise is not shown (the user, 28.10.: "there is no use for it"): the widget stays ungridded, so the workflow's /
         # the function's value, presets, Reset and the requests work as before
