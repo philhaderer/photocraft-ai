@@ -73,6 +73,7 @@ class ThemeMixin:
         s.configure("Link.TButton", background=BG, foreground=MUTED, padding=(0, 2), borderwidth=0, relief="flat",
                     width=0)   # as wide as its text: clam's minimum width would centre "Advanced" and push it right
         s.map("Link.TButton", foreground=[("active", FG)], background=[("active", BG)])
+        s.configure("Llm.TButton", padding=(4, 1), width=0, font=font(9))     # the "LLM" button at the prompt: short, not stretched
         s.configure("Small.TButton", padding=(8, 2), font=font(9))   # "Show feather" beside the layer mask menu: a button in the size of the slider texts
         # small switches in the look of "Show feather", the chosen one filled orange like the functions (Upscale factor)
         s.configure("Small.Toolbutton", background=PANEL, foreground=FG, padding=(8, 2), font=font(9), anchor="center",
