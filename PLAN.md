@@ -34,6 +34,17 @@ Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir gepr
 **Neu vom 30.10. (Punkt 15, BBOX)**
 - Flux 3, Multi Image Edit: Haken „BBOX“ neben „Prompt“ und Tipp unter den Slots. Echter Lauf mit GPU nötig (nur mit deiner Erlaubnis): Rechteck auswählen (z. B. Zelt), eine Referenz in Slot 1, Prompt „replace the tent <obj_1> with <ref_image_1> a little dog …“, einmal mit und einmal ohne eigenes `<obj_1>`; prüfen: landet das Bild in der Box, bleibt die Auswahl, stimmt der Tipp. Graph danach in `data/exchange/last-graph.json`.
 
+**Neu vom 1.11. (kleinere Änderungen, alles ungeprüft im echten Fenster)**
+- Eingabefelder: Steps höchstens zwei Ziffern, CFG 0 bis 9,9 (eine Nachkommastelle), Seed höchstens acht Ziffern (-1 bleibt); Zufallsseeds liegen jetzt unter 10^8.
+- Kein Statustext mehr beim Ausschalten von Easy Mode. Advanced settings sind bei jedem Start zugeklappt. Easy Mode läuft nach dem Beenden im Easy Mode wieder an (war schon so, getestet in `test_easymode_gui.py`).
+- Tipp unter dem Prompt ist markier- und kopierbar (das Info-Symbol nicht). LLM-Knopf kürzer, Kopier-Knopf bei „LLM prompt enhancement“ auf 80 % Größe.
+- Zahnrad-Fenster: Trennlinien vor „Covers these modes“ und „Needs these weights“ (vorher „Needs these models“), „(optional, not used in standard settings)“.
+- Referenzbild nach „Cut out“ auf die äußersten sichtbaren Pixel beschnitten (Alpha über 4); „Undo cut“ bringt das Original zurück.
+- Symbol rechts neben dem Seed-Feld (Kreispfeil gegen den Uhrzeigersinn): setzt den Seed des letzten Laufs wieder ein; grau bis ein Lauf fertig ist.
+- Umschalt-Klick auf „Reset page“: immer die Standardwerte, auch wenn du eigene gespeichert hast (Option B).
+- Ranking: alle Funktionen sind gerankt (siehe Abschnitt 2).
+- Bestätigt (kein Code): der LLM-Knopf folgt einem neu verlinkten Textmodell (Test `test_llm_button.py`).
+
 **Neu vom 31.10.**
 - **Fenster ohne Titelleiste (31.10., Option B, auf dein Wort):** Der Fensterkopf ist jetzt der Griff: ziehen verschiebt das Plugin, rechts neben „Minimise“ steht ein neuer Knopf „Close the plugin“. Kein Windows-Rand mehr, nur ein dünner grauer Rahmen; der Eintrag in der Taskleiste fehlte schon (das Fenster gehört PhotoCraft). `PCCOMFY_TITLEBAR=1` bringt die Titelleiste zurück, falls es im echten Fenster Probleme gibt (Eingabe in Textfelder, Verknüpfung mit PhotoCraft, 150 %). Ungeprüft im echten Fenster.
 - **Zahnrad-Fenster mit Reitern je Modell:** oben „Models“ und „Credits“; in „Models“ stehen „Linked files“ (Infotext, Undo, Reset) und darunter ein Reiter je Modell (Zustandszeichen im Titel) plus „Additional“. Jeder Modellreiter: Haken „Show this model in the plugin“, „Covers these modes:“ (grün bereit, rot Dateien fehlen, grau nicht angeboten) und die Dateien. Dateien, die das Plugin nicht selbst lädt (gesperrt bei Hugging Face, Civitai), tragen einen orangen Hinweis; „alle fehlenden“ nennt sie im OK-Fenster und öffnet ihre Seiten im Browser. Downloads laufen parallel (keine Warteschlange); die TAESD-Decoder kommen von `raw.githubusercontent.com`, weil `github.com` in Windows-Python am Zertifikat scheitert.
@@ -73,7 +84,7 @@ Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir gepr
 - Screenshots des Fensters nur, wenn du etwas nicht selbst prüfen kannst.
 
 **Modelle und Reihung**
-- Ranking (in `models.RANKING`, zum Testen vorn in jedem Funktions-Tooltip): Fill und Remove: Fibo, Qwen. Expand: Flux 2, Flux 3, Qwen, Fibo. Offen: Text to image, Edit, Multi Image Edit, Upscale, Refine, dazu Flux 2/3 bei Remove. Der Favorit aus dem Rechtsklick überschreibt das Ranking je Funktion.
+- Ranking (in `models.RANKING`, zum Testen vorn in jedem Funktions-Tooltip): Fill und Remove: Fibo, Qwen. Expand: Flux 2, Flux 3, Qwen, Fibo. Seit 1.11. gilt für alle Funktionen dieselbe Reihung wie im Easy Mode (Text to image: Flux 3, MOSS, Flux 2, Qwen, Fibo; Edit: Flux 3, Qwen, Flux 2, Fibo; Upscale: Flux 3, Flux 2; Refine: Fibo, Flux 2; Multi Image Edit: Flux 3, Flux 2, Qwen, Fibo); Refine und Multi Image Edit vorläufig, du prüfst sie noch. Offen: Flux 2/3 bei Remove. Der Favorit aus dem Rechtsklick überschreibt das Ranking je Funktion.
 - Krea 2 und MOSS Expand sind seit 29.10. abgeschaltet (Blindtest: 2 und 10 von 64 gut), geparkt in `models.PARKED_EXPAND`. Flux 3 Expand läuft mit der Outpaint-LoRA. Fill für Flux später.
 - MOSS Text to image: CFG 3.0, 35 Steps, ohne DMD2 (Blindtest 29.10.). Qwen startet ohne Turbo, Qwen-Slotzahl 8.
 
