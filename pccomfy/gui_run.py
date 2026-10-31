@@ -42,7 +42,6 @@ class RunMixin:
                        layer_mask=layer_mask_key(self.v_lmask.get()),
                        feather_pct=round(float(self.v_feather.get()) * 2) / 2,
                        mask_density=min(100, max(0, int(self.v_density.get()))),
-                       seam=bool(self.v_seam.get()) and self._seam_mode() == "switch" and self._run_mode() in ("inpaint", "remove", "outpaint"),
                        seam_fixed=self._seam_mode() == "on" and self._run_mode() in ("inpaint", "remove", "outpaint"),
                        preview=bool(self.v_live.get()))
 

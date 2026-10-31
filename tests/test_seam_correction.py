@@ -112,28 +112,15 @@ def bridge_checks():
 
 def gui_checks():
     app = ra.make()
-    shown = {}
-    app.f_seam.pack = lambda *a, **k: shown.__setitem__("seam", True)
-    app.f_seam.pack_forget = lambda: shown.__setitem__("seam", False)
-    assert app.v_seam.get() is False                     # off at the start
-    for mode, on in (("inpaint", True), ("remove", True), ("outpaint", True), ("edit", False), ("txt2img", False)):
-        ra.go(app, "qwen", mode)
-        assert shown.get("seam") is on, (mode, shown)
-        app.v_seam.set(True)
-        assert app._request().seam is on, mode            # only where a new area meets the old picture
-    app.reset_settings()
-    assert app.v_seam.get() is False
-    # per model (user 29.10.): Fibo always on without the checkbox, Flux 2 / 3 off without it, Qwen keeps it
-    assert {m.key: m.seam for m in models.MODELS if m.key in ("qwen", "flux2", "flux3", "fibo")} ==         {"qwen": "switch", "flux2": "off", "flux3": "off", "fibo": "on"}
-    for key, mode, box, ab, fixed in (("fibo", "inpaint", False, False, True), ("fibo", "remove", False, False, True),
-                                      ("fibo", "outpaint", False, False, True), ("fibo", "edit", False, False, False),
-                                      ("flux2", "outpaint", False, False, False), ("flux3", "remove", False, False, False),
-                                      ("qwen", "outpaint", True, True, False)):
+    assert not hasattr(app, "v_seam") and not hasattr(app, "f_seam")     # the A/B checkbox is gone (user 1.11.)
+    # per model: Fibo always on, all others fixed off (Qwen too since 1.11.)
+    assert {m.key: m.seam for m in models.MODELS if m.key in ("qwen", "flux2", "flux3", "fibo")} ==         {"qwen": "off", "flux2": "off", "flux3": "off", "fibo": "on"}
+    for key, mode, fixed in (("fibo", "inpaint", True), ("fibo", "remove", True), ("fibo", "outpaint", True),
+                             ("fibo", "edit", False), ("flux2", "outpaint", False), ("flux3", "remove", False),
+                             ("qwen", "outpaint", False), ("qwen", "inpaint", False)):
         ra.go(app, key, mode)
-        app.v_seam.set(True)
-        assert shown.get("seam", False) is box, (key, mode, shown)
         req = app._request()
-        assert (req.seam, req.seam_fixed) == (ab, fixed), (key, mode, req.seam, req.seam_fixed)
+        assert (req.seam, req.seam_fixed) == (False, fixed), (key, mode, req.seam, req.seam_fixed)
 
 
 def main():

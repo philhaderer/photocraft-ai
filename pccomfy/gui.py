@@ -83,7 +83,6 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.v_top = tk.BooleanVar(value=True)      # the window always belongs to PhotoCraft (no switch any more)
         self.v_feather = tk.DoubleVar(value=2.0)    # the function's own value is set after the build (see below)
         self.v_density = tk.IntVar(value=100)       # the same
-        self.v_seam = tk.BooleanVar(value=False)    # seam correction A/B test: off at every start until confirmed (T2)
         self.v_live = tk.BooleanVar(value=True)     # live preview of the sampler under the plugin: on at every start (T3a)
         self.v_enhance = tk.BooleanVar(value=g("enhance", False))   # off at the first start, like Reset
         self.v_turbo = tk.BooleanVar(value=g("turbo", True))
@@ -553,12 +552,6 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
                               "Click again, or Generate, to get your selection back.")
         for w in (lb, cb_lm):
             Tooltip(w, "How the result is blended into your picture: soft (soft edge), hard (the selection as it is), none (the whole redrawn area).")
-        fs = self.f_seam = ttk.Frame(self.f_post)   # under Layer mask; Fill, Remove and Expand only (see _update_availability)
-        fs.pack(fill="x", pady=(2, 0))
-        self.cb_seam = ttk.Checkbutton(fs, text="Seam correction (A/B)", variable=self.v_seam)
-        self.cb_seam.pack(side="left")
-        Tooltip(self.cb_seam, "Evens out a lighter or darker rim where the result meets your picture. Test: each result "
-                              "comes twice, “[seam fix]” on top and “[raw]” hidden below it.")
 
         bf = self.f_go = ttk.Frame(r)   # Generate, Cancel, Undo, Redo: above the line over "Prompt", under the functions
         bf.pack(fill="x", padx=10, pady=(6, 2), before=self.sep_prompt)
