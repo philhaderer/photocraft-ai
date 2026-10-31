@@ -337,9 +337,11 @@ class SettingsMixin(DownloadMixin):
                              {"count": len(direct), "site": len(miss) - len(direct), "size": size_text(sum(f.size for f in direct))}
                              if len(miss) > 1 else None))
                 rows.append(("enable", row["key"], row["label"], row["status"].state != "missing"))
+                rows.append(("sep",))
                 rows.append(("modes", row["key"], self._mode_cover(row["key"])))
                 rows.append(("line", manifest.describe_line(row["key"], self.inv.has), "muted"))
-                rows.append(("head", "Needs these models:"))
+                rows.append(("sep",))
+                rows.append(("head", "Needs these weights:"))
                 for f, found, level in row["files"]:
                     rows.append(("file", self._file_data(f, found, level)))
                 for c in row["status"].nodes:
@@ -732,7 +734,7 @@ class SettingsMixin(DownloadMixin):
                     lb = ttk.Label(box, text=f["size"] if (f["size"] and not ok) else "", style=SET_STYLES["muted"], width=8, anchor="e")
                     lb.pack(side="right")
                 label(box, "\u2713" if ok else "\u2717", "ok" if ok else ("bad" if f["level"] == "required" else "note"), padx=(8, 6))
-                label(box, f["path"] + ("   (optional)" if f["level"] == "optional" and not f.get("use") else ""),
+                label(box, f["path"] + ("   (optional, not used in standard settings)" if f["level"] == "optional" and not f.get("use") else ""),
                       "muted" if ok else "", wrap=self._px(130))
                 extra = [(f["use"], "muted")] if f.get("use") else []
                 if f["hint"]:
@@ -754,6 +756,8 @@ class SettingsMixin(DownloadMixin):
                 label(box, f"node {cls}" + (f"   \u2192 {pack}" if pack else ""), "", wrap=self._px(120))
             elif kind == "head":
                 label(line(), row[1], "head", pady=(10, 2))
+            elif kind == "sep":          # a light line before "Covers these modes" and "Needs these weights" (user 1.11.)
+                ttk.Frame(line(), style="Sep.TFrame", height=1).pack(fill="x", pady=(8, 0))
             elif kind == "links":          # the head of "Linked files" with its Undo and Reset
                 box = line()
                 self.b_link_reset = ttk.Button(box, text="Reset to startup", command=self._link_reset, style="SetSmall.TButton")
