@@ -103,7 +103,28 @@ def gui_checks():
     assert "Describe failed" in app.v_status.get() and "harbour" in app.t_prompt.get("1.0", "end")
 
 
+def relink_checks():
+    """A text model the user linked to another file (settings, chain symbol; user 1.11.): the LLM button uses the linked file
+    and its graph loads it; a link whose file is gone falls back to the expected file, and with neither the button is grey."""
+    from pccomfy import inventory, workflows
+    fb, mine = manifest.DESCRIBE_FALLBACK, "mine\other-llm.safetensors"
+    app = ra.make()
+    ra.go(app, "fibo", "edit")
+    app.inv = inventory.Inventory({"clip": [fb, mine]}, mapping={fb: mine})
+    assert app._llm_file() == mine
+    g, _ = workflows.apply_template(workflows.load_template(workflows.DESCRIBE_WORKFLOW), workflows.GenParams(clip=app._llm_file()), "x.png", None)
+    assert [n["inputs"]["clip_name"] for n in g.values() if n["class_type"] == "CLIPLoader"] == [mine]
+    app.inv = inventory.Inventory({"clip": [fb]}, mapping={fb: mine})          # the linked file was removed
+    assert app._llm_file() == fb
+    app._update_llm_button()
+    assert app.b_llm["state"] == "normal"
+    app.inv = inventory.Inventory({"clip": []}, mapping={fb: mine})            # nothing left
+    app._update_llm_button()
+    assert app._llm_file() == "" and app.b_llm["state"] == "disabled"
+
+
 def main():
+    relink_checks()
     manifest_checks()
     bridge_checks()
     gui_checks()
