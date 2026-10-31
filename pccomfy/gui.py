@@ -453,7 +453,7 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.cb_sched.grid(row=0, column=3, sticky="ew", padx=6)
         self.recipe_widgets += [self.cb_sampler, self.cb_sched]
 
-        self.v_adv_open = tk.BooleanVar(value=bool(self.state.get("adv_open", False)))
+        self.v_adv_open = tk.BooleanVar(value=False)     # Advanced settings are closed at every start (user 1.11.)
         self.btn_adv = ttk.Button(self.f_adv, command=self._toggle_advanced, style="Link.TButton")
         self.sep_adv = ttk.Frame(self.f_adv, style="Sep.TFrame", height=1)     # a light line above "Advanced settings"
         self.sep_adv.pack(fill="x", pady=(0, 6))
