@@ -5,8 +5,6 @@ Multi Image Edit, Upscale, Refine and Text to image. Everything runs locally in
 [ComfyUI](https://github.com/comfyanonymous/ComfyUI) on your own graphics card. Each result lands in your document as a
 **new layer with an editable layer mask**.
 
-![Before / after: Fill Selection in PhotoCraft](docs/before-after.jpg)
-
 > Unofficial community project, not affiliated with PhotoCraft, ArtCraft or Storyteller. PhotoCraft is in early alpha
 > and so is this plugin. "PhotoCraft AI" is a working title.
 
