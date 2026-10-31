@@ -88,6 +88,7 @@ SHAPES.update({
     "eye":[_arc(12, 15.64, 10.64, 200, 340, 14) + _arc(12, 8.36, 10.64, 20, 160, 14) + [(2, 12)], _circle(12, 12, 3)],
     "refresh":[_arc(12, 12, 9, 0, 315, 28) + [(21, 8)], [(21, 3), (21, 8), (16, 8)]],    # a circle arrow, clockwise
     "minimize": [[(5, 12), (19, 12)]],              # the minimise button in the header
+    "close": [[(6, 6), (18, 18)], [(18, 6), (6, 18)]],     # the close button in the header (no title bar)
     "chevron-up": [[(6, 15), (12, 9), (18, 15)]],
     "chevron-down": [[(6, 9), (12, 15), (18, 9)]],
     "chevron-right": [[(9, 6), (15, 12), (9, 18)]],
