@@ -98,7 +98,7 @@ def window():
     app._tip_win.destroy()
     app._tip_win = None
 
-    app.root.iconify()                                       # minimised window: no popup
+    app.root.withdraw()                                      # hidden window (no title bar, so no iconify): no popup
     app.root.update()
     app._show_tip_popup()
     assert app._tip_win is None

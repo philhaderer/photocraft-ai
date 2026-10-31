@@ -41,8 +41,15 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
             self.ui = 1.0
         self.root.resizable(False, False)       # a fixed width; the height is set from the content (_fit_height)
         self._sized = False
+        # no title bar (user 31.10.): the header is the handle (drag, minimise, close). PCCOMFY_TITLEBAR=1 brings the
+        # Windows title bar back.
+        self._frameless = not os.environ.get("PCCOMFY_TITLEBAR")
+        if self._frameless:
+            self.root.wm_overrideredirect(True)
+            self.root.configure(highlightthickness=1, highlightbackground="#5c5c5c")
         self._style()
-        self.root.after(200, lambda: winlink.caption(self.root, (0x40, 0x40, 0x40), (0xee, 0xee, 0xee)))
+        if not self._frameless:
+            self.root.after(200, lambda: winlink.caption(self.root, (0x40, 0x40, 0x40), (0xee, 0xee, 0xee)))
 
         g = lambda k, default: self.state.get(k, default)  # noqa: E731
         self.v_mode = tk.StringVar(value=g("mode", "inpaint"))
@@ -143,6 +150,13 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.f_logo = ttk.Frame(self.f_header, height=self._px(ICON_PX + 12))
         self.f_logo.pack(side="left", fill="x", expand=True)
         self._minimized = False
+        if self._frameless:         # far right: closes the plugin (what the title bar's cross did)
+            self.b_close = ttk.Button(self.f_header, image=self._icon("close"), style="Link.TButton", command=self._quit)
+            self.b_close.pack(side="right", padx=(6, 0))
+            Tooltip(self.b_close, "Close the plugin.")
+            for w in (self.f_header, self.f_logo):     # drag the window by its header
+                w.bind("<ButtonPress-1>", self._drag_start, add="+")
+                w.bind("<B1-Motion>", self._drag_move, add="+")
         self.b_min = ttk.Button(self.f_header, image=self._icon("minimize"), style="Link.TButton", command=self.toggle_minimize)
         self.b_min.pack(side="right")
         self.tt_min = Tooltip(self.b_min, "Minimise: only this header stays. Click again to show the plugin.")
@@ -706,6 +720,18 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         if (x, y) != self._win_pos:
             self.root.geometry(f"+{x}+{y}")
             self._win_pos = (x, y)
+
+    def _drag_start(self, e):
+        self._drag_from = (e.x_root - self.root.winfo_x(), e.y_root - self.root.winfo_y())
+
+    def _drag_move(self, e):
+        """Moves the title-bar-less window with the mouse; the top edge stays on the screen so the header can be grabbed again."""
+        try:
+            ox, oy = self._drag_from
+            top = self.root.winfo_vrooty()
+            self.root.geometry(f"+{e.x_root - ox}+{max(top, e.y_root - oy)}")
+        except (AttributeError, tk.TclError):
+            pass
 
     def _remember_pos(self, e=None):
         """Keeps the window's place for the next start (saved with the state)."""
