@@ -85,7 +85,6 @@ class Request:
     outpaint: tuple[int, int, int, int] = (0, 0, 0, 0)  # left, top, right, bottom (px)
     overlap: int = 48                    # outpaint overlap onto the existing image (px)
     variants: int = 1
-    fooocus: bool = True                 # inpaint/outpaint: Fooocus patch (SDXL) when the server has it
     remove: bool = False                 # "Remove" (the bridge runs it as an inpaint with the removal instruction)
     remove_tries: int = 1                # tries (new seed each) until the object is really gone; 1 = never again by
     #                                      itself (decision of the user 28.10.: generate again by hand, see REMOVE_AGAIN)
@@ -1060,12 +1059,6 @@ class Bridge:
             return workflows.txt2img(p), "out"
         if req.mode == "img2img":
             return workflows.img2img(p, image_name), "out"
-        if req.fooocus:
-            files = self.comfy.fooocus_inpaint()
-            if files:
-                self.pipeline = "Fooocus inpaint"
-                fill = "blur" if req.mode == "outpaint" else "neutral"
-                return workflows.inpaint_fooocus(p, image_name, mask_name, *files, fill=fill), "out"
         self.pipeline = "inpaint"
         return workflows.inpaint(p, image_name, mask_name), "out"
 

@@ -346,7 +346,6 @@ class ModeMixin:
         if getattr(self, "v_bbox", None) is not None:      # BBOX (Flux 3 Multi Image Edit), made with the reference slots
             self.v_bbox.set(False)
             self._refs_bbox_changed()
-        self.v_fooocus.set(True)
         self.v_clip.set(CLIP_DEFAULT)
         self.v_pchoice.set("")
         self.v_preset.set("")
@@ -659,11 +658,6 @@ class ModeMixin:
         # a custom workflow carries its own model/steps/CFG/sampler – these fields apply to the built-in one only
         state = "normal" if self.v_workflow.get() == BUILTIN else "disabled"
         self._sync_sampler_fields()
-        # Fooocus inpaint only exists in the built-in graph
-        if state == "normal":
-            self.cb_fooocus.grid()
-        else:
-            self.cb_fooocus.grid_remove()
         # the text model applies to custom workflows (nodes tagged pc:clip), not to the built-in graph, and only
         # while the prompt enhancement is on
         # no text model here, or a fixed / ready-made prompt: the row is hidden, never a greyed-out box (user 30.10.)

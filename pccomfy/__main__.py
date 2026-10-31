@@ -34,8 +34,6 @@ def cmd_check(cfg: dict) -> int:
         print(f"ComfyUI: OK – {stats.get('system', {}).get('comfyui_version', '?')}, {dev.get('name', '?')}")
         ckpts = b.comfy.checkpoints()
         print(f"  checkpoints ({len(ckpts)}):", *ckpts[:30], sep="\n    ")
-        fo = b.comfy.fooocus_inpaint()
-        print("  Fooocus inpaint:", f"OK ({fo[0]}, {fo[1]})" if fo else "not found (needs comfyui-inpaint-nodes and the files in models/inpaint)")
     except ComfyError as e:
         ok = False
         print(f"ComfyUI: ERROR – {e}")
@@ -164,7 +162,7 @@ def cmd_run(cfg: dict, a) -> int:
                   denoise=a.denoise if a.denoise is not None else (1.0 if a.mode in ("inpaint", "remove", "outpaint") else d["denoise"]))
     req = Request(mode=a.mode, params=p, workflow=a.workflow, base_res=a.res or d["base_res"],
                   context=d["context"], mask_grow=d["mask_grow"], mask_blur=d["mask_blur"],
-                  outpaint=tuple(a.expand), overlap=d["overlap"], variants=a.variants, fooocus=not a.no_fooocus,
+                  outpaint=tuple(a.expand), overlap=d["overlap"], variants=a.variants,
                   layer_mask=a.layer_mask, enhance=not a.no_enhance, turbo=not a.no_turbo, scale=a.scale)
     b = make(cfg)
     if not p.checkpoint and not a.workflow:
@@ -222,7 +220,6 @@ def main(argv=None) -> int:
     r.add_argument("--layer-mask", choices=("auto", "soft", "selection", "none"), default="auto",
                    help="layer mask of the new layer: auto (default: none for Fill with a Fibo-type editor, else soft), "
                         "soft, hard from the selection, or none")
-    r.add_argument("--no-fooocus", action="store_true", help="don't use the Fooocus patch (e.g. for SD1.5 models)")
     r.add_argument("--no-enhance", action="store_true",
                    help="text-model workflows: send the prompt as typed, without the text model writing it")
     r.add_argument("--scale", type=float, default=2.0, help="upscale mode: factor per side (default 2)")

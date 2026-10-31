@@ -75,7 +75,6 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.v_density = tk.IntVar(value=100)       # the same
         self.v_seam = tk.BooleanVar(value=False)    # seam correction A/B test: off at every start until confirmed (T2)
         self.v_live = tk.BooleanVar(value=True)     # live preview of the sampler under the plugin: on at every start (T3a)
-        self.v_fooocus = tk.BooleanVar(value=g("fooocus", True))
         self.v_enhance = tk.BooleanVar(value=g("enhance", False))   # off at the first start, like Reset
         self.v_turbo = tk.BooleanVar(value=g("turbo", True))
         self.v_lora_str = tk.DoubleVar(value=g("lora_strength", 1.0))
@@ -468,7 +467,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         Tooltip(self.w_detail, "100 % = only the new image; less mixes in the plain scaled original (tames over-sharp results).")
         self._on_detail()
 
-        # "Image and mask" (Base res., Mask grow, Mask blur, Fooocus) is not shown (the user's choice, 28.10.): each model's
+        # "Image and mask" (Base res., Mask grow, Mask blur) is not shown (the user's choice, 28.10.): each model's
         # function sets these values; the widgets stay, so presets, Reset and the requests work as before
         self.f_img = ttk.LabelFrame(self.adv_body, text="Image and mask")
         tips = {
@@ -513,9 +512,6 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         except (AttributeError, tk.TclError):
             pass
         self._show_context()
-        self.cb_fooocus = ttk.Checkbutton(self.f_img, text="Fooocus inpaint (SDXL, as in Krita AI Diffusion)", variable=self.v_fooocus)
-        self.cb_fooocus.grid(row=3, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 6))
-        Tooltip(self.cb_fooocus, "Built-in SDXL inpaint graph only.")
         lm = ttk.Frame(self.f_post)     # the last row of the finishing options (Advanced settings)
         self.f_lm = lm
         lm.pack(fill="x", pady=(2, 0))

@@ -190,15 +190,6 @@ class ComfyUI:
     def schedulers(self) -> list[str]:
         return self._choices("KSampler", "scheduler")
 
-    def fooocus_inpaint(self) -> tuple[str, str] | None:
-        """(head, patch) if the server has comfyui-inpaint-nodes and the Fooocus files in models/inpaint."""
-        files = self._choices("INPAINT_LoadFooocusInpaint", "head")
-        heads = [f for f in files if "head" in f.lower()]
-        patches = sorted((f for f in files if f.lower().endswith(".patch") or "inpaint_v2" in f.lower()), reverse=True)
-        if heads and patches:
-            return heads[0], patches[0]  # sorted descending: newest patch (v26 > v25) first
-        return None
-
     def _folder(self, folder: str) -> list[str]:
         """The files in one of ComfyUI's model folders (GET /models/<folder>); [] when it cannot be read."""
         try:
