@@ -148,12 +148,18 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.f_header.pack(fill="x", padx=10, pady=(8, 0))
         self.f_logo = ttk.Frame(self.f_header, height=self._px(ICON_PX + 12))
         self.f_logo.pack(side="left", fill="x", expand=True)
+        self.f_logo.pack_propagate(False)       # the title never makes the header higher
+        # a makeshift title until the user's picture comes: "PhotoCraft" in white, "AI" in blue, large (user 1.11.)
+        self.lbl_title = [ttk.Label(self.f_logo, text="PhotoCraft", foreground="#ffffff", font=font(16, bold=True)),
+                          ttk.Label(self.f_logo, text="AI", foreground=ACCENT, font=font(16, bold=True))]
+        self.lbl_title[0].pack(side="left", padx=(2, 5))
+        self.lbl_title[1].pack(side="left")
         self._minimized = False
         if self._frameless:         # far right: closes the plugin (what the title bar's cross did)
             self.b_close = ttk.Button(self.f_header, image=self._icon("close"), style="Link.TButton", command=self._quit)
             self.b_close.pack(side="right", padx=(6, 0))
             Tooltip(self.b_close, "Close the plugin.")
-            for w in (self.f_header, self.f_logo):     # drag the window by its header
+            for w in (self.f_header, self.f_logo, *self.lbl_title):     # drag the window by its header
                 w.bind("<ButtonPress-1>", self._drag_start, add="+")
                 w.bind("<B1-Motion>", self._drag_move, add="+")
         self.b_min = ttk.Button(self.f_header, image=self._icon("minimize"), style="Link.TButton", command=self.toggle_minimize)
@@ -168,7 +174,7 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.b_history.pack(side="right", padx=(0, 6))
         Tooltip(self.b_history, "Last runs: click one to load all its settings with a new seed. Nothing starts by itself.")
         self._history_popup = None
-        for w in (self.f_header, self.f_logo):      # a double click on the header does the same (user 29.10., option C)
+        for w in (self.f_header, self.f_logo, *self.lbl_title):      # a double click on the header does the same (user 29.10., option C)
             w.bind("<Double-Button-1>", lambda e: self.toggle_minimize(), add="+")
         self.f_tabs = ttk.Frame(r)
         self.f_tabs.pack(fill="x", padx=10, pady=(8, 2))
