@@ -35,8 +35,8 @@ class Model:
                                     # is image 1, the first reference image 2), {i} from 0 ("" = no names)
     requires: tuple = ()            # model detection: the model files this tab needs (file names, as ComfyUI lists them); () = not set yet
     bbox: bool = False              # Multi Image Edit: the BBOX switch (the selection becomes <obj_1>, see bridge.BBOX_SENTENCE); Flux 3 only
-    seam: str = "switch"            # seam correction in Fill / Remove / Expand: "on" always (one corrected layer), "off" never,
-                                    # "switch" the A/B checkbox (user 29.10.: Fibo on, Flux 2/3 off, Qwen keeps the checkbox)
+    seam: str = "off"               # seam correction in Fill / Remove / Expand: "on" always (one corrected layer), "off" never
+                                    # (user 29.10.: Fibo on, the others off; the A/B checkbox was removed 1.11., Qwen fixed off)
 
     def workflows(self) -> list[str]:
         out = []

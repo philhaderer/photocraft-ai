@@ -17,7 +17,6 @@ TIPS = (
     "\"Show feather\" paints the blend area red in PhotoCraft (Quick Mask). Click it again, or Generate, to get your selection back.",
     "Match colours (Fill Selection only) pulls the new area's saturation back toward its surroundings. 0 = off.",
     "Qwen fills small selections badly. Use a larger selection, or try Fibo 2.0 Edit Turbo.",
-    "With Qwen, \"Seam correction (A/B)\" evens out a rim at the border. Each result comes twice: \"[seam fix]\" on top, \"[raw]\" hidden below.",
     "Right-click a model chip: \"Set as my settings\" keeps the current sliders, sampler, steps and LoRAs for this function and model; \"Reset page\" brings them back.",
     "A Favourite is the model a function opens with when you switch to it. Hidden models come back with a tick in the gear window.",
     "Hover a function button: the tooltip starts with the model ranking for it, e.g. Fill Selection: 1. Fibo, 2. Qwen.",

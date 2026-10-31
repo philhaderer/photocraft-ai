@@ -73,9 +73,9 @@ class ModeMixin:
         return models.BY_KEY.get(self.v_model.get())
 
     def _seam_mode(self) -> str:
-        """The seam correction for the chosen model: "on", "off" or "switch" (the checkbox; also for a workflow of your own)."""
+        """The seam correction for the chosen model: "on" or "off" (a workflow of your own: off)."""
         m = self._model()
-        return m.seam if m else "switch"
+        return m.seam if m else "off"
 
     def _custom_workflow(self) -> bool:
         """A workflow of your own is chosen (no model): every function is offered as it is."""
@@ -345,7 +345,6 @@ class ModeMixin:
         self.v_match.set(0.0)
         self.v_feather.set(2.0)
         self.v_density.set(100)
-        self.v_seam.set(False)
         self.v_live.set(True)
         self.v_detail.set(1.0)
         self.v_lmask.set(LAYER_MASKS["soft"])       # the model's function sets its own below
@@ -390,7 +389,7 @@ class ModeMixin:
         shown = (lambda f: bool(f.winfo_manager())) if hasattr(frame, "winfo_manager") else (lambda f: False)
         if shown(frame):
             return
-        order = [f for f in (getattr(self, n, None) for n in ("f_detail", "f_sharp", "f_ctx", "f_feather", "f_density", "f_lm", "f_seam")) if f is not None]
+        order = [f for f in (getattr(self, n, None) for n in ("f_detail", "f_sharp", "f_ctx", "f_feather", "f_density", "f_lm")) if f is not None]
         later = [f for f in order[order.index(frame) + 1:] if shown(f)] if frame in order else []
         frame.pack(fill="x", pady=(2, 0), **({"before": later[0]} if later else {}))
 
@@ -659,12 +658,6 @@ class ModeMixin:
             self._pack_post(self.f_ctx)
         elif hasattr(self.f_ctx, "pack_forget"):
             self.f_ctx.pack_forget()
-        fs = getattr(self, "f_seam", None)    # the seam correction too: only where a new area meets the old picture,
-        if fs is not None:                    # and only for a model that keeps the checkbox (Fibo always on, Flux off)
-            if masked and self._seam_mode() == "switch":
-                self._pack_post(fs)
-            elif hasattr(fs, "pack_forget"):
-                fs.pack_forget()
         on(self.w_adv["Mask grow"], masked and not editor)
         on(self.w_adv["Mask blur"], masked and not editor)
         on(self.cb_lm, mode != "upscale", "readonly")        # Upscale opens a new document: no layer to mask
