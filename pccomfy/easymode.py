@@ -25,6 +25,12 @@ PRIORITY = {
     "upscale": ("flux3", "flux2"),
 }
 
+# Functions Easy Mode leaves out, with the models that do them best first (the list in the Easy Mode tab of the settings).
+EXTRA_PRIORITY = {
+    "refine": ("fibo", "flux2"),
+    "multi_edit": ("flux3", "flux2", "qwen", "fibo"),
+}
+
 # The starter models Easy Mode asks for (user 31.10.: Fibo and Flux 3, maybe Qwen later).
 STARTER_MODELS = ("flux3", "fibo")
 
@@ -32,7 +38,8 @@ STARTER_MODELS = ("flux3", "fibo")
 SWITCH_TEXT = "Easy Mode"
 SWITCH_TIP = ("Easy mode: only the basics. The plugin picks the best installed model and its tested settings. "
               "Click again for all settings.")
-MODEL_LINE = "Model: {name}"
+MODEL_LINE = "{name}"                         # in the footer, right of "Live preview"
+MODEL_TIP = "The model Easy Mode picked for this function."
 MODE_GREYED_TIP = "No model installed for this function. Get the starter models in the settings (gear) under Easy Mode."
 NO_MODELS = "No models yet. Open the settings (gear) and get the starter models."
 STATUS_ON = "Easy mode on: the plugin picks the model and settings."
@@ -40,6 +47,8 @@ STATUS_OFF = "Easy mode off: your settings are back."
 TAB_TITLE = "Easy Mode"
 TAB_INFO = "Easy mode needs these models for all six functions."
 TAB_BUTTON = "Get the starter models"
+TAB_MORE = ("Refine and Multi Image Edit are not in Easy Mode. Switch Easy Mode off to use them; they need one of these "
+            "models (best first):")
 TAB_FLUX3_NOTE = "Flux 3 needs a free Hugging Face login once. The button opens its page."
 
 
@@ -60,7 +69,7 @@ def available_modes(usable: Callable[[str], bool], hidden: Iterable[str] = ()) -
 
 
 def model_line(model_key: str) -> str:
-    """The line under the function buttons: 'Model: Fibo 2.0 Edit Turbo' ('' without a model)."""
+    """The model's name for the footer, right of "Live preview": 'Fibo 2.0 Edit Turbo' ('' without a model)."""
     m = models.BY_KEY.get(model_key)
     return MODEL_LINE.format(name=m.label) if m else ""
 

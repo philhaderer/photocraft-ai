@@ -25,6 +25,8 @@ def main():
         for k in keys:
             assert mode in models.BY_KEY[k].modes, (mode, k)
     assert set(em.PRIORITY) == set(em.EASY_MODES)
+    for mode, keys in em.EXTRA_PRIORITY.items():             # the functions Easy Mode leaves out: only models that really have them
+        assert mode not in em.EASY_MODES and all(mode in models.BY_KEY[k].modes for k in keys)
 
     everything = lambda k: True  # noqa: E731
     assert em.available_modes(everything) == {
@@ -47,7 +49,7 @@ def main():
     assert em.best_model("refine", everything) == ""          # not an Easy Mode function
     assert em.available_modes(lambda k: False) == {m: "" for m in em.EASY_MODES}
 
-    assert em.model_line("fibo") == "Model: " + models.BY_KEY["fibo"].label
+    assert em.model_line("fibo") == models.BY_KEY["fibo"].label
     assert em.model_line("") == "" and em.model_line("nope") == ""
 
     # the switch and the kept state live in settings.json

@@ -64,7 +64,7 @@ def main():
     assert app.v_seed.get() == -1
     for w in (app.f_models, app.f_neg, app.f_enh, app.f_adv, app.f_opts, app.b_llm, app.b_reset, app.f_pchoice):
         assert not shown(w), w
-    assert shown(app.lbl_easy_model) and app.v_easy_model.get() == "Model: " + models.BY_KEY["fibo"].label
+    assert shown(app.lbl_easy_model) and app.v_easy_model.get() == models.BY_KEY["fibo"].label
     assert shown(app.f_go) and shown(app.t_prompt) and shown(app.cb_live) and shown(app.b_history) and shown(app.b_copy_canvas)
     assert shown(app.b_easy)
     on = [k for k, rb in app.rb_modes.items() if shown(rb)]
@@ -77,7 +77,7 @@ def main():
         app._on_mode()
         app.root.update()
         assert app.v_model.get() == want, (mode, app.v_model.get())
-        assert app.v_easy_model.get() == "Model: " + models.BY_KEY[want].label
+        assert app.v_easy_model.get() == models.BY_KEY[want].label
         assert not shown(app.f_neg) and not shown(app.f_adv) and not shown(app.f_models) and not shown(app.f_opts)
     assert shown(app.f_scale)                                  # Upscale factor stays in Upscale
     app.v_mode.set("edit")
@@ -129,6 +129,8 @@ def main():
             out += texts(c)
         return out
     t = texts(app._easy_tab)
+    assert em.TAB_MORE in t and any(x.startswith("Refine") and "Fibo" in x and "(best)" in x for x in t), t
+    assert any(x.startswith("Multi Image Edit:") for x in t), t
     assert em.TAB_INFO in t and any(x.startswith(em.TAB_BUTTON) for x in t) and em.TAB_FLUX3_NOTE in t, t
     need = {f.name for f in app._starter_missing()}
     assert need and all(name in need for name in manifest.tab_required("fibo")) and all(name in need for name in manifest.tab_required("flux3"))
