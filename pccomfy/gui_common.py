@@ -508,6 +508,41 @@ def seed_typed_ok(action: str, typed: str, after: str) -> bool:
     return action != "1" or (all(c in "0123456789-" for c in typed) and re.fullmatch(r"-?\d{0,%d}" % SEED_DIGITS, after) is not None)
 
 
+class SelectableLabel(tk.Text):
+    """A wrapped text that looks like a label but can be selected with the mouse and copied (Ctrl+C): the tips under the
+    prompt (user 1.11.). `configure(text=...)` sets the text; the height follows the wrapped lines."""
+
+    def __init__(self, parent, text: str = "", fg: str = "", bg: str = "", fnt=None):
+        super().__init__(parent, height=1, width=1, wrap="word", bd=0, highlightthickness=0, padx=0, pady=0, bg=bg, fg=fg,
+                         font=fnt, cursor="xterm", insertwidth=0, takefocus=0, selectbackground="#6e6558", inactiveselectbackground="#6e6558")
+        self.bind("<Button-1>", lambda e: self.focus_set(), add="+")      # a disabled Text does not take the focus itself
+        self.bind("<Configure>", lambda e: self._fit(), add="+")
+        self.configure(text=text)
+
+    def configure(self, cnf=None, **kw):
+        if "text" in kw:
+            t = kw.pop("text")
+            super().configure(state="normal")
+            self.delete("1.0", "end")
+            self.insert("1.0", t)
+            super().configure(state="disabled")
+            self.after_idle(self._fit)
+            if not (cnf or kw):
+                return None
+        return super().configure(cnf, **kw)
+
+    config = configure
+
+    def _fit(self):
+        try:
+            n = self.tk.call(self._w, "count", "-displaylines", "1.0", "end")
+            n = int(n[0] if isinstance(n, (tuple, list)) else n)
+            if n >= 1 and int(self.cget("height")) != n:
+                super().configure(height=n)
+        except (tk.TclError, TypeError, ValueError):
+            pass
+
+
 class ValueBox(ttk.Entry):
     """The value of a slider in a small dark box on its right (as in PhotoCraft), and you can type into it: Enter or
     leaving the box takes the number, kept inside the slider's range (only digits and one decimal point or comma can be
@@ -733,6 +768,7 @@ __all__ = [
     "ValueBox",
     "parse_number",
     "number_typed_ok",
+    "SelectableLabel",
     "steps_typed_ok",
     "cfg_typed_ok",
     "seed_typed_ok",
