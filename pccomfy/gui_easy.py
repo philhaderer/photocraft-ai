@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
-from . import easymode as em
-from .ui_settings import FOOT_RESET_PADX
+from PIL import Image
+
+from . import easymode as em, icons
+from .gui_theme import ICON_PX
+from .ui_downloads import browser_only, size_text
+from .ui_settings import FOOT_RESET_PADX, SET_STYLES, STATE_MARK
 
 
 class EasyMixin:
@@ -14,11 +18,25 @@ class EasyMixin:
     def _build_easy(self):
         """The switch (left of the clock) and the model line under the function buttons. Called at the end of _build."""
         self.b_easy = ttk.Checkbutton(self.f_header, text=em.SWITCH_TEXT, variable=self.v_easy, command=self.toggle_easy,
-                                      style="Small.Toolbutton", image=self._icon("toggle"), compound="left")
+                                      style="Switch.Toolbutton", image=self._switch_icon(), compound="left")
         self.b_easy.pack(side="right", padx=(0, 8))
         Tooltip(self.b_easy, em.SWITCH_TIP)
         self.v_easy_model = tk.StringVar(value="")
         self.lbl_easy_model = ttk.Label(self.f_tabs, textvariable=self.v_easy_model, style="Muted.TLabel")
+
+    def _switch_icon(self):
+        """The switch icon: grey while Easy Mode is off, orange while it is on (the button itself stays flat), with 2 px of
+        extra room on its right (user 31.10.)."""
+        cache = self.__dict__.setdefault("_icon_cache", {})
+
+        def img(c):
+            if ("easy", c) not in cache:
+                px = self._px(ICON_PX)
+                wide = Image.new("RGBA", (px + self._px(2), px), (0, 0, 0, 0))
+                wide.paste(icons.render("toggle", c, px), (0, 0))
+                cache[("easy", c)] = icons.photo(self.root, None, c, px, image=wide)
+            return cache[("easy", c)]
+        return (img(MUTED), "selected", img(ACCENT))
 
     def _easy_boot(self):
         """At start: Easy Mode was left on. The saved window is shown as it was; the model is checked when ComfyUI's files are known."""
@@ -157,6 +175,77 @@ class EasyMixin:
         notes = super()._apply_settings(s)
         self._easy_refresh()            # a loaded run or preset may name a function or model Easy Mode does not offer
         return notes
+
+    # ---------- the Easy Mode tab of the settings window ----------
+
+    def open_settings(self, focus=None):
+        super().open_settings(focus)
+        nb, frame = getattr(self, "nb_settings", None), getattr(self, "_easy_tab", None)
+        try:
+            if nb is None or (frame is not None and frame.winfo_exists()):
+                return
+            self._easy_tab = ttk.Frame(nb)
+            nb.insert(1, self._easy_tab, text=em.TAB_TITLE)          # between "Models" and "Credits"
+            self._easy_tab_draw()
+        except tk.TclError:
+            pass
+
+    def _settings_fill(self):
+        super()._settings_fill()
+        self._easy_tab_draw()
+
+    def _starter_missing(self) -> list:
+        """The files of the starter models that are missing (required ones, listed once even when two models share them)."""
+        if self.inv is None:
+            return []
+        out = []
+        for row in self.inv.rows():
+            if row["key"] in em.STARTER_MODELS:
+                out += [f for f, found, lv in row["files"] if found is None and lv == "required" and f not in out]
+        return out
+
+    def _easy_tab_draw(self):
+        """The tab: what Easy Mode needs, what is missing, and the button that gets the starter models."""
+        frame = getattr(self, "_easy_tab", None)
+        if frame is None:
+            return
+        try:
+            if not frame.winfo_exists():
+                return
+            for w in frame.winfo_children():
+                w.destroy()
+        except tk.TclError:
+            return
+        box = ttk.Frame(frame)
+        box.pack(fill="both", expand=True, padx=12, pady=10)
+
+        def label(text, style="", pady=(0, 4), mark=None):
+            lb = ttk.Label(box, text=text, style=SET_STYLES.get(style, "SetText.TLabel"), justify="left", wraplength=self._px(640))
+            lb.pack(anchor="w", pady=pady)
+            return lb
+
+        label(em.TAB_INFO, pady=(0, 8))
+        if self.inv is None:
+            label("ComfyUI could not be read. Start ComfyUI, then click the refresh arrow (⟳) at the bottom of the plugin.", "bad")
+            return
+        missing = self._starter_missing()
+        for row in self.inv.rows():
+            if row["key"] not in em.STARTER_MODELS:
+                continue
+            mark, style = STATE_MARK[row["status"].state]
+            label(f"{mark}  {row['label']}", "head", pady=(6, 2))
+            for f in (f for f in missing if any(f is x for x, _fd, _lv in row["files"])):
+                label(f"      {f.name}   {f.size_text}" + ("   (opens its page in your browser)" if browser_only(f) else ""), "muted", pady=0)
+        if "flux3" in em.STARTER_MODELS and any(browser_only(f) for f in missing):
+            label(em.TAB_FLUX3_NOTE, "note", pady=(8, 4))
+        if missing:
+            total = size_text(sum(f.size for f in missing))
+            b = ttk.Button(box, text=f"{em.TAB_BUTTON} ({total})", style="SetSmall.TButton",
+                           command=lambda: self.download_missing(em.STARTER_MODELS, required_only=True))
+            b.pack(anchor="w", pady=(10, 0))
+            Tooltip(b, "Downloads the missing files of the starter models. Files that need a website open their page in your browser.")
+        else:
+            label("All starter models are installed.", "ok", pady=(10, 0))
 
     # ---------- the switch ----------
 

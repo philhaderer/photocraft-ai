@@ -111,6 +111,36 @@ def main():
     assert not shown(app.lbl_easy_model)
     assert all(shown(rb) for rb in app.rb_modes.values() if rb is not app.rb_modes.get("img2img"))
 
+    # the settings window has a tab "Easy Mode" between "Models" and "Credits" with the button for the starter models
+    from pccomfy import inventory, manifest
+    calls = []
+    app.download_missing = lambda key, required_only=False: calls.append((tuple(key), required_only))
+    app.inv = inventory.Inventory({k: [] for k in inventory.LIST_KINDS}, None, None)      # ComfyUI lists nothing
+    app.open_settings()
+    app.root.update()
+    tabs = [app.nb_settings.tab(i, "text") for i in range(app.nb_settings.index("end"))]
+    assert tabs == ["Models", em.TAB_TITLE, "Credits"], tabs
+
+    def texts(w):
+        out = []
+        for c in w.winfo_children():
+            if c.winfo_class() in ("TLabel", "TButton"):
+                out.append(str(c.cget("text")))
+            out += texts(c)
+        return out
+    t = texts(app._easy_tab)
+    assert em.TAB_INFO in t and any(x.startswith(em.TAB_BUTTON) for x in t) and em.TAB_FLUX3_NOTE in t, t
+    need = {f.name for f in app._starter_missing()}
+    assert need and all(name in need for name in manifest.tab_required("fibo")) and all(name in need for name in manifest.tab_required("flux3"))
+    assert any(name in x for x in t for name in need)         # the missing files are listed
+    btn = next(c for c in app._easy_tab.winfo_children()[0].winfo_children() if c.winfo_class() == "TButton")
+    btn.invoke()
+    assert calls == [(em.STARTER_MODELS, True)], calls
+    app.inv = None
+    app._easy_tab_draw()
+    assert any("could not be read" in x for x in texts(app._easy_tab))
+    app._settings_close()
+
     # Easy Mode left on is on again at the next start
     em.set_on(True)
     app.root.destroy()
