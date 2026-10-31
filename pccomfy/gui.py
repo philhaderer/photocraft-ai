@@ -9,12 +9,14 @@ from .gui_lora import LoraMixin
 from .gui_modes import ModeMixin
 from .gui_state import StateMixin
 from .gui_run import RunMixin
+from .gui_easy import EasyMixin
 from .ui_settings import SettingsMixin, GEAR_PX, FOOT_REFRESH_PADX, FOOT_RESET_PADX
 from .refslots import RefSlotsMixin
 from . import clipboard
+from . import easymode
 
 
-class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, ModeMixin, StateMixin, RunMixin):
+class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, ModeMixin, StateMixin, RunMixin):
     def __init__(self, cfg: dict):
         self.cfg = cfg
         self.state = cfgmod.load_state()
@@ -78,6 +80,8 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.v_enhance = tk.BooleanVar(value=g("enhance", False))   # off at the first start, like Reset
         self.v_turbo = tk.BooleanVar(value=g("turbo", True))
         self.v_lora_str = tk.DoubleVar(value=g("lora_strength", 1.0))
+        self._easy = easymode.is_on()               # Easy Mode (gui_easy.py): the switch lives in settings.json
+        self.v_easy = tk.BooleanVar(value=self._easy)
         self.v_model = tk.StringVar(value=g("model", ""))   # the tab; "" = a workflow of your own (everything enabled)
         self.v_sharpen = tk.DoubleVar(value=g("sharpen", 0.0))
         self.v_match = tk.DoubleVar(value=g("match", 0.0))
@@ -105,6 +109,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self._booting = True    # the saved window state is shown as it was: the model's starting settings are not applied
         self._on_mode()
         self._booting = False
+        self._easy_boot()
         # the edge feather is not kept from the last time: every start has the function's own value (decision of the
         # user 28.10.; before, every start showed 2 % and Fibo Fill / Qwen Fill looked hard until the function was chosen again)
         spec = self._model().modes.get(self.v_mode.get()) if self._model() else None
@@ -602,6 +607,7 @@ class App(SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, Mode
         self.cb_live.pack(side="left", padx=FOOT_RESET_PADX)
         self.tt_live = Tooltip(self.cb_live, LIVE_TIP)
         self._build_settings(foot)      # the gear at the right end of this row (ui_settings.py)
+        self._build_easy()              # the Easy Mode switch in the header and the model line (gui_easy.py)
 
         for cb in (self.cb_lm, self.cb_sampler, self.cb_sched):
             self._open_on_click(cb)         # the list opens on a click anywhere in the box, not only on the arrow
