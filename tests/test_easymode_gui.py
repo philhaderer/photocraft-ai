@@ -6,6 +6,7 @@ Skipped when Tk cannot open a window.
 """
 import os
 import shutil
+import threading
 import sys
 import tempfile
 from pathlib import Path
@@ -129,8 +130,8 @@ def main():
             out += texts(c)
         return out
     t = texts(app._easy_tab)
-    assert em.TAB_MORE in t and any(x.startswith("Refine") and "Fibo" in x and "(best)" in x for x in t), t
-    assert any(x.startswith("Multi Image Edit:") for x in t), t
+    assert em.TAB_MORE in t and not any("(best)" in x or x.startswith("Multi Image Edit:") for x in t), t      # no ranking in the tab
+    assert t.index(next(x for x in t if x.startswith(em.TAB_BUTTON))) < t.index(em.TAB_FLUX3_NOTE), t         # the button comes first
     assert em.TAB_INFO in t and any(x.startswith(em.TAB_BUTTON) for x in t) and em.TAB_FLUX3_NOTE in t, t
     need = {f.name for f in app._starter_missing()}
     assert need and all(name in need for name in manifest.tab_required("fibo")) and all(name in need for name in manifest.tab_required("flux3"))
@@ -138,6 +139,16 @@ def main():
     btn = next(c for c in app._easy_tab.winfo_children()[0].winfo_children() if c.winfo_class() == "TButton")
     btn.invoke()
     assert calls == [(em.STARTER_MODELS, True)], calls
+    # a running download shows a bar, the percent and a cross in the tab
+    name = sorted(need)[0]
+    f0 = manifest.FILES[name]
+    app._dl[name] = {"file": f0, "target": None, "done": f0.size // 2, "total": f0.size, "phase": "downloading", "cancel": threading.Event()}
+    app._easy_tab_draw()
+    app.root.update()
+    w = app._dl_widgets_easy[name]
+    assert w["label"].cget("text") == "50 %", w["label"].cget("text")
+    assert str(next(c for c in app._easy_tab.winfo_children()[0].winfo_children() if c.winfo_class() == "TButton").cget("state")) == "disabled"
+    app._dl.clear()
     app.inv = None
     app._easy_tab_draw()
     assert any("could not be read" in x for x in texts(app._easy_tab))

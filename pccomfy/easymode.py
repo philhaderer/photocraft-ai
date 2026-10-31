@@ -46,8 +46,7 @@ STATUS_ON = "Easy mode on: the plugin picks the model and settings."
 TAB_TITLE = "Easy Mode"
 TAB_INFO = "Easy mode needs these models for all six functions."
 TAB_BUTTON = "Get the starter models"
-TAB_MORE = ("Refine and Multi Image Edit are not in Easy Mode. Switch Easy Mode off to use them; they need one of these "
-            "models (best first):")
+TAB_MORE = "Refine and Multi Image Edit are not in Easy Mode. Switch Easy Mode off to use them."
 TAB_FLUX3_NOTE = "Flux 3 needs a free Hugging Face login once. The button opens its page."
 
 
