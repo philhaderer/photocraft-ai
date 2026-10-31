@@ -60,6 +60,15 @@ def main():
     app.v_feather.set(1.0)
     app.reset_settings()
     assert app.v_feather.get() == 9.5
+    # Shift + click on Reset page: the standard settings, the saved ones stay saved (user 31.10., option B)
+    app.v_feather.set(1.0)
+    app._shift_down = True
+    app._reset_click()
+    assert app.v_feather.get() == 10.0 and cfgmod.saved_page("fibo", "inpaint")["feather_pct"] == 9.5
+    assert "standard settings" in app.v_status.get()
+    app._shift_down = False
+    app._reset_click()
+    assert app.v_feather.get() == 9.5
     # another model's page is not touched
     assert cfgmod.saved_page("qwen", "inpaint") == {}
 
