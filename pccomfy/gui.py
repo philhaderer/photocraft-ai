@@ -10,13 +10,14 @@ from .gui_modes import ModeMixin
 from .gui_state import StateMixin
 from .gui_run import RunMixin
 from .gui_easy import EasyMixin
+from .gui_tips import TipsMixin
 from .ui_settings import SettingsMixin, GEAR_PX, FOOT_REFRESH_PADX, FOOT_RESET_PADX
 from .refslots import RefSlotsMixin
 from . import clipboard
 from . import easymode
 
 
-class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, ModeMixin, StateMixin, RunMixin):
+class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, LoraMixin, ModeMixin, StateMixin, RunMixin, TipsMixin):
     def __init__(self, cfg: dict):
         self.cfg = cfg
         self.state = cfgmod.load_state()
@@ -123,6 +124,7 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self._sized = True
         self.root.after(100, self._poll)
         self.root.after(200, self.refresh)
+        self._schedule_tip()
         self.refresh_presets()
         self.root.protocol("WM_DELETE_WINDOW", self._quit)
         self.root.bind("<Destroy>", self._on_destroy, add="+")

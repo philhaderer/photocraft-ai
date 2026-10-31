@@ -17,6 +17,7 @@ Search the whole folder for the exact words you see in the window, e.g. `Covers 
 | Names of the models, tooltips of the function buttons (`FUNCTION_TIPS`), the tips under the prompt (`T2I_TIP`, `EDIT_TIP`, `FILL_TIP`, `MULTI_TIP`, `REMOVE_NAME_TIP` ...) | `pccomfy\models.py` |
 | Notes on model files (licence, "gated"), the Credits tab (`CONTRIBUTORS`) | `pccomfy\manifest.py` |
 | Easy Mode: switch text and tip, the model line, status lines, the Easy Mode tab of the settings | `pccomfy\easymode.py` |
+| Tips of the day (popup at start) | `pccomfy	ips.py` |
 | Names of the functions, the Live preview tip (`LIVE_TIP`), the "LLM" button tip (`LLM_TIP`), other shared texts | `pccomfy\gui_common.py` |
 | Main window: labels, buttons and most tooltips | `pccomfy\gui.py` |
 | Prompt area (LLM line, "LLM" button, negative prompt), LoRA rows | `pccomfy\gui_prompt.py`, `pccomfy\gui_lora.py` |
