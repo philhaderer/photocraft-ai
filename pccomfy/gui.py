@@ -257,7 +257,7 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.cb_enhance = ttk.Checkbutton(self.f_enh, text="LLM prompt enhancement", variable=self.v_enhance, command=self._on_workflow)
         self.cb_enhance.pack(side="left")
         self.tt_enhance = Tooltip(self.cb_enhance, ENHANCE_TIP)
-        self._icons["copy"] = self._icon("copy")
+        self._icons["copy"] = self._icon("copy", px=round(ICON_PX * 0.8))     # 80 % of the usual icon (user 1.11.)
         self._last_vgl = ""             # the prompt the text model wrote in the last run
         self.b_copy = ttk.Button(self.f_enh, image=self._icons["copy"], style="Icon.TButton", command=self._copy_enhanced, state="disabled")
         self.b_copy.pack(side="left", padx=(8, 0))
