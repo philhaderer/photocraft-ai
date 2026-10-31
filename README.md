@@ -12,10 +12,11 @@ Multi Image Edit, Upscale, Refine and Text to image. Everything runs locally in
 
 1. **Get the parts**: Windows 10/11 with an NVIDIA card (16 GB VRAM), [Python 3.11+](https://www.python.org/downloads/windows/)
    (tick "tcl/tk" and "Add python.exe to PATH"), PhotoCraft 0.16 or 0.17 (portable) and ComfyUI 0.42 or newer.
-2. **Install the plugin**: *Code › Download ZIP*, unpack it, double-click **`setup-windows.bat`**.
+2. **Install the plugin**: *Code › Download ZIP*, unpack it, double-click **`setup-windows.bat`**. It also creates the
+   desktop shortcut **PhotoCraft AI** (it looks for `photocraft.exe` itself and asks once if it can't find it).
 3. **Get the models**: start ComfyUI, then open the plugin's gear window. Under **Easy Mode** one button downloads the
    two starter models (Flux 3 and Fibo, about 20 GB), which cover all functions. Restart ComfyUI afterwards.
-4. **Create the shortcut** (once, see [Install](#install)) and double-click **PhotoCraft AI** on your desktop.
+4. Double-click **PhotoCraft AI** on your desktop (ComfyUI running, PhotoCraft closed).
 5. In the plugin window switch on **Easy Mode**, pick a function, type a prompt, press **Generate** (Ctrl+Enter).
 
 Easy Mode shows only the function buttons and the prompt; the plugin picks the best installed model and its tested
@@ -68,16 +69,16 @@ You need the plugin, PhotoCraft, ComfyUI and the model files. Details for each s
    are part of ComfyUI.
 3. **Model files**: use the download buttons in the gear window, or see [Models](#models). ComfyUI reads its model
    folders only at start, so restart it after adding files.
-4. **Desktop shortcut**: in the plugin folder type `powershell` into Explorer's address bar, press Enter, then run
-   (with the path to your `photocraft.exe`):
+4. **Desktop shortcut**: `setup-windows.bat` creates it for you. If it could not find `photocraft.exe`, it asks for it
+   once. To redo it later, run this in the plugin folder (type `powershell` into Explorer's address bar):
 
    ```
-   .venv\Scripts\python.exe -m pccomfy shortcut --photocraft "C:\programs\photocraft-0.17.0-windows-x64-portable\photocraft.exe"
+   .venv\Scripts\python.exe -m pccomfy shortcut
    ```
 
-   If `setup-windows.bat` said it uses Python directly, use the path in `data\python.txt` instead of
-   `.venv\Scripts\python.exe`.
-5. **First start**: ComfyUI is running, PhotoCraft is closed. Double-click **PhotoCraft AI**. PhotoCraft starts, and a
+   Add `--photocraft "C:\programs\photocraft\photocraft.exe"` to name the file yourself. If `setup-windows.bat` said it uses
+   Python directly, use the path in `data\python.txt` instead of `.venv\Scripts\python.exe`.
+5. **First start**: ComfyUI is running, PhotoCraft is closed. Double-click **PhotoCraft AI** on the desktop. PhotoCraft starts, and a
    few seconds later the plugin window appears. In the gear window, red entries are model files that are still missing.
 
 The shortcut starts PhotoCraft with its control channel (loopback only, token-protected, file access limited to
