@@ -153,6 +153,7 @@ class RunMixin:
                     res = self.bridge.run(rq, progress)
                     total += len(res["layers"])
                 self.events.put(("vgl", res.get("vgl", "")))
+                self.events.put(("seed", res.get("seed")))
                 seam = res.get("seam")     # the seam correction's A/B: the tone jump of #1 in levels, before → after
                 seam_text = f" · seam {seam[0]:.0f} → {seam[1]:.0f}" if seam else ""
                 self.events.put(("done", f"Done · seed {res['seed']} · created {total} layer{'s' if total != 1 else ''}{seam_text} · {duration_text(time.monotonic() - t_start)}"))
@@ -296,6 +297,19 @@ class RunMixin:
         if pending is not None and shown:    # the slider moved (show anew) or Hide was clicked while it was busy
             self.toggle_feather_preview(show=pending)
 
+    def _set_last_seed(self, seed):
+        """The seed of the run that just finished: the icon beside the seed field can put it back (user 1.11.)."""
+        try:
+            self._last_seed = int(seed)
+        except (TypeError, ValueError):
+            return
+        self.b_last_seed.configure(state="normal")
+
+    def use_last_seed(self):
+        """The icon beside the seed field: the next run uses the seed of the last one (same settings, same picture)."""
+        if getattr(self, "_last_seed", None) is not None:
+            self.v_seed.set(self._last_seed)
+
     def stop(self):
         if self.worker and self.worker.is_alive():
             self.bridge.cancel()
@@ -333,6 +347,8 @@ class RunMixin:
                     self.b_redo.configure(state="normal")
                     self.b_stop.configure(state="disabled")
                     self._history_end(ok)
+                elif kind == "seed":
+                    self._set_last_seed(data)
                 elif kind == "vgl":
                     self._last_vgl = str(data or "")      # not shown in the window; the copy button next to the LLM checkbox takes it
                     self.b_copy.configure(state="normal" if self._last_vgl.strip() else "disabled")
