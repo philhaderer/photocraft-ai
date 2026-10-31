@@ -139,7 +139,7 @@ def main():
         assert rows[ULTRA]["browser"] and rows[ULTRA]["hint"].startswith("The disk symbol opens civitai.com") and "civitai.com" in rows[ULTRA]["hint"]
         assert "models" + chr(92) + "loras" + chr(92) + "Flux 2" in rows[ULTRA]["hint"] and "licence" in rows[UPS]["hint"]
         head = next(r for r in app._settings_rows() if r[0] == "model" and r[1] == "flux2")
-        assert head[5]["count"] == 1 and head[5]["site"] == 2          # the VAE loads, the upsampler and the LoRA open their page
+        assert head[5]["count"] == 1 and head[5]["site"] == 1
         asked = []
         t.mb.askokcancel = lambda title, msg, **k: asked.append(msg) or True
         opened.clear()
