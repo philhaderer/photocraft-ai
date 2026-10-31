@@ -49,7 +49,7 @@ def rows_text(app) -> str:
             out.append(f"node {row[1]}  {row[2]}")
         elif kind == "error":
             out.append(row[1] + "\n" + row[2])
-        else:
+        elif kind != "sep":                 # the light lines carry no text
             out.append(row[1])
     return "\n".join(out)
 

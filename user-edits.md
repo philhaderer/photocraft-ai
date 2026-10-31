@@ -12,7 +12,7 @@ Search the whole folder for the exact words you see in the window, e.g. `Covers 
 
 | What you see | File |
 |---|---|
-| Settings window (gear): headings, tab titles, info texts, button texts, "Covers these modes:", "Needs these models:" | `pccomfy\ui_settings.py` |
+| Settings window (gear): headings, tab titles, info texts, button texts, "Covers these modes:", "Needs these weights:" | `pccomfy\ui_settings.py` |
 | Download hints in orange, the OK window of a download, status lines of downloads | `pccomfy\ui_downloads.py` |
 | Names of the models, tooltips of the function buttons (`FUNCTION_TIPS`), the tips under the prompt (`T2I_TIP`, `EDIT_TIP`, `FILL_TIP`, `MULTI_TIP`, `REMOVE_NAME_TIP` ...) | `pccomfy\models.py` |
 | Notes on model files (licence, "gated"), the Credits tab (`CONTRIBUTORS`) | `pccomfy\manifest.py` |
