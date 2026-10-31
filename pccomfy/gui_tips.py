@@ -51,7 +51,8 @@ class TipsMixin:
         """The window: the tip, the tick and "OK". The tick is saved at once, so it also holds when the window is just closed."""
         win = tk.Toplevel(self.root)
         win.title("Tip of the day")
-        win.configure(bg=BG)
+        win.wm_overrideredirect(True)                  # no title bar (user 31.10.); the thin frame keeps it visible
+        win.configure(bg=BG, highlightthickness=1, highlightbackground="#5c5c5c")
         self._tip_win = win
         v_hide = tk.BooleanVar(value=tips_hidden())
         self._tip_hide_var = v_hide
@@ -71,7 +72,7 @@ class TipsMixin:
         row.pack(fill="x")
         ttk.Checkbutton(row, text=HIDE_TEXT, variable=v_hide, style="SetText.TCheckbutton",
                         command=lambda: cfgmod.set_setting(HIDE_KEY, True if v_hide.get() else None)).pack(side="left")
-        ok = ttk.Button(row, text="OK", command=close, style="SetSmall.TButton")
+        ok = ttk.Button(row, text="OK", command=close, style="TipOk.TButton")
         ok.pack(side="right")
         win.protocol("WM_DELETE_WINDOW", close)
         win.bind("<Return>", lambda e: close())
@@ -80,13 +81,30 @@ class TipsMixin:
             win.transient(self.root)
             win.update_idletasks()
             w, h = max(self._px(POPUP_W), win.winfo_reqwidth()), win.winfo_reqheight()
-            x = self.root.winfo_rootx() + max(0, (self.root.winfo_width() - w) // 2)
-            y = self.root.winfo_rooty() + self._px(60)
+            x, y = self._tip_position(w, h)
             win.geometry(f"{w}x{h}+{x}+{y}")
+            win.focus_force()
             ok.focus_set()
         except tk.TclError:
             pass
         return win
+
+    def _tip_position(self, w: int, h: int) -> tuple[int, int]:
+        """Beside the plugin where there is room (right first, then left), not on top of it; with no room on either side it
+        goes to the screen edge on the side with more room. Always inside the screen."""
+        r = self.root
+        gap = self._px(8)
+        left, top = r.winfo_vrootx(), r.winfo_vrooty()
+        right, bottom = left + r.winfo_vrootwidth(), top + r.winfo_vrootheight()
+        rl, rr = r.winfo_rootx(), r.winfo_rootx() + r.winfo_width()
+        if right - rr >= w + gap:
+            x = rr + gap
+        elif rl - left >= w + gap:
+            x = rl - gap - w
+        else:
+            x = right - w if right - rr >= rl - left else left
+        y = r.winfo_rooty() + self._px(60)
+        return max(left, min(x, right - w)), max(top, min(y, bottom - h))
 
     def _tips_setting_row(self, parent):
         """The same tick in the settings window (bottom of the window; packed before the notebook so it keeps its place)."""

@@ -43,6 +43,7 @@ class ThemeMixin:
         s.configure("SetText.TLabel", foreground=FG, font=font(9))
         s.configure("SetText.TCheckbutton", font=font(9))
         s.configure("SetSmall.TButton", padding=(8, 2), width=0, font=font(9))      # Undo and Reset: small, not stretched
+        s.configure("TipOk.TButton", padding=(22, 7), width=0, font=font(11, bold=True))      # "OK" of the tip popup: easy to hit
         for name, colour in (("SetOk", DONE_GREEN), ("SetBad", ERROR_TEXT), ("SetNote", ACCENT), ("SetMuted", MUTED)):
             s.configure(f"{name}.TLabel", foreground=colour, font=font(9))
         s.configure("TNotebook", background=BG, borderwidth=0, tabmargins=(0, 4, 0, 0))     # the tabs of the settings window
