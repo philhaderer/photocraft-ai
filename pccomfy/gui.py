@@ -437,6 +437,12 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
                 continue
             ttk.Label(af, text=lbl, style="Muted.TLabel").grid(row=0, column=col, sticky="w", padx=(0, 6))
             w.grid(row=1, column=col, sticky="w", padx=(0, 6))
+        # beside the seed: the seed of the last run again (user 1.11.), grey until a run has finished
+        self._last_seed = None
+        self.b_last_seed = ttk.Button(af, image=self._icon("seed-last"), style="Link.TButton", command=self.use_last_seed, state="disabled")
+        self.b_last_seed.grid(row=1, column=3, sticky="w")
+        Tooltip(self.b_last_seed, "Use the seed of the last run again: the same settings then give the same result. "
+                                  "Grey until a run has finished.")
         self.w_denoise = items[3][1]
         self.w_steps, self.w_cfg, self.w_seed = items[0][1], items[1][1], items[2][1]
         self.tt_steps = Tooltip(self.w_steps, "")      # a hint of the mode, when it has one (MOSS: 25 steps)
