@@ -20,7 +20,7 @@ from pccomfy.tips import TIPS  # noqa: E402
 
 
 def logic():
-    assert len(TIPS) == 29 and all(isinstance(t, str) and t.strip() for t in TIPS) and len(set(TIPS)) == 29
+    assert len(TIPS) == 28 and all(isinstance(t, str) and t.strip() for t in TIPS) and len(set(TIPS)) == 28
     rng = random.Random(1)
     shown, seen = [], []
     for _ in range(30):                                     # a whole round: every tip exactly once

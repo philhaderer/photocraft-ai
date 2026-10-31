@@ -5,7 +5,6 @@ TIPS = (
     "Fill Selection: select an area and describe only what should appear there, e.g. \"a red flower\". Hide old result layers before the next run.",
     "Remove Selection: keep the whole object inside the selection. Text is optional; you can name it (\"the dog\").",
     "Fibo 2.0 Edit Turbo or Flux 2: if Remove Selection leaves a trace, run it a second time.",
-    "To remove something with Edit Canvas, say what replaces it: \"Remove the dog and paint the wall behind him\".",
     "Expand image: crop outward with the Crop tool (Enter), fill the new area white, and try an empty prompt first. Expand big areas in small steps.",
     "In Multi Image Edit your PhotoCraft picture is image 1 and slot 1 is image 2. Click the tag under a slot to add it to your prompt.",
     "Drag a slot picture into the prompt box: its tag lands where you let go, and the text cursor shows the spot.",
