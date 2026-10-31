@@ -535,6 +535,8 @@ class SelectableLabel(tk.Text):
 
     def _fit(self):
         try:
+            if self.winfo_width() < 20:          # not shown yet: the width is unknown, a Configure comes when it is
+                return
             n = self.tk.call(self._w, "count", "-displaylines", "1.0", "end")
             n = int(n[0] if isinstance(n, (tuple, list)) else n)
             if n >= 1 and int(self.cget("height")) != n:
