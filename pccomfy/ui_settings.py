@@ -40,7 +40,7 @@ def file_path(f) -> str:
     """Where a file lies inside ComfyUI's models folder, as the window shows it: "/loras/Flux 3/flux-3-...safetensors"."""
     return "/" + f.folder + "/" + f.name.replace("\\", "/")
 GEAR_PX = round(ICON_PX * 0.6)     # the gear: about 60 % of the other button icons, flat without a button background (user 28.10.)
-FOOT_REFRESH_PADX, FOOT_RESET_PADX = (4, 0), (12, 0)     # footer: the refresh arrow close to the ComfyUI dot, "Set Page to Defaults" apart
+FOOT_REFRESH_PADX, FOOT_RESET_PADX = (4, 0), (12, 0)     # footer: the refresh arrow close to the ComfyUI dot, "Reset page" apart
 
 
 class SettingsMixin(DownloadMixin):
@@ -57,7 +57,7 @@ class SettingsMixin(DownloadMixin):
     # ---------- build (one call at the end of App._build) ----------
 
     def _build_settings(self, foot):
-        """The gear button at the right end of the footer row (the one with the connection dot, the refresh arrow and "Set Page to Defaults")."""
+        """The gear button at the right end of the footer row (the one with the connection dot, the refresh arrow and "Reset page")."""
         self._last_model = self.v_model.get()
         self._dl_init()
         self._page_w = {}

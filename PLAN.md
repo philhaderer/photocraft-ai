@@ -18,11 +18,11 @@ Stand 2026-10-30. Der Plan ist freigegeben. Abschnitt 3 ist die Arbeitsliste in 
 Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir geprüft. (Live-Test vom 30.10. bestanden: Fill-Maske, Verlauf, Punkt 11 und 12, Describe, Seam-Korrektur, Fensterkopf, Slots, Zahnrad-Fenster; Liste in `docs/erledigt.md`.)
 
 **Neu vom 30.10. (Feinschliff, alles noch ungeprüft im echten Fenster)**
-- Fußzeile: „Set Page to Defaults“ (kleiner Knopf) und „Live preview“ daneben; Vorschau höchstens 210 px hoch.
+- Fußzeile: „Reset page“ (kleiner Knopf) und „Live preview“ daneben; Vorschau höchstens 210 px hoch.
 - Pfeile 90 % mit 3 px Abstand, Steps/CFG gleich schmal, Seed 80 %, Undo/Redo rechts, „×1“ am Generate-Stück.
 - Verlauf (Uhr): eigene Liste mit Mausrad und Scrollbalken, „Erase history“ oben.
 - „LLM“-Knopf links vom Papierkorb; Describe an den Referenz-Slots nutzt dasselbe Textmodell; Zeile je Modell in den Settings.
-- Rechtsklick am Modell: Save current settings / Load default settings / Favourite / Hide.
+- Rechtsklick am Modell: Set as my settings / Favourite / Hide (seit 31.10. umbenannt; „Load default settings“ gestrichen).
 - Statuszeile: „Loading models“, „Decoding“ usw. nach 2 s, „tile n“.
 - Strg+Alt+Enter bricht ab; Fibo Refine startet bei 10 % Sharpen; kein oranger Fokusrahmen nach Klick.
 - Regel „Standardeinstellungen“: ein Modell mit einer Funktion ohne ihre Dateien ist ganz gesperrt; Flux 3 Upscale läuft ohne SeedVR2 (Schalter grau).
@@ -136,9 +136,11 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 - **Später, je als Testrunde (blind, mit/ohne LLM):** Edit whole image (könnte mit LLM besser werden); Qwen Fill mit einem Prompt-Schreiber; Multi Image Edit bei Flux 3, Flux 2 und Qwen (dort ist der Haken heute ausgegraut).
 - Ausgeblendet bleibt die Zeile bei Expand, Remove, Refine und Upscale (feste oder fertige Prompts) und überall, wo es (noch) kein Textmodell gibt.
 
-**Zu hinterfragen: Logik von „Set Page to Defaults“, „Save current settings“, „Load default settings“ (du, 30.10.)**
-- Stand heute (`feat/chip-save-defaults`): „Save current settings“ (Rechtsklick auf den Modell-Chip, nur beim gewählten Modell) speichert die Fensterwerte ohne Prompt, Seed, Seite als Startwerte dieser Seite (Modell + Funktion). Die Seite öffnet damit, und „Set Page to Defaults“ setzt auf diese Werte zurück, wenn es sie gibt, sonst auf die Standardwerte. „Load default settings“ vergisst die gespeicherten Werte und zeigt die Standardwerte.
-- Zu klären: Soll „Set Page to Defaults“ immer die Standardwerte laden (und die gespeicherten bleiben nur für „öffnen“)? Soll das Gespeicherte beim Öffnen überhaupt greifen, oder nur auf Wunsch („Load saved settings“)? Gehören Prompt, Varianten, Sampler/Steps und LoRAs ins Gespeicherte? Gilt „Load default settings“ auch für ein nicht gewähltes Modell? Bis zur Entscheidung bleibt es, wie es ist.
+**Seiten-Einstellungen (entschieden 31.10.)**
+- Der Knopf unten heißt **„Reset page“** (setzt den aktuellen Modus und das aktuelle Modell zurück); er lädt die gespeicherten Werte der Seite, wenn es welche gibt, sonst die Standardwerte (Funktion wie bisher).
+- Rechtsklick am Modell-Chip: **„Set as my settings for this mode and model“** (nur beim gewählten Modell), dann Favourite und Hide. „Load default settings“ ist weg: so gibt es immer einen Weg zu den eigenen Standardwerten (Reset page) und immer einen Weg, sie zu ändern (Set as my settings).
+- Gespeichert werden Regler, Sampler, Scheduler, Steps und LoRAs (alles außer Prompt, negativer Prompt, Seed, Varianten-Anzahl, Seite, Workflow, Text-Encoder und Checkpoint).
+- Hinweis: Wer „Set as my settings“ einmal benutzt hat, kommt ohne den Werkswert nicht mehr auf die Werkseinstellung zurück; falls das fehlt, wäre ein Eintrag „Forget my settings“ der kleinste Weg.
 
 **Offen aus den Testrunden**
 - **Edge feather bei Fill** (du bist unsicher, 30.10.): später als Testrunde anlegen (z. B. 0 %, Startwert, doppelt; blind), auch ob 0 % wieder hart sein soll.

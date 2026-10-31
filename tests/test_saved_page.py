@@ -1,6 +1,6 @@
-"""Right-click on a model chip: "Save current settings for this mode and model" and "Load default settings" (user 30.10.).
+"""Right-click on a model chip: "Set as my settings for this mode and model" (user 30.10., renamed 31.10.; "Load default settings" was dropped).
 The saved settings (not the prompt, the seed or the page itself) are the starting settings of that model and function:
-they come back when the page opens and with "Set Page to Defaults"; "Load default settings" forgets them. Stubbed Tk.
+they come back when the page opens and with "Reset page". Stubbed Tk.
 
     python tests/test_saved_page.py
 """
@@ -47,7 +47,7 @@ def main():
     s = cfgmod.saved_page("fibo", "inpaint")
     assert s["feather_pct"] == 9.5 and abs(s["context"] - 0.7) < 1e-9
     assert not {"prompt", "negative", "seed", "mode", "workflow", "clip", "checkpoint"} & set(s), sorted(s)
-    assert "Saved the settings" in app.v_status.get()
+    assert "Saved my settings" in app.v_status.get()
 
     # another function and back: the saved settings are the start values of the page
     app.v_mode.set("edit")
@@ -56,17 +56,13 @@ def main():
     app.v_mode.set("inpaint")
     app._apply_model_mode()
     assert app.v_feather.get() == 9.5 and abs(app.v_context.get() - 0.7) < 1e-9
-    # Set Page to Defaults brings the saved ones back, not the factory ones
+    # Reset page brings the saved ones back, not the factory ones
     app.v_feather.set(1.0)
     app.reset_settings()
     assert app.v_feather.get() == 9.5
     # another model's page is not touched
     assert cfgmod.saved_page("qwen", "inpaint") == {}
 
-    # Load default settings: forgotten, the factory values are back at once
-    app._load_default_page("fibo")
-    assert cfgmod.saved_page("fibo", "inpaint") == {}
-    assert (app.v_feather.get(), app.v_context.get()) == factory, ((app.v_feather.get(), app.v_context.get()), factory)
     print("ALL OK (saved page)")
 
 
