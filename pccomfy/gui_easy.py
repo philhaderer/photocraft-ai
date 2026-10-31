@@ -231,30 +231,52 @@ class EasyMixin:
             label("ComfyUI could not be read. Start ComfyUI, then click the refresh arrow (⟳) at the bottom of the plugin.", "bad")
             return
         missing = self._starter_missing()
+        self._dl_widgets_easy = {}
+        if missing:
+            busy = any(f.name in self._dl for f in missing)
+            total = size_text(sum(f.size for f in missing))
+            b = ttk.Button(box, text=f"{em.TAB_BUTTON} ({total})", style="SetSmall.TButton",
+                           command=lambda: self.download_missing(em.STARTER_MODELS, required_only=True))
+            b.pack(anchor="w", pady=(0, 6))
+            if busy:
+                b.configure(state="disabled")
+            Tooltip(b, "Downloads the missing files of the starter models. Files that need a website open their page in your browser.")
+        else:
+            label("All starter models are installed.", "ok", pady=(0, 6))
         for row in self.inv.rows():
             if row["key"] not in em.STARTER_MODELS:
                 continue
             mark, style = STATE_MARK[row["status"].state]
             label(f"{mark}  {row['label']}", "head", pady=(6, 2))
+            if row["key"] == "flux3" and any(browser_only(f) for f in missing):
+                label(em.TAB_FLUX3_NOTE, "note", pady=(0, 2))
             for f in (f for f in missing if any(f is x for x, _fd, _lv in row["files"])):
-                label(f"      {f.name}   {f.size_text}" + ("   (opens its page in your browser)" if browser_only(f) else ""), "muted", pady=0)
-        if "flux3" in em.STARTER_MODELS and any(browser_only(f) for f in missing):
-            label(em.TAB_FLUX3_NOTE, "note", pady=(8, 4))
-        label(em.TAB_MORE, "head", pady=(16, 2))
-        for mode, keys in em.EXTRA_PRIORITY.items():
-            names = []
-            for n, k in enumerate(keys):
-                st = self.inv.tab_status(k).state
-                names.append(models.BY_KEY[k].label + (" (best)" if n == 0 else "") + ("" if st != "missing" else " - files missing"))
-            label(f"{dict(MODE_LABELS)[mode]}:  " + ",  ".join(names), "muted", pady=(0, 2))
-        if missing:
-            total = size_text(sum(f.size for f in missing))
-            b = ttk.Button(box, text=f"{em.TAB_BUTTON} ({total})", style="SetSmall.TButton",
-                           command=lambda: self.download_missing(em.STARTER_MODELS, required_only=True))
-            b.pack(anchor="w", pady=(10, 0))
-            Tooltip(b, "Downloads the missing files of the starter models. Files that need a website open their page in your browser.")
+                self._easy_file_row(box, f)
+        label(em.TAB_MORE, "muted", pady=(16, 0))
+
+    def _easy_file_row(self, parent, f):
+        """One missing file: its name and size, or (while it loads) a bar, the percent and a cross to stop it."""
+        line = ttk.Frame(parent)
+        line.pack(fill="x", anchor="w")
+        st = self._dl_info(f.name)
+        if st:
+            cancel = ttk.Button(line, text="✕", style="Link.TButton", width=2, command=lambda n=f.name: self.download_cancel(n))
+            cancel.pack(side="right", padx=(4, 0))
+            Tooltip(cancel, "Stop this download. What is loaded stays, loading it again goes on where it stopped.")
+            lb = ttk.Label(line, text="", style=SET_STYLES["muted"], width=8, anchor="e")
+            lb.pack(side="right")
+            bar = ttk.Progressbar(line, length=self._px(120), maximum=max(st["total"], 1), value=st["done"])
+            bar.pack(side="right", padx=(8, 4))
+            self._dl_widgets_easy[f.name] = {"bar": bar, "label": lb}
+            self._dl_paint(f.name)
         else:
-            label("All starter models are installed.", "ok", pady=(10, 0))
+            ttk.Label(line, text=f.size_text, style=SET_STYLES["muted"], width=8, anchor="e").pack(side="right")
+        text = f"      {f.name}"
+        if f.name in self._dl_restart:
+            text += "   (loaded: restart ComfyUI)"
+        elif browser_only(f):
+            text += "   (opens its page in your browser)"
+        ttk.Label(line, text=text, style=SET_STYLES["muted"], justify="left", wraplength=self._px(480)).pack(side="left")
 
     # ---------- the switch ----------
 

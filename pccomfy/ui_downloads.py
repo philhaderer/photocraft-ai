@@ -43,6 +43,7 @@ class DownloadMixin:
         self._dl: dict[str, dict] = {}              # file name -> {"file", "target", "done", "total", "phase", "cancel"} (running)
         self._dl_restart: set[str] = set()          # loaded, but ComfyUI does not list it yet
         self._dl_widgets: dict[str, dict] = {}      # file name -> the progress widgets of its row
+        self._dl_widgets_easy: dict[str, dict] = {} # the same for the rows in the Easy Mode tab
         self._comfy_root: Path | None = None        # found for this session
 
     def _dl_info(self, name: str) -> dict | None:
@@ -212,13 +213,15 @@ class DownloadMixin:
         self._settings_fill()
 
     def _dl_paint(self, name: str):
-        w, info = self._dl_widgets.get(name), self._dl_info(name)
-        if not w or not info:
-            return
-        total = info["total"]
-        try:
-            w["bar"].configure(maximum=max(total, 1), value=info["done"])
-            pct = f"{round(100 * info['done'] / total)} %" if total else size_text(info["done"])
-            w["label"].configure(text="checking" if info["state"] == "verifying" else pct)
-        except (tk.TclError, KeyError):      # noqa: F405
-            pass
+        info = self._dl_info(name)
+        for widgets in (self._dl_widgets, self._dl_widgets_easy):
+            w = widgets.get(name)
+            if not w or not info:
+                continue
+            total = info["total"]
+            try:
+                w["bar"].configure(maximum=max(total, 1), value=info["done"])
+                pct = f"{round(100 * info['done'] / total)} %" if total else size_text(info["done"])
+                w["label"].configure(text="checking" if info["state"] == "verifying" else pct)
+            except (tk.TclError, KeyError):      # noqa: F405
+                pass
