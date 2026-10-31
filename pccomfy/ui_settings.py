@@ -811,7 +811,7 @@ class SettingsMixin(DownloadMixin):
         t.tag_configure("head", font=font(10, bold=True), foreground=FG)
         t.tag_configure("ok", foreground=DONE_GREEN)           # noqa: F405
         t.tag_configure("bad", foreground=ERROR_TEXT)          # noqa: F405
-        t.tag_configure("note", foreground=ACCENT)
+        t.tag_configure("note", foreground=ACCENT_TEXT)
         t.tag_configure("muted", foreground=MUTED)
         n = 0
         for text, style, url in segments:
@@ -819,7 +819,7 @@ class SettingsMixin(DownloadMixin):
             if style in ("link", "pick"):
                 n += 1
                 tag = f"link{n}"
-                t.tag_configure(tag, foreground=ACCENT, underline=True)
+                t.tag_configure(tag, foreground=ACCENT_TEXT, underline=True)
                 if style == "pick":
                     t.tag_bind(tag, "<Button-1>", lambda e, u=url: self._choose_for(u))
                 else:

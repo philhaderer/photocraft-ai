@@ -364,10 +364,10 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         Tooltip(self.grip, "Drag to resize the prompt field.")
         # the tip under the prompt: orange text with an orange info icon in front, level with its first line (user 29.10.)
         self.f_hint = ttk.Frame(r)
-        self.lbl_hint_icon = ttk.Label(self.f_hint, image=self._icon("info", ACCENT, px=HINT_ICON_PX))
+        self.lbl_hint_icon = ttk.Label(self.f_hint, image=self._icon("info", ACCENT_TEXT, px=HINT_ICON_PX))
         self.lbl_hint_icon.pack(side="left", anchor="n", padx=(0, 6), pady=(2, 0))
         # selectable text (user 1.11.), not the icon; the wrap width is the row's width
-        self.lbl_hint = SelectableLabel(self.f_hint, text=EXPAND_HINT, fg=ACCENT, bg=BG, fnt=font(10))   # Expand image, Upscale, Refine (see _update_prompt_hint)
+        self.lbl_hint = SelectableLabel(self.f_hint, text=EXPAND_HINT, fg=ACCENT_TEXT, bg=BG, fnt=font(10))   # Expand image, Upscale, Refine (see _update_prompt_hint)
         self.lbl_hint.pack(side="left", anchor="n", fill="x", expand=True)
         # Krea 2 / MOSS Expand: writes a description of the surroundings into the field (under the tip, user 29.10.)
         self.b_describe = ttk.Button(r, text="Describe", style="Small.TButton", command=self.describe_scene)

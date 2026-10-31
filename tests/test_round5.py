@@ -306,7 +306,7 @@ def main():
     assert app.lbl_hint["wrap"] == "word"      # selectable text
     # an orange info icon in front of the tip, both in one row (user 29.10.)
     from pccomfy import gui_theme
-    assert app.lbl_hint_icon["image"] == app._icon("info", gui.ACCENT, px=gui_theme.HINT_ICON_PX)
+    assert app.lbl_hint_icon["image"] == app._icon("info", gui.ACCENT_TEXT, px=gui_theme.HINT_ICON_PX)
 
     # the Upscale factor sits under the LLM row (the negative prompt when that row is hidden), above the LoRA box
     scale_pack = rec(app.f_scale, "pack")
