@@ -31,14 +31,14 @@ class EasyMixin:
         extra room on its right (user 31.10.)."""
         cache = self.__dict__.setdefault("_icon_cache", {})
 
-        def img(c):
-            if ("easy", c) not in cache:
+        def img(kind, c):
+            if ("easy", kind, c) not in cache:
                 px = self._px(ICON_PX)
                 wide = Image.new("RGBA", (px + self._px(2), px), (0, 0, 0, 0))
-                wide.paste(icons.render("toggle", c, px), (0, 0))
-                cache[("easy", c)] = icons.photo(self.root, None, c, px, image=wide)
-            return cache[("easy", c)]
-        return (img(MUTED), "selected", img(ACCENT))
+                wide.paste(icons.render(kind, c, px), (0, 0))
+                cache[("easy", kind, c)] = icons.photo(self.root, None, c, px, image=wide)
+            return cache[("easy", kind, c)]
+        return (img("toggle", MUTED), "selected", img("toggle-on", ACCENT))
 
     def _easy_boot(self):
         """At start: Easy Mode was left on. The saved window is shown as it was; the model is checked when ComfyUI's files are known."""
@@ -187,7 +187,7 @@ class EasyMixin:
             if nb is None or (frame is not None and frame.winfo_exists()):
                 return
             self._easy_tab = ttk.Frame(nb)
-            nb.insert(1, self._easy_tab, text=em.TAB_TITLE)          # between "Models" and "Credits"
+            nb.insert(0, self._easy_tab, text=em.TAB_TITLE)          # in front of "Models" and "Credits"
             self._easy_tab_draw()
         except tk.TclError:
             pass
