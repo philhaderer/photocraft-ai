@@ -931,7 +931,7 @@ class Bridge:
         hist = self._wait(self.comfy.queue(graph), graph, str(wf), 0.1, 0.85, "", progress)
         out = self.comfy.output_images(hist, out_node)[0]
         progress(1.0, "Background removed")
-        return out.convert("RGBA")
+        return imaging.crop_to_alpha(out.convert("RGBA"))      # the picture ends at the subject's outermost pixels (user 1.11.)
 
     def describe_image(self, im: Image.Image, progress: Progress | None = None, question: str = "",
                        workflow: str | Path | None = None, clip: str = "", seed: int | None = None) -> str:

@@ -441,3 +441,12 @@ REMOVAL_MIN = 0.13   # between the failed (<= 0.11) and the successful (>= 0.16)
 def removal_done(before: Image.Image, after: Image.Image, mask: Image.Image, width: int, min_changed: float = REMOVAL_MIN) -> bool:
     """True when `removal_score` says the selection was replaced."""
     return removal_score(before, after, mask, width) >= min_changed
+
+
+def crop_to_alpha(im: Image.Image, threshold: int = 4) -> Image.Image:
+    """An RGBA picture cut to the box around its visible pixels (alpha above `threshold`, so faint specks of a cut-out do not
+    widen it). A picture with nothing visible stays as it is."""
+    if im.mode != "RGBA":
+        return im
+    box = im.getchannel("A").point(lambda v: 255 if v > threshold else 0).getbbox()
+    return im.crop(box) if box and box != (0, 0, im.width, im.height) else im
