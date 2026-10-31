@@ -67,6 +67,13 @@ def window():
     app.root.update()
     win = app._tip_win
     assert win is not None and win.winfo_exists()
+    assert win.wm_overrideredirect()                         # no title bar
+    x, _ = app._tip_position(300, 200)                       # inside the screen, and beside (not on) the plugin when there is room
+    sw = app.root.winfo_vrootx() + app.root.winfo_vrootwidth()
+    assert 0 <= x and x + 300 <= sw
+    rl, rr = app.root.winfo_rootx(), app.root.winfo_rootx() + app.root.winfo_width()
+    if sw - rr >= 308 or rl >= 308:
+        assert x >= rr or x + 300 <= rl
     shown = cfgmod.get_setting(gui_tips.SHOWN_KEY)
     assert isinstance(shown, list) and len(shown) == 1
     app._show_tip_popup()                                    # no second popup while one is open
