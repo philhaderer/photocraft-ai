@@ -122,6 +122,20 @@ def gui_checks():
     assert not packed
     app._minimized = False
 
+    # a mode switch during a run puts the tabs and the body back (_apply_start_state): above the preview, never below it
+    # (user 1.11.: "the preview suddenly shows above the modes")
+    packed.append({})                                       # the preview is showing
+    where = {}
+    app.f_tabs.pack = lambda *a, **k: where.__setitem__("tabs", k.get("before"))
+    app.f_scrollbox.pack = lambda *a, **k: where.__setitem__("body", k.get("before"))
+    app.lbl_empty.pack = lambda *a, **k: where.__setitem__("empty", k.get("before"))
+    app._apply_start_state(fit=False)
+    assert where.get("tabs") is app.f_preview and (where.get("body") is app.f_preview or where.get("empty") is app.f_preview), where
+    packed.clear()                                          # no preview: as before, above the status line
+    where.clear()
+    app._apply_start_state(fit=False)
+    assert where.get("tabs") is app.f_status, where
+
 
 def manifest_checks():
     """The TAESD files are optional and linked in the gear window (user 29.10.: default coarse colours, the files to test)."""

@@ -209,12 +209,13 @@ class SettingsMixin(DownloadMixin):
             if fit and getattr(self, "_sized", False):
                 self._fit_height()
             return
-        if state != "none_linked":
-            self.f_tabs.pack(fill="x", padx=10, pady=(8, 2), before=self.f_status)
+        below = self.f_preview if self.f_preview.winfo_manager() else self.f_status   # the live preview sits above the status line:
+        if state != "none_linked":                                                     # the tabs must not slip under it
+            self.f_tabs.pack(fill="x", padx=10, pady=(8, 2), before=below)
         if state:
-            self.lbl_empty.pack(fill="x", padx=10, pady=(26, 22), before=self.f_status)
+            self.lbl_empty.pack(fill="x", padx=10, pady=(26, 22), before=below)
         else:
-            self.f_scrollbox.pack(fill="x", before=self.f_status)     # the body sits in its scroll box (gui.py)
+            self.f_scrollbox.pack(fill="x", before=below)     # the body sits in its scroll box (gui.py)
         hide_foot = state == "none_linked"
         if hide_foot != self._foot_hidden:
             self._foot_hidden = hide_foot
