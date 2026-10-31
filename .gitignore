@@ -5,3 +5,10 @@ build/
 dist/
 .venv/
 data/
+
+# Working notes and tool folders (local only)
+CLAUDE.md
+PLAN.md
+ideas.md
+user-edits.md
+.claude/
