@@ -469,6 +469,7 @@ class SettingsMixin(DownloadMixin):
 
         # no ComfyUI dot and no Refresh here: the plugin's footer has both
 
+        self._tips_setting_row(win)
         nb = ttk.Notebook(win)              # tab 1: the models; tab 2: credits
         nb.pack(fill="both", expand=True, padx=10, pady=8)
         tab_models, tab_credits = ttk.Frame(nb), ttk.Frame(nb)

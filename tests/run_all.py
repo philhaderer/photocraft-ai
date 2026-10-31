@@ -24,7 +24,7 @@ def main(words: list[str]) -> int:
         try:
             # UTF-8 both ways: on Windows the console code page cannot hold the tests' "·" and "→"
             r = subprocess.run([sys.executable, "-B", str(p)], cwd=ROOT, capture_output=True, text=True, timeout=300,
-                               encoding="utf-8", errors="replace", env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+                               encoding="utf-8", errors="replace", env={**os.environ, "PYTHONIOENCODING": "utf-8", "PCCOMFY_NO_TIPS": "1"})
             ok, out = r.returncode == 0, (r.stdout + r.stderr)
         except subprocess.TimeoutExpired:
             ok, out = False, "timeout after 300 s"
