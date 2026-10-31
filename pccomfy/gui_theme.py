@@ -78,6 +78,9 @@ class ThemeMixin:
                     relief="flat", borderwidth=0)
         s.map("Small.Toolbutton", background=[("selected", ACCENT), ("active", "#5f5f5f")],
               foreground=[("selected", "#1b1b1b")])
+        # the Easy Mode switch in the header (user 31.10.): no fill, never orange; only its icon turns from grey to orange
+        s.configure("Switch.Toolbutton", background=BG, foreground=FG, padding=(4, 2), font=font(9), relief="flat", borderwidth=0)
+        s.map("Switch.Toolbutton", background=[("selected", BG), ("active", BG)], foreground=[("selected", FG), ("active", FG)])
         # the model chips under the functions: outlined, no fill; chosen = orange outline and text (Tab.Toolbutton is the
         # filled look of the functions above them)
         s.configure("Chip.Toolbutton", background=BG, foreground=FG, padding=(2, 3), anchor="center", relief="solid",

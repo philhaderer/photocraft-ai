@@ -111,13 +111,18 @@ class DownloadMixin:
             return
         self._dl_add([(f, target)])
 
-    def download_missing(self, key: str):
+    def download_missing(self, key, required_only: bool = False):
         """The disk symbol in a model's head: every file of it that is missing (all of them load at the same time). Files that
-        need a website (gated, Civitai) are named in the OK window and their pages open in the browser."""
+        need a website (gated, Civitai) are named in the OK window and their pages open in the browser. `key` may be several
+        models (the Easy Mode tab: the starter models; a file two models share is listed once)."""
         if self.inv is None:
             return
-        row = next((r for r in self.inv.rows() if r["key"] == key), None)
-        todo = [f for f, found, _lv in (row["files"] if row else []) if found is None and f.url and f.name not in self._dl]
+        keys = (key,) if isinstance(key, str) else tuple(key)
+        todo = []
+        for row in (r for r in self.inv.rows() if r["key"] in keys):
+            for f, found, lv in row["files"]:
+                if found is None and f.url and f.name not in self._dl and f not in todo and (lv == "required" or not required_only):
+                    todo.append(f)
         own = [f for f in todo if not browser_only(f)]
         site = [f for f in todo if browser_only(f)]
         if not own and not site:
