@@ -234,7 +234,7 @@ class ModeMixin:
             s.pop("enhance", None)       # same workflow: the "LLM prompt enhancement" checkbox keeps what you set (Expand ignores it)
         if getattr(self, "_easy", False):
             s["enhance"] = False       # Easy Mode: always the factory settings, no saved page, no LLM (its row is hidden)
-        else:
+        elif not getattr(self, "_factory", False):         # Shift + "Reset page": the standard settings, not the saved ones
             s.update(cfgmod.saved_page(m.key, mode))      # settings the user saved for this page (chip menu) replace the starting ones
         self._switch_context(mode)   # first: the context memory belongs to the mode, the defaults below overwrite its value
         self._apply_settings(s)
@@ -315,10 +315,24 @@ class ModeMixin:
         elif mode == "img2img" and self.v_denoise.get() >= 0.99 and not self._ignores_mask():
             self.v_denoise.set(0.6)   # not for Fibo-type editors: below 1.0 they produce a different, broken picture
 
-    def reset_settings(self):
+    def _reset_click(self, event=None):
+        """The footer button: a click resets to the saved settings of the page (else the standard ones); Shift + click always
+        to the standard ones (the way back after "Set as my settings"; PLAN.md, user 31.10. option B)."""
+        self.reset_settings(factory=bool(getattr(self, "_shift_down", False)))
+
+    def reset_settings(self, factory: bool = False):
         """Everything in the window back to what a fresh start has: this tab and function stay, their starting settings come back,
         the prompt, the negative prompt, extra LoRAs, seed and the finishing sliders are cleared. Also while a run is on
         (user 30.10.): the run took its own copy of the settings at Generate, Generate stays grey until it is done."""
+        self._factory = factory
+        try:
+            self._reset_settings()
+        finally:
+            self._factory = False
+        if factory:
+            self._status("Reset to the standard settings (your saved ones are ignored).")
+
+    def _reset_settings(self):
         d = self.cfg["defaults"]
         self.v_seed.set(-1)
         self.v_variants.set(int(d["variants"]))
