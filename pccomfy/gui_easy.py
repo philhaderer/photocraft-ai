@@ -16,13 +16,15 @@ class EasyMixin:
     # ---------- building ----------
 
     def _build_easy(self):
-        """The switch (left of the clock) and the model line under the function buttons. Called at the end of _build."""
+        """The switch (left of the clock) and the model label in the footer. Called at the end of _build."""
         self.b_easy = ttk.Checkbutton(self.f_header, text=em.SWITCH_TEXT, variable=self.v_easy, command=self.toggle_easy,
                                       style="Switch.Toolbutton", image=self._switch_icon(), compound="left")
         self.b_easy.pack(side="right", padx=(0, 8))
         Tooltip(self.b_easy, em.SWITCH_TIP)
         self.v_easy_model = tk.StringVar(value="")
-        self.lbl_easy_model = ttk.Label(self.f_tabs, textvariable=self.v_easy_model, style="Muted.TLabel")
+        # the model Easy Mode uses: in the footer, right of "Live preview" (user 1.11.; no line under the function buttons)
+        self.lbl_easy_model = ttk.Label(self.f_foot, textvariable=self.v_easy_model, style="Muted.TLabel")
+        Tooltip(self.lbl_easy_model, em.MODEL_TIP)
 
     def _switch_icon(self):
         """The switch icon: grey while Easy Mode is off, orange while it is on (the button itself stays flat), with 2 px of
@@ -111,7 +113,7 @@ class EasyMixin:
         line = em.model_line(key) if key else ""
         self.v_easy_model.set(line or em.NO_MODELS)
         if not self.lbl_easy_model.winfo_manager():
-            self.lbl_easy_model.pack(fill="x", pady=(6, 0), anchor="w")
+            self.lbl_easy_model.pack(side="left", padx=FOOT_RESET_PADX, after=self.cb_live)
 
     def _easy_show(self):
         """Easy Mode is off: the hidden parts go back to their places (stacking order: negative prompt, LLM row, Upscale factor,
@@ -238,6 +240,13 @@ class EasyMixin:
                 label(f"      {f.name}   {f.size_text}" + ("   (opens its page in your browser)" if browser_only(f) else ""), "muted", pady=0)
         if "flux3" in em.STARTER_MODELS and any(browser_only(f) for f in missing):
             label(em.TAB_FLUX3_NOTE, "note", pady=(8, 4))
+        label(em.TAB_MORE, "head", pady=(16, 2))
+        for mode, keys in em.EXTRA_PRIORITY.items():
+            names = []
+            for n, k in enumerate(keys):
+                st = self.inv.tab_status(k).state
+                names.append(models.BY_KEY[k].label + (" (best)" if n == 0 else "") + ("" if st != "missing" else " - files missing"))
+            label(f"{dict(MODE_LABELS)[mode]}:  " + ",  ".join(names), "muted", pady=(0, 2))
         if missing:
             total = size_text(sum(f.size for f in missing))
             b = ttk.Button(box, text=f"{em.TAB_BUTTON} ({total})", style="SetSmall.TButton",
