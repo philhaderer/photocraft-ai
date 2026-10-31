@@ -249,8 +249,12 @@ class ThemeMixin:
         self._editor_keys(t)
         return t
 
-    def _spin(self, parent, var, frm, to, inc=1.0, width=6):
-        return ttk.Spinbox(parent, textvariable=var, from_=frm, to=to, increment=inc, width=width)
+    def _spin(self, parent, var, frm, to, inc=1.0, width=6, typed=None):
+        """A number box with arrows; `typed` is a key check (gui_common.steps_typed_ok and the like) for what can be typed."""
+        sp = ttk.Spinbox(parent, textvariable=var, from_=frm, to=to, increment=inc, width=width)
+        if typed is not None:
+            sp.configure(validate="key", validatecommand=(sp.register(typed), "%d", "%S", "%P"))
+        return sp
 
     def _px(self, n: int) -> int:
         return round(n * getattr(self, "ui", 1.0))

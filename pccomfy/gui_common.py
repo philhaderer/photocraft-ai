@@ -488,6 +488,26 @@ def number_typed_ok(action: str, typed: str, after: str) -> bool:
     return sum(after.count(c) for c in ".,") <= 1
 
 
+def steps_typed_ok(action: str, typed: str, after: str) -> bool:
+    """Steps: whole numbers of at most two digits (user 1.11.)."""
+    return action != "1" or (typed.isdigit() and len(after) <= 2 and after.isdigit())
+
+
+def cfg_typed_ok(action: str, typed: str, after: str) -> bool:
+    """CFG: 0 to 9.9: one digit, and after a point or comma one more digit (user 1.11.)."""
+    if action != "1":
+        return True
+    return all(c in "0123456789.," for c in typed) and re.fullmatch(r"\d?([.,]\d?)?", after) is not None
+
+
+SEED_DIGITS = 8
+
+
+def seed_typed_ok(action: str, typed: str, after: str) -> bool:
+    """Seed: whole numbers of at most 8 digits; -1 (random) can be typed too (user 1.11.)."""
+    return action != "1" or (all(c in "0123456789-" for c in typed) and re.fullmatch(r"-?\d{0,%d}" % SEED_DIGITS, after) is not None)
+
+
 class ValueBox(ttk.Entry):
     """The value of a slider in a small dark box on its right (as in PhotoCraft), and you can type into it: Enter or
     leaving the box takes the number, kept inside the slider's range (only digits and one decimal point or comma can be
@@ -713,6 +733,10 @@ __all__ = [
     "ValueBox",
     "parse_number",
     "number_typed_ok",
+    "steps_typed_ok",
+    "cfg_typed_ok",
+    "seed_typed_ok",
+    "SEED_DIGITS",
     "workflows_tags",
     "FLUX2_SCHEDULER",
     "GenParams",
