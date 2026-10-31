@@ -13,6 +13,8 @@ Stand 2026-10-30. Der Plan ist freigegeben. Abschnitt 3 ist die Arbeitsliste in 
 
 ## 1. Wartet auf deinen Live-Test
 
+**Stand 31.10.:** Der Live-Test des Fensters läuft laufend und ist kein Planpunkt mehr; was dir auffällt, sagst du direkt. BBOX (Punkt 15) hat bestanden („passt fürs Erste“), weitere BBOX-Tests folgen später. Die Liste unten bleibt als Gedächtnisstütze.
+
 Alles gebaut und in `next`, mit Tests; im echten Fenster noch nicht von dir geprüft. (Live-Test vom 30.10. bestanden: Fill-Maske, Verlauf, Punkt 11 und 12, Describe, Seam-Korrektur, Fensterkopf, Slots, Zahnrad-Fenster; Liste in `docs/erledigt.md`.)
 
 **Neu vom 30.10. (Feinschliff, alles noch ungeprüft im echten Fenster)**
@@ -144,8 +146,12 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 
 **Danach**
 15. **Flux-3-Boxen** (gebaut 30.10., `feat/flux3-bbox`; Option 1: die zwei Kernknoten im Graph): in Multi Image Edit bei Flux 3 steht neben „Prompt“ der Haken „BBOX“. Ist er an und es gibt eine Auswahl, ist das Rechteck der Auswahl die Box `<obj_1>` (`workflows.add_layout`: `CreateBoundingBoxes` + `Flux3LayoutPrompt` vor dem Prompt-Knoten); steht kein `<obj_1>` im Prompt, hängt das Plugin „Place the result in <obj_1>.“ an (`bridge.BBOX_SENTENCE`; Entscheidung 30.10.). Ohne Auswahl läuft ein normales Multi Image Edit. Unter den Slots steht ein Tipp, solange der Haken an ist. Die Auswahl bleibt nach dem Lauf stehen. **Entschieden (Variante B): bei einer Box bleiben**; mehrere Boxen nur später, falls gewünscht (Test: ohne `desc` sind bei vertauschten Boxen 2 von 3 Referenzen falsch, mit `desc` alle richtig; Varianten A/C in `docs/flux3-bbox-workflow-notes.md`). Seit 30.10. abends hat das Ergebnis eine weiche Ebenenmaske (Box +15 % Rand je Seite, Farben außerhalb an das Original angeglichen (`imaging.match_outside`), `feat/bbox-margin-mask`; im echten Fenster ungeprüft). Notizen und Textlauf: `docs/flux3-bbox-workflow-notes.md`. **Offen: echter Lauf** (siehe Abschnitt 1), die Frage, ob „desc“ der Box gefüllt werden soll (heute leer).
-16. **L4 Inhalte:** Krea-Style-Chooser, Tipps, tägliche Tooltips, Tutorial-PSDs.
-17. **Easy Mode** (`easymode.py`).
+16. **L4 Inhalte** (Tutorial-PSDs später, mit Testbild):
+    - **Style-Chooser, Knopf „Styles“** (entschieden 31.10.): ein Flyout-Menü, das sich beim Prompt neben dem LLM-Knopf öffnet. Quelle: `ThetaCursed/Krea2-Style-Explorer` (MIT, nur `krea_moodboards.json`: ca. 3.549 Stile, je nur `index` und `styleKeywords`, **keine Namen und keine Gruppen**, Stand 4.8.2026; Lizenz der Bilder nicht genannt, die Daten gehören aber zur MIT-Lizenz des Repos). Die Stile werden auf ca. 5 bis 10 Gruppen mit je ca. 20 Stilen eingegrenzt und sinnvoll gruppiert (Vorarbeit durch einen Sonnet-Subagenten); **die Stil-Prompts bleiben Zeichen für Zeichen unverändert**, nur Auswahl, Gruppenname und Kurzname kommen neu dazu.
+    - **Stil-Test vor dem Einbau:** 10 Prompts aus `docs/tests/testprompts.md`, alle Modelle mit Text to image (Flux 3, Flux 2, Qwen, Fibo, MOSS, Krea 2), je 2 Seeds, automatisiert, um zu sehen, wie die Stile bei den anderen Modellen wirken (Krea 2 war das Zielmodell der Stile). Braucht deine GPU-Erlaubnis.
+    - **Tipps:** 20 bis 30 Tooltips zu wichtigen und versteckten Funktionen (Entwurf `docs/tooltips-entwurf.md`, von dir zu prüfen, Wortlaut mit dir klären), danach tägliche Tooltips.
+16a. **Große Testrunde (zu einem Zeitpunkt, den du bestimmst; vor dem Release):** automatisiert und manuell, alle Funktionen und alle Modelle (Text to image, Edit, Multi Image Edit inkl. BBOX, Fill, Expand, Remove, Upscale, Refine), Standardeinstellungen und Randfälle, 16 GB. Der Zuschnitt (was automatisch läuft, was du siehst, blind oder nicht) wird vorher mit dir festgelegt.
+17. **Easy Mode** (`easymode.py`): Idee: ein Schalter reduziert das Plugin radikal auf das Nötigste, mit einer kleinsten Modellausstattung. Plan mit Optionen: `docs/easymode-plan.md` (Entwurf eines Opus-Subagenten, 31.10.), Entscheidung bei dir.
 18. **Release:** neues Repo, Credits (Upstream, Lucide-Icons, Inter-Schrift (OFL), Modelle, Danrisi), README-Windows, Prüfung auf 16 GB; `photocraft-ai.bat` (zeigt noch auf 0.14.0) an die aktuelle PhotoCraft-Version angleichen. Start für andere Nutzer: Verknüpfung als Standard, Autostart als Schalter im Zahnrad prüfen (Code liegt bereit, Einzelheiten `docs/erledigt.md`, 28.10.). Am saubersten wäre ein Start durch PhotoCraft selbst (Einstellung `generatorEnabled`): bei den PhotoCraft-Entwicklern nachfragen.
 
 **Geparkt** (von dir nicht entschieden, aus `ideas.md`): Expand-Warnung über 25 % je Seite und automatische Runden; schnelles Remove mit LaMa (GPL-3.0, nur als Abhängigkeit); ComfyUI automatisch starten/herunterladen; Gerät beim Start loggen, „Open log folder“; AnyPaint-LoRA für Krea 2.
@@ -160,7 +166,7 @@ Jede Aufgabe auf eigenem Branch; wo Design oder Wortlaut zu wählen ist, vorher 
 
 ## 5. Risiken und Lizenzen
 
-- Krea-Style-Explorer: Lizenz des Repos und der Bilder vor dem Mitliefern klären.
+- Krea-Style-Explorer: Repo MIT; für die Bilder ist keine Lizenz genannt (wir brauchen nur `styleKeywords`, keine Bilder). Vor dem Mitliefern Urheber nennen (Credits) und die MIT-Lizenzdatei der Daten beilegen.
 - Fibo 2.0 (CC BY-NC) und die FLUX.2-Dateien nur nicht-kommerziell; Lenovo UltraReal verlangt Nennung von Danrisi; Lucide-Icons (ISC) nennen; Inter (SIL OFL 1.1) liegt mit `OFL-Inter.txt` bei.
 - Scribble/Sketch, Remove-Prompt, Encoder-Tausch, Steps-Prüfung: Recherche- und Testaufgaben ohne Code (`docs/tests/`).
 
