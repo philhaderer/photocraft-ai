@@ -36,7 +36,7 @@ class RecStyle(t.Widget):
 def main():
     assert gui.PANEL == "#282828" and gui.NA_RED == "#ff6b6b"
     # readable on PANEL (WCAG AA for normal text is 4.5; DISABLED is 4.5 to one decimal)
-    for name in ("FG", "MUTED", "ACCENT", "NA_RED", "ERROR_TEXT", "DONE_GREEN"):
+    for name in ("FG", "MUTED", "ACCENT_TEXT", "NA_RED", "ERROR_TEXT", "DONE_GREEN"):
         assert contrast(getattr(gui, name), gui.PANEL) >= 4.5, name
     assert contrast(gui.DISABLED, gui.PANEL) >= 4.45
 

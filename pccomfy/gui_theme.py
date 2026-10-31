@@ -44,7 +44,7 @@ class ThemeMixin:
         s.configure("SetText.TCheckbutton", font=font(9))
         s.configure("SetSmall.TButton", padding=(8, 2), width=0, font=font(9))      # Undo and Reset: small, not stretched
         s.configure("TipOk.TButton", padding=(22, 7), width=0, font=font(11, bold=True))      # "OK" of the tip popup: easy to hit
-        for name, colour in (("SetOk", DONE_GREEN), ("SetBad", ERROR_TEXT), ("SetNote", ACCENT), ("SetMuted", MUTED)):
+        for name, colour in (("SetOk", DONE_GREEN), ("SetBad", ERROR_TEXT), ("SetNote", ACCENT_TEXT), ("SetMuted", MUTED)):
             s.configure(f"{name}.TLabel", foreground=colour, font=font(9))
         s.configure("TNotebook", background=BG, borderwidth=0, tabmargins=(0, 4, 0, 0))     # the tabs of the settings window
         s.configure("TNotebook.Tab", background=PANEL, foreground=FG, padding=(14, 4), borderwidth=0)
@@ -87,11 +87,11 @@ class ThemeMixin:
         # filled look of the functions above them)
         s.configure("Chip.Toolbutton", background=BG, foreground=FG, padding=(2, 3), anchor="center", relief="solid",
                     borderwidth=1, bordercolor="#686868", lightcolor=BG, darkcolor=BG, font=font(9))
-        s.map("Chip.Toolbutton", foreground=[("disabled", DISABLED), ("selected", ACCENT)],
+        s.map("Chip.Toolbutton", foreground=[("disabled", DISABLED), ("selected", ACCENT_TEXT)],
               bordercolor=[("disabled", "#4a4a4a"), ("selected", ACCENT)], background=[("active", "#5f5f5f")])
         s.configure("Missing.Chip.Toolbutton", foreground=NA_RED)
         s.configure("Accent.TButton", background=ACCENT, foreground="#1b1b1b", font=font(10, bold=True))
-        s.map("Accent.TButton", background=[("active", "#ff9d3d"), ("disabled", "#6e6558")])
+        s.map("Accent.TButton", background=[("active", "#5ba3f5"), ("disabled", "#5a6678")])
         s.configure("Split.Accent.TButton", padding=(6, 6))     # the narrow "×2 ▾" piece on the right of Generate
         s.configure("TCombobox", fieldbackground=PANEL, background=PANEL, foreground=FG, arrowcolor=FG)
         s.map("TCombobox", fieldbackground=[("readonly", PANEL)], foreground=[("readonly", FG)],
@@ -101,7 +101,7 @@ class ThemeMixin:
         s.configure("TSpinbox", fieldbackground=PANEL, foreground=FG, arrowcolor=FG, arrowsize=self._px(18))   # up/down arrows 50 % larger
         s.configure("Horizontal.TProgressbar", background=ACCENT)
         s.configure("Grip.TFrame", background="#454545")
-        s.configure("Hint.TLabel", foreground=ACCENT)
+        s.configure("Hint.TLabel", foreground=ACCENT_TEXT)
         s.configure("Sep.TFrame", background="#9a9a9a")
         s.configure("Done.TLabel", foreground=DONE_GREEN, font=font(10, bold=True))      # the word "Done"
         s.configure("DoneRest.TLabel", foreground=FG, font=font(10, bold=True))        # what follows it (seed, layers, time)
@@ -135,7 +135,7 @@ class ThemeMixin:
             px = self._px(CHECK_PX)
             looks = {"off": ("#454545", "#a0a0a0", None), "off-hover": ("#454545", FG, None),
                      "on": (ACCENT, ACCENT, "#ffffff"), "off-grey": (BG, "#6e6e6e", None),
-                     "on-grey": ("#6e6558", "#6e6558", "#a8a8a8")}
+                     "on-grey": ("#5a6678", "#5a6678", "#a8a8a8")}
             imgs = {}
             for k, v in looks.items():      # the gap to the text is part of the picture (an image element ignores padding)
                 wide = Image.new("RGBA", (px + self._px(CHECK_GAP), px), (0, 0, 0, 0))

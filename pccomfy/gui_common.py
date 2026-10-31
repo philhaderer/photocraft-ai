@@ -514,7 +514,7 @@ class SelectableLabel(tk.Text):
 
     def __init__(self, parent, text: str = "", fg: str = "", bg: str = "", fnt=None):
         super().__init__(parent, height=1, width=1, wrap="word", bd=0, highlightthickness=0, padx=0, pady=0, bg=bg, fg=fg,
-                         font=fnt, cursor="xterm", insertwidth=0, takefocus=0, selectbackground="#6e6558", inactiveselectbackground="#6e6558")
+                         font=fnt, cursor="xterm", insertwidth=0, takefocus=0, selectbackground="#5a6678", inactiveselectbackground="#5a6678")
         self.bind("<Button-1>", lambda e: self.focus_set(), add="+")      # a disabled Text does not take the focus itself
         self.bind("<Configure>", lambda e: self._fit(), add="+")
         self.configure(text=text)
@@ -674,7 +674,8 @@ def preset_stem(name: str) -> str:
     return re.sub(r"[^\w .\-]", "_", name.strip(), flags=re.UNICODE).strip(". ") or "preset"
 
 PAGE_NOT_SAVED = ("mode", "workflow", "clip", "checkpoint", "seed", "prompt", "negative", "variants")   # what "Set as my settings" leaves out: the page itself, the text, the seed and the number of variants
-BG, PANEL, FG, MUTED, ACCENT = "#535353", "#282828", "#eeeeee", "#cfcfcf", "#f28c28"   # PhotoCraft grey (measured from a screenshot), orange accent; PANEL = inactive tab, fields, buttons, slots
+BG, PANEL, FG, MUTED, ACCENT = "#535353", "#282828", "#eeeeee", "#cfcfcf", "#378ef0"   # PhotoCraft grey and blue (both measured from a screenshot); PANEL = inactive tab, fields, buttons, slots
+ACCENT_TEXT = "#6aaaf5"     # the blue for text and thin lines on the grey (the exact blue is too dark there: 2.3 : 1 on BG, this 3.2 : 1 like the old orange)
 NA_RED = "#ff6b6b"      # text of a tab that is not available (model files missing); 5.3 : 1 on PANEL
 DISABLED = "#8e8e8e"   # text of a greyed-out control: clearly darker than MUTED, so it reads as "not available here"
 SCALE_MODES = ("upscale", "refine")   # these run only with an upscale workflow (a node titled pc:upscale)
@@ -819,6 +820,7 @@ __all__ = [
     "FG",
     "MUTED",
     "ACCENT",
+    "ACCENT_TEXT",
     "DISABLED",
     "SCALE_MODES",
     "NO_LLM_MODES",
