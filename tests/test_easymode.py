@@ -16,7 +16,16 @@ from pccomfy import easymode as em  # noqa: E402
 from pccomfy import models  # noqa: E402
 
 
+def ranking_matches_easy_priority():
+    """The ranking shown in the tooltips and the order Easy Mode uses are one list (user 31.10.)."""
+    for mode, keys in em.PRIORITY.items():
+        assert models.RANKING[mode] == keys, mode
+    for mode, keys in em.EXTRA_PRIORITY.items():
+        assert models.RANKING[mode] == keys, mode
+
+
 def main():
+    ranking_matches_easy_priority()
     assert em.EASY_MODES == ("txt2img", "edit", "inpaint", "remove", "outpaint", "upscale")
     assert "multi_edit" not in em.EASY_MODES and "refine" not in em.EASY_MODES
     # every key in the priority is a model that really has the function

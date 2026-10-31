@@ -252,7 +252,7 @@ def main():
     assert models.ranking_text("inpaint") == "Ranking: 1. Fibo, 2. Qwen."
     assert models.ranking_text("remove") == "Ranking: 1. Fibo, 2. Qwen (not ranked: Flux 3, Flux 2)."
     assert models.ranking_text("outpaint") == "Ranking: 1. Flux 2, 2. Flux 3, 3. Qwen, 4. Fibo."      # Krea 2 / MOSS Expand off 29.10.
-    assert models.ranking_text("edit") == "Ranking: not set yet." and models.ranking_text("img2img") == ""
+    assert models.ranking_text("edit").startswith("Ranking: 1. Flux 3, 2. Qwen, 3. Flux 2, 4. Fibo") and models.ranking_text("img2img") == ""   # all functions are ranked since 1.11.
     assert app.tt_modes["remove"].text.startswith("Ranking: 1. Fibo, 2. Qwen")
     assert all(k in models.SHORT for k in models.BY_KEY) and all(k in models.BY_KEY for r in models.RANKING.values() for k in r)
     # Fibo Refine starts with Sharpen 10 % (user 30.10.), Fibo Text to image with 20 % (user 28.10.); the box shows the percent

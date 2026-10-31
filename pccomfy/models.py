@@ -229,6 +229,12 @@ RANKING = {
     "inpaint": ("fibo", "qwen"),            # E2 test round 28.10.: "Fibo is better overall"
     "remove": ("fibo", "qwen"),
     "outpaint": ("flux2", "flux3", "qwen", "fibo"),   # user 28.10.: Flux 2 very good, Flux 3 and Qwen too; Krea 2 / MOSS off 29.10.
+    # the rest is the order of Easy Mode (user 31.10.); Refine and Multi Image Edit are accepted for now, still being checked (1.11.)
+    "txt2img": ("flux3", "moss", "flux2", "qwen", "fibo"),
+    "edit": ("flux3", "qwen", "flux2", "fibo"),
+    "upscale": ("flux3", "flux2"),
+    "refine": ("fibo", "flux2"),
+    "multi_edit": ("flux3", "flux2", "qwen", "fibo"),
 }
 SHORT = {"flux3": "Flux 3", "flux2": "Flux 2", "qwen": "Qwen", "fibo": "Fibo", "krea2": "Krea 2", "moss": "MOSS"}
 
