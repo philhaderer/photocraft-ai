@@ -9,7 +9,7 @@ from PIL import Image
 from . import easymode as em, icons
 from .gui_theme import ICON_PX
 from .ui_downloads import browser_only, size_text
-from .ui_settings import FOOT_RESET_PADX, SET_STYLES, STATE_MARK
+from .ui_settings import FOOT_RESET_PADX, SET_STYLES
 
 
 class EasyMixin:
@@ -246,8 +246,8 @@ class EasyMixin:
         for row in self.inv.rows():
             if row["key"] not in em.STARTER_MODELS:
                 continue
-            mark, style = STATE_MARK[row["status"].state]
-            label(f"{mark}  {row['label']}", "head", pady=(6, 2))
+            head = label(row["label"], "head", pady=(6, 2))
+            head.configure(image=self.state_dot(row["status"].state), compound="left")
             if row["key"] == "flux3" and any(browser_only(f) for f in missing):
                 label(em.TAB_FLUX3_NOTE, "note", pady=(0, 2))
             for f in (f for f in missing if any(f is x for x, _fd, _lv in row["files"])):

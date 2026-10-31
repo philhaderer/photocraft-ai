@@ -15,7 +15,7 @@ from __future__ import annotations
 import difflib
 import webbrowser
 
-from . import inventory, manifest, sthead
+from . import icons, inventory, manifest, sthead
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
 from .gui_theme import ICON_PX
@@ -24,7 +24,8 @@ from .ui_downloads import DownloadMixin, browser_only, site_hint, size_text
 _LABELS = dict(MODE_LABELS)      # noqa: F405
 EMPTY_TEXT = {"choose": "Choose a model", "none_linked": "Link your model in the settings"}
 STATE_TEXT = {"ready": "ready", "partial": "some functions need files", "missing": "files missing"}
-STATE_MARK = {"ready": ("\u25CF", "ok"), "partial": ("\u25D0", "note"), "missing": ("\u25CB", "bad")}
+DOT_RED = "#e5484d"                   # the dot in front of a model that is not available (nothing in front of a ready one)
+DOT_PAD = 4                            # px of room to the left of the dot (user 1.11.)
 SETTINGS_W, SETTINGS_H = 760, 700      # the settings window at first (before the display scaling); then the size it was closed at
 SET_ICON_PX = 16                       # the download and chain symbols next to a file
 SET_STYLES = {"head": "SetHead.TLabel", "ok": "SetOk.TLabel", "bad": "SetBad.TLabel", "note": "SetNote.TLabel",
@@ -332,11 +333,11 @@ class SettingsMixin(DownloadMixin):
             rows += [("enable", m.key, m.label, True) for m in models.MODELS]
         else:
             for row in self.inv.rows():
-                miss = [f for f, found, _lv in row["files"] if found is None and f.url]
+                miss = [f for f, found, lv in row["files"] if found is None and f.url and lv == "required"]
                 direct = [f for f in miss if not browser_only(f)]
                 rows.append(("model", row["key"], row["label"], row["status"].state, row["key"] == self._settings_focus,
                              {"count": len(direct), "site": len(miss) - len(direct), "size": size_text(sum(f.size for f in direct))}
-                             if len(miss) > 1 else None))
+                             if miss else None))
                 rows.append(("enable", row["key"], row["label"], row["status"].state != "missing"))
                 rows.append(("sep",))
                 rows.append(("modes", row["key"], self._mode_cover(row["key"])))
@@ -476,7 +477,7 @@ class SettingsMixin(DownloadMixin):
         nb = ttk.Notebook(win)              # tab 1: the models; tab 2: credits
         nb.pack(fill="both", expand=True, padx=10, pady=8)
         tab_models, tab_credits = ttk.Frame(nb), ttk.Frame(nb)
-        nb.add(tab_models, text="Models")
+        nb.add(tab_models, text="All supported models")
         nb.add(tab_credits, text="Credits")
         self.nb_settings = nb
 
@@ -617,15 +618,28 @@ class SettingsMixin(DownloadMixin):
         self._settings_titles()
         self._settings_wrap()
 
+    def state_dot(self, state: str):
+        """The red dot in front of a model that is not active or available (some or all of its files are missing), with
+        DOT_PAD px of room on its left; "" for a ready model (no mark)."""
+        if state not in ("partial", "missing"):
+            return ""
+        cache = self.__dict__.setdefault("_icon_cache", {})
+        if ("dot", state) not in cache:
+            from PIL import Image, ImageDraw
+            sc, d, pad = 4, self._px(9), self._px(DOT_PAD)
+            im = Image.new("RGBA", ((d + pad) * sc, d * sc), (0, 0, 0, 0))
+            ImageDraw.Draw(im).ellipse([pad * sc, 0, (pad + d) * sc - 1, d * sc - 1], fill=DOT_RED)
+            cache[("dot", state)] = icons.photo(self.root, None, DOT_RED, d, image=im.resize((d + pad, d), Image.LANCZOS))
+        return cache[("dot", state)]
+
     def _settings_titles(self):
-        """The tab of a model carries its state: filled dot ready, half some functions need files, empty files missing."""
+        """The tab of a model carries its state: a red dot in front of the name when it is not available, nothing when ready."""
         for key, page in getattr(self, "_set_pages", {}).items():
             if key == "additional":
                 continue
             st = self.inv.tab_status(key).state if self.inv is not None else ""
-            mark = STATE_MARK.get(st, ("", ""))[0]
             try:
-                self.nb_models.tab(page["page"], text=(mark + " " + models.SHORT[key]).strip())
+                self.nb_models.tab(page["page"], text=models.SHORT[key], image=self.state_dot(st), compound="left")
             except (tk.TclError, AttributeError):
                 pass
 
@@ -670,16 +684,17 @@ class SettingsMixin(DownloadMixin):
                 label(line(), row[1], "muted", pady=(0, 4), wrap=self._px(20))
             elif kind == "model":
                 _k, key, name, state, focus, allm = row
-                mark, style = STATE_MARK[state]
                 box = line()
                 if allm:
-                    b = ttk.Button(box, image=self._icon("save", px=SET_ICON_PX), style="Link.TButton",
-                                   command=lambda k=key: self.download_missing(k))
+                    b = ttk.Button(box, text="Download all needed models", image=self._icon("save", px=SET_ICON_PX), compound="left",
+                                   style="SetSmall.TButton", command=lambda k=key: self.download_missing(k, required_only=True))
                     b.pack(side="right", padx=(4, 0), pady=(6, 2))
-                    Tooltip(b, f"Download all missing files that can be loaded here ({allm['count']}, {allm['size']})"
+                    Tooltip(b, f"Download the missing files this model needs ({allm['count']}, {allm['size']})"
                                + (f"; {allm['site']} open their page in the browser." if allm["site"] else "."))
-                label(box, mark, style, pady=(6, 2))
-                label(box, name + "   " + STATE_TEXT[state] + ("   \u25C0" if focus else ""), "head", padx=(8, 0), pady=(6, 2))
+                dot = self.state_dot(state)
+                if dot:
+                    ttk.Label(box, image=dot).pack(side="left", pady=(6, 2))
+                label(box, name + "   " + STATE_TEXT[state] + ("   \u25C0" if focus else ""), "head", padx=(4 if dot else 0, 0), pady=(6, 2))
             elif kind == "enable":
                 key = row[1]
                 usable = row[3] if len(row) > 3 else True
@@ -701,10 +716,11 @@ class SettingsMixin(DownloadMixin):
                 grid = ttk.Frame(line())
                 grid.pack(fill="x")
                 made.append(grid)
-                for i, (_mode, text, state, tip) in enumerate(row[2]):
-                    mark, style = {"ready": ("\u2713", "ok"), "missing": ("\u2717", "bad"), "none": ("\u2013", "muted")}[state]
-                    lb = ttk.Label(grid, text=f"{mark}  {text}", style=SET_STYLES[style])
-                    lb.grid(row=i // 3, column=i % 3, sticky="w", padx=(8, 18), pady=1)
+                for i, (_mode, text, state, tip) in enumerate(m for m in row[2] if m[2] != "none"):     # a list: what the model offers
+                    ttk.Label(grid, text="✗" if state == "missing" else "", width=2, style=SET_STYLES["ok"]).grid(
+                        row=i, column=0, sticky="w", padx=(8, 0), pady=1)       # the one icon: an X on a mode with missing files
+                    lb = ttk.Label(grid, text=text, style=SET_STYLES["ok"])
+                    lb.grid(row=i, column=1, sticky="w", padx=(4, 0), pady=1)
                     Tooltip(lb, tip)
             elif kind == "file":
                 f = row[1]
@@ -811,7 +827,7 @@ class SettingsMixin(DownloadMixin):
         t.tag_configure("head", font=font(10, bold=True), foreground=FG)
         t.tag_configure("ok", foreground=DONE_GREEN)           # noqa: F405
         t.tag_configure("bad", foreground=ERROR_TEXT)          # noqa: F405
-        t.tag_configure("note", foreground=ACCENT_TEXT)
+        t.tag_configure("note", foreground="#ffffff")
         t.tag_configure("muted", foreground=MUTED)
         n = 0
         for text, style, url in segments:
