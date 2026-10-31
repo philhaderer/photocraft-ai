@@ -130,7 +130,6 @@ Danrisi). Check [docs/model-downloads.md](docs/model-downloads.md) before you us
   `python -m pccomfy --help`.
 - **Tests**: `python tests/run_all.py` (stubbed Tk, fake PhotoCraft and fake ComfyUI; no GPU needed).
 - **Diagnostics**: `data\exchange\last-graph.json` (last graph sent) and `data\exchange\runs.jsonl` (one line per run).
-- **PhotoCraft's control channel**: [docs/photocraft-developer-notes.md](docs/photocraft-developer-notes.md).
 
 ## Credits
 

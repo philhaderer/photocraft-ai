@@ -13,8 +13,7 @@ ideas.md
 user-edits.md
 .claude/
 
-# Internal docs (local only); public docs stay: model-downloads, photocraft-developer-notes, photocraft-befehle
+# Internal docs (local only); public docs stay: model-downloads, photocraft-befehle
 docs/*
 !docs/model-downloads.md
-!docs/photocraft-developer-notes.md
 !docs/photocraft-befehle.md
