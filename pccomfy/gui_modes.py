@@ -232,7 +232,10 @@ class ModeMixin:
             s["workflow"] = spec.workflow
         elif not force:
             s.pop("enhance", None)       # same workflow: the "LLM prompt enhancement" checkbox keeps what you set (Expand ignores it)
-        s.update(cfgmod.saved_page(m.key, mode))      # settings the user saved for this page (chip menu) replace the starting ones
+        if getattr(self, "_easy", False):
+            s["enhance"] = False       # Easy Mode: always the factory settings, no saved page, no LLM (its row is hidden)
+        else:
+            s.update(cfgmod.saved_page(m.key, mode))      # settings the user saved for this page (chip menu) replace the starting ones
         self._switch_context(mode)   # first: the context memory belongs to the mode, the defaults below overwrite its value
         self._apply_settings(s)
         t = self.t_prompt

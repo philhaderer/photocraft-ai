@@ -79,6 +79,7 @@ _SAVE = [[(5, 3), (15.2, 3), (21, 8.8), (21, 19)] + _arc(19, 19, 2, 0, 90) + [(5
 SHAPES.update({
     "placeholder": [_rrect(4, 4, 16, 16, 3)],      # a function without a symbol of its own (img2img)
     "plus": [[(5, 12), (19, 12)], [(12, 5), (12, 19)]],
+    "toggle": [_rrect(2, 6, 20, 12, 6), _circle(8, 12, 2.6)],     # a switch: the Easy Mode button in the header
     "gear": _gear(),
     "undo": _UNDO,
     "redo": _mirror(_UNDO),

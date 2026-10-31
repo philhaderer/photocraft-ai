@@ -1,0 +1,127 @@
+"""Easy Mode in the real Tk window (hidden): the switch hides the model chips, the negative prompt and everything between the
+prompt and the status line; the plugin picks the model per function; switching off brings the normal window back exactly.
+Skipped when Tk cannot open a window.
+
+    python tests/test_easymode_gui.py
+"""
+import os
+import shutil
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+TMP = tempfile.mkdtemp(prefix="pccomfy-easygui-")
+os.environ["PCCOMFY_HOME"] = TMP
+sys.path.insert(0, str(ROOT))
+
+try:
+    import tkinter
+    _r = tkinter.Tk()
+    _r.destroy()
+except Exception as e:                      # no display / no Tk
+    print(f"SKIPPED (no Tk window: {e})")
+    sys.exit(0)
+
+from pccomfy import config as cfgmod  # noqa: E402
+from pccomfy import easymode as em  # noqa: E402
+from pccomfy import gui, models  # noqa: E402
+
+
+def shown(w) -> bool:
+    return bool(w.winfo_manager())
+
+
+def main():
+    gui.winlink.available = lambda: False
+    cfg = cfgmod.load()
+    cfg["comfyui"]["url"] = "http://127.0.0.1:1"
+    cfg["photocraft"]["port"] = 1
+    app = gui.App(cfg)
+    app.root.withdraw()
+    names = sorted({w for m in models.MODELS for w in m.workflows()})
+    app.cb_workflow["values"] = [gui.BUILTIN] + names
+    app.v_model.set("qwen")
+    app.v_mode.set("inpaint")
+    app._on_model()
+    app.t_prompt.delete("1.0", "end")
+    app.t_prompt.insert("1.0", "a red kite")
+    app.v_seed.set(1234)
+    app.root.update()
+    assert not app._easy and shown(app.f_models) and shown(app.f_neg) and shown(app.f_adv) and shown(app.b_reset)
+    before = list(app.f_body.pack_slaves())
+    before_all = {k: shown(getattr(app, k)) for k in ("f_models", "f_neg", "f_enh", "f_adv", "b_llm", "b_reset", "f_opts")}
+
+    # a page the user saved is ignored in Easy Mode
+    cfgmod.set_setting("saved_pages", {"fibo|inpaint": {"steps": 7}})
+
+    app.v_easy.set(True)
+    app.toggle_easy()
+    app.root.update()
+    assert app._easy and em.is_on()
+    assert app.v_mode.get() == "inpaint" and app.v_model.get() == "fibo", (app.v_mode.get(), app.v_model.get())
+    assert app.v_steps.get() != 7
+    assert app.v_seed.get() == -1
+    for w in (app.f_models, app.f_neg, app.f_enh, app.f_adv, app.f_opts, app.b_llm, app.b_reset, app.f_pchoice):
+        assert not shown(w), w
+    assert shown(app.lbl_easy_model) and app.v_easy_model.get() == "Model: " + models.BY_KEY["fibo"].label
+    assert shown(app.f_go) and shown(app.t_prompt) and shown(app.cb_live) and shown(app.b_history) and shown(app.b_copy_canvas)
+    assert shown(app.b_easy)
+    on = [k for k, rb in app.rb_modes.items() if shown(rb)]
+    assert on == [k for k, _ in gui.MODE_LABELS if k in em.EASY_MODES], on                       # no Multi Image Edit, no Refine
+    assert app.t_prompt.get("1.0", "end").strip() == "a red kite"
+
+    # a function click picks the best model for it
+    for mode, want in (("txt2img", "flux3"), ("edit", "flux3"), ("remove", "fibo"), ("outpaint", "flux2"), ("upscale", "flux3")):
+        app.v_mode.set(mode)
+        app._on_mode()
+        app.root.update()
+        assert app.v_model.get() == want, (mode, app.v_model.get())
+        assert app.v_easy_model.get() == "Model: " + models.BY_KEY[want].label
+        assert not shown(app.f_neg) and not shown(app.f_adv) and not shown(app.f_models) and not shown(app.f_opts)
+    assert shown(app.f_scale)                                  # Upscale factor stays in Upscale
+    app.v_mode.set("edit")
+    app._on_mode()
+    assert not shown(app.f_scale)
+
+    # no model for a function: its button is greyed out; the current function moves to one that has a model
+    app.v_mode.set("upscale")
+    app._on_mode()
+    app._model_usable = lambda key, mode: key == "fibo"
+    app._easy_refresh()
+    app.root.update()
+    assert str(app.rb_modes["upscale"].cget("state")) == "disabled"
+    assert str(app.rb_modes["edit"].cget("state")) == "normal"
+    assert app.v_model.get() == "fibo" and app.v_mode.get() == "txt2img", (app.v_model.get(), app.v_mode.get())
+    assert app.tt_modes["upscale"].text == em.MODE_GREYED_TIP
+    del app._model_usable
+
+    # back to the normal window: the same stacking order, the same model, function, settings
+    app.v_mode.set("upscale")
+    app._on_mode()
+    app.v_easy.set(False)
+    app.toggle_easy()
+    app.root.update()
+    assert not app._easy and not em.is_on() and em.pop_return() == {}
+    assert app.v_model.get() == "qwen" and app.v_mode.get() == "inpaint", (app.v_model.get(), app.v_mode.get())
+    assert app.v_seed.get() == 1234
+    assert app.t_prompt.get("1.0", "end").strip() == "a red kite"
+    assert {k: shown(getattr(app, k)) for k in before_all} == before_all
+    assert list(app.f_body.pack_slaves()) == before, "stacking order changed"
+    assert not shown(app.lbl_easy_model)
+    assert all(shown(rb) for rb in app.rb_modes.values() if rb is not app.rb_modes.get("img2img"))
+
+    # Easy Mode left on is on again at the next start
+    em.set_on(True)
+    app.root.destroy()
+    app2 = gui.App(cfg)
+    app2.root.withdraw()
+    app2.root.update()
+    assert app2._easy and not shown(app2.f_neg) and not shown(app2.f_models) and not shown(app2.f_adv)
+    app2.root.destroy()
+    shutil.rmtree(TMP, ignore_errors=True)
+    print("ALL OK (easy mode window)")
+
+
+if __name__ == "__main__":
+    main()
