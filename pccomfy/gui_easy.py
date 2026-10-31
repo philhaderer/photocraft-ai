@@ -314,4 +314,3 @@ class EasyMixin:
         self._on_mode_ui()
         self._on_workflow()
         self._fit_height()
-        self._status(em.STATUS_OFF)
