@@ -67,7 +67,7 @@ QWEN_SMALL = "Small selections don't work well with Qwen."   # user 30.10.: smal
 REMOVE_NAME_TIP = "Optional: name what to remove (\"the dog\")."
 REMOVE_AGAIN = "If the first try didn't work, try removing it a second time."   # Fibo Remove, idea of the user (28.10.)
 MULTI_TIP = "You can start with a white image and use the reference images below to place them on the canvas."
-EDIT_TIP = "To remove something, say what replaces it: \u201cRemove the dog and paint the wall behind him\u201d"
+EDIT_TIP = "Describe the result: \u201cReplace the dog with a vase of flowers.\u201d"
 # Krea 2 / MOSS Expand (wording chosen by the user 29.10.; A/B test docs/tests/krea-moss-expand-ab.md)
 EXPAND_DESCRIBE_TIP = ("This model needs a prompt: describe the surroundings only (place, light, style), not the main subject. "
                        "Describe writes one for you.")
