@@ -772,13 +772,25 @@ class RefSlotsMixin:
             return
         self._refs_add_image(im, "clipboard")
 
+    def _clipboard_has_text(self) -> bool:
+        """Text on the clipboard (a text field pastes it itself); anything unclear counts as text, so a field keeps Ctrl+V."""
+        import tkinter as tk
+        try:
+            return bool(self.root.clipboard_get())
+        except tk.TclError:
+            return False
+        except Exception:
+            return True
+
     def _refs_ctrl_v(self, event=None):
-        """Ctrl+V adds a picture, but never takes the shortcut away from a text field (prompt, spin boxes ...)."""
+        """Ctrl+V adds a picture. A text field (prompt, spin boxes ...) keeps the shortcut while the clipboard holds text;
+        with only a picture on it, the picture goes into the slots, also when the cursor is in the prompt."""
         try:
             cls = str(self.root.focus_get().winfo_class())
         except Exception:
             cls = ""
-        if cls in ("Text", "Entry", "TEntry", "TCombobox", "TSpinbox", "Spinbox") or not self._refs_wanted():
+        if not self._refs_wanted() or (cls in ("Text", "Entry", "TEntry", "TCombobox", "TSpinbox", "Spinbox")
+                                       and self._clipboard_has_text()):
             return None
         im = clipboard.read_image()
         if im is None:

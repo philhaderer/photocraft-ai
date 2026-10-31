@@ -74,7 +74,13 @@ def main():
         app.root.focus_get = lambda: Focus()
         before = len(app.refslots.items)
         app.refslots.remove(0)
+        app.root.clipboard_get = lambda: "some text"                 # text on the clipboard: the field pastes it
         assert app._refs_ctrl_v() is None and len(app.refslots.items) == before - 1
+        import tkinter as tk
+        def no_text():
+            raise tk.TclError("CLIPBOARD selection doesn't exist or form \"STRING\" not defined")
+        app.root.clipboard_get = no_text                             # only a picture, cursor in the prompt: it goes into the slots
+        assert app._refs_ctrl_v() == "break" and len(app.refslots.items) == before
         app.root.focus_get = lambda: None
     finally:
         clipboard.read_image = orig
