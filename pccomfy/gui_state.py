@@ -22,7 +22,6 @@ class StateMixin:
                 info["clips"] = self.comfy.clips()
                 info["loras"] = self.comfy.loras()
                 info["scheds"] = self.comfy.schedulers()
-                info["fooocus"] = self.comfy.fooocus_inpaint()
                 info["comfy"] = True
             except ComfyError as e:
                 info["comfy"] = False
@@ -45,10 +44,6 @@ class StateMixin:
             self.cb_sampler["values"] = info["samplers"]
         if info.get("scheds"):
             self._sched_names = list(info["scheds"])
-        if "fooocus" in info:
-            ok = info["fooocus"] is not None
-            self.cb_fooocus.configure(state="normal" if ok else "disabled",
-                                      text="Fooocus inpaint (SDXL, as in Krita AI Diffusion)" + ("" if ok else " – not on server"))
         self.templates = [t for t in list_templates(self.workflows_dir) if t.name not in models.PARKED_WORKFLOWS]
         self.cb_workflow["values"] = [BUILTIN] + [t.name for t in self.templates]
         if self.v_workflow.get() not in self.cb_workflow["values"]:
@@ -82,7 +77,7 @@ class StateMixin:
             "base_res": int(self.v_res.get()), "context": float(self.v_context.get()),
             "mask_grow": int(self.v_grow.get()), "mask_blur": int(self.v_blur.get()), "overlap": int(self.v_overlap.get()),
             "scale": self._scale(),
-            "fooocus": bool(self.v_fooocus.get()), "enhance": bool(self.v_enhance.get()),
+            "enhance": bool(self.v_enhance.get()),
             "turbo": bool(self.v_turbo.get()), "stage_on": bool(self.v_stage.get()), "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "stage_strengths": [round(float(v.get()), 2) for v in self.v_sstr], "loras": self._loras(), "sharpen": round(float(self.v_sharpen.get()), 2), "match": round(float(self.v_match.get()), 2), "detail": round(float(self.v_detail.get()), 2),
             "lora_strength": round(float(self.v_lora_str.get()), 2),
             "layer_mask": layer_mask_key(self.v_lmask.get()),
@@ -134,7 +129,6 @@ class StateMixin:
         put(self.v_blur, "mask_blur", int)
         put(self.v_overlap, "overlap", int)
         put(self.v_scale, "scale", scale_text)
-        put(self.v_fooocus, "fooocus", bool)
         put(self.v_enhance, "enhance", bool)
         put(self.v_turbo, "turbo", bool)
         if "loras" in s:
@@ -259,7 +253,7 @@ class StateMixin:
             "negative": p.negative, "steps": p.steps, "cfg": p.cfg, "denoise": self.v_denoise.get(),
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
-            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "prompt_h": self._prompt_lines(), "fooocus": req.fooocus, "enhance": bool(self.v_enhance.get()), "turbo": req.turbo, "layer_mask": req.layer_mask, "mask_density": req.mask_density,
+            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "prompt_h": self._prompt_lines(), "enhance": bool(self.v_enhance.get()), "turbo": req.turbo, "layer_mask": req.layer_mask, "mask_density": req.mask_density,
             "stage_on": req.stage_on, "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "stage_strengths": [round(float(v.get()), 2) for v in self.v_sstr], "detail": req.detail, "sharpen": round(float(self.v_sharpen.get()), 2), "match": req.match, "loras": [list(x) for x in req.loras], "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
             "runs": dict(self.state.get("runs", {})),
             "model_by_mode": dict(getattr(self, "_mode_model", None) or self.state.get("model_by_mode") or {}),

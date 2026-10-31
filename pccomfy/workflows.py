@@ -109,45 +109,6 @@ def inpaint(p: GenParams, image_name: str, mask_name: str) -> dict:
     return g
 
 
-def inpaint_fooocus(p: GenParams, image_name: str, mask_name: str, head: str, patch: str,
-                    fill: str = "neutral") -> dict:
-    """Inpaint like Krita AI Diffusion (SDXL): the Fooocus patch turns a regular SDXL checkpoint into an inpaint model.
-
-    Needs comfyui-inpaint-nodes (the Krita plugin installs them) and the files in models/inpaint.
-    At full denoise the masked area is pre-filled first: grey ("neutral", new object) or blurred
-    surrounding colours ("blur", outpaint), so old content doesn't bleed through and there are no seams.
-    """
-    g = _base(p)
-    g["load"] = {"class_type": "LoadImage", "inputs": {"image": image_name}, "_meta": {"title": "pc:image"}}
-    g["load_mask"] = {"class_type": "LoadImage", "inputs": {"image": mask_name}, "_meta": {"title": "pc:mask"}}
-    g["mask"] = {"class_type": "ImageToMask", "inputs": {"image": ["load_mask", 0], "channel": "red"}}
-    pixels = ["load", 0]
-    if p.denoise >= 0.99 and fill != "none":
-        if fill == "neutral":  # grey: the model draws new content, old content doesn't bleed through
-            g["prefill"] = {"class_type": "INPAINT_MaskedFill", "inputs": {
-                "image": pixels, "mask": ["mask", 0], "fill": "neutral", "falloff": 0}}
-            pixels = ["prefill", 0]
-        # "blur": blurred surroundings (outpaint – the area is already pre-filled by the bridge)
-        g["preblur"] = {"class_type": "INPAINT_MaskedBlur", "inputs": {
-            "image": pixels, "mask": ["mask", 0], "blur": 65, "falloff": 9}}
-        pixels = ["preblur", 0]
-    g["cond"] = {"class_type": "INPAINT_VAEEncodeInpaintConditioning", "inputs": {
-        "positive": ["pos", 0], "negative": ["neg", 0], "vae": ["ckpt", 2], "pixels": pixels, "mask": ["mask", 0]}}
-    g["fooocus_load"] = {"class_type": "INPAINT_LoadFooocusInpaint", "inputs": {"head": head, "patch": patch}}
-    g["fooocus_apply"] = {"class_type": "INPAINT_ApplyFooocusInpaint", "inputs": {
-        "model": ["ckpt", 0], "patch": ["fooocus_load", 0], "latent": ["cond", 2]}}
-    model = ["fooocus_apply", 0]
-    if p.differential_diffusion:
-        g["diff"] = {"class_type": "DifferentialDiffusion", "inputs": {"model": model}}
-        model = ["diff", 0]
-    g["batch"] = {"class_type": "RepeatLatentBatch", "inputs": {"samples": ["cond", 3], "amount": p.batch}}
-    g["sampler"]["inputs"].update(model=model, positive=["cond", 0], negative=["cond", 1], latent_image=["batch", 0])
-    g["pos"]["_meta"] = {"title": "pc:prompt"}
-    g["neg"]["_meta"] = {"title": "pc:negative"}
-    g["sampler"]["_meta"] = {"title": "pc:sampler"}
-    return g
-
-
 # ---------- custom (templates) ----------
 
 DESCRIBE_WORKFLOW = Path(__file__).resolve().parent.parent / "workflows" / "describe-image.json"   # reference slots: Qwen 3.5 9B describes the picture

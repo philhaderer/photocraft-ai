@@ -56,7 +56,6 @@ class FakeComfy:
     def clips(self): return []
     def loras(self): return []
     def schedulers(self): return ["normal"]
-    def fooocus_inpaint(self): return []
 
 
 app = object.__new__(gui.App)
