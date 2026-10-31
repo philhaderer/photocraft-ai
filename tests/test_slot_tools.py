@@ -43,6 +43,16 @@ def main():
     assert next(n for n in g.values() if n["class_type"] == "LoadImage")["inputs"]["image"] in b.comfy.uploads
     assert b.comfy.out_node == "6" and msgs and links_ok(g)
 
+    # the cut-out ends at the subject's outermost pixels (user 1.11.); faint specks do not widen it, an empty result stays
+    pic = Image.new("RGBA", (40, 30), (255, 0, 0, 0))
+    pic.paste((0, 255, 0, 255), (10, 5, 25, 20))
+    pic.putpixel((1, 1), (0, 0, 0, 3))
+    cropped = bridge.imaging.crop_to_alpha(pic)
+    assert cropped.size == (15, 15) and cropped.getpixel((0, 0)) == (0, 255, 0, 255)
+    assert bridge.imaging.crop_to_alpha(Image.new("RGBA", (40, 30), (0, 0, 0, 0))).size == (40, 30)
+    b.comfy.output_images = lambda hist, node_id=None: [pic]
+    assert b.remove_background(Image.new("RGB", (40, 30))).size == (15, 15)
+
     # Qwen 3.5 9B describes a picture (describe-image.json): the question defaults to the workflow's own, a typed one replaces it
     d = workflows.load_template(workflows.DESCRIBE_WORKFLOW)
     assert links_ok(d) and bridge.has_tag(d, "image") and bridge.has_tag(d, "prompt") and workflows.writer_name(d) == "Qwen 3.5 9B"
