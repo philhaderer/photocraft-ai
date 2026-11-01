@@ -66,7 +66,86 @@ class _NoPhotoCraft:
     pass
 
 
+PAIRS = (("B", "C"), ("B", "D"), ("A", "B"))      # 4-step + UltraReal against the start and DMD2; the effect of UltraReal on 4-step
+NAMES = {k: label for k, label, _f, _o in VARIANTS}
+
+
+def latest(folder):
+    if folder:
+        return Path(folder)
+    runs = sorted(p for p in BASE.iterdir() if (p / "bilder").exists() and any((p / "bilder").iterdir()))
+    return runs[-1]
+
+
+def cmd_blind(folder):
+    import random
+    import shutil
+    out = latest(folder)
+    sets = {}
+    for f in sorted((out / "bilder").glob("*.png")):
+        stem = f.stem
+        if not stem.count("-s"):
+            continue
+        base, key = stem.rsplit("-", 1)
+        sets.setdefault(base, {})[key] = f
+    sets = {b: v for b, v in sets.items() if set(v) >= set("ABCD")}      # only finished sets
+    (out / "blind").mkdir(exist_ok=True)
+    names = [m for m, _ in MOTIVES]
+    items, pairs, n = {}, [], 0
+    for base, v in sets.items():
+        motive = base.rsplit("-s", 1)[0]
+        for a, b in PAIRS:
+            ids = []
+            for k in (a, b):
+                n += 1
+                fid = f"{n:04d}"
+                shutil.copy(v[k], out / "blind" / f"{fid}.png")
+                items[fid] = {"prompt_nr": names.index(motive) + 1, "variant": k, "set": base}
+                ids.append(fid)
+            pairs.append(ids)
+    rnd = random.Random(11)
+    rnd.shuffle(pairs)
+    for pr in pairs:
+        rnd.shuffle(pr)
+    prompts = {str(i + 1): t for i, (_m, t) in enumerate(MOTIVES)}
+    # live_moss_cfg.py reads the pictures from "bilder": the blind copies go there under their blind ids
+    (out / "bilder_original").exists() or (out / "bilder").rename(out / "bilder_original")
+    (out / "blind").rename(out / "bilder")
+    json.dump({"pairs": pairs, "items": items, "prompts": prompts, "size": "", "title": "MOSS 4-step: Paare blind vergleichen"},
+              open(out / "key.json", "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+    print(f"{len(pairs)} pairs from {len(sets)} sets in {out}")
+    print("Rate: python tests/live_moss_cfg.py rate", out)
+
+
+def cmd_summary(folder):
+    out = latest(folder)
+    key = json.load(open(out / "key.json", encoding="utf-8"))
+    data = json.loads((out / "bewertung.json").read_text(encoding="utf-8")) if (out / "bewertung.json").exists() else {}
+    items, tally = key["items"], {}
+    for rec in data.values():
+        w = rec.get("wahl")
+        if not w:
+            continue
+        a, b = items[rec["links"]]["variant"], items[rec["rechts"]]["variant"]
+        t = tally.setdefault(tuple(sorted((a, b))), {a: 0, b: 0, "gleich": 0, "beide schlecht": 0})
+        if w in ("links", "rechts"):
+            t[items[rec[w]]["variant"]] += 1
+        else:
+            t[w] += 1
+    lines = ["# MOSS 4-step, blind", ""]
+    for (a, b), t in sorted(tally.items()):
+        lines.append(f"- {NAMES[a]} gegen {NAMES[b]}: {t[a]} : {t[b]}, gleich {t['gleich']}, beide schlecht {t['beide schlecht']}")
+    text = "\n".join(lines) + "\n"
+    (out / "ergebnis.md").write_text(text, encoding="utf-8")
+    print(text)
+
+
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] in ("blind", "summary"):
+        {"blind": cmd_blind, "summary": cmd_summary}[sys.argv[1]](sys.argv[2] if len(sys.argv) > 2 else None)
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "run":
+        del sys.argv[1]
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=2)
     ap.add_argument("--size", default="1344x896")

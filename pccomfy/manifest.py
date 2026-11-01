@@ -24,11 +24,12 @@ KINDS = {
     "lora": ("LoraLoaderModelOnly", "lora_name", "loras"),
     "preview": ("", "", "vae_approx"),       # live preview decoders (TAESD): no loader node, ComfyUI lists /models/vae_approx
     "bg_removal": ("LoadBackgroundRemovalModel", "bg_removal_name", "background_removal"),   # "Cut out" in the reference slots
+    "upscale_model": ("UpscaleModelLoader", "model_name", "upscale_models"),               # 4x UltraSharp in Flux 3 Upscale
 }
 # helpers several models share, listed apart in the settings window as "Additional models" (user 30.10.), with their use
 ADDITIONAL_KINDS = {"bg_removal": "Cut out in Multi Image Edit", "preview": "Live preview"}
 KIND_LABEL = {"unet": "Diffusion model", "clip": "Text encoder", "vae": "VAE", "lora": "LoRA", "preview": "Preview decoder",
-              "bg_removal": "Background removal"}
+              "bg_removal": "Background removal", "upscale_model": "Upscale model"}
 
 
 @dataclass(frozen=True)
@@ -136,6 +137,8 @@ _LIST = [
 ]
 _LIST += [
     # the reference slots' "Cut out" button (ComfyUI's own BiRefNet nodes)
+    File("4x-UltraSharpV2.safetensors", "upscale_model", _HF + "Kim2091/UltraSharpV2/resolve/main/4x-UltraSharpV2.safetensors",
+         "Flux 3 Upscale, switch \"4x UltraSharp\" for generated pictures; licence: CC BY-NC-SA 4.0 (" + _NC + ")", size=139792588),
     File("birefnet.safetensors", "bg_removal", _HF + "Comfy-Org/BiRefNet/resolve/main/background_removal/birefnet.safetensors",
          "optional: \"Cut out\" in the reference slots; licence: MIT", size=444473596),
 ]
@@ -180,6 +183,7 @@ _SHA256 = {
     'Moss\\lenovo_moss.safetensors': "f28ab12e33e60146c8740a86730385cf5ba488e9f6eda50b14383d6ddbf300fb",
     'Moss\\moss_image_sft_4step_v2.0.safetensors': "154c7f1455c3bf9925945c2f1ea2e4f09d0d0c67256081384a094b2b585f913f",
     'Moss\\moss_image_edit_lora_rank_64_bf16.safetensors': "17a48b8c605dcffdedb92a2b887d18cf316505be90802717669fb6556098dcdf",
+    '4x-UltraSharpV2.safetensors': "2b5db674aa8f3864a696dccd1d07d7cc0500fbf220f35044cd30eee9a7f971a7",
     'birefnet.safetensors': "9ab37426bf4de0567af6b5d21b16151357149139362e6e8992021b8ce356a154",
     'lighttaew2_1.safetensors': "8666e769f449f2d955651564bcadb0c5e12461b50480e67b7241f32c15f11a19",
 }
@@ -220,7 +224,7 @@ TABS: dict[str, TabSpec] = {
             # SeedVR2 pre-cleaning is a switch that starts off: the mode runs without its files (they are optional and the
             # switch is greyed out while they are missing, user 30.10.)
             "upscale": ModeSpec(requires=("Flux 3\\flux-3-image-klein-restore.safetensors",),
-                                optional=("seedvr2_3b_int8_convrot.safetensors", "seedvr2_ema_vae_fp16.safetensors"),
+                                optional=("seedvr2_3b_int8_convrot.safetensors", "seedvr2_ema_vae_fp16.safetensors", "4x-UltraSharpV2.safetensors"),
                                 nodes=_FLUX3_UP_NODES),
             "refine": ModeSpec(),   # the edit graph with the picture rescaled to its own size: no files of its own
             "multi_edit": _CUT,

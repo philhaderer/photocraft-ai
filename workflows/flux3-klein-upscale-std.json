@@ -290,7 +290,7 @@
     "label": "SeedVR2 pre-cleaning",
     "set": {
      "image": [
-      "2",
+      "13",
       0
      ]
     },
@@ -308,7 +308,10 @@
      "152"
     ],
     "tip": "SeedVR2 cleans the photo before Flux redraws it.",
-    "default_on": false
+    "default_on": false,
+    "excludes": [
+     "12"
+    ]
    }
   }
  },
@@ -556,6 +559,45 @@
   },
   "_meta": {
    "title": "Color Match (KJNodes) - Colours back to your picture"
+  }
+ },
+ "12": {
+  "class_type": "UpscaleModelLoader",
+  "inputs": {
+   "model_name": "4x-UltraSharpV2.safetensors"
+  },
+  "_meta": {
+   "title": "Upscale model - 4x-UltraSharpV2",
+   "pc_stage_off": {
+    "label": "4x UltraSharp",
+    "default_on": false,
+    "remove": [
+     "12"
+    ],
+    "rewire": [
+     "13"
+    ],
+    "excludes": [
+     "153"
+    ],
+    "tip": "For pictures an AI model made (clean already): 4x-UltraSharpV2 enlarges the picture first, instead of SeedVR2. Licence: non-commercial."
+   }
+  }
+ },
+ "13": {
+  "class_type": "ImageUpscaleWithModel",
+  "inputs": {
+   "upscale_model": [
+    "12",
+    0
+   ],
+   "image": [
+    "2",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Upscale Image (using Model) - 4x UltraSharp"
   }
  }
 }

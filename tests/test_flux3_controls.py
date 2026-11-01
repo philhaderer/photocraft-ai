@@ -28,9 +28,9 @@ def main():
     assert workflows.lora_strength(workflows.load_template(ROOT / "workflows" / "flux2-klein-upscale.json")) == 0.3
     assert workflows.lora_strength(workflows.load_template(ROOT / "workflows" / "fibo2-edit.json")) is None
 
-    assert [l for _, l in workflows.stage_switches(f3)] == ["SeedVR2 pre-cleaning"]
+    assert [l for _, l in workflows.stage_switches(f3)] == ["SeedVR2 pre-cleaning", "4x UltraSharp"]
     off = workflows.bypass_stage(f3)
-    assert links_ok(off) and len(off) == len(f3) - 11 and not any("SeedVR2" in n["class_type"] for n in off.values())
+    assert links_ok(off) and len(off) == len(f3) - 13 and not any("SeedVR2" in n["class_type"] for n in off.values())
     assert off["153"]["inputs"]["image"] == ["2", 0]
     assert workflows.stage_switches(off) and links_ok(workflows.apply_template(off, workflows.GenParams(prompt="x"), "a.png", None, None)[0])
 

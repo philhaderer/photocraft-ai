@@ -747,6 +747,10 @@ class ModeMixin:
         fields back what the workflow runs with."""
         stages = self._stages()
         st = stages[i] if i < len(stages) else None
+        if st and st.get("excludes") and self.stage_vars[i].get():     # "excludes": stages that cannot run together with this one
+            for j, other in enumerate(stages):
+                if j != i and other["id"] in st["excludes"]:
+                    self.stage_vars[j].set(False)
         if st and st.get("sampler"):
             if self.stage_vars[i].get():
                 if self.v_turbo.get():
