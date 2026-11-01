@@ -64,7 +64,7 @@ Which model offers which function:
 | Expand image | ✓ | ✓ | ✓ | ✓ | | |
 | Edit Canvas | ✓ | ✓ | ✓ | ✓ | | |
 | Multi Image Edit | ✓ | ✓ | ✓ | ✓ | | |
-| Upscale (new file) | ✓ | ✓ | | | | |
+| Upscale (new file) | ✓ | ✓ | ✓ | | | |
 | Refine (same size) | | ✓ | | ✓ | | |
 | Text to image | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
@@ -116,7 +116,7 @@ results commercially.
 | Krea 2 | Krea 2 Community License | See the licence on its model page |
 | MOSS | Apache 2.0 | Yes |
 
-Other files: the Lenovo UltraReal LoRA for MOSS asks for credit (Danrisi), the Qwen3-VL and Qwen 3.5 text encoders,
+Other files: the 4x UltraSharp upscaler (Flux 3 Upscale) is CC BY-NC-SA 4.0, so no commercial use; the Lenovo UltraReal LoRA for MOSS asks for credit (Danrisi), the Qwen3-VL and Qwen 3.5 text encoders,
 SeedVR2 and the MOSS LoRAs are Apache 2.0, BiRefNet is MIT.
 
 ## Credits
