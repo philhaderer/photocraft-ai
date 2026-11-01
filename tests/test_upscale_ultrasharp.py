@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from pccomfy import inventory, manifest, workflows  # noqa: E402
+from pccomfy import inventory, manifest, models, workflows  # noqa: E402
 
 FILE = "4x-UltraSharpV2.safetensors"
 
@@ -35,7 +35,9 @@ def main():
     f = manifest.FILES[FILE]
     assert f.kind == "upscale_model" and f.sha256 and f.size and f.target.endswith("upscale_models") and "non-commercial" in f.note
     assert FILE in manifest.mode_optional("flux3", "upscale") and FILE not in manifest.mode_required("flux3", "upscale")
-    assert FILE not in inventory.default_switch_files("flux3", "upscale")      # starts off: the mode runs without the file
+    assert FILE in inventory.default_switch_files("flux3", "upscale")      # the standard settings switch it on (user 2.11.): the file is needed
+    assert FILE in inventory.mode_files("flux3", "upscale")
+    assert models.BY_KEY["flux3"].modes["upscale"].settings["stage2_on"] is True and not models.BY_KEY["flux3"].modes["upscale"].settings["stage_on"]
     print("ALL OK (upscale ultrasharp)")
 
 
