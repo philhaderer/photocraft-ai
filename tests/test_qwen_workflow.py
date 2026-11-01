@@ -36,7 +36,7 @@ def main():
     assert g[by_tag(g, "sampler")[0]]["inputs"]["latent_image"] == [by_tag(g, "latent")[0], 0]
     assert workflows.size_multiple(tpl) == 32 and workflows.size_multiple({}) == 16
     smp = g[by_tag(g, "sampler")[0]]["inputs"]
-    assert smp["seed"] == 11 and smp["denoise"] == 1.0 and smp["steps"] == 10 and smp["cfg"] == 1
+    assert smp["seed"] == 11 and smp["denoise"] == 1.0 and smp["steps"] == 8 and smp["cfg"] == 1
     assert g[out]["class_type"] == "PreviewImage"
     enc = g[by_tag(g, "prompt")[0]]["inputs"]
     assert enc["images.image_1"] == [by_tag(g, "image")[0], 0] and enc["prompt"] == "<image1> a red scarf"
@@ -54,7 +54,7 @@ def main():
     assert off[by_tag(off, "sampler")[0]]["inputs"]["steps"] == 25 and links_resolve(off)
     cache = next(n for n in off.values() if n["class_type"] == "QwenImage21Cache")
     assert off[str(cache["inputs"]["model"][0])]["class_type"] == "UNETLoader"
-    for turbo, steps in ((True, 10), (False, 25)):
+    for turbo, steps in ((True, 8), (False, 25)):
         req = bridge.Request(workflow=str(WF), params=p, turbo=turbo)
         graph, _ = bridge.Bridge._graph(object(), req, p, "pic.png", "mask.png", str(WF))
         assert graph[by_tag(graph, "sampler")[0]]["inputs"]["steps"] == steps
