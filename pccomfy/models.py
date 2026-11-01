@@ -160,9 +160,11 @@ FLUX3 = Model(
 # guidance (SLG) are switches that start on (best result in the live tests); the LLM prompt enhancer starts off.
 _MOSS = dict(turbo=True, stage_on=True, stage2_on=True)
 MOSS_STEPS_TIP = "Turn up the steps to 35 for best results."     # wording of the user (29.10.), 35 after the CFG test
+_MOSS_EDIT = dict(base_res=1024, layer_mask="none")
+MOSS_EDIT_TIP = ("Describe the change: “Change only the X to Y. Keep the rest unchanged.”")   # wording of the LoRA's template; proposal, the user decides
 MOSS = Model(
     "moss", "MOSS Image",
-    "MOSS-Image: text to image. No edit functions.",
+    "MOSS-Image: text to image, Edit Canvas, Multi Image Edit and Remove Selection (edit LoRA).",
     {
         # Text to image starts without DMD2 and without SLG, no LLM: the user's live test 29.10. (with DMD2 or SLG the photos
         # looked artificial, with the LLM prompt too). Without DMD2 the workflow runs 35 steps at CFG 3.0 (pc_no_lora; blind
@@ -170,12 +172,19 @@ MOSS = Model(
         "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "turbo": False, "stage2_on": False, "base_res": 1280,
                                                 "layer_mask": "none", "enhance": False},
                         prompt_tip=T2I_TIP, steps_tip=MOSS_STEPS_TIP),
+        # Edit (1.11.): the edit LoRA on the same checkpoint, 30 steps at CFG 4 (euler / normal) as the LoRA's author ships it;
+        # no speed LoRA. The workflow takes no mask, so Remove Selection works like Qwen's (red outline + instruction).
+        "edit": Mode("moss-image-edit.json", _MOSS_EDIT, prompt_tip=MOSS_EDIT_TIP),
+        "multi_edit": Mode("moss-image-edit.json", _MOSS_EDIT, prompt_tip=MULTI_TIP, run_as="edit"),
+        "remove": Mode("moss-image-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0),
+                       prompt_tip=REMOVE_NAME_TIP, remove_text=True),
     },
     requires=(
         "moss_image_sft_int8_convrot.safetensors",
         "qwen3.5_9b_w4a8_gptq.safetensors",
         "flux2-vae_small.safetensors",
-    ))   # the model files this tab needs (details per mode: manifest.py)
+    ),   # the model files this tab needs (details per mode: manifest.py)
+    max_refs=3, tag_style="image {n}", seam="off")
 
 # Krea-2 Turbo: a fast distilled text-to-image model (8 steps, CFG 1). Text to image has the model's own prompt enhancer
 # (starts off, like the other models').

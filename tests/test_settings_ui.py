@@ -350,7 +350,7 @@ def main():
     # BiRefNet and the preview decoders stand once, under "Additional models", with what they are for (user 30.10.)
     extra = {d["name"]: d for d in file_rows(app) if d.get("use")}
     assert set(extra) == {n for n, f in manifest.FILES.items() if f.kind in ("bg_removal", "preview")}, set(extra)
-    assert extra["birefnet.safetensors"]["use"] == "Cut out in Multi Image Edit: Flux 3, Flux 2, Qwen, Fibo"
+    assert extra["birefnet.safetensors"]["use"] == "Cut out in Multi Image Edit: Flux 3, Flux 2, Qwen, Fibo, MOSS"
     assert extra["taef2_decoder.pth"]["use"] == "Live preview: Flux 3, Flux 2, Fibo, MOSS"
     assert sum(d["name"] == "taef2_decoder.pth" for d in file_rows(app)) == 1          # not again under each model
     assert "Additional models (used by several models)" in rows_text(app)

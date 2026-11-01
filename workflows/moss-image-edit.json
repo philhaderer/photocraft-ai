@@ -1,0 +1,258 @@
+{
+ "1": {
+  "class_type": "UNETLoader",
+  "inputs": {
+   "unet_name": "moss_image_sft_int8_convrot.safetensors",
+   "weight_dtype": "default"
+  },
+  "_meta": {
+   "title": "Load MOSS-Image model"
+  }
+ },
+ "2": {
+  "class_type": "LoraLoaderModelOnly",
+  "inputs": {
+   "lora_name": "Moss\\moss_image_edit_lora_rank_64_bf16.safetensors",
+   "strength_model": 1.0,
+   "model": [
+    "1",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Edit LoRA (format Moss-Image-Edit)"
+  }
+ },
+ "3": {
+  "class_type": "SkipLayerGuidanceDiTSimple",
+  "inputs": {
+   "model": [
+    "2",
+    0
+   ],
+   "double_layers": "",
+   "single_layers": "22",
+   "start_percent": 0.0,
+   "end_percent": 1.0
+  },
+  "_meta": {
+   "title": "Skip-layer guidance (as in the ComfyUI template)"
+  }
+ },
+ "4": {
+  "class_type": "CLIPLoader",
+  "inputs": {
+   "clip_name": "qwen3.5_9b_w4a8_gptq.safetensors",
+   "type": "moss_image",
+   "device": "default"
+  },
+  "_meta": {
+   "title": "Load text encoder (type: moss_image)"
+  }
+ },
+ "5": {
+  "class_type": "VAELoader",
+  "inputs": {
+   "vae_name": "flux2-vae_small.safetensors"
+  },
+  "_meta": {
+   "title": "Load VAE (Flux 2 small)"
+  }
+ },
+ "10": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:image Your picture"
+  }
+ },
+ "11": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 1",
+   "pc_slot": 1
+  }
+ },
+ "12": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 2",
+   "pc_slot": 2
+  }
+ },
+ "13": {
+  "class_type": "LoadImage",
+  "inputs": {
+   "image": "example.png"
+  },
+  "_meta": {
+   "title": "pc:ref Reference 3",
+   "pc_slot": 3
+  }
+ },
+ "20": {
+  "class_type": "TextEncodeMOSSImageEdit",
+  "inputs": {
+   "clip": [
+    "4",
+    0
+   ],
+   "prompt": "",
+   "edit_format": "Moss-Image-Edit",
+   "image_strength": 1.0,
+   "vae": [
+    "5",
+    0
+   ],
+   "images.image_0": [
+    "10",
+    0
+   ],
+   "images.image_1": [
+    "11",
+    0
+   ],
+   "images.image_2": [
+    "12",
+    0
+   ],
+   "images.image_3": [
+    "13",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "pc:prompt Edit instruction"
+  }
+ },
+ "21": {
+  "class_type": "TextEncodeMOSSImageEdit",
+  "inputs": {
+   "clip": [
+    "4",
+    0
+   ],
+   "prompt": "nsfw, worst quality, bad anatomy, watermark, jpeg artifact",
+   "edit_format": "Moss-Image-Edit",
+   "image_strength": 1.0,
+   "vae": [
+    "5",
+    0
+   ],
+   "images.image_0": [
+    "10",
+    0
+   ],
+   "images.image_1": [
+    "11",
+    0
+   ],
+   "images.image_2": [
+    "12",
+    0
+   ],
+   "images.image_3": [
+    "13",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Negative (fixed, sees the same pictures)"
+  }
+ },
+ "30": {
+  "class_type": "GetImageSize",
+  "inputs": {
+   "image": [
+    "10",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Size of the picture"
+  }
+ },
+ "31": {
+  "class_type": "EmptyFlux2LatentImage",
+  "inputs": {
+   "width": [
+    "30",
+    0
+   ],
+   "height": [
+    "30",
+    1
+   ],
+   "batch_size": 1
+  },
+  "_meta": {
+   "title": "pc:latent Variants"
+  }
+ },
+ "40": {
+  "class_type": "KSampler",
+  "inputs": {
+   "model": [
+    "3",
+    0
+   ],
+   "positive": [
+    "20",
+    0
+   ],
+   "negative": [
+    "21",
+    0
+   ],
+   "latent_image": [
+    "31",
+    0
+   ],
+   "seed": 42,
+   "steps": 30,
+   "cfg": 4.0,
+   "sampler_name": "euler",
+   "scheduler": "normal",
+   "denoise": 1.0
+  },
+  "_meta": {
+   "title": "pc:sampler"
+  }
+ },
+ "50": {
+  "class_type": "VAEDecode",
+  "inputs": {
+   "samples": [
+    "40",
+    0
+   ],
+   "vae": [
+    "5",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Decode"
+  }
+ },
+ "60": {
+  "class_type": "PreviewImage",
+  "inputs": {
+   "images": [
+    "50",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "pc:output Result"
+  }
+ }
+}
