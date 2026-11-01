@@ -26,11 +26,15 @@ def main():
     assert out["6"]["inputs"]["image"] == "in.png" and out["13"]["inputs"]["megapixels"] == 4.2 and out["10"]["inputs"]["seed"] == 7
     assert out["8"]["inputs"]["prompt"] == models.QWEN_UPSCALE_DEFAULT and node == "12"
     assert out["9"]["inputs"]["width"] == ["14", 0]            # the latent takes the size of the enlarged picture, not a typed one
-    p.prompt = models.QWEN_UPSCALE_DETAILED
-    assert workflows.apply_template(g, p, "in.png", None)[0]["8"]["inputs"]["prompt"] == models.QWEN_UPSCALE_DETAILED
+    p.prompt = "a portrait with fine skin detail"
+    assert workflows.apply_template(g, p, "in.png", None)[0]["8"]["inputs"]["prompt"] == p.prompt          # typed text replaces it
     mode = models.BY_KEY["qwen"].modes["upscale"]
     assert mode.workflow == WF.name and mode.settings["turbo"] is False and mode.prompt_hint == models.QWEN_UPSCALE_DEFAULT
-    assert [x[0] for x in mode.prompts] == ["Default", "Detailed"]
+    assert mode.prompts == ()                                    # no Default / Detailed switches (user 2.11.)
+    refine = models.BY_KEY["qwen"].modes["refine"]               # the same graph at the canvas size, waits for the user's test
+    assert refine.workflow == WF.name and refine.prompt_hint == models.QWEN_UPSCALE_DEFAULT and refine.prompts == ()
+    assert models.RANKING["upscale"][0] == "qwen" and models.ranking_text("refine").endswith("(not ranked: Qwen).")
+    assert inventory.mode_files("qwen", "refine") == manifest.mode_required("qwen", "refine")
     assert inventory.mode_files("qwen", "upscale") == manifest.mode_required("qwen", "upscale")      # no switch brings extra files
     print("ALL OK (qwen upscale)")
 

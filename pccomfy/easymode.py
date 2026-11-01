@@ -22,7 +22,7 @@ PRIORITY = {
     "inpaint": ("fibo", "qwen"),
     "remove": ("fibo", "qwen"),
     "outpaint": ("flux2", "flux3", "qwen", "fibo"),
-    "upscale": ("flux3", "flux2"),
+    "upscale": ("qwen", "flux3", "flux2"),
 }
 
 # Functions Easy Mode leaves out, with the models that do them best first (the list in the Easy Mode tab of the settings).

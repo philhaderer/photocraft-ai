@@ -73,7 +73,7 @@ def main():
     assert app.t_prompt.get("1.0", "end").strip() == "a red kite"
 
     # a function click picks the best model for it
-    for mode, want in (("txt2img", "flux3"), ("edit", "flux3"), ("remove", "fibo"), ("outpaint", "flux2"), ("upscale", "flux3")):
+    for mode, want in (("txt2img", "flux3"), ("edit", "flux3"), ("remove", "fibo"), ("outpaint", "flux2"), ("upscale", "qwen")):
         app.v_mode.set(mode)
         app._on_mode()
         app.root.update()

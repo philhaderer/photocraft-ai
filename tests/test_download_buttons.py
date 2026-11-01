@@ -157,7 +157,7 @@ def main():
         assert extra[0][0] == "head" and all(r[0] in ("head", "file", "stop") for r in extra)
         cover = {m: st for m, _l, st, _tip in app._mode_cover("krea2")}
         assert cover["txt2img"] == "ready" and cover["inpaint"] == "none" and "img2img" not in cover
-        assert {st for _m, _l, st, _t in app._mode_cover("qwen")} == {"ready", "none"}
+        assert {st for _m, _l, st, _t in app._mode_cover("qwen")} <= {"ready", "none"} and any(st == "ready" for _m, _l, st, _t in app._mode_cover("qwen"))
         app._settings_close()
         app.open_settings(focus="moss")
         assert app._settings_focus == "moss" and set(app._set_pages) == {m.key for m in ts.models.MODELS} | {"additional"}
