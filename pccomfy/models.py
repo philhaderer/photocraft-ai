@@ -66,7 +66,7 @@ FILL_TIP = "Draw a selection and prompt e.g. “a red flower”. Hide layers fro
 QWEN_SMALL = "Small selections don't work well with Qwen."   # user 30.10.: small fills came out shifted (helikopter.psd)
 REMOVE_NAME_TIP = "Optional: name what to remove (\"the dog\")."
 REMOVE_AGAIN = "If the first try didn't work, try removing it a second time."   # Fibo Remove, idea of the user (28.10.)
-MULTI_TIP = "You can start with a white image and use the reference images below to place them on the canvas."
+MULTI_TIP = "Place reference images on an image or on an empty white canvas. Example: \"Place the tent from {tag} in the meadow.\""   # {tag}: the model's name for reference image 1 (user 1.11.)
 EDIT_TIP = "Describe the result: \u201cReplace the dog with a vase of flowers.\u201d"
 # Krea 2 / MOSS Expand (wording chosen by the user 29.10.; A/B test docs/tests/krea-moss-expand-ab.md)
 EXPAND_DESCRIBE_TIP = ("This model needs a prompt: describe the surroundings only (place, light, style), not the main subject. "

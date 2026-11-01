@@ -122,6 +122,8 @@ class PromptMixin:
         m = self._model()
         spec = m.modes.get(mode) if m else None
         text = (spec.prompt_tip if spec and spec.prompt_tip else "") or (EXPAND_HINT if mode == "outpaint" else "")
+        if "{tag}" in text:      # Multi Image Edit: the example names the first reference the way this model does
+            text = text.replace("{tag}", m.tag_style.format(n=2, i=1) if m and m.tag_style else "the reference image")
         on = bool(text)
         self._hint_text = text
         self._update_llm_button()
