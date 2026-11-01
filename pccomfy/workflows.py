@@ -190,7 +190,8 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
                 inp[key] = with_image_tag(p.prompt.strip() and p.prompt or default_prompt(node) or p.prompt, node)
             elif tag == "negative":
                 key = "text" if "text" in inp else "negative_prompt"
-                inp[key] = p.negative
+                if p.negative.strip():          # an empty box keeps the workflow's own negative text (MOSS has a ready-made one)
+                    inp[key] = p.negative
             elif tag == "sampler":
                 for k, v in (("seed", p.seed), ("noise_seed", p.seed), ("denoise", p.denoise)):
                     if k in inp and not isinstance(inp[k], list):
