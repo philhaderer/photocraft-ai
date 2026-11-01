@@ -123,7 +123,7 @@ def cmd_rate(a):
     fout = out / "bewertung.json"
     data = json.loads(fout.read_text(encoding="utf-8")) if fout.exists() else {}
     root = tk.Tk()
-    root.title("MOSS: CFG blind vergleichen")
+    root.title(key.get("title", "MOSS: CFG blind vergleichen"))
     root.configure(bg="#282828")
     st = {"i": 0}
     choice, note = tk.StringVar(), tk.StringVar()
@@ -162,7 +162,7 @@ def cmd_rate(a):
         i = st["i"]
         left, right = pairs[i]
         it = items[left]
-        top.configure(text=f"Paar {i + 1}/{len(pairs)}  ·  Prompt {it['prompt_nr']}: {key['prompts'][str(it['prompt_nr'])]}")
+        top.configure(text=f"Paar {i + 1}/{len(pairs)}  ·  {it.get('model', '')}  Prompt {it['prompt_nr']}: {key['prompts'][str(it['prompt_nr'])]}")
         side_px = min((root.winfo_screenwidth() - 60) // 2, root.winfo_screenheight() - 260)
         st["photos"] = []
         for lbl, fid in zip(pics, (left, right)):
