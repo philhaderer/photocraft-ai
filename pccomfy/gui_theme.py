@@ -48,11 +48,13 @@ class ThemeMixin:
         for name, colour in (("SetOk", "#ffffff"), ("SetBad", "#ffffff"), ("SetNote", "#ffffff"), ("SetMuted", "#ffffff")):      # all text in the settings is white (user 1.11.)
             s.configure(f"{name}.TLabel", foreground=colour, font=font(9))
         s.configure("TNotebook", background=BG, borderwidth=0, tabmargins=(0, 4, 0, 0))     # the tabs of the settings window
-        s.configure("TNotebook.Tab", background=PANEL, foreground=FG, padding=(14, 4), borderwidth=0)
-        s.map("TNotebook.Tab", background=[("selected", ACCENT), ("active", "#5f5f5f")], foreground=[("selected", "#1b1b1b")])
+        s.configure("TNotebook.Tab", background=BG, foreground=MUTED, padding=(14, 4), borderwidth=0)
+        s.map("TNotebook.Tab", background=[("selected", BG), ("active", BG)], foreground=[("selected", "#ffffff"), ("active", "#ffffff")],
+              expand=[("selected", (0, 0, 0, 0))])
         s.configure("Inner.TNotebook", background=BG, borderwidth=0, tabmargins=(0, 2, 0, 0))       # the model tabs inside "Models"
-        s.configure("Inner.TNotebook.Tab", background=PANEL, foreground=FG, padding=(8, 3), borderwidth=0, font=font(9))
-        s.map("Inner.TNotebook.Tab", background=[("selected", ACCENT), ("active", "#5f5f5f")], foreground=[("selected", "#1b1b1b")])
+        s.configure("Inner.TNotebook.Tab", background=BG, foreground=MUTED, padding=(8, 3), borderwidth=0, font=font(9))
+        s.map("Inner.TNotebook.Tab", background=[("selected", BG), ("active", BG)], foreground=[("selected", "#ffffff"), ("active", "#ffffff")],
+              expand=[("selected", (0, 0, 0, 0))])
         for name, colour in (("ConnOk", DONE_GREEN), ("ConnBad", ERROR), ("ConnWait", MUTED)):     # the ComfyUI dot
             s.configure(f"{name}.TLabel", foreground=colour, font=font(9))
         s.configure("Badge.TLabel", background=ERROR, foreground="white", font=font(10, bold=True))
@@ -127,6 +129,7 @@ class ThemeMixin:
         self.root.option_add("*TCombobox*Listbox.foreground", FG)
         self._spin_arrows(s)
         self._checkbox_look(s)
+        self._flat_tabs(s)
 
     def _checkbox_look(self, s):
         """Every checkbox in PhotoCraft's look (docs/design/photocraft-checkbox.png): a rounded square with a light grey
@@ -151,6 +154,29 @@ class ThemeMixin:
                 ("PC.Checkbutton.indicator", {"side": "left", "sticky": ""}),
                 ("Checkbutton.focus", {"side": "left", "sticky": "w", "children": [
                     ("Checkbutton.label", {"sticky": "nswe"})]})]})])
+        except Exception:
+            pass
+
+    def _flat_tabs(self, s):
+        """The tabs of the settings window (user 1.11.): no fill, grey text; the chosen tab is white with a blue line under it, a
+        tab under the mouse white with a grey line. The line is a picture element (clam has no bottom-only border). Without
+        image support the plain tabs stay."""
+        try:
+            line = max(1, self._px(2))
+            imgs = {}
+            for k, colour in (("off", None), ("hot", "#8e8e8e"), ("on", ACCENT)):
+                im = Image.new("RGBA", (8, 8 + line), (0, 0, 0, 0))
+                if colour:
+                    im.paste(colour, (0, 8, 8, 8 + line))
+                imgs[k] = icons.photo(self.root, None, "", 8, image=im)
+            self._tab_imgs = imgs           # Tk drops an image Python no longer holds
+            if "Flat.tab" not in s.element_names():
+                s.element_create("Flat.tab", "image", imgs["off"], ("selected", imgs["on"]), ("active", imgs["hot"]),
+                                 border=(2, 2, 2, line), sticky="nswe")
+            for name in ("TNotebook.Tab", "Inner.TNotebook.Tab"):
+                s.layout(name, [("Flat.tab", {"sticky": "nswe", "children": [
+                    ("Notebook.padding", {"side": "top", "sticky": "nswe", "children": [
+                        ("Notebook.label", {"side": "top", "sticky": ""})]})]})])
         except Exception:
             pass
 
