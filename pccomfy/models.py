@@ -162,7 +162,7 @@ _MOSS = dict(turbo=True, stage_on=True, stage2_on=True)
 MOSS_STEPS_TIP = "Turn up the steps to 35 for best results."     # wording of the user (29.10.), 35 after the CFG test
 _MOSS_EDIT = dict(base_res=1024, layer_mask="none")
 _MOSS_INPAINT = {**_MOSS, "turbo": False, "stage2_on": False, "base_res": 1216, "layer_mask": "soft", "mask_grow": 8, "mask_blur": 16,
-                 "context": 0.4}
+                 "context": 1.0}      # 0.4 gave the model too little surroundings (user test 1.11.: Fill did not fit the picture)
 MOSS_EDIT_TIP = ("Describe the change: “Change only the X to Y. Keep the rest unchanged.”")   # wording of the LoRA's template; proposal, the user decides
 MOSS = Model(
     "moss", "MOSS Image",
@@ -181,7 +181,7 @@ MOSS = Model(
         "remove": Mode("moss-image-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0),
                        prompt_tip=REMOVE_NAME_TIP, remove_text=True),
         # Fill and Expand (1.11., to test): MOSS Inpainting v10's recipe: 25 steps, CFG 2.5, er_sde / simple, no DMD2, UltraReal on,
-        # mask grown by 8 and softened by 16; the plugin cuts out the part (Context 0.4), the tick "v10 graph" lets the graph do it
+        # mask grown by 8 and softened by 16; the plugin cuts out the part (Context 1.0), the tick "v10 graph" lets the graph do it
         "inpaint": Mode("moss-image-inpaint.json", _MOSS_INPAINT, prompt_tip=FILL_TIP),
         "outpaint": Mode("moss-image-inpaint.json", {**_MOSS_INPAINT, "match": 0.5}, prompt_tip=EXPAND_DESCRIBE_TIP, describe=True),
     },
