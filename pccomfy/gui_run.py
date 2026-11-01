@@ -22,6 +22,8 @@ class RunMixin:
 
     def _request(self) -> Request:
         wf = self.v_workflow.get()
+        if self.v_std.get() and self._std_shown:      # test A2: the same Upscale with standard nodes
+            wf = STD_WORKFLOW
         wf_path = None if wf == BUILTIN else str(self.workflows_dir / wf)
         p = GenParams(prompt=self.t_prompt.get("1.0", "end").strip(), negative=self.t_neg.get("1.0", "end").strip(),
                       checkpoint=self.v_ckpt.get().strip(), steps=int(self.v_steps.get()), cfg=float(self.v_cfg.get()),

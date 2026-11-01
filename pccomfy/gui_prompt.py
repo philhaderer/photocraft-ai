@@ -128,6 +128,7 @@ class PromptMixin:
         self._hint_text = text
         self._update_llm_button()
         self._update_styles_button()
+        self._update_std_switch()
         self.t_prompt.configure(highlightbackground=ACCENT if on else "#454545", highlightthickness=2 if on else 1)
         if on:
             self.lbl_hint.configure(text=text)
@@ -317,6 +318,19 @@ class PromptMixin:
                 top.add_cascade(label=g["name"], menu=sub)
             top.bind("<<MenuSelect>>", lambda e: self._style_tip_hide(), add="+")
             self.m_styles[mode] = top
+
+    def _update_std_switch(self):
+        """"Std nodes" (test A2) is there only in Flux 3 Upscale of the standard window; Easy Mode always runs the AusBoss graph."""
+        want = (self.v_mode.get() == "upscale" and self.v_model.get() == "flux3" and not getattr(self, "_easy", False)
+                and (self.workflows_dir / STD_WORKFLOW).exists())
+        if want and not self._std_shown:
+            self.cb_std.pack(side="left", padx=(10, 0), after=self.f_pchoice)
+            self._std_shown = True
+        elif not want and self._std_shown:
+            self.cb_std.pack_forget()
+            self._std_shown = False
+        if not want:
+            self.v_std.set(False)
 
     def _update_styles_button(self):
         """The Styles button is there only in a mode that has styles (Text to image), also in Easy Mode (user 1.11.); it sits left

@@ -109,6 +109,7 @@ class EasyMixin:
                   self.b_reset):
             w.pack_forget()
         self._update_styles_button()     # the Styles button stays (user 1.11.), now beside the bin
+        self._update_std_switch()
         mode = self.v_mode.get()
         picks = self._easy_models()
         key = picks.get(mode) or self.v_model.get()
@@ -132,6 +133,7 @@ class EasyMixin:
             self.b_llm.pack(side="right", padx=(0, 6))
         self._update_styles_button()
         self.f_pchoice.pack(side="left", padx=(10, 0))
+        self._update_std_switch()
         self.b_reset.pack(side="left", padx=FOOT_RESET_PADX, before=self.cb_live)
 
     def _update_mode_radios(self):
