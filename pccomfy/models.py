@@ -146,7 +146,7 @@ FLUX3 = Model(
         # Expand: its own graph with ausboss' outpaint LoRA (29.10., after Pixaroma's "14. Flux 3 Klein - Outpaint"; without
         # it Flux 3 slid or zoomed the picture instead of filling the margin): grey margin, ~1 megapixel, Context 1.0
         "outpaint": Mode("flux3-klein-outpaint.json", dict(base_res=1024, context=1.0, layer_mask="none")),
-        "upscale": Mode("flux3-klein-upscale.json", dict(scale=1.5, turbo=True, stage_on=False, context=0.0, detail=0.7), FLUX3_DEFAULT, prompt_tip=DESCRIBE_TIP),
+        "upscale": Mode("flux3-klein-upscale.json", dict(scale=1.5, turbo=True, stage_on=False, stage2_on=True, context=0.0, detail=0.7), FLUX3_DEFAULT, prompt_tip=DESCRIBE_TIP),
         "refine": Mode("flux3-klein-refine.json", dict(turbo=False, context=0.0), FLUX3_DEFAULT, FLUX3_REFINE_PROMPTS, DESCRIBE_TIP),
     },
     requires=(
