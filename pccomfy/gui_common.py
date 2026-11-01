@@ -681,6 +681,7 @@ DISABLED = "#8e8e8e"   # text of a greyed-out control: clearly darker than MUTED
 SCALE_MODES = ("upscale", "refine")   # these run only with an upscale workflow (a node titled pc:upscale)
 NO_LLM_MODES = ("outpaint", "remove") + SCALE_MODES   # no "LLM prompt enhancement" row: fixed or ready-made prompts (user 30.10.)
 LLM_TIP = "Describes the picture in PhotoCraft with the text model of this model and adds the description to the end of the prompt."
+STYLES_TIP = "Style prompts"
 LIVE_TIP = "Shows the picture while it is being made, under the plugin. It goes away when the result is in PhotoCraft."
 ERROR, ERROR_TEXT = "#e5484d", "#ffc2c2"
 DONE_GREEN = "#39A95D"      # only the word "Done" above the bar
@@ -826,6 +827,7 @@ __all__ = [
     "NO_LLM_MODES",
     "LIVE_TIP",
     "LLM_TIP",
+    "STYLES_TIP",
     "PAGE_NOT_SAVED",
     "PREVIEW_MAX_H",
     "ERROR",

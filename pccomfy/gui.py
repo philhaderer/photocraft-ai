@@ -348,6 +348,13 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.b_llm = ttk.Button(self.f_ptop, text="LLM", style="Llm.TButton", command=self.describe_canvas)
         self.b_llm.pack(side="right", padx=(0, 6))
         self.tt_llm = Tooltip(self.b_llm, LLM_TIP)
+        # "Styles" left of "LLM" (user 1.11.): style prompts (styles.json) for the modes that have them, now Text to image; shown by
+        # _update_styles_button. A click on an entry replaces the prompt
+        self._icons["styles"] = self._icon("palette")
+        self.b_styles = ttk.Button(self.f_ptop, image=self._icons["styles"], style="Link.TButton", command=self._styles_menu)
+        Tooltip(self.b_styles, STYLES_TIP)
+        self._styles_shown = False
+        self._build_styles_menus()
         self.f_pchoice = ttk.Frame(self.f_ptop)
         self.f_pchoice.pack(side="left", padx=(10, 0))
         self.v_pchoice = tk.StringVar(value="")
