@@ -15,7 +15,7 @@ from pccomfy import models  # noqa: E402
 
 
 def main():
-    assert models.PARKED_WORKFLOWS == {"krea2-turbo-inpaint.json"}
+    assert models.PARKED_WORKFLOWS == {"krea2-turbo-inpaint.json", "moss-image-inpaint.json", "moss-image-inpaint-v10.json"}
     app = ra.make()
     for f in models.PARKED_WORKFLOWS:                     # in the folder, as in the repo
         shutil.copy(ra.t.ROOT / "workflows" / f, Path(app.workflows_dir) / f)

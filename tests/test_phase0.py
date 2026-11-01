@@ -42,7 +42,7 @@ assert {k: (m.max_refs, m.tag_style) for k, m in by.items()} == {
     "qwen": (8, "<image{n}>"), "fibo": (2, "<image_{n}>"), "flux2": (3, "image {n}"), "flux3": (3, "<ref_image_{i}>"),
     "krea2": (0, ""), "moss": (3, "image {n}")}                                                          # Multi Image Edit: slots per model
 assert "Expand" in by["flux3"].tip and "Expand" not in by["krea2"].tip and "Expand" in by["moss"].tip
-assert set(models.PARKED_EXPAND) == {"krea2"} and all(m.describe for m in models.PARKED_EXPAND.values())   # kept for later
+assert set(models.PARKED_EXPAND) == {"krea2", "moss"} and all(m.describe for m in models.PARKED_EXPAND.values())   # kept for later
 
 
 # 4. footer: only "ComfyUI" and its dot (no PhotoCraft mark, no document count)

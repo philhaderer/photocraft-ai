@@ -166,7 +166,7 @@ _MOSS_INPAINT = {**_MOSS, "turbo": False, "stage2_on": False, "base_res": 1216, 
 MOSS_EDIT_TIP = ("Describe the change: “Change only the X to Y. Keep the rest unchanged.”")   # wording of the LoRA's template; proposal, the user decides
 MOSS = Model(
     "moss", "MOSS Image",
-    "MOSS-Image: text to image, Edit Canvas, Multi Image Edit, Remove Selection (edit LoRA), Fill and Expand (Inpainting v10).",
+    "MOSS-Image: text to image, Edit Canvas, Multi Image Edit, Remove Selection, Fill and Expand (edit LoRA).",
     {
         # Text to image starts without DMD2 and without SLG, no LLM: the user's live test 29.10. (with DMD2 or SLG the photos
         # looked artificial, with the LLM prompt too). Without DMD2 the workflow runs 35 steps at CFG 3.0 (pc_no_lora; blind
@@ -180,10 +180,11 @@ MOSS = Model(
         "multi_edit": Mode("moss-image-edit.json", _MOSS_EDIT, prompt_tip=MULTI_TIP, run_as="edit"),
         "remove": Mode("moss-image-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0),
                        prompt_tip=REMOVE_NAME_TIP, remove_text=True),
-        # Fill and Expand (1.11., to test): MOSS Inpainting v10's recipe: 25 steps, CFG 2.5, er_sde / simple, no DMD2, UltraReal on,
-        # mask grown by 8 and softened by 16; the plugin cuts out the part (Context 1.0), the tick "v10 graph" lets the graph do it
-        "inpaint": Mode("moss-image-inpaint.json", _MOSS_INPAINT, prompt_tip=FILL_TIP),
-        "outpaint": Mode("moss-image-inpaint.json", {**_MOSS_INPAINT, "match": 0.5}, prompt_tip=EXPAND_DESCRIBE_TIP, describe=True),
+        # Fill and Expand (1.11., to test): the edit LoRA like Qwen and Fibo (the selection is drawn into the picture as a red
+        # outline and an instruction says what to do; Expand: white margin). The MOSS Inpainting v10 graphs did not fit the
+        # selection in the user's test (docs/tests/moss-edit-inpaint.md); the tick "v10 graph" next to Prompt (Fill only) still runs one.
+        "inpaint": Mode("moss-image-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=4.0), prompt_tip=FILL_TIP),
+        "outpaint": Mode("moss-image-edit.json", dict(base_res=1024, layer_mask="none")),
     },
     requires=(
         "moss_image_sft_int8_convrot.safetensors",
@@ -213,10 +214,11 @@ KREA2 = Model(
 PARKED_EXPAND = {
     "krea2": Mode("krea2-turbo-inpaint.json", dict(base_res=1024, layer_mask="soft"),
                   prompt_tip=EXPAND_DESCRIBE_TIP, describe=True),
+    "moss": Mode("moss-image-inpaint.json", {**_MOSS_INPAINT, "match": 0.5}, prompt_tip=EXPAND_DESCRIBE_TIP, describe=True),   # Inpainting v10 with the plugin's cut-out
 }
 # their graph files stay in the workflows folder but are not offered in the Workflow list: picked there they counted as a
 # workflow of your own ("Image -> image" appeared, user 29.10.)
-PARKED_WORKFLOWS = {m.workflow for m in PARKED_EXPAND.values()}
+PARKED_WORKFLOWS = {m.workflow for m in PARKED_EXPAND.values()} | {"moss-image-inpaint-v10.json"}   # the v10 one only runs through the tick
 
 FIBO = Model(
     "fibo", "Fibo 2.0 Edit Turbo",

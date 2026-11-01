@@ -65,6 +65,16 @@ def main():
     for n in encoders(out):
         assert sorted(k for k in n["inputs"] if k.startswith("images.")) == ["images.image_0", "images.image_1", "images.image_2"]
     assert out["20"]["inputs"]["images.image_0"] == ["10", 0] and "13" not in out
+    # Fill (1.11.): the selection is drawn into the picture as a red outline, the typed text sits in a fixed wrapper
+    pc, _, b = T.make(tempfile.mkdtemp(), with_sel=True)
+    b.comfy = T.FakeComfy()
+    req = Request(mode="inpaint", workflow=str(WF), preset="X", run_no=1, base_res=1024, context=0.4)
+    req.params = workflows.GenParams(prompt="a red flower", seed=5)
+    res = b.run(req)
+    out = b.comfy.graphs[0]
+    assert "a red flower" in out["20"]["inputs"]["prompt"] and res["layers"]
+    pic = next(v for k, v in b.comfy.uploads.items() if k.endswith("-image.png")).convert("RGB")
+    assert any(r > 200 and g < 80 and bl < 80 for r, g, bl in pic.getdata()), "no red outline in the picture sent"
     print("ALL OK (moss edit)")
 
 

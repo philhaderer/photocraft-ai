@@ -321,8 +321,8 @@ class PromptMixin:
 
     def _update_std_switch(self):
         """"Std nodes" (test A2) is there only in Flux 3 Upscale of the standard window; Easy Mode always runs the AusBoss graph.
-        "v10 graph" (A/B test) likewise only in MOSS Fill and Expand of the standard window."""
-        want10 = (self.v_mode.get() in ("inpaint", "outpaint") and self.v_model.get() == "moss" and not getattr(self, "_easy", False)
+        "v10 graph" (A/B test) likewise only in MOSS Fill of the standard window."""
+        want10 = (self.v_mode.get() == "inpaint" and self.v_model.get() == "moss" and not getattr(self, "_easy", False)
                   and (self.workflows_dir / V10_WORKFLOW).exists())
         if want10 and not self._v10_shown:
             self.cb_v10.pack(side="left", padx=(10, 0), after=self.f_pchoice)
