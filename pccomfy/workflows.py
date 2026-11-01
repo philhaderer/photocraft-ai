@@ -195,6 +195,8 @@ def apply_template(graph: dict, p: GenParams, image_name: str | None, mask_name:
                 for k, v in (("seed", p.seed), ("noise_seed", p.seed), ("denoise", p.denoise)):
                     if k in inp and not isinstance(inp[k], list):
                         inp[k] = v
+                if node.get("class_type") == "PrimitiveInt" and "value" in inp:   # a plain seed node (Flux 3 upscale, standard nodes)
+                    inp["value"] = p.seed
             elif tag in ("latent", "size"):
                 for k, v in (("width", p.width), ("height", p.height), ("batch_size", p.batch), ("amount", p.batch)):
                     if k in inp and not isinstance(inp[k], list):
