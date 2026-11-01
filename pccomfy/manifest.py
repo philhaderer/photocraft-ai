@@ -239,6 +239,7 @@ TABS: dict[str, TabSpec] = {
             "outpaint": ModeSpec(requires=("qwen3vl_8b_int8_convrot.safetensors",)),
             "multi_edit": ModeSpec(requires=("qwen3vl_8b_int8_convrot.safetensors",), optional=_CUT.optional),   # runs the edit graph
             "remove": ModeSpec(requires=("qwen3vl_8b_int8_convrot.safetensors",)),
+            "upscale": ModeSpec(requires=("qwen3vl_8b_int8_convrot.safetensors",)),
         },
         optional=("qwen\\qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors", "taeqi2_1_decoder.pth", DESCRIBE_FALLBACK)),
     "fibo": TabSpec(

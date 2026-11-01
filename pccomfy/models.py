@@ -66,6 +66,16 @@ FLUX3_REFINE_PROMPTS = (
     ("Default", FLUX3_DEFAULT, "The workflow's own prompt: restore sharp, natural detail."),
     ("Restore", FLUX3_RESTORE, "Repair an old or damaged photo: scratches, dust, folds and stains go, faces get their detail back."),
 )
+# Qwen 2.1 Upscale (workflow qwen212KUpscale_v10): the generic prompt of the workflow, and the longer one its notes offer for portraits
+QWEN_UPSCALE_DEFAULT = "Enhance this image to high resolution while preserving the original composition, lighting, and atmosphere. Image can be illustration or real photo, keep the original input style."
+QWEN_UPSCALE_DETAILED = ("Enhance this image to high resolution with rich fine details. Sharpen textures and surfaces, add natural microdetails, "
+                         "and improve clarity and definition across the image while preserving the original composition, lighting, atmosphere, "
+                         "and visual style. The input may be an illustration or a real photograph; preserve the original style.")
+QWEN_UPSCALE_PROMPTS = (
+    ("Default", QWEN_UPSCALE_DEFAULT, "The workflow's own prompt: generic, works for most pictures."),
+    ("Detailed", QWEN_UPSCALE_DETAILED, "Longer: more fine detail, good for portraits; on some pictures it adds noticeably more artifacts."),
+)
+QWEN_UPSCALE_TIP = "The prompt matters most. Too much grain, noise or artifacts? Try the other prompt or reword it."
 FIBO_REFINE = "relight the scene to natural lighting"   # Fibo Refine's old prompt (now FLUX2_DEFAULT, user 28.10.); kept as a stock text
 FILL_TIP = "Draw a selection and prompt e.g. “a red flower”. Hide layers from previous results before running again."   # wording from the user (28.10.)
 QWEN_SMALL = "Small selections don't work well with Qwen."   # user 30.10.: small fills came out shifted (helikopter.psd)
@@ -79,7 +89,7 @@ EXPAND_DESCRIBE_TIP = ("This model needs a prompt: describe the surroundings onl
 DESCRIBE_TIP = "Add a short description of your image in front of this text."   # Refine and Upscale, wording chosen by the user (28.10.)
 T2I_TIP = "Text to image: a completely new image is added to the canvas as a new layer."
 FLUX3_DEFAULT_OLD = "Restore the photo: remove blur, noise and compression artifacts and recover sharp, natural detail, keeping the same composition, people and colors."
-STOCK_PROMPTS = {FLUX2_DEFAULT_PREV, FLUX2_DEFAULT_OLD, FLUX3_DEFAULT_OLD, PLACEHOLDER, FLUX2_DEFAULT, FLUX3_DEFAULT, FLUX3_RESTORE, RELIGHT_NEUTRAL, RELIGHT_STUDIO, FIBO_REFINE}   # texts the window may replace when the mode changes
+STOCK_PROMPTS = {FLUX2_DEFAULT_PREV, FLUX2_DEFAULT_OLD, FLUX3_DEFAULT_OLD, PLACEHOLDER, FLUX2_DEFAULT, FLUX3_DEFAULT, FLUX3_RESTORE, QWEN_UPSCALE_DEFAULT, QWEN_UPSCALE_DETAILED, RELIGHT_NEUTRAL, RELIGHT_STUDIO, FIBO_REFINE}   # texts the window may replace when the mode changes
 
 # The tooltips of the function buttons: one general text per function, the same for every model (user 28.10.); what
 # holds for one model only goes into its tip under the prompt (Mode.prompt_tip). The ranking goes in front (function_tip).
@@ -109,6 +119,8 @@ QWEN = Model(
         "inpaint": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=False, feather_pct=4.0), prompt_tip=FILL_TIP + " " + QWEN_SMALL),
         "outpaint": Mode("qwen-image-21-edit.json", dict(base_res=1024, turbo=False, layer_mask="none")),   # = the old "auto"
         "remove": Mode("qwen-image-21-edit.json", dict(_SOFT, base_res=1024, context=0.4, turbo=False, feather_pct=10.0), prompt_tip=REMOVE_NAME_TIP, remove_text=True),
+        # native 2K upscale: no upscaler node and no LoRA, 25 steps; the result is about the scale factor times the picture, up to 24 MP
+        "upscale": Mode("qwen-image-21-upscale.json", dict(scale=1.5, turbo=False, context=0.0), QWEN_UPSCALE_DEFAULT, QWEN_UPSCALE_PROMPTS, QWEN_UPSCALE_TIP),
     },
     requires=(
         "qwen_image_2.1_int8_convrot.safetensors",
