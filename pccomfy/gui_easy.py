@@ -107,6 +107,8 @@ class EasyMixin:
         for w in (self.f_neg, self.f_enh, self.f_opts, self.f_adv, self.b_describe, self.f_models, self.b_llm, self.f_pchoice,
                   self.b_reset):
             w.pack_forget()
+        self.b_styles.pack_forget()      # (comes back through _update_styles_button)
+        self._styles_shown = False
         mode = self.v_mode.get()
         picks = self._easy_models()
         key = picks.get(mode) or self.v_model.get()
@@ -125,6 +127,7 @@ class EasyMixin:
         self.f_neg.pack(fill="x", padx=10, pady=(6, 0), before=self.sep_status)
         self.f_adv.pack(fill="x", padx=10, pady=4, before=self.sep_status)
         self.b_llm.pack(side="right", padx=(0, 6))
+        self._update_styles_button()
         self.f_pchoice.pack(side="left", padx=(10, 0))
         self.b_reset.pack(side="left", padx=FOOT_RESET_PADX, before=self.cb_live)
 

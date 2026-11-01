@@ -359,4 +359,5 @@ CONTRIBUTORS = (
     ("Krea", "Krea 2 Turbo", "https://www.krea.ai"),
     ("ausboss", "ComfyUI-AusBoss (tiled upscale nodes) and the FLUX.3 Klein Restore LoRA", "https://github.com/ausboss/ComfyUI-AusBoss"),
     ("lodestones", "MOSS-Image 8-step DMD2 LoRA", "https://huggingface.co/lodestones"),
+    ("ThetaCursed", "Krea2-Style-Explorer, the style prompts of the Styles button (MIT)", "https://github.com/ThetaCursed/Krea2-Style-Explorer"),
 )

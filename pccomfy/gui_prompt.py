@@ -1,7 +1,7 @@
 """The prompt field: editor keys, hints, ready-made prompts, enhance and negative boxes. (moved out of gui.py unchanged; see PLAN.md, phase 0)."""
 from __future__ import annotations
 
-from . import manifest
+from . import manifest, styles
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _ALL  # noqa: F401
 
@@ -125,6 +125,7 @@ class PromptMixin:
         on = bool(text)
         self._hint_text = text
         self._update_llm_button()
+        self._update_styles_button()
         self.t_prompt.configure(highlightbackground=ACCENT if on else "#454545", highlightthickness=2 if on else 1)
         if on:
             self.lbl_hint.configure(text=text)
@@ -289,6 +290,114 @@ class PromptMixin:
             return
         t.delete("1.0", "end")
         t.insert("1.0", text)
+
+    # ---------- Styles (styles.json) ----------
+
+    def _build_styles_menus(self):
+        """One menu per mode that has styles: a submenu per group, an entry per style (its name). The whole text shows in a box
+        right of the menu while the mouse is on an entry (user 1.11.; a menu entry has no tooltip of its own)."""
+        self._styles = styles.load()
+        self.m_styles: dict = {}
+        self._style_texts: dict = {}        # (submenu, entry number) -> the style's text
+        self._style_tip = None
+        self._style_menus: list = []        # kept, so the submenus (and their names) stay alive
+        kw = dict(tearoff=0, bg=PANEL, fg=FG, activebackground=ACCENT, activeforeground="#1b1b1b", bd=0, font=font(10))
+        for mode, groups in self._styles.items():
+            top = tk.Menu(self.root, **kw)
+            for g in groups:
+                sub = tk.Menu(top, **kw)
+                self._style_menus.append(sub)
+                for i, s in enumerate(g["styles"]):
+                    sub.add_command(label=s["name"], command=lambda t=s["text"]: self._apply_style(t))
+                    self._style_texts[(str(sub), i)] = s["text"]
+                sub.bind("<<MenuSelect>>", lambda e, m=sub: self._style_preview(m), add="+")
+                sub.bind("<Unmap>", lambda e: self._style_tip_hide(), add="+")
+                top.add_cascade(label=g["name"], menu=sub)
+            top.bind("<<MenuSelect>>", lambda e: self._style_tip_hide(), add="+")
+            self.m_styles[mode] = top
+
+    def _update_styles_button(self):
+        """The Styles button is there only in a mode that has styles (Text to image) and not in Easy Mode (which hides the LLM
+        button too); it sits left of the LLM button."""
+        b = getattr(self, "b_styles", None)
+        if b is None:
+            return
+        want = self.v_mode.get() in self.m_styles and not getattr(self, "_easy", False)
+        if want and not self._styles_shown:
+            b.pack(side="right", padx=(0, 6), after=self.b_llm)
+            self._styles_shown = True
+        elif not want and self._styles_shown:
+            b.pack_forget()
+            self._styles_shown = False
+
+    def _styles_menu(self):
+        """A click on the Styles button: the groups, opening under the button."""
+        m = self.m_styles.get(self.v_mode.get())
+        if m is None or str(self.t_prompt.cget("state")) == "disabled":
+            return
+        b = self.b_styles
+        try:
+            m.tk_popup(b.winfo_rootx(), b.winfo_rooty() + b.winfo_height())
+        finally:
+            try:
+                m.grab_release()
+            except Exception:
+                pass
+            self._style_tip_hide()
+
+    def _apply_style(self, text: str):
+        """A style entry REPLACES the prompt (user 1.11.), in one undo step: Ctrl+Z in the field brings the old text back."""
+        t = self.t_prompt
+        if str(t.cget("state")) == "disabled":
+            return
+        auto = t.cget("autoseparators")      # Tk would otherwise split delete + insert into two undo steps
+        t.configure(autoseparators=False)
+        try:
+            t.edit_separator()
+            t.delete("1.0", "end")
+            t.insert("1.0", text)
+            t.edit_separator()
+        finally:
+            t.configure(autoseparators=auto)
+        self.v_pchoice.set("")
+        t.focus_set()
+        self._status("Style set as the prompt. Ctrl+Z in the field brings the old text back.")
+
+    def _style_text_at(self, menu, active):
+        """The text of entry number `active` of a style submenu ("" for none)."""
+        return self._style_texts.get((str(menu), active), "") if isinstance(active, int) else ""
+
+    def _style_preview(self, menu):
+        """<<MenuSelect>> of a group menu: the whole text of the entry under the mouse in a small box right of the menu (left
+        of it when there is no room)."""
+        self._style_tip_hide()
+        try:
+            text = self._style_text_at(menu, menu.index("active"))
+            if not text:
+                return
+            idx = menu.index("active")
+            x = menu.winfo_rootx() + menu.winfo_width() + 4
+            y = menu.winfo_rooty() + menu.yposition(idx)
+            tip = tk.Toplevel(self.root)
+            tip.wm_overrideredirect(True)
+            tk.Label(tip, text=text, justify="left", wraplength=340, background="#ffffe0", foreground="#000000",
+                     relief="solid", borderwidth=1, padx=6, pady=4, font=font(9)).pack()
+            tip.update_idletasks()
+            if x + tip.winfo_reqwidth() > self.root.winfo_screenwidth():
+                x = menu.winfo_rootx() - tip.winfo_reqwidth() - 4
+            tip.wm_geometry(f"+{x}+{y}")
+            tip.wm_attributes("-topmost", True)
+            self._style_tip = tip
+        except tk.TclError:
+            self._style_tip_hide()
+
+    def _style_tip_hide(self):
+        tip, self._style_tip = getattr(self, "_style_tip", None), None
+        if tip is not None:
+            try:
+                tip.destroy()
+            except Exception:
+                pass
 
     def _clear_prompt(self):
         """The bin next to "Prompt": empties the field (one undo step, so Ctrl+Z in the field brings the text back)."""

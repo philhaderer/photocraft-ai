@@ -129,6 +129,8 @@ SeedVR2 and the MOSS LoRAs are Apache 2.0, BiRefNet is MIT.
 - The model authors: Black Forest Labs (Flux 2 / Flux 3 Klein), Qwen (Qwen-Image 2.1), Bria (Fibo 2.0), Krea (Krea 2),
   MOSS-Image, ByteDance (SeedVR2), obsxrver (Flux 2 Klein int8 ConvRot), lodestones (MOSS DMD2 LoRA), Danrisi (Lenovo
   UltraReal LoRA), vizsumit (UltraReal LoRA for Flux 2)
+- [ThetaCursed/Krea2-Style-Explorer](https://github.com/ThetaCursed/Krea2-Style-Explorer) (MIT): the style prompts of the
+  Styles button, licence in [pccomfy/assets/LICENSE-krea-style-explorer.txt](pccomfy/assets/LICENSE-krea-style-explorer.txt)
 - [Lucide](https://lucide.dev) (ISC): the window's icons follow its shapes and style
 - [Inter](https://rsms.me/inter/) font by Rasmus Andersson (SIL Open Font License 1.1, see
   [pccomfy/assets/fonts/OFL-Inter.txt](pccomfy/assets/fonts/OFL-Inter.txt))

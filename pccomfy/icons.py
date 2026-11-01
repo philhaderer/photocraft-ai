@@ -2,7 +2,7 @@
 
 Every icon lives on a 24 x 24 grid with a 2-unit stroke, round ends and round corners, the style of the Lucide icon set
 (lucide.dev, ISC licence; the shapes here follow its icons x, scissors, message-square-text, copy, clipboard,
-image-plus, plus, settings, undo-2, redo-2, chevron-up/down/right, save, link-2 and trash-2; of the function symbols `fn-multi_edit`
+image-plus, plus, settings, undo-2, redo-2, chevron-up/down/right, save, link-2, trash-2 and palette; of the function symbols `fn-multi_edit`
 follows images, `fn-upscale` scaling, `fn-refine` focus and `fn-edit` sparkles, the other `fn-` shapes are our own in the
 same style). An icon is drawn 8 times larger and scaled down with Lanczos to the exact pixel size it is shown at
 (display scaling included), so it stays sharp and even at 100 % and at 150 %, which the old 16 px pixel art did not.
@@ -55,6 +55,12 @@ SHAPES: dict[str, list[list[Point]]] = {
              [(21, 15), (17.9, 11.9)] + _arc(16.5, 13.3, 2, 315, 225, 6) + [(6, 21)],    # the hill in the picture
              _circle(9, 9, 2)],
 }
+
+
+# the Styles button (Lucide palette): a rounded blob with a thumb notch at the bottom and four paint dots
+SHAPES["palette"] = ([_arc(12, 12, 10, 270, 90, 18) + [(13.65, 20.3), (13.2, 18.9), (13.7, 17.7), (15.7, 17.7)]
+                      + _arc(15.7, 12.15, 5.55, 90, 0, 6) + _arc(12, 12, 10, 0, -90, 9)]
+                     + [[(x, y), (x + 0.01, y)] for x, y in ((13.5, 6.5), (17.5, 10.5), (8.5, 7.5), (6.5, 12.5))])
 
 
 def _mirror(shape: list[list[Point]]) -> list[list[Point]]:

@@ -1,0 +1,798 @@
+{
+ "source": "ThetaCursed/Krea2-Style-Explorer, krea_moodboards.json, styleKeywords (MIT, see LICENSE-krea-style-explorer.txt)",
+ "modes": {
+  "txt2img": {
+   "groups": [
+    {
+     "name": "Photography",
+     "styles": [
+      {
+       "name": "Panning Blur",
+       "text": "motion blur, panning photography, shutter drag, kinetic energy, vibrant saturation, high-speed action, abstract velocity"
+      },
+      {
+       "name": "Flash Fisheye",
+       "text": "fisheye lens distortion, direct flash photography, minimalist editorial, cool-toned color palette, 90s nostalgic aesthetic, raw studio setting, oversized tailoring"
+      },
+      {
+       "name": "Tilt-Shift Miniature",
+       "text": "tilt-shift photography, miniature diorama, macro lens, shallow depth of field, high-angle perspective, verdant moss textures, whimsical scale model"
+      },
+      {
+       "name": "Tiny Planet",
+       "text": "stereographic projection, tiny planet effect, 360-degree panorama, surreal landscape, fish-eye lens distortion, circular horizon, vibrant nature"
+      },
+      {
+       "name": "Camera Sweep",
+       "text": "intentional camera movement, motion blur, impressionistic photography, kinetic energy, painterly texture, dreamy summer haze, vibrant green palette"
+      },
+      {
+       "name": "Solarized Photogram",
+       "text": "vintage photogram, solarized negative, high-contrast chiaroscuro, sepia-toned grain, kinetic motion blur, ethereal spectral glow, geometric light streaks, scientific darkroom aesthetic"
+      },
+      {
+       "name": "Prismatic Leaks",
+       "text": "prismatic light leaks, liquid caustics, vintage analog film grain, rainbow starburst reflections, ethereal dreamcore, soft-focus bokeh, spectral lighting"
+      },
+      {
+       "name": "Aerial Top-Down",
+       "text": "top-down aerial perspective, turquoise water, minimalist composition, drone photography, water caustics, geometric symmetry, vibrant light reflections"
+      },
+      {
+       "name": "Double Exposure Noir",
+       "text": "high-contrast monochrome, surrealist double exposure, vintage film grain, fragmented portraiture, chiaroscuro lighting, photocopy texture, avant-garde noir"
+      },
+      {
+       "name": "Wet Street",
+       "text": "cinematic street photography, muted desaturated palette, wet asphalt reflections, overcast atmospheric lighting, vintage urban architecture, candid narrative realism, shallow depth of field, grainy film aesthetic"
+      },
+      {
+       "name": "Night Drift",
+       "text": "cinematic motion blur, long exposure light trails, analog film grain, nocturnal atmosphere, intentional camera movement, saturated cool tones, liminal space, high contrast shadows"
+      },
+      {
+       "name": "Pictorialist Mist",
+       "text": "pictorialism, monochrome photography, heavy film grain, sfumato effect, ethereal silhouettes, soft focus, minimalist composition, atmospheric fog"
+      },
+      {
+       "name": "Candid Snapshot",
+       "text": "black and white photography, high contrast, fisheye lens distortion, candid snapshot, film grain texture, high angle perspective, documentary aesthetic"
+      },
+      {
+       "name": "Harsh Flash Film",
+       "text": "analog 35mm film grain, candid snapshot aesthetic, cinematic motion blur, harsh flash photography, lo-fi retro texture, moody atmospheric lighting, vintage film color grading"
+      },
+      {
+       "name": "Cyanotype Bloom",
+       "text": "monochromatic cyanotype palette, heavy film grain, glowing ethereal highlights, nocturnal atmosphere, submerged dreamscape, halation bloom, high-contrast low-key lighting, surreal lo-fi texture"
+      },
+      {
+       "name": "Blue Hour Haze",
+       "text": "analog film grain, twilight blue hour, dreamy soft focus, cinematic silhouette, nostalgic haze, surreal melancholia, vintage retro aesthetic"
+      },
+      {
+       "name": "Sky Fisheye",
+       "text": "low angle perspective, fisheye lens distortion, vibrant cerulean sky background, shimmering light caustics, high-contrast midday sunlight, hyper-saturated color palette, ethereal aquatic refraction, glossy reflective textures"
+      },
+      {
+       "name": "Bokeh Dream",
+       "text": "extreme out-of-focus, heavy analog film grain, deep indigo and teal palette, dreamy bokeh glow, impressionistic blur, cinematic low-light, painterly soft focus"
+      },
+      {
+       "name": "Macro Refraction",
+       "text": "extreme macro photography, refractive liquid distortion, peephole tunnel perspective, cinematic soft lighting, hyper-detailed textures, water caustics, shallow depth of field"
+      },
+      {
+       "name": "Golden Transit",
+       "text": "golden hour lighting, cinematic transit perspective, frame-within-a-frame, warm amber glow, nostalgic travel photography, sun-drenched interior, scenic landscape vista"
+      },
+      {
+       "name": "Summer Midday",
+       "text": "vibrant high-saturation photography, bright direct midday sunlight, wide-angle candid perspective, sharp high-contrast shadows, summer lifestyle energy, clear blue sky backdrop, warm golden skin tones"
+      }
+     ]
+    },
+    {
+     "name": "Cinema & Mood",
+     "styles": [
+      {
+       "name": "Amber Dusk",
+       "text": "cinematic twilight, 35mm film grain, warm amber glow, deep blue hour, soft focus bokeh, atmospheric low-light, nostalgic analog texture"
+      },
+      {
+       "name": "Cyan Twilight",
+       "text": "cinematic twilight, cyan monochrome, backlit silhouette, nocturnal atmospheric, grainy film texture, liminal space, moody minimalism, moonlit melancholy"
+      },
+      {
+       "name": "Teal Noir",
+       "text": "cinematic noir, deep indigo and teal, atmospheric fog, low-key lighting, heavy film grain, silhouette in window, voyeuristic perspective"
+      },
+      {
+       "name": "Blue Rim Light",
+       "text": "cinematic rim lighting, deep blue palette, high-contrast silhouette, atmospheric haze, cool-toned highlights, dramatic shadows, minimalist composition"
+      },
+      {
+       "name": "Neon Bokeh Night",
+       "text": "cinematic street photography, shallow depth of field, wet asphalt reflections, glowing neon bokeh, muted urban palette, atmospheric night mood, dreamy soft focus"
+      },
+      {
+       "name": "Volumetric Beams",
+       "text": "chiaroscuro lighting, volumetric light beams, deep blue and black palette, atmospheric haze, monolithic structures, high contrast, cinematic isolation, nocturnal atmosphere"
+      },
+      {
+       "name": "High-Key White",
+       "text": "high-key minimalism, sterile white environment, diffused soft lighting, architectural geometric forms, editorial surrealism, shallow depth of field, clean crisp textures"
+      },
+      {
+       "name": "Nineties Dusk",
+       "text": "analog film grain, 90s cinema aesthetic, twilight color palette, soft focus, lo-fi texture, hazy atmospheric lighting, nostalgic melancholy"
+      },
+      {
+       "name": "Gelled Lights",
+       "text": "high-contrast chiaroscuro, saturated gelled lighting, minimalist editorial portraiture, dramatic graphic shadows, sculptural lighting, vibrant red and blue palette, cinematic noir"
+      },
+      {
+       "name": "Cobalt Noir Glow",
+       "text": "electric cobalt glow, high contrast chiaroscuro, heavy analog film grain, ethereal motion blur, spectral distortion, nocturnal noir atmosphere, liquid light texture"
+      },
+      {
+       "name": "Stark Noir",
+       "text": "high-contrast black and white, chiaroscuro lighting, stark geometric composition, hard directional light, dramatic shadows, fine film grain, minimalist noir"
+      },
+      {
+       "name": "Fog Silhouette",
+       "text": "high-contrast black and white, heavy film grain, backlit silhouette, atmospheric fog, liminal space, vintage analog aesthetic, soft-focus bloom, minimalist composition"
+      },
+      {
+       "name": "Pictorial Fog",
+       "text": "high-contrast monochrome, soft-focus diffusion, heavy film grain, mysterious silhouette, dense fog landscape, pictorialist aesthetic, liminal atmosphere"
+      },
+      {
+       "name": "Dreamy Noir Haze",
+       "text": "heavy film grain, soft focus blur, pictorialism, monochromatic noir, dreamlike haze, high-contrast shadows, atmospheric fog"
+      },
+      {
+       "name": "Amber Haze",
+       "text": "amber gradient, atmospheric fog, minimalist silhouette, soft-focus haze, cinematic backlighting, liminal space, warm color field"
+      },
+      {
+       "name": "Misty Blue",
+       "text": "minimalist silhouette, atmospheric blue palette, misty fog, clean graphic lines, introspective mood, monochromatic gradient, solitary landscape"
+      },
+      {
+       "name": "Airbrush Mist",
+       "text": "heavy film grain, soft-focus airbrush, minimalist silhouette, atmospheric mist, stippled texture, high-contrast gradient, dreamlike noir, diffused lighting"
+      },
+      {
+       "name": "Crimson Thriller",
+       "text": "high-contrast silhouette, crimson and black duotone, intentional motion blur, analog film grain, cinematic thriller atmosphere, long exposure distortion, minimalist noir"
+      },
+      {
+       "name": "Warm Light Trails",
+       "text": "long exposure motion blur, chiaroscuro lighting, warm amber glow, cinematic haze, analog film grain, ethereal light trails, heavy shadow contrast"
+      },
+      {
+       "name": "Cool Low-Key",
+       "text": "cinematic chiaroscuro, motion blur, low-key lighting, deep blue shadows, film grain texture, selective focus, introspective atmosphere, cool color grading"
+      },
+      {
+       "name": "Crimson Bloom",
+       "text": "saturated crimson background, ethereal bloom effect, cinematic film grain, high contrast lighting, surreal liminal atmosphere, soft focus, minimalist composition"
+      },
+      {
+       "name": "Spotlight Void",
+       "text": "chiaroscuro lighting, dramatic spotlight, minimalist landscape photography, atmospheric negative space, solitary focal point, surreal liminality, high contrast composition"
+      }
+     ]
+    },
+    {
+     "name": "Painting",
+     "styles": [
+      {
+       "name": "Impasto Realism",
+       "text": "impasto oil painting, visible brushstrokes, earthy color palette, chiaroscuro lighting, textured canvas, 19th century realism, atmospheric depth"
+      },
+      {
+       "name": "Impressionist Sunlight",
+       "text": "impasto oil painting, impressionism, dappled sunlight, textured brushstrokes, pastel color palette, ethereal atmosphere, romanticized nature"
+      },
+      {
+       "name": "Impressionist Motion",
+       "text": "impressionist oil painting, dynamic motion blur, heavy impasto texture, sun-drenched palette, soft focus, vibrant wildflowers, dreamy painterly atmosphere"
+      },
+      {
+       "name": "Tenebrist Teal",
+       "text": "impasto oil painting, chiaroscuro lighting, deep teal and prussian blue palette, ethereal atmospheric depth, expressive visible brushstrokes, nocturnal moody tenebrism, submerged liquid haze"
+      },
+      {
+       "name": "Tonalist Nocturne",
+       "text": "tonalism, nocturne oil painting, atmospheric fog, deep emerald and teal palette, chiaroscuro lighting, painterly impasto texture, ethereal glow, melancholic isolation"
+      },
+      {
+       "name": "Baroque Crimson",
+       "text": "chiaroscuro lighting, baroque oil painting style, deep crimson and black palette, regal gothic aesthetic, intricate metallic textures, dramatic shadows, infernal dark fantasy"
+      },
+      {
+       "name": "Fauvist Impasto",
+       "text": "thick impasto oil painting, fauvist color palette, expressive brushstrokes, bold black outlines, naive art style, saturated color blocking, textured canvas grain"
+      },
+      {
+       "name": "Naive Folk",
+       "text": "naive art style, visible impasto brushstrokes, folk art aesthetic, bold black outlines, flat perspective, saturated color palette, textured acrylic painting"
+      },
+      {
+       "name": "Swirling Post-Impressionism",
+       "text": "swirling impasto brushstrokes, post-impressionist digital painting, celestial nocturne, vibrant cobalt and gold, textured oil texture, dreamlike luminous atmosphere, dynamic rhythmic movement"
+      },
+      {
+       "name": "Dark Romantic Oil",
+       "text": "classical oil painting, chiaroscuro lighting, tonalist landscape, dark romanticism, textured canvas, nocturne atmosphere, muted earth tones, impasto brushstrokes"
+      },
+      {
+       "name": "Sumi-e Wash",
+       "text": "sumi-e, ink wash painting, monochrome minimalism, bleeding ink, translucent layers, stark silhouettes, negative space"
+      },
+      {
+       "name": "Earthy Gouache",
+       "text": "grainy gouache texture, muted earth tones, minimalist flat composition, stippled shading, soft organic shapes, handcrafted illustration style, contemplative mood"
+      },
+      {
+       "name": "Ink and Watercolor",
+       "text": "expressive painterly portrait, ink and watercolor wash, high contrast composition, fluid graphic linework, gothic romanticism, minimalist fashion illustration, textured brushstrokes"
+      },
+      {
+       "name": "Storybook Watercolor",
+       "text": "storybook watercolor illustration, delicate ink outlines, muted earth tones, whimsical architectural details, cozy nostalgic atmosphere, hand-drawn texture, soft watercolor washes"
+      },
+      {
+       "name": "Oil Pastel Scribble",
+       "text": "oil pastel texture, fauvist color palette, gestural scribbles, electric yellow highlights, dreamlike atmosphere, textured paper background, ethereal glow"
+      },
+      {
+       "name": "Intaglio Etching",
+       "text": "intaglio engraving, cross-hatching, chiaroscuro ink illustration, aged parchment, monochrome etching, stipple texture, vintage printmaking style"
+      },
+      {
+       "name": "Pointillism",
+       "text": "pointillism, stippling texture, intricate linework, muted pastel palette, tapestry-like pattern, contemporary surrealism, divisionism"
+      },
+      {
+       "name": "Neon Palette Knife",
+       "text": "heavy impasto texture, fluorescent neon accents, muted earthy base, palette knife technique, expressive gestural brushwork, contemporary abstract oil painting, distressed industrial finish"
+      },
+      {
+       "name": "Cobalt Palette Knife",
+       "text": "heavy impasto oil painting, monochromatic cobalt palette, thick palette knife texture, dramatic chiaroscuro lighting, sculptural paint layers, expressive brushwork, indigo and icy blue tones"
+      },
+      {
+       "name": "Craquelure Baroque",
+       "text": "chiaroscuro oil painting, craquelure texture, tenebrism, dark baroque, surreal cosmic motifs, classical portraiture, muted earth tones, reflective gold accents"
+      },
+      {
+       "name": "Cobalt Folk Gouache",
+       "text": "naive art style, cobalt blue palette, textured gouache illustration, minimalist folk art, hand-drawn aesthetic, warm cream background, whimsical simplified shapes"
+      }
+     ]
+    },
+    {
+     "name": "Illustration & Print",
+     "styles": [
+      {
+       "name": "Cobalt Risograph",
+       "text": "risograph texture, cobalt blue and yellow duotone, minimalist geometric vector, grainy noise texture, high contrast graphic design, flat design, sharp vector lines"
+      },
+      {
+       "name": "Punk Zine",
+       "text": "punk zine aesthetic, high-contrast halftone, distressed screenprint texture, xerox photocopy art, gritty collage, neon pink accents, raw paper texture"
+      },
+      {
+       "name": "Photogravure Halftone",
+       "text": "high-contrast monochrome, halftone dot pattern, tactile grain texture, stipple and dither, industrial screenprint, vintage photogravure, minimalist sculptural depth"
+      },
+      {
+       "name": "Retro Screenprint",
+       "text": "risograph texture, minimalist screenprint, halftone dots, retro color palette, vintage print aesthetic, bold graphic illustration, grainy paper texture"
+      },
+      {
+       "name": "Linocut Riso",
+       "text": "risograph print, linocut illustration, textured cream paper, hand-carved aesthetic, grainy ink texture, bold graphic minimalism, vintage woodblock print, misregistered ink layers"
+      },
+      {
+       "name": "Terracotta Woodcut",
+       "text": "graphic woodcut print, cobalt and terracotta palette, chiaroscuro lighting, stippled texture, hand-carved aesthetic, high-contrast ink illustration, minimalist printmaking"
+      },
+      {
+       "name": "Neon Vector",
+       "text": "vector illustration, sharp geometric shapes, high contrast color palette, minimalist graphic design, clean digital lines, flat design with gradients, electric blue and neon accents"
+      },
+      {
+       "name": "Sunny Flat Vector",
+       "text": "flat vector illustration, minimalist graphic style, hard-edged shadows, sun-drenched color palette, clean line art, retro-modern, nostalgic atmosphere"
+      },
+      {
+       "name": "Travel Poster",
+       "text": "flat vector illustration, mid-century travel poster, bold color blocking, minimalist geometric shapes, sharp graphic shadows, vibrant summer palette, scenic coastal aesthetic"
+      },
+      {
+       "name": "Ligne Claire",
+       "text": "ligne claire, flat vector illustration, bold black outlines, vibrant gradient background, paper grain texture, surrealist conceptual art, minimalist graphic design"
+      },
+      {
+       "name": "Mid-Century Linocut",
+       "text": "mid-century noir, linocut print texture, terracotta and black palette, minimalist graphic illustration, distressed ink grain, high-contrast silhouette, screenprint aesthetic"
+      },
+      {
+       "name": "Scratchy Storybook",
+       "text": "whimsical storybook illustration, scratchy ink outlines, textured watercolor wash, crooked asymmetrical architecture, earthy ochre and terracotta palette, stylized angular character design, fairytale atmosphere"
+      },
+      {
+       "name": "Stipple Line Art",
+       "text": "graphic illustration, intricate line art, surrealist composition, textured stippling, bold color palette, flat geometric perspective, stylized architecture"
+      },
+      {
+       "name": "Minimal Line Art",
+       "text": "minimalist line art, bold ink outlines, high contrast, flat color fields, nostalgic atmosphere, limited color palette, dreamlike composition"
+      },
+      {
+       "name": "Gesture Sketch",
+       "text": "minimalist gesture drawing, expressive pencil linework, textured paper background, visible construction lines, fluid ink silhouettes, analog sketch aesthetic, hand-drawn character design"
+      },
+      {
+       "name": "Block Print Ink",
+       "text": "minimalist black ink illustration, naive hand-drawn style, bold linework, vibrant orange accents, block print texture, flat graphic composition, high contrast"
+      },
+      {
+       "name": "Duotone Silhouette",
+       "text": "minimalist vector illustration, bold flat silhouettes, duotone orange and black, high-contrast graphic art, mid-century screenprint aesthetic, clean vector line art, vibrant flat color fields"
+      },
+      {
+       "name": "Pop Collage",
+       "text": "surreal collage, risograph texture, geometric pop art, halftone stipple, vibrant color blocking, tactile paper cutout, absurdist composition"
+      },
+      {
+       "name": "Dada Collage",
+       "text": "analog paper collage, vintage halftone texture, surrealist photomontage, mid-century ephemera, torn paper edges, retro dreamscape, dadaist composition"
+      },
+      {
+       "name": "Neon Punk Collage",
+       "text": "mixed-media collage, neon punk aesthetic, torn paper edges, halftone texture, vibrant color blocking, gritty analog xerox, graphic zine style"
+      },
+      {
+       "name": "Corporate Memphis",
+       "text": "Corporate Memphis, flat vector illustration, exaggerated proportions, minimalist character design, vibrant color blocking, clean geometric shapes"
+      },
+      {
+       "name": "Monoline Icon",
+       "text": "minimalist vector illustration, bold monoline art, flat graphic design, high-contrast color palette, geometric simplification, clean white silhouettes, modernist icon design"
+      }
+     ]
+    },
+    {
+     "name": "Anime & Cartoon",
+     "styles": [
+      {
+       "name": "Retro Anime Pastel",
+       "text": "retro anime aesthetic, clean ink line art, soft cel-shaded coloring, expressive character design, nostalgic cottagecore vibes, muted pastel palette, graphic indie comic style"
+      },
+      {
+       "name": "Minimal Anime",
+       "text": "minimalist anime illustration, clean line art, flat color blocks, pastel color palette, sharp graphic quality, surreal symbolic motifs, modern Japanese aesthetic"
+      },
+      {
+       "name": "Kawaii Pop",
+       "text": "kawaii anime style, bold clean line art, pastel pop palette, vibrant neon accents, halftone textures, dreamy whimsical motifs, harajuku streetwear aesthetic"
+      },
+      {
+       "name": "Clean Anime Lines",
+       "text": "clean bold line art, anime illustration, flat color fills, high-contrast graphic style, expressive character design, vibrant color blocking, modern anime aesthetic"
+      },
+      {
+       "name": "Cool Cel Night",
+       "text": "cinematic anime style, cool blue color palette, atmospheric lighting, desaturated tones, cel-shaded, melancholic mood, sharp line art, nocturnal cityscape"
+      },
+      {
+       "name": "Rainy Anime Night",
+       "text": "melancholic anime style, cinematic urban nightscape, cool blue and purple tones, rain-soaked atmosphere, soft bokeh lighting, introspective emotional close-up, dramatic shadow play"
+      },
+      {
+       "name": "Anime VHS",
+       "text": "1990s anime style, hand-painted cel animation, nocturnal city lighting, vintage VHS film grain, cinematic retro anime, moody atmospheric color palette"
+      },
+      {
+       "name": "Nineties Cel Blue",
+       "text": "90s retro anime style, melancholic nocturnal mood, muted cool color palette, hand-drawn cel animation, soft cinematic lighting, introspective urban solitude, lo-fi aesthetic"
+      },
+      {
+       "name": "Anime Golden Sky",
+       "text": "cinematic anime background, golden hour lighting, nostalgic atmosphere, soft digital painting, volumetric sunset clouds, Japanese urban landscape, warm amber color palette"
+      },
+      {
+       "name": "Painterly Anime Twilight",
+       "text": "painterly anime style, twilight blue and warm orange, glowing lanterns, whimsical fantasy landscape, starlit night sky, cozy cottagecore, magical realism"
+      },
+      {
+       "name": "Pastel Anime Sky",
+       "text": "retro anime style, saturated pastel palette, volumetric cumulus clouds, clean ink outlines, surreal dreamscape, lo-fi aesthetic, vibrant twilight lighting"
+      },
+      {
+       "name": "Noir Cel",
+       "text": "1990s anime cel style, dramatic chiaroscuro lighting, analog film grain, saturated retro palette, star lens flare, hand-drawn ink outlines, noir cinematic atmosphere"
+      },
+      {
+       "name": "Lofi Anime",
+       "text": "lofi anime aesthetic, pastel color palette, surreal floating marine life, clean ink line art, nostalgic urban fantasy, magical realism, soft gradient lighting"
+      },
+      {
+       "name": "Pastel Rubberhose",
+       "text": "rubberhose animation style, bold black ink outlines, minimalist vector illustration, vibrant pastel and saturated palette, whimsical anthropomorphic character, flat graphic design, retro 1930s cartoon aesthetic"
+      },
+      {
+       "name": "Vintage Rubberhose",
+       "text": "rubber hose animation style, bold ink outlines, vintage print texture, halftone shading, mid-century commercial art, minimalist graphic illustration, risograph aesthetic"
+      },
+      {
+       "name": "Neon Pop Cartoon",
+       "text": "flat vector illustration, bold black outlines, saturated neon color palette, pop art surrealism, clean graphic design, high-contrast composition, modern character design"
+      },
+      {
+       "name": "Cel Comic",
+       "text": "bold cel-shaded line art, vibrant high-contrast palette, expressive character illustration, graphic vector style, neon accents, contemporary comic aesthetic, sharp geometric composition"
+      },
+      {
+       "name": "Editorial Vector",
+       "text": "flat vector illustration, bold graphic style, saturated color blocking, minimalist clean lines, geometric character design, contemporary editorial art, high contrast pop aesthetic"
+      },
+      {
+       "name": "Manga Pop",
+       "text": "minimalist manga illustration, bold ink line art, solid vibrant background, flat color blocking, high contrast graphic art, slice of life anime, pop art aesthetic"
+      },
+      {
+       "name": "Cyber Graphic Novel",
+       "text": "cyberpunk graphic novel style, bold ink outlines, neon synthwave palette, high-contrast cel-shading, dynamic action lines, halftone textures, retro-futuristic atmosphere"
+      }
+     ]
+    },
+    {
+     "name": "3D & Digital",
+     "styles": [
+      {
+       "name": "Satin Sculpt",
+       "text": "tactile 3d rendering, draped satin fabric, saturated color blocking, sculptural minimalist composition, soft studio lighting, high-contrast directional shadows, glossy and matte material juxtaposition"
+      },
+      {
+       "name": "Pastel Voxel",
+       "text": "voxel art, pastel color scheme, isometric 3D diorama, miniature toy aesthetic, soft volumetric lighting, cute blocky design, shallow depth of field"
+      },
+      {
+       "name": "Low-Poly Sunset",
+       "text": "low-poly 3D, voxel art style, golden hour sunset, nostalgic retro game graphics, volumetric lighting, pixelated textures, soft depth of field"
+      },
+      {
+       "name": "Clay Render",
+       "text": "3D clay render, matte texture, minimalist rounded geometry, soft studio lighting, playful design, clean solid background, tactile digital sculpture"
+      },
+      {
+       "name": "Claymation Toy",
+       "text": "3D claymation style, tactile toy aesthetic, soft pastel palette, matte and plush textures, chibi proportion, vibrant whimsical render, shallow depth of field"
+      },
+      {
+       "name": "Stop-Motion Felt",
+       "text": "tactile stop-motion style, felt and claymation textures, vibrant primary color palette, miniature diorama composition, shallow depth of field, whimsical character design, soft studio lighting"
+      },
+      {
+       "name": "Yarn Embroidery",
+       "text": "tactile textile landscape, 3D embroidery relief, needle felted fiber art, chunky yarn texture, handcrafted wool tapestry, whimsical pastoral scene, intricate stitch detail"
+      },
+      {
+       "name": "Needle Felt",
+       "text": "needle felted texture, tactile wool roving, soft-focus macro photography, biomorphic rounded forms, diffused warm studio lighting, minimalist background, fuzzy plush aesthetic"
+      },
+      {
+       "name": "Glass and Clay",
+       "text": "3D digital render, translucent glass and matte clay textures, minimalist studio lighting, cobalt blue color palette, smooth rounded contours, soft refractive gradients, clean neutral background"
+      },
+      {
+       "name": "Liquid Chrome",
+       "text": "liquid chrome, iridescent metallic, 3D fluid sculpture, holographic reflection, minimalist studio lighting, gradient background, futuristic design"
+      },
+      {
+       "name": "Holo Chrome",
+       "text": "liquid holographic chrome, refractive glass structures, electric cyan and cobalt glow, iridescent pearlescent sheen, dreamlike motion blur, retro digital grain, surreal fluid silhouettes"
+      },
+      {
+       "name": "Jelly Glass",
+       "text": "translucent iridescent glass, starburst lens flare, surreal 3D render, ethereal cloud background, jelly-like refraction, pastel rainbow gradients, soft-focus depth of field"
+      },
+      {
+       "name": "Pillowy Clay",
+       "text": "claymorphic 3D, vibrant matte texture, fluid surrealism, rounded pillowy shapes, high-contrast lighting, saturated color gradients, minimalist studio composition"
+      },
+      {
+       "name": "Eight-Bit Pixel",
+       "text": "pixel art, 8-bit retro gaming, dithered shading, cosmic surrealism, high-contrast palette, retro digital minimalism, nostalgic computer graphics"
+      },
+      {
+       "name": "Phosphor Pixel",
+       "text": "retro computer aesthetic, pixel art, CRT scanlines, dithered shading, phosphor glow, low-resolution graphics, 1-bit minimalist style"
+      },
+      {
+       "name": "VHS Tracking",
+       "text": "analog glitch art, CRT scanlines, chromatic aberration, VHS tracking error, pixelated decay, interlaced signal, cobalt blue aesthetic, retro digital distortion"
+      },
+      {
+       "name": "Pixel Sort Glitch",
+       "text": "glitch art, pixel sorting, digital decay, data corruption, monochromatic, clinical studio lighting, fragmented geometry"
+      },
+      {
+       "name": "One-Bit Desktop",
+       "text": "1-bit pixel art, 90s retro OS interface, chromatic aberration, dithering pattern, aliased pixelated lines, glitch art, vintage CRT monitor effect"
+      },
+      {
+       "name": "Weirdcore",
+       "text": "liminal space, weirdcore, chromatic aberration, low-poly CGI, VHS glitch effect, retro computer UI, uncanny dreamcore"
+      },
+      {
+       "name": "Amber Resin",
+       "text": "backlit amber luminescence, translucent golden resin, ethereal divine glow, macro crystalline texture, warm honey-colored light, molten organic surfaces, symbolist painterly detail"
+      },
+      {
+       "name": "Glass Product",
+       "text": "minimalist product photography, stark white background, cobalt blue accents, translucent glass and gel, sharp caustic refraction, high-contrast studio lighting, organic biomorphic shapes"
+      },
+      {
+       "name": "Earthy Product",
+       "text": "minimalist product photography, tactile textures, warm earthy palette, sculptural balancing, optical refraction, soft studio lighting, geometric and organic juxtaposition"
+      },
+      {
+       "name": "White Studio Render",
+       "text": "3D minimalist render, tactile matte texture, cobalt and violet palette, soft studio lighting, rounded organic forms, sub-surface scattering, clean white background"
+      }
+     ]
+    },
+    {
+     "name": "Retro & Vintage",
+     "styles": [
+      {
+       "name": "Technicolor Pop",
+       "text": "vintage halftone print, saturated technicolor palette, heavy film grain, mid-century retro aesthetic, lo-fi airbrush texture, pop surrealism, warm sun-drenched lighting"
+      },
+      {
+       "name": "Mid-Century Lithograph",
+       "text": "mid-century print aesthetic, halftone dot texture, vintage lithograph style, tactile yarn embroidery, distressed paper patina, saturated retro palette, graphic screenprint illustration"
+      },
+      {
+       "name": "Americana Collage",
+       "text": "vintage paper collage, retro-futurism, mid-century Americana, cosmic surrealism, halftone texture, analog film grain, surreal space landscape"
+      },
+      {
+       "name": "Seventies Film",
+       "text": "1970s vintage film grain, muted forest tones, overcast diffused lighting, cinematic realism, overgrown rustic pastoral, weathered organic textures, melancholic atmosphere"
+      },
+      {
+       "name": "Eighties Airbrush",
+       "text": "1980s airbrush illustration, nocturnal surrealism, vintage film grain, chromatic aberration, stippled glow, high-contrast chiaroscuro, cosmic lens flare, atmospheric dreamcore"
+      },
+      {
+       "name": "Chrome Airbrush",
+       "text": "liquid chrome surrealism, 1980s airbrush aesthetic, cobalt blue luminescence, starburst lens flare, retro-futurist digital collage, high-contrast metallic reflection, analog grain texture"
+      },
+      {
+       "name": "Seventies Sci-Fi Airbrush",
+       "text": "vintage airbrush texture, prismatic lens flare, retro-futuristic surrealism, twilight color gradient, analog film grain, mystical starburst glow, 70s sci-fi aesthetic"
+      },
+      {
+       "name": "Paperback Cosmos",
+       "text": "1970s sci-fi book cover art, prismatic light leaks, surreal scale juxtaposition, analog film grain, cosmic airbrush illustration, dramatic silhouette, psychedelic retro-futurism"
+      },
+      {
+       "name": "Vaporwave Grid",
+       "text": "poolcore, liminal space, vaporwave aesthetic, pastel grid tiles, dreamcore, surreal indoor oasis, soft diffused lighting"
+      },
+      {
+       "name": "Synthwave Noir",
+       "text": "retro-futurism, synthwave color palette, analog film grain, neon noir atmosphere, liminal space, CRT scanline texture, high-contrast lighting"
+      },
+      {
+       "name": "Engraved Collage",
+       "text": "vintage surrealist collage, botanical illustration, engraving texture, torn paper layers, monochrome portraiture, saturated color accents, aged parchment, dreamlike juxtaposition"
+      },
+      {
+       "name": "Cut and Paste",
+       "text": "surrealist collage, vintage halftone texture, analog cut-and-paste aesthetic, saturated color juxtaposition, retro-futurism, botanical surrealism, dadaist composition"
+      },
+      {
+       "name": "Tri-Tone Lithograph",
+       "text": "vintage lithograph texture, halftone dot pattern, stippled pointillism, tri-tone color palette, surrealist botanical illustration, retro risograph style, woodcut engraving aesthetic"
+      },
+      {
+       "name": "Pastel Dreamcore",
+       "text": "retro-futuristic surrealism, pastel dreamcore, nostalgic liminal space, uncanny pastoral, vintage film aesthetic, soft cinematic lighting, bizarre juxtaposition"
+      },
+      {
+       "name": "Die-Cut Space",
+       "text": "retro-futuristic surrealism, cosmic void portals, vintage die-cut collage, metaphysical landscape, saturated mid-century print, airbrush gradient, cracked oil painting texture"
+      },
+      {
+       "name": "Retro One-Point",
+       "text": "retro-surrealism, one-point perspective, hyper-saturated primary colors, cloudless blue sky, liminal space, geometric composition, sharp-edged graphic style"
+      },
+      {
+       "name": "Mid-Century Fisheye",
+       "text": "mid-century modern, retro surrealism, vibrant color blocking, fisheye lens distortion, warm cinematic lighting, geometric architectural detail, eclectic maximalist interior"
+      },
+      {
+       "name": "Glitter Dreamcore",
+       "text": "dreamcore aesthetic, vintage analog film grain, twilight color palette, starburst lens flare, magical realism, shimmering glitter overlay, soft glow bloom"
+      }
+     ]
+    },
+    {
+     "name": "Fantasy & Sci-Fi",
+     "styles": [
+      {
+       "name": "Neon Dark Fantasy",
+       "text": "bioluminescent glow, dark fantasy illustration, chiaroscuro lighting, painterly digital texture, neon accent lighting, ethereal atmospheric depth, high-contrast noir"
+      },
+      {
+       "name": "Crimson Gothic",
+       "text": "dark gothic fantasy, chiaroscuro lighting, fiery crimson accents, expressive impasto texture, ominous atmosphere, dynamic painterly brushstrokes, high contrast composition"
+      },
+      {
+       "name": "Primeval Mist",
+       "text": "cinematic dark fantasy, misty primordial forest, overgrown ancient ruins, desaturated green and earth tones, volumetric atmospheric lighting, scale comparison, moss-draped textures"
+      },
+      {
+       "name": "Apocalyptic Ruins",
+       "text": "chiaroscuro lighting, apocalyptic dark fantasy, monumental ruined architecture, obsidian and crimson palette, sublime dramatic scale, volcanic atmospheric gloom"
+      },
+      {
+       "name": "Teal Gothic Fog",
+       "text": "gothic dark fantasy, chiaroscuro lighting, bioluminescence, volumetric fog, intricate metallic detail, haunting atmosphere, monochromatic teal palette"
+      },
+      {
+       "name": "Ink Gothic",
+       "text": "dark fantasy, ink wash, crimson accents, high-contrast engraving, gothic surrealism, skeletal motifs, textured parchment, intricate line art"
+      },
+      {
+       "name": "Cyberpunk Megacity",
+       "text": "cyberpunk megacity, volumetric atmospheric haze, high-contrast neon lighting, rain-slicked urban canyons, dramatic vertical perspective, futuristic industrial decay, magenta and cyan color palette"
+      },
+      {
+       "name": "Cyberpunk Noir",
+       "text": "cyberpunk noir, high-contrast silhouette, neon rim lighting, duotone lighting, saturated electric color palette, futuristic cinematic portrait, minimalist graphic composition"
+      },
+      {
+       "name": "Lofi Cyberpunk",
+       "text": "lofi cyberpunk aesthetic, cluttered interior, neon ambient lighting, vibrant digital illustration, dramatic shadow contrast, lived-in storytelling, saturated neon palette"
+      },
+      {
+       "name": "Brutalist Megastructure",
+       "text": "brutalist sci-fi megastructures, monolithic concrete architecture, atmospheric hazy environment, muted cold tones with warm accents, monumental industrial scale, dystopian cinematic realism"
+      },
+      {
+       "name": "Industrial Retro-Future",
+       "text": "industrial retro-futurism, colossal megastructures, weathered metal textures, atmospheric haze, hard surface engineering, painterly industrial detail, utilitarian sci-fi design"
+      },
+      {
+       "name": "Solarpunk Ruins",
+       "text": "monolithic industrial ruins, overgrown solarpunk, cinematic atmospheric scale, misty mountain megastructures, decaying futuristic architecture, high-angle vertical perspective, lush jungle reclamation"
+      },
+      {
+       "name": "Eco-Futurism",
+       "text": "solarpunk, biophilic architecture, aerial perspective, organic curves, misty tropical landscape, vertical forests, eco-futurism"
+      },
+      {
+       "name": "Painted Solarpunk",
+       "text": "stylized digital painting, solarpunk aesthetic, vibrant color palette, lush overgrown nature, high-contrast lighting, painterly textures, atmospheric depth"
+      },
+      {
+       "name": "Crystal Cavern",
+       "text": "bioluminescent subterranean landscape, stylized digital fantasy, glowing crystalline structures, high-contrast atmospheric lighting, deep blue and cyan gradient, mystical god rays, geometric rock formations"
+      },
+      {
+       "name": "Celestial Storybook",
+       "text": "whimsical storybook illustration, painterly texture, glowing celestial elements, dreamy nocturnal landscape, swirling brushstrokes, vibrant indigo and emerald palette, soft-focus fantasy"
+      },
+      {
+       "name": "Twilight Magical Realism",
+       "text": "magical realism, twilight atmosphere, lush botanical detail, iridescent light, stylized landscape, nocturnal fantasy, high contrast, dreamlike mood"
+      },
+      {
+       "name": "Deep Space Noir",
+       "text": "deep space noir, ethereal light, analog film grain, glowing nebula, chiaroscuro lighting, retro-futuristic haze, cosmic mystery, diffused lens flare"
+      },
+      {
+       "name": "Fractal Moss",
+       "text": "mossy textures, verdant forest palette, chiaroscuro lighting, surreal organic structures, intricate fractal growth, botanical fantasy, dreamlike atmosphere"
+      },
+      {
+       "name": "Glowing Botanical",
+       "text": "bioluminescent botanical macro, neon fluorescence, ethereal violet and cyan gradients, surreal organic textures, studio lighting precision, glowing plant veins, dreamy macro photography"
+      }
+     ]
+    },
+    {
+     "name": "Abstract & Surreal",
+     "styles": [
+      {
+       "name": "Cloud Minimalism",
+       "text": "minimalist surrealism, ethereal cloud textures, soft diffuse lighting, sculptural white forms, pastel gradient backdrop, serene dreamscape, high-key composition"
+      },
+      {
+       "name": "Pearl Biomorph",
+       "text": "translucent textures, icy blue and pearlescent palette, soft diffused backlighting, biomorphic minimalism, ethereal high-fashion, rim-lit silhouettes, sculptural elegance"
+      },
+      {
+       "name": "Mirror Horizon",
+       "text": "surreal minimalism, glass-like perfect reflection, ethereal dreamscape, soft pastel gradients, symmetrical composition, vast horizon, diffused golden hour light"
+      },
+      {
+       "name": "Colour Field Aura",
+       "text": "chromatic aura gradient, minimalist color field, soft focus glow, tactile paper grain, atmospheric color bleed, hazy light halo, abstract geometry"
+      },
+      {
+       "name": "Psychedelic Airbrush",
+       "text": "airbrush gradient, thermal aura glow, soft-focus blur, grainy texture, psychedelic dreamscape, vibrant color bleed, silhouette halo"
+      },
+      {
+       "name": "Blueprint Grid",
+       "text": "geometric grid overlay, hyperrealistic minimalist, surreal landscape intervention, high-contrast technical blueprint, saturated blues and greens, liminal architectural space, sharp graphic shadows"
+      },
+      {
+       "name": "Moire Topography",
+       "text": "high-contrast monochrome, topographic line art, glitch art distortion, moire pattern, chromatic aberration, optical illusion, digital signal degradation, psychedelic wave"
+      },
+      {
+       "name": "Contour Linocut",
+       "text": "topographic contour lines, surrealist linocut texture, glowing energy aura, high-contrast duotone, psychedelic wave patterns, mythic silhouette, vintage print grain"
+      },
+      {
+       "name": "Holographic Glitch",
+       "text": "chromatic aberration, holographic iridescent texture, digital glitch distortion, neon spectrum gradients, CRT scanline artifacts, liquid metallic sheen, pixel sorted patterns"
+      },
+      {
+       "name": "Iridescent Liquid",
+       "text": "iridescent liquid texture, spectral motion blur, prismatic color gradients, deep violet and teal palette, holographic light trails, surreal geometric abstraction, ethereal layered translucency"
+      },
+      {
+       "name": "Terracotta Arches",
+       "text": "minimalist surrealism, terracotta architecture, geometric arches, sculptural plaster, dramatic sunlight, monochromatic warm palette, hypnotic perspective"
+      },
+      {
+       "name": "Slit-Scan Gradient",
+       "text": "ethereal chromatic gradient, glowing ambient aura, slit-scan motion blur, vibrant thermal color palette, soft-focus digital abstraction, temporal distortion, luminous light leak"
+      },
+      {
+       "name": "Fluted Glass",
+       "text": "fluted glass distortion, botanical macro minimalism, ribbed texture refraction, high-key natural lighting, organic digital fusion, vertical linear abstraction, surreal minimalist composition"
+      },
+      {
+       "name": "Weightless Sky",
+       "text": "minimalist surrealism, bright cerulean sky, sharp natural sunlight, high-contrast white textures, weightless floating objects, sculptural composition, airy dreamlike atmosphere"
+      },
+      {
+       "name": "Glowing Monolith",
+       "text": "minimalist geometric monolith, volumetric light, twilight atmosphere, surreal landscape, ethereal glowing portal, cinematic high contrast, atmospheric fog"
+      },
+      {
+       "name": "Desert Geometry",
+       "text": "minimalist geometry, sharp architectural shadows, arid desert landscape, deep blue sky, monumental scale, high-contrast lighting, surreal minimalism, clean architectural lines"
+      },
+      {
+       "name": "Pixel-Stretch Grid",
+       "text": "minimalist surrealism, temporal distortion, architectural grid, pixel-stretched glitch, high-contrast monochrome, uncanny dreamscape, sharp focus"
+      },
+      {
+       "name": "Soft Plush Surreal",
+       "text": "soft surrealism, tactile texture, minimalist studio lighting, muted earth tones, whimsical hybrid, levitating objects, plush and clay materials"
+      },
+      {
+       "name": "Pastel Twilight Glass",
+       "text": "surrealism, pastel twilight gradient, ethereal lighting, magical realism, reflective glass elements, dreamlike atmosphere, cinematic soft focus"
+      }
+     ]
+    }
+   ]
+  }
+ }
+}
