@@ -669,9 +669,6 @@ def font(size: int, bold: bool = False) -> tuple:
 CLIP_DEFAULT = "(workflow default)"
 
 
-def preset_stem(name: str) -> str:
-    """File-name-safe preset name."""
-    return re.sub(r"[^\w .\-]", "_", name.strip(), flags=re.UNICODE).strip(". ") or "preset"
 
 PAGE_NOT_SAVED = ("mode", "workflow", "clip", "checkpoint", "seed", "prompt", "negative", "variants")   # what "Set as my settings" leaves out: the page itself, the text, the seed and the number of variants
 BG, PANEL, FG, MUTED, ACCENT = "#535353", "#282828", "#eeeeee", "#cfcfcf", "#378ef0"   # PhotoCraft grey and blue (both measured from a screenshot); PANEL = inactive tab, fields, buttons, slots
@@ -814,7 +811,6 @@ __all__ = [
     "FONT",
     "font",
     "CLIP_DEFAULT",
-    "preset_stem",
     "BG",
     "PANEL",
     "NA_RED",

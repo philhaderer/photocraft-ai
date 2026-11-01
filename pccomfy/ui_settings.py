@@ -261,22 +261,6 @@ class SettingsMixin(DownloadMixin):
         self._on_model_core()
         self._apply_start_state()
 
-    # ---------- presets ----------
-
-    def preset_blocked(self, settings: dict) -> str:
-        """For a preset: "" when its model and mode can run, else a short note ("Flux 3 Klein Edit is missing files ..."). The preset
-        loader (gui_state.py, see docs/archiv/entscheidungen-L1.md) uses it to leave the model out and say why."""
-        wf = settings.get("workflow") if isinstance(settings, dict) else None
-        m = models.model_for_workflow(wf) if wf and wf != BUILTIN else None
-        if m is None or self.inv is None:
-            return ""
-        mode = settings.get("mode")
-        st = self.inv.mode_status(m.key, mode) if mode in m.modes else self.inv.tab_status(m.key)
-        if st.state != "missing":
-            return ""
-        names = [f.name for f in st.missing] + list(st.nodes)
-        return f"{m.label} is missing files: {', '.join(names[:2])}{' ...' if len(names) > 2 else ''} (see settings)"
-
     # ---------- preflight ----------
 
     def _reread_inventory(self):

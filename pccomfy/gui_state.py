@@ -1,4 +1,4 @@
-"""Settings state: collect, apply, presets, refresh from PhotoCraft, saved state. (moved out of gui.py unchanged; see PLAN.md, phase 0)."""
+"""Settings state: collect, apply, refresh from PhotoCraft, saved state. (moved out of gui.py unchanged; see PLAN.md, phase 0)."""
 from __future__ import annotations
 
 from .gui_common import *  # noqa: F401,F403
@@ -63,7 +63,7 @@ class StateMixin:
         if info.get("err"):
             self._status(info["err"], error=True)
 
-    # ---------- presets (save / load everything, incl. the prompt) ----------
+    # ---------- collect / apply (history, saved pages) ----------
 
     def _collect(self) -> dict:
         """Every setting in the window, as plain JSON values."""
@@ -173,79 +173,6 @@ class StateMixin:
         self._sync_model()
         return notes
 
-    def _preset_path(self, name: str) -> Path:
-        return self.presets_dir / (preset_stem(name) + ".json")
-
-    def refresh_presets(self, select: str | None = None):
-        names = sorted(p.stem for p in self.presets_dir.glob("*.json")) if self.presets_dir.is_dir() else []
-        self.cb_preset["values"] = names
-        if select is not None:
-            self.v_preset.set(select)
-        elif self.v_preset.get() not in names:
-            self.v_preset.set("")
-
-    def save_preset(self):
-        name = self.v_preset.get().strip()
-        if not name:
-            self.save_preset_as()
-        else:
-            self._write_preset(name)
-
-    def save_preset_as(self):
-        name = simpledialog.askstring("Save preset", "Preset name:", parent=self.root, initialvalue=self.v_preset.get())
-        if not name or not name.strip():
-            return
-        if self._preset_path(name).exists() and preset_stem(name) != self.v_preset.get():
-            if not messagebox.askyesno("Save preset", f"A preset named “{preset_stem(name)}” exists. Overwrite it?", parent=self.root):
-                return
-        self._write_preset(name)
-
-    def _write_preset(self, name: str):
-        try:
-            settings = self._collect()
-        except (tk.TclError, ValueError) as e:
-            self._status(f"Invalid value, preset not saved: {e}", error=True)
-            return
-        stem = preset_stem(name)
-        data = {"format": 1, "name": stem, "saved": datetime.now().isoformat(timespec="seconds"), "settings": settings}
-        try:
-            self.presets_dir.mkdir(parents=True, exist_ok=True)
-            self._preset_path(stem).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-        except OSError as e:
-            self._status(f"Could not save the preset: {e}", error=True)
-            return
-        self.refresh_presets(select=stem)
-        self._status(f"Saved preset “{stem}”.")
-
-    def load_preset(self, name: str):
-        if not name:
-            return
-        try:
-            data = json.loads(self._preset_path(name).read_text(encoding="utf-8"))
-        except (OSError, ValueError) as e:
-            self._status(f"Could not load the preset: {e}", error=True)
-            return
-        settings = data.get("settings", data) if isinstance(data, dict) else {}
-        blocked = self.preset_blocked(settings)      # L1: a preset whose model has missing files keeps the current tab and says why
-        if blocked:
-            settings = {k: v for k, v in settings.items() if k not in ("mode", "workflow", "model")}
-        notes = ([blocked] if blocked else []) + self._apply_settings(settings)
-        self._status(f"Loaded preset “{name}”." + (f" Not applied: {'; '.join(notes)}." if notes else ""))
-
-    def delete_preset(self):
-        name = self.v_preset.get().strip()
-        if not name:
-            return
-        if not messagebox.askyesno("Delete preset", f"Delete the preset “{name}”?", parent=self.root):
-            return
-        try:
-            self._preset_path(name).unlink()
-        except OSError as e:
-            self._status(f"Could not delete the preset: {e}", error=True)
-            return
-        self.refresh_presets(select="")
-        self._status(f"Deleted preset “{name}”.")
-
     def _save_state(self, req: Request):
         p = req.params
         cfgmod.save_state({
@@ -253,7 +180,7 @@ class StateMixin:
             "negative": p.negative, "steps": p.steps, "cfg": p.cfg, "denoise": self.v_denoise.get(),
             "sampler": p.sampler, "scheduler": p.scheduler, "variants": req.variants, "base_res": req.base_res,
             "context": req.context, "mask_grow": req.mask_grow, "mask_blur": req.mask_blur, "overlap": req.overlap, "scale": req.scale,
-            "preset": self.v_preset.get(), "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "prompt_h": self._prompt_lines(), "enhance": bool(self.v_enhance.get()), "turbo": req.turbo, "layer_mask": req.layer_mask, "mask_density": req.mask_density,
+            "on_top": bool(self.v_top.get()), "adv_open": bool(self.v_adv_open.get()), "model": self.v_model.get(), "neg_open": bool(self.v_neg_open.get()), "prompt_h": self._prompt_lines(), "enhance": bool(self.v_enhance.get()), "turbo": req.turbo, "layer_mask": req.layer_mask, "mask_density": req.mask_density,
             "stage_on": req.stage_on, "stage2_on": bool(self.v_stage2.get()), "stage3_on": bool(self.v_stage3.get()), "stage_strengths": [round(float(v.get()), 2) for v in self.v_sstr], "detail": req.detail, "sharpen": round(float(self.v_sharpen.get()), 2), "match": req.match, "loras": [list(x) for x in req.loras], "lora_strength": req.lora_strength if req.lora_strength is not None else self.state.get("lora_strength", 1.0),
             "runs": dict(self.state.get("runs", {})),
             "model_by_mode": dict(getattr(self, "_mode_model", None) or self.state.get("model_by_mode") or {}),

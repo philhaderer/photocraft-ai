@@ -24,8 +24,6 @@ def _config_dir() -> Path:
 CONFIG_DIR = _config_dir()
 # Windows: the workflows shipped next to the code; elsewhere: ~/.config/pccomfy/workflows
 WORKFLOWS_DIR = _ROOT / "workflows" if os.name == "nt" else CONFIG_DIR / "workflows"
-# Windows: <bridge folder>\\presets (outside data\\, so git tracks them); elsewhere: ~/.config/pccomfy/presets
-PRESETS_DIR = _ROOT / "presets" if os.name == "nt" else CONFIG_DIR / "presets"
 EXCHANGE_DIR = CONFIG_DIR / "exchange" if os.name == "nt" else Path("~/.cache/pccomfy/exchange")
 CONFIG_FILE = CONFIG_DIR / "config.toml"
 STATE_FILE = CONFIG_DIR / "state.json"
