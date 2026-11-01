@@ -159,11 +159,9 @@ def test_status():
     st = inventory.Inventory(lists, nodes=inv.nodes).tab_status("flux2")
     assert st.state == "missing" and set(st.detail) == {"upscale", "refine"}, st
 
-    # a missing AusBoss node blocks Flux 3 Upscale, and the message names the pack
+    # Flux 3 Upscale needs no custom node pack any more (standard nodes since 2.11.): unknown node classes do not block it
     i4 = inventory.Inventory(full_lists(), nodes={"SomethingElse"})
-    ms = i4.mode_status("flux3", "upscale")
-    assert ms.state == "missing" and "AUSBOSS_NODES_TiledUpscale" in ms.nodes
-    assert any("ComfyUI-AusBoss" in ln for ln in inventory.preflight(i4, "flux3", "upscale"))
+    assert i4.mode_status("flux3", "upscale").state == "ready" and not inventory.preflight(i4, "flux3", "upscale")
     # node classes not read (None): never a reason to block
     assert inventory.Inventory(full_lists(), nodes=None).mode_status("flux3", "upscale").state == "ready"
 

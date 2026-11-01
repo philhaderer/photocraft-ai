@@ -379,7 +379,7 @@ def main():
     seed = next(d for d in file_rows(app) if d["name"] == "seedvr2_3b_int8_convrot.safetensors")
     assert seed["url"] == manifest.FILES[seed["name"]].url and seed["size"] == "3.5 GB" and seed["path"] == "/diffusion_models/" + seed["name"]
     nodes = [row for row in app._settings_rows() if row[0] == "node"]
-    assert any(n[1] == "AUSBOSS_NODES_TiledUpscale" and n[3] == "https://github.com/ausboss/ComfyUI-AusBoss" for n in nodes)
+    assert not any(n[1].startswith("AUSBOSS_NODES_") for n in nodes)          # Flux 3 Upscale needs no AusBoss nodes any more (2.11.)
     # BiRefNet and the preview decoders stand once, under "Additional models", with what they are for (user 30.10.)
     extra = {d["name"]: d for d in file_rows(app) if d.get("use")}
     assert set(extra) == {n for n, f in manifest.FILES.items() if f.kind in ("bg_removal", "preview")}, set(extra)

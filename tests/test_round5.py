@@ -193,13 +193,12 @@ def main():
     assert packs and packs[0][1].get("after") is app._below_prompt() and app._below_prompt() in (app.f_enh, app.f_neg), packs
     assert app.sep_adv is not None
 
-    # Restore LoRA (AusBoss loader): the name is matched against the server's list; a missing file is an error, never a silent skip
+    # Restore LoRA (a standard LoRA loader since 2.11.): the name is matched against the server's list; a missing file is an error, never a silent skip
     f3 = workflows.load_template(t.ROOT / "workflows" / "flux3-klein-upscale.json")
-    assert f3["9"]["inputs"]["on_missing"] == "error"
     g3, miss = workflows.fix_lora_names(f3, ["Flux 3\\flux-3-image-klein-restore.safetensors"])
-    assert not miss and json.loads(g3["9"]["inputs"]["loras"])[0]["name"] == "Flux 3\\flux-3-image-klein-restore.safetensors"
+    assert not miss and g3["9"]["inputs"]["lora_name"] == "Flux 3\\flux-3-image-klein-restore.safetensors"
     g3, miss = workflows.fix_lora_names(f3, ["Flux 3/Flux-3-Image-Klein-Restore.safetensors"])      # other separator / case: the listed name is used
-    assert not miss and json.loads(g3["9"]["inputs"]["loras"])[0]["name"] == "Flux 3/Flux-3-Image-Klein-Restore.safetensors"
+    assert not miss and g3["9"]["inputs"]["lora_name"] == "Flux 3/Flux-3-Image-Klein-Restore.safetensors"
     _, miss = workflows.fix_lora_names(f3, ["Flux 2\\ultra_real_v4.safetensors"])
     assert miss == ["Flux 3\\flux-3-image-klein-restore.safetensors"]
     off, miss = workflows.fix_lora_names(workflows.bypass_lora(f3), [])                          # switched off: nothing to find
@@ -209,9 +208,9 @@ def main():
         assert models.BY_KEY[key].modes["remove"].remove_text, key
     assert [k for k, _ in gui.MODE_LABELS][:6] == ["txt2img", "outpaint", "inpaint", "remove", "edit", "multi_edit"]
 
-    # Flux 3: 15 steps in every workflow (the SeedVR2 pre-stage keeps its one step); Upscale shows "x 1.5"; a line above "Prompt"
-    for wf in ("flux3-klein-edit.json", "flux3-klein-t2i.json", "flux3-klein-upscale.json"):
-        assert workflows.sampler_values(workflows.load_template(t.ROOT / "workflows" / wf))["steps"] == 15, wf
+    # Flux 3: 15 steps in the edit and text to image workflows, 8 in Upscale (user 2.11.; the SeedVR2 pre-stage keeps its one step); Upscale shows "x 1.5"; a line above "Prompt"
+    for wf, steps in (("flux3-klein-edit.json", 15), ("flux3-klein-t2i.json", 15), ("flux3-klein-upscale.json", 8)):
+        assert workflows.sampler_values(workflows.load_template(t.ROOT / "workflows" / wf))["steps"] == steps, wf
     assert app.sep_prompt is not None and gui.scale_text(1.5) == "x 1.5" and gui.scale_text("2.0") == "x 2"
     assert app.sep_status["style"] == app.sep_prompt["style"] == "Sep.TFrame" and app.sep_status["height"] == 1   # the same light line above the progress line
 

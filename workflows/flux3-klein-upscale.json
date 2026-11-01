@@ -9,29 +9,27 @@
   }
  },
  "3": {
-  "class_type": "AUSBOSS_NODES_TiledUpscale",
+  "class_type": "ImageScaleToTotalPixels",
+  "_meta": {
+   "title": "pc:upscale Megapixels of the result"
+  },
   "inputs": {
-   "megapixels": 4,
-   "tile_megapixels": 2,
-   "overlap": 128,
-   "multiple": 32,
-   "max_growth": 8,
    "image": [
     "2",
     0
-   ]
-  },
-  "_meta": {
-   "title": "pc:upscale Megapixels of the result"
+   ],
+   "upscale_method": "lanczos",
+   "megapixels": 4,
+   "resolution_steps": 32
   }
  },
  "5": {
-  "class_type": "AUSBOSS_NODES_Seed",
-  "inputs": {
-   "seed": 20261016
-  },
+  "class_type": "PrimitiveInt",
   "_meta": {
    "title": "pc:sampler Seed"
+  },
+  "inputs": {
+   "value": 20261016
   }
  },
  "6": {
@@ -65,20 +63,19 @@
   }
  },
  "9": {
-  "class_type": "AUSBOSS_NODES_LoraLoader",
-  "inputs": {
-   "loras": "[{\"name\":\"Flux 3\\\\flux-3-image-klein-restore.safetensors\",\"strength\":0.5,\"enabled\":true,\"triggers\":\"\"}]",
-   "trigger_separator": ", ",
-   "on_missing": "error",
-   "model": [
-    "8",
-    0
-   ]
-  },
+  "class_type": "LoraLoaderModelOnly",
   "_meta": {
    "title": "pc:lora LoRA Loader - Restore LoRA",
    "pc_lora_label": "Restore LoRA",
    "pc_lora_tip": "Restore LoRA: faces and details stay closer to the picture."
+  },
+  "inputs": {
+   "lora_name": "Flux 3\\flux-3-image-klein-restore.safetensors",
+   "strength_model": 0.5,
+   "model": [
+    "8",
+    0
+   ]
   }
  },
  "10": {
@@ -100,16 +97,6 @@
    "title": "SeedVR2 VAE"
   }
  },
- "24": {
-  "class_type": "AUSBOSS_NODES_Text",
-  "inputs": {
-   "text": ""
-  },
-  "_meta": {
-   "title": "pc:prompt The request (what each tile is asked to do)",
-   "pc_default_prompt": "Restore the photo: remove blur, noise and compression artifacts and recover sharp, natural detail, keeping the same composition and colors."
-  }
- },
  "144": {
   "class_type": "GetImageSize",
   "inputs": {
@@ -123,20 +110,20 @@
   }
  },
  "145": {
-  "class_type": "AUSBOSS_NODES_MathExpression",
+  "class_type": "ComfyMathExpression",
   "inputs": {
    "expression": "min(12, max(a * c, 9 * b * b * c / a) / 1000000)",
-   "a": [
-    "3",
-    3
+   "values.a": [
+    "166",
+    0
    ],
-   "b": [
+   "values.b": [
     "144",
     0
    ],
-   "c": [
-    "3",
-    4
+   "values.c": [
+    "166",
+    1
    ]
   },
   "_meta": {
@@ -144,28 +131,21 @@
   }
  },
  "146": {
-  "class_type": "AUSBOSS_NODES_ImageResize",
+  "class_type": "ImageScaleToTotalPixels",
+  "_meta": {
+   "title": "Image Resize - Your picture at that size"
+  },
   "inputs": {
-   "target_mode": "megapixels",
-   "width": 0,
-   "height": 0,
-   "edge_length": 1024,
+   "image": [
+    "2",
+    0
+   ],
+   "upscale_method": "lanczos",
    "megapixels": [
     "145",
     0
    ],
-   "scale_factor": 0.5,
-   "keep_proportion": "fit",
-   "fill_color": "#000000",
-   "divisible_by": 32,
-   "interpolation": "lanczos",
-   "image": [
-    "2",
-    0
-   ]
-  },
-  "_meta": {
-   "title": "Image Resize - Your picture at that size"
+   "resolution_steps": 32
   }
  },
  "147": {
@@ -291,12 +271,12 @@
   "inputs": {
    "upscale_method": "lanczos",
    "width": [
-    "3",
-    3
+    "166",
+    0
    ],
    "height": [
-    "3",
-    4
+    "166",
+    1
    ],
    "crop": "disabled",
    "image": [
@@ -336,36 +316,38 @@
   }
  },
  "154": {
-  "class_type": "AUSBOSS_NODES_TiledUpscale",
+  "class_type": "SplitImageToTileList",
+  "_meta": {
+   "title": "Split Image into Tiles - Equal tiles of about 2 MP"
+  },
   "inputs": {
-   "megapixels": 0,
-   "tile_megapixels": 2,
-   "overlap": 128,
-   "multiple": 32,
-   "max_growth": 8,
    "image": [
     "153",
     0
-   ]
-  },
-  "_meta": {
-   "title": "Tiled Upscale - Cut into tiles at this size"
+   ],
+   "tile_width": [
+    "170",
+    1
+   ],
+   "tile_height": [
+    "171",
+    1
+   ],
+   "overlap": 128
   }
  },
  "159": {
   "class_type": "CLIPTextEncode",
   "inputs": {
-   "text": [
-    "24",
-    0
-   ],
+   "text": "",
    "clip": [
     "6",
     0
    ]
   },
   "_meta": {
-   "title": "CLIP Text Encode - The request"
+   "title": "pc:prompt The request (what each tile is asked to do)",
+   "pc_default_prompt": "Restore the photo: remove blur, noise and compression artifacts and recover sharp, natural detail, keeping the same composition and colors."
   }
  },
  "160": {
@@ -406,10 +388,10 @@
   }
  },
  "162": {
-  "class_type": "AUSBOSS_NODES_MathExpression",
+  "class_type": "ComfyMathExpression",
   "inputs": {
    "expression": "a + 1",
-   "a": [
+   "values.a": [
     "5",
     0
    ]
@@ -425,7 +407,7 @@
     "162",
     1
    ],
-   "steps": 15,
+   "steps": 8,
    "cfg": 1,
    "sampler_name": "euler",
    "scheduler": "simple",
@@ -448,7 +430,7 @@
    ]
   },
   "_meta": {
-   "title": "KSampler - 15 steps, each tile drawn again"
+   "title": "KSampler - 8 steps, each tile drawn again"
   }
  },
  "164": {
@@ -468,32 +450,115 @@
   }
  },
  "165": {
-  "class_type": "AUSBOSS_NODES_TiledUpscaleStitch",
+  "class_type": "ImageMergeTileList",
+  "_meta": {
+   "title": "Merge Tiles - Join the tiles"
+  },
   "inputs": {
-   "keep_colors": 1,
-   "tiles": [
+   "image_list": [
     "164",
     0
    ],
-   "stitcher": [
-    "154",
+   "final_width": [
+    "166",
+    0
+   ],
+   "final_height": [
+    "166",
     1
-   ]
-  },
-  "_meta": {
-   "title": "Tiled Upscale Stitch - Join the tiles"
+   ],
+   "overlap": 128
   }
  },
  "16": {
   "class_type": "PreviewImage",
   "inputs": {
    "images": [
-    "165",
+    "173",
     0
    ]
   },
   "_meta": {
    "title": "pc:output Result"
+  }
+ },
+ "166": {
+  "class_type": "GetImageSize",
+  "_meta": {
+   "title": "Get Image Size - The result's size"
+  },
+  "inputs": {
+   "image": [
+    "3",
+    0
+   ]
+  }
+ },
+ "170": {
+  "class_type": "ComfyMathExpression",
+  "inputs": {
+   "expression": "ceil(((a - 128) / max(1, ceil((a - 128) / 1280)) + 128) / 32) * 32",
+   "values.a": [
+    "166",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Math Expression - Tile width (equal tiles, about 1280 px apart)"
+  }
+ },
+ "171": {
+  "class_type": "ComfyMathExpression",
+  "inputs": {
+   "expression": "ceil(((a - 128) / max(1, ceil((a - 128) / 1280)) + 128) / 32) * 32",
+   "values.a": [
+    "166",
+    1
+   ]
+  },
+  "_meta": {
+   "title": "Math Expression - Tile height (equal tiles, about 1280 px apart)"
+  }
+ },
+ "172": {
+  "class_type": "ImageScale",
+  "inputs": {
+   "image": [
+    "2",
+    0
+   ],
+   "upscale_method": "lanczos",
+   "width": [
+    "166",
+    0
+   ],
+   "height": [
+    "166",
+    1
+   ],
+   "crop": "disabled"
+  },
+  "_meta": {
+   "title": "Upscale Image - Your picture at the size of the result (colour reference)"
+  }
+ },
+ "173": {
+  "class_type": "ColorMatch",
+  "inputs": {
+   "image_ref": [
+    "172",
+    0
+   ],
+   "image_target": [
+    "165",
+    0
+   ],
+   "method": "mkl",
+   "strength": 1.0,
+   "multithread": true
+  },
+  "_meta": {
+   "title": "Color Match (KJNodes) - Colours back to your picture"
   }
  },
  "12": {
