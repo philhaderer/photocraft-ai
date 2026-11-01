@@ -29,7 +29,7 @@ for name in ("BUILTIN", "MODE_LABELS", "SHORT_MODES", "LAYER_MASKS", "CLIP_DEFAU
 
 # 3. models: Expand is on for Flux 3 (26.10.), off for Krea 2 and MOSS (blind test 29.10.); the new fields start neutral
 by = models.BY_KEY
-assert list(by["flux3"].modes) == ["txt2img", "edit", "multi_edit", "remove", "outpaint", "upscale"]
+assert list(by["flux3"].modes) == ["txt2img", "edit", "multi_edit", "remove", "outpaint", "upscale", "refine"]
 assert list(by["krea2"].modes) == ["txt2img"]
 assert list(by["flux2"].modes) == ["txt2img", "edit", "multi_edit", "remove", "outpaint", "upscale", "refine"]
 assert list(by["qwen"].modes) == ["txt2img", "edit", "multi_edit", "inpaint", "outpaint", "remove"]

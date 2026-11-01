@@ -61,6 +61,11 @@ FLUX2_REFINE_PROMPTS = (
     ("Neutral", RELIGHT_NEUTRAL, "Relight: soft, even, neutral light without harsh shadows, true-to-life colours."),
     ("Studio portrait", RELIGHT_STUDIO, "Relight: a professionally lit studio portrait with soft, diffused light."),
 )
+FLUX3_RESTORE = "Restore this old photo: remove scratches, white lines, dust, folds and stains, and bring back sharp facial detail. Keep the people, their faces, their expressions, their poses and the framing exactly unchanged."   # after Pixaroma's "Restore and Colorize" (wording agreed with the user 1.11.)
+FLUX3_REFINE_PROMPTS = (
+    ("Default", FLUX3_DEFAULT, "The workflow's own prompt: restore sharp, natural detail."),
+    ("Restore", FLUX3_RESTORE, "Repair an old or damaged photo: scratches, dust, folds and stains go, faces get their detail back."),
+)
 FIBO_REFINE = "relight the scene to natural lighting"   # Fibo Refine's old prompt (now FLUX2_DEFAULT, user 28.10.); kept as a stock text
 FILL_TIP = "Draw a selection and prompt e.g. “a red flower”. Hide layers from previous results before running again."   # wording from the user (28.10.)
 QWEN_SMALL = "Small selections don't work well with Qwen."   # user 30.10.: small fills came out shifted (helikopter.psd)
@@ -74,7 +79,7 @@ EXPAND_DESCRIBE_TIP = ("This model needs a prompt: describe the surroundings onl
 DESCRIBE_TIP = "Add a short description of your image in front of this text."   # Refine and Upscale, wording chosen by the user (28.10.)
 T2I_TIP = "Text to image: a completely new image is added to the canvas as a new layer."
 FLUX3_DEFAULT_OLD = "Restore the photo: remove blur, noise and compression artifacts and recover sharp, natural detail, keeping the same composition, people and colors."
-STOCK_PROMPTS = {FLUX2_DEFAULT_PREV, FLUX2_DEFAULT_OLD, FLUX3_DEFAULT_OLD, PLACEHOLDER, FLUX2_DEFAULT, FLUX3_DEFAULT, RELIGHT_NEUTRAL, RELIGHT_STUDIO, FIBO_REFINE}   # texts the window may replace when the mode changes
+STOCK_PROMPTS = {FLUX2_DEFAULT_PREV, FLUX2_DEFAULT_OLD, FLUX3_DEFAULT_OLD, PLACEHOLDER, FLUX2_DEFAULT, FLUX3_DEFAULT, FLUX3_RESTORE, RELIGHT_NEUTRAL, RELIGHT_STUDIO, FIBO_REFINE}   # texts the window may replace when the mode changes
 
 # The tooltips of the function buttons: one general text per function, the same for every model (user 28.10.); what
 # holds for one model only goes into its tip under the prompt (Mode.prompt_tip). The ranking goes in front (function_tip).
@@ -132,7 +137,7 @@ FLUX2 = Model(
 
 FLUX3 = Model(
     "flux3", "Flux 3 Klein Edit",
-    "FLUX.3 Klein: text to image, whole-image edits, Remove Selection, Expand, Upscale.",
+    "FLUX.3 Klein: text to image, whole-image edits, Remove Selection, Expand, Upscale, Refine.",
     {
         "txt2img": Mode("flux3-klein-t2i.json", dict(base_res=1536, layer_mask="none", enhance=False), prompt_tip=T2I_TIP),
         "edit": Mode("flux3-klein-edit.json", dict(base_res=1536, layer_mask="none"), prompt_tip=EDIT_TIP + " " + EDIT_AGAIN),
@@ -142,6 +147,7 @@ FLUX3 = Model(
         # it Flux 3 slid or zoomed the picture instead of filling the margin): grey margin, ~1 megapixel, Context 1.0
         "outpaint": Mode("flux3-klein-outpaint.json", dict(base_res=1024, context=1.0, layer_mask="none")),
         "upscale": Mode("flux3-klein-upscale.json", dict(scale=1.5, turbo=True, stage_on=False, context=0.0), FLUX3_DEFAULT, prompt_tip=DESCRIBE_TIP),
+        "refine": Mode("flux3-klein-refine.json", dict(turbo=False, context=0.0), FLUX3_DEFAULT, FLUX3_REFINE_PROMPTS, DESCRIBE_TIP),
     },
     requires=(
         "flux3-image-klein-int8-convrot.safetensors",
@@ -233,7 +239,7 @@ RANKING = {
     "txt2img": ("flux3", "moss", "flux2", "qwen", "fibo"),
     "edit": ("flux3", "qwen", "flux2", "fibo"),
     "upscale": ("flux3", "flux2"),
-    "refine": ("fibo", "flux2"),
+    "refine": ("fibo", "flux2", "flux3"),
     "multi_edit": ("flux3", "flux2", "qwen", "fibo"),
 }
 SHORT = {"flux3": "Flux 3", "flux2": "Flux 2", "qwen": "Qwen", "fibo": "Fibo", "krea2": "Krea 2", "moss": "MOSS"}

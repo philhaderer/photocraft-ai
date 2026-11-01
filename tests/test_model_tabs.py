@@ -107,7 +107,7 @@ def main():
     app.v_mode.set("upscale")
     app._on_mode()
     assert app.v_workflow.get() == "flux3-klein-upscale.json" and app.t_prompt.get("1.0", "end").strip() == "make it night"  # typed text stays
-    assert "refine" not in models.BY_KEY["flux3"].modes                                  # Flux 3 Refine is off
+    assert "refine" in models.BY_KEY["flux3"].modes                                      # Flux 3 Refine (after Pixaroma, 1.11.)
 
     # a model without the current mode: the first one it has
     app.v_model.set("flux2")

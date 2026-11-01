@@ -27,7 +27,7 @@ PRIORITY = {
 
 # Functions Easy Mode leaves out, with the models that do them best first (the list in the Easy Mode tab of the settings).
 EXTRA_PRIORITY = {
-    "refine": ("fibo", "flux2"),
+    "refine": ("fibo", "flux2", "flux3"),
     "multi_edit": ("flux3", "flux2", "qwen", "fibo"),
 }
 
