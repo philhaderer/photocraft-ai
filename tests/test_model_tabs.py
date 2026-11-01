@@ -229,8 +229,8 @@ def main():
     wf2 = _j.loads((t.ROOT / "workflows" / "flux2-klein-upscale.json").read_text(encoding="utf-8"))
     wf3 = _j.loads((t.ROOT / "workflows" / "flux3-klein-upscale.json").read_text(encoding="utf-8"))
     assert wf2["206"]["_meta"]["pc_default_prompt"] == models.FLUX2_DEFAULT == mm["flux2"].modes["refine"].prompt_hint
-    assert wf3["24"]["_meta"]["pc_default_prompt"] == models.FLUX3_DEFAULT == mm["flux3"].modes["upscale"].prompt_hint
-    assert wf3["159"]["inputs"]["text"] == ["24", 0] and "158" not in wf3
+    assert wf3["159"]["_meta"]["pc_default_prompt"] == models.FLUX3_DEFAULT == mm["flux3"].modes["upscale"].prompt_hint
+    assert wf3["159"]["inputs"]["text"] == ""          # the pc:prompt node itself (no AusBoss text node since 2.11.)
     assert mm["flux2"].modes["refine"].prompt_tip == mm["flux3"].modes["upscale"].prompt_tip == models.DESCRIBE_TIP
     assert models.DESCRIBE_TIP == "Add a short description of your image in front of this text."   # user 28.10.
     # Remove (a test) for Flux 2 and 3: the Qwen way, soft mask with 10 % feather

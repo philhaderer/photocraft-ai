@@ -22,8 +22,6 @@ class RunMixin:
 
     def _request(self) -> Request:
         wf = self.v_workflow.get()
-        if self.v_std.get() and self._std_shown:      # test A2: the same Upscale with standard nodes
-            wf = STD_WORKFLOW
         if self.v_v10.get() and self._v10_shown:      # A/B test: MOSS Fill / Expand with the published v10 graph
             wf = V10_WORKFLOW
         wf_path = None if wf == BUILTIN else str(self.workflows_dir / wf)

@@ -1,4 +1,4 @@
-"""Flux 3 Upscale built from standard nodes only (test variant A2 of the refine A/B test, 1.6 option b).
+"""Flux 3 Upscale built from standard nodes only (the A2 variant of the refine A/B test; the only one since 2.11.).
 
     python tests/test_upscale_std.py
 """
@@ -14,7 +14,7 @@ import test_reference_mode as T  # noqa: E402
 from pccomfy import workflows  # noqa: E402
 from pccomfy.bridge import Request  # noqa: E402
 
-WF = ROOT / "workflows" / "flux3-klein-upscale-std.json"
+WF = ROOT / "workflows" / "flux3-klein-upscale.json"
 
 
 def links_ok(g):

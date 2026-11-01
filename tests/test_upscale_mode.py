@@ -57,13 +57,12 @@ def main():
     ti = {n["class_type"] for n in tpl.values()}
     assert "SaveImage" not in ti and "AUSBOSS_NODES_SaveImage" not in ti and "PreviewImage" in ti
     ref = tpl["161"]["inputs"]
-    assert ref["images.image0"] == ["154", 0] and tpl["165"]["inputs"]["stitcher"] == ["154", 1]   # the tiles and the stitcher
+    assert ref["images.image0"] == ["154", 0] and tpl["165"]["inputs"]["image_list"] == ["164", 0]   # the tiles and the merge of the redrawn ones
     p = workflows.GenParams(prompt="a young woman", seed=5)
     p.extra["megapixels"] = 3.5
     g, out = workflows.apply_template(tpl, p, "pic.png", None)
     assert g["2"]["inputs"]["image"] == "pic.png" and g["3"]["inputs"]["megapixels"] == 3.5
-    assert g["154"]["inputs"]["megapixels"] == 0                       # the inner tiling stays as saved
-    assert g["24"]["inputs"]["text"] == "a young woman" and g["5"]["inputs"]["seed"] == 5
+    assert g["159"]["inputs"]["text"] == "a young woman" and g["5"]["inputs"]["value"] == 5
     assert g[out]["class_type"] == "PreviewImage"
 
     # the Flux 2 Klein upscale: the same slots, and a default prompt when nothing is typed
@@ -94,7 +93,7 @@ def main():
     assert abs(mp_of(b) - 200 * 120 * 4 / 1e6) < 1e-6, mp_of(b)
     img_up = next(v for k, v in b.comfy.uploads.items() if k.endswith("-image.png"))
     assert img_up.size == (200, 120), img_up.size                          # at its own size, not scaled to a base resolution
-    assert b.comfy.graphs[0]["24"]["inputs"]["text"] == "a young woman" and res["documents"] == 1
+    assert b.comfy.graphs[0]["159"]["inputs"]["text"] == "a young woman" and res["documents"] == 1
 
     # Upscale of a selection: only that part, at its own size
     pc, b, _ = run("upscale", scale=3.0, with_sel=True)

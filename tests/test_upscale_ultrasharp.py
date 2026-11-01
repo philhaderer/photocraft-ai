@@ -18,7 +18,7 @@ def links_ok(g):
 
 
 def main():
-    for name in ("flux3-klein-upscale.json", "flux3-klein-upscale-std.json"):
+    for name in ("flux3-klein-upscale.json",):
         g = json.loads((ROOT / "workflows" / name).read_text(encoding="utf-8"))
         info = workflows.stage_info(g)
         assert [s["label"] for s in info] == ["SeedVR2 pre-cleaning", "4x UltraSharp"], name
