@@ -31,7 +31,8 @@ def main():
     for m in gui.models.MODELS:
         if m.max_refs == 0:
             assert "multi_edit" not in m.modes, m.key
-    tip = "You can start with a white image and use the reference images below to place them on the canvas."
+    tip = gui.models.MULTI_TIP
+    assert tip.startswith("Place reference images on an image or on an empty white canvas. Example: ") and "{tag}" in tip
     assert all(x.modes["multi_edit"].prompt_tip == tip for x in gui.models.MODELS if "multi_edit" in x.modes)
     # the window: the request runs as an edit, carries no mask use, and the mode is kept in the state
     app.cb_workflow["values"] = [gui.BUILTIN, "qwen-image-21-edit.json"]

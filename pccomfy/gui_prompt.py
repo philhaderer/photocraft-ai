@@ -122,6 +122,8 @@ class PromptMixin:
         m = self._model()
         spec = m.modes.get(mode) if m else None
         text = (spec.prompt_tip if spec and spec.prompt_tip else "") or (EXPAND_HINT if mode == "outpaint" else "")
+        if "{tag}" in text:      # Multi Image Edit: the example names the first reference the way this model does
+            text = text.replace("{tag}", m.tag_style.format(n=2, i=1) if m and m.tag_style else "the reference image")
         on = bool(text)
         self._hint_text = text
         self._update_llm_button()
@@ -346,7 +348,8 @@ class PromptMixin:
             self._style_tip_hide()
 
     def _apply_style(self, text: str):
-        """A style entry REPLACES the prompt (user 1.11.), in one undo step: Ctrl+Z in the field brings the old text back."""
+        """A style entry is added to the prompt after a line break (user 1.11.; an empty field just gets the style), in one undo
+        step: Ctrl+Z in the field takes it away again."""
         t = self.t_prompt
         if str(t.cget("state")) == "disabled":
             return
@@ -354,14 +357,18 @@ class PromptMixin:
         t.configure(autoseparators=False)
         try:
             t.edit_separator()
-            t.delete("1.0", "end")
-            t.insert("1.0", text)
+            old = t.get("1.0", "end").rstrip()
+            if old:
+                t.insert("end-1c", ("" if t.get("end-2c", "end-1c") == "\n" else "\n") + text)
+            else:
+                t.delete("1.0", "end")
+                t.insert("1.0", text)
             t.edit_separator()
         finally:
             t.configure(autoseparators=auto)
         self.v_pchoice.set("")
         t.focus_set()
-        self._status("Style set as the prompt. Ctrl+Z in the field brings the old text back.")
+        self._status("Style added to the prompt. Ctrl+Z in the field takes it away again.")
 
     def _style_text_at(self, menu, active):
         """The text of entry number `active` of a style submenu ("" for none)."""

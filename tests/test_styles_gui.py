@@ -1,5 +1,5 @@
 """The Styles button in the real Tk window (hidden): it sits left of the LLM button only in Text to image, goes in Easy Mode and
-comes back, the menu has a submenu per group, an entry REPLACES the prompt in one undo step (Ctrl+Z brings the old text back),
+comes back, the menu has a submenu per group, an entry is ADDED to the prompt after a line break in one undo step (Ctrl+Z takes it away),
 and the hover box shows the whole text. Skipped when Tk cannot open a window.
 
     python tests/test_styles_gui.py
@@ -58,16 +58,23 @@ def main():
     sub = top.nametowidget(top.entrycget(0, "menu"))
     assert [sub.entrycget(i, "label") for i in range(len(groups[0]["styles"]))] == [s["name"] for s in groups[0]["styles"]]
 
-    # an entry replaces the prompt; one Ctrl+Z brings the old text back
+    # an entry is added after a line break; one Ctrl+Z takes it away again; an empty field just gets the style
     app.t_prompt.configure(undo=True)
     app.t_prompt.delete("1.0", "end")
     app.t_prompt.insert("1.0", "a red bicycle")
     app.t_prompt.edit_reset()
     sub.invoke(2)
     want = groups[0]["styles"][2]["text"]
-    assert app.t_prompt.get("1.0", "end").strip() == want
+    assert app.t_prompt.get("1.0", "end").rstrip("\n") == "a red bicycle\n" + want, repr(app.t_prompt.get("1.0", "end"))
     app.t_prompt.edit_undo()
     assert app.t_prompt.get("1.0", "end").strip() == "a red bicycle", repr(app.t_prompt.get("1.0", "end"))
+    app.t_prompt.delete("1.0", "end")
+    sub.invoke(2)
+    assert app.t_prompt.get("1.0", "end").strip() == want
+    app.t_prompt.delete("1.0", "end")
+    app.t_prompt.insert("1.0", "a red bicycle\n")        # already ends in a line break: no empty line in between
+    sub.invoke(2)
+    assert app.t_prompt.get("1.0", "end").rstrip("\n") == "a red bicycle\n" + want
 
     # the hover box: shown for an active entry, gone for none and after a hide. (A real posted menu is a native Windows menu that
     # a test cannot drive reliably, so the active entry is faked: a menu that says entry 1 is active.)

@@ -1,6 +1,6 @@
 """The Styles button beside the prompt (user 1.11.): styles.json (186 style prompts of the Krea 2 Style Explorer, MIT, in 9 groups,
 Text to image only), the loader (a broken file means no styles), the palette icon, the button (only in a mode that has styles,
-not in Easy Mode), a click on an entry REPLACES the prompt, and the whole text of every entry is kept for the hover box.
+not in Easy Mode), a click on an entry is ADDED to the prompt after a line break, and the whole text of every entry is kept for the hover box.
 Stubbed Tk.
 
     python tests/test_styles.py
@@ -87,18 +87,18 @@ def gui_checks():
     app._easy = False
     app._update_styles_button()
     assert app._styles_shown
-    # an entry replaces the prompt (the field is emptied first, one undo step in a real Tk)
+    # an entry is added after a line break (an empty field just gets the style; one undo step in a real Tk)
     app.t_prompt.delete("1.0", "end")
     app.t_prompt.insert("1.0", "a red bicycle")
     first = styles.load()["txt2img"][0]["styles"][0]["text"]
     app._apply_style(first)
-    assert app.t_prompt.get("1.0", "end").strip() == first
+    assert app.t_prompt.get("1.0", "end").strip() == "a red bicycle\n" + first
     assert "Ctrl+Z" in app.v_status.get()
     # a field that is switched off is left alone
     app.t_prompt.configure(state="disabled")
     app._apply_style("other")
     app.t_prompt.configure(state="normal")
-    assert app.t_prompt.get("1.0", "end").strip() == first
+    assert app.t_prompt.get("1.0", "end").strip() == "a red bicycle\n" + first
     # the hover box: the whole text of an entry by (menu, number); nothing for a group entry or "none"
     key, text = next(iter(app._style_texts.items()))
     menu = type("M", (), {"__str__": lambda s: key[0]})()
