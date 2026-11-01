@@ -30,16 +30,18 @@ def main():
         shutil.copy(t.ROOT / "workflows" / f, wfdir / f)
     app.cb_workflow["values"] = [gui.BUILTIN] + names
 
-    # Qwen: fill, remove, reference, expand, edit - no upscale
+    # Qwen: fill, remove, reference, expand, edit, upscale (2.11.) - no refine
     app.v_model.set("qwen")
     app.v_mode.set("inpaint")
     app._on_model()
     assert app.v_workflow.get() == "qwen-image-21-edit.json" and app.v_res.get() == 1024 and app.v_turbo.get() is False    # Qwen: Turbo off by default (27.10.)
     assert app.rb_modes["edit"]["state"] == "normal" and app.rb_modes["upscale"]["state"] == "normal"     # functions: never grey
     assert [k for k, rb in app.rb_tabs.items() if rb["state"] == "normal"] == ["qwen", "fibo"]          # models that can fill
-    # a function the model cannot do picks a model that can (the fixed order: Flux 3 first); Qwen comes back for Fill
     app.v_mode.set("upscale"); app._on_mode()
-    assert app.v_model.get() == "flux3" and app.v_workflow.get() == "flux3-klein-upscale.json"
+    assert app.v_model.get() == "qwen" and app.v_workflow.get() == "qwen-image-21-upscale.json"      # Qwen can upscale: stays
+    # a function the model cannot do picks a model that can (the fixed order: Fibo first for Refine); Qwen comes back for Fill
+    app.v_mode.set("refine"); app._on_mode()
+    assert app.v_model.get() in ("fibo", "flux2", "flux3") and app.v_model.get() != "qwen"
     app.v_mode.set("inpaint"); app._on_mode()
     assert app.v_model.get() == "qwen"                                                                   # the last model of Fill
     app.v_mode.set("txt2img"); app._on_mode()

@@ -298,7 +298,7 @@ def main():
     assert app.rb_tabs["flux3"]["style"] == "Missing.Chip.Toolbutton" and inv.tab_status("flux3").state == "missing"
     assert app.rb_modes["upscale"]["state"] == "normal" and app.rb_modes["edit"]["state"] == "normal"
     app.v_mode.set("upscale"); app._update_mode_radios()
-    assert app.rb_tabs["flux3"]["style"] == "Missing.Chip.Toolbutton" and app.rb_tabs["qwen"]["state"] == "disabled"
+    assert app.rb_tabs["flux3"]["style"] == "Missing.Chip.Toolbutton" and app.rb_tabs["qwen"]["state"] == "normal"      # Qwen can upscale too (2.11.)
     app.v_mode.set("edit"); app._update_mode_radios()
     assert "Missing for Upscale (new file): Flux 3\\flux-3-image-klein-restore.safetensors. Set in settings" in app.tt_modes["upscale"].text
     assert app.tt_modes["upscale"].text.startswith(models.function_tip("upscale", models.FUNCTION_TIPS["upscale"]))
