@@ -118,8 +118,11 @@ def main():
     calls = []
     app.download_missing = lambda key, required_only=False: calls.append((tuple(key), required_only))
     app.inv = inventory.Inventory({k: [] for k in inventory.LIST_KINDS}, None, None)      # ComfyUI lists nothing
+    app._detect_async = lambda: None         # no reading of the (unreachable) ComfyUI may replace this inventory during the test,
+    app._set_inventory = lambda inv, err="": None      # not even one that was started at startup and arrives late
     app.open_settings()
     app.root.update()
+    assert app.nb_settings.select() == str(app._easy_tab)        # the window opens on the Easy Mode tab (user 2.11.)
     tabs = [app.nb_settings.tab(i, "text") for i in range(app.nb_settings.index("end"))]
     assert tabs == [em.TAB_TITLE, "All supported models", "Other settings", "Credits"], tabs
 
@@ -148,7 +151,14 @@ def main():
     app.root.update()
     w = app._dl_widgets_easy[name]
     assert w["label"].cget("text") == "50 %", w["label"].cget("text")
-    assert str(next(c for c in app._easy_tab.winfo_children()[0].winfo_children() if c.winfo_class() == "TButton").cget("state")) == "disabled"
+    btns = {str(c.cget("text")).split(" (")[0]: c for c in app._easy_tab.winfo_children()[0].winfo_children() if c.winfo_class() == "TButton"}
+    assert str(btns[em.TAB_BUTTON.split(" (")[0]].cget("state")) == "normal"       # the files that do not load yet can still be fetched
+    assert str(btns["Stop downloads"].cget("state")) == "normal"
+    app._dl_stopped = []
+    app.download_cancel = lambda n: app._dl_stopped.append(n)
+    btns["Stop downloads"].invoke()
+    assert app._dl_stopped == [name], app._dl_stopped
+    del app.download_cancel
     app._dl.clear()
     app.inv = None
     app._easy_tab_draw()
