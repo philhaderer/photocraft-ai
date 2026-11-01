@@ -15,7 +15,7 @@ from pccomfy import models  # noqa: E402
 
 
 def main():
-    assert models.PARKED_WORKFLOWS == {"krea2-turbo-inpaint.json", "moss-image-inpaint.json"}
+    assert models.PARKED_WORKFLOWS == {"krea2-turbo-inpaint.json"}
     app = ra.make()
     for f in models.PARKED_WORKFLOWS:                     # in the folder, as in the repo
         shutil.copy(ra.t.ROOT / "workflows" / f, Path(app.workflows_dir) / f)
@@ -23,9 +23,9 @@ def main():
     app._apply_refresh({})
     values = list(app.cb_workflow["values"])
     assert not set(values) & models.PARKED_WORKFLOWS, values
-    assert "flux3-klein-outpaint.json" in values and "moss-image-inpaint.json" not in values
-    # the state of 19:01: Flux 3, Expand, the parked MOSS graph
-    app.v_workflow.set("moss-image-inpaint.json")
+    assert "flux3-klein-outpaint.json" in values and "krea2-turbo-inpaint.json" not in values
+    # the state of 19:01: Flux 3, Expand, a parked graph
+    app.v_workflow.set("krea2-turbo-inpaint.json")
     app._apply_refresh({})
     assert app.v_workflow.get() == "flux3-klein-outpaint.json", app.v_workflow.get()
     assert app.v_model.get() == "flux3" and not app._custom_workflow()

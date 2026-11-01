@@ -349,6 +349,11 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.cb_std = ttk.Checkbutton(self.f_ptop, text="Std nodes", variable=self.v_std)
         Tooltip(self.cb_std, STD_NODES_TIP)
         self._std_shown = False
+        # "v10 graph" next to "Prompt" (user 1.11., A/B test): MOSS Fill and Expand as the published Inpainting v10 graph does it
+        self.v_v10 = tk.BooleanVar(value=False)
+        self.cb_v10 = ttk.Checkbutton(self.f_ptop, text="v10 graph", variable=self.v_v10)
+        Tooltip(self.cb_v10, V10_TIP)
+        self._v10_shown = False
         self.f_prompt = ttk.Frame(r)
         self.f_prompt.pack(fill="x", padx=10)
         try:

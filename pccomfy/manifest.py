@@ -260,7 +260,10 @@ TABS: dict[str, TabSpec] = {
         modes={"txt2img": ModeSpec(requires=("Moss\\lenovo_moss.safetensors",)),
                "edit": ModeSpec(requires=(_MOSS_EDIT_LORA,)),
                "multi_edit": ModeSpec(requires=(_MOSS_EDIT_LORA,), optional=_CUT.optional),
-               "remove": ModeSpec(requires=(_MOSS_EDIT_LORA,))},
+               "remove": ModeSpec(requires=(_MOSS_EDIT_LORA,)),
+               # Fill and Expand (Inpainting v10) start with the UltraReal LoRA on, so the file is required (1.11.)
+               "inpaint": ModeSpec(requires=("Moss\\lenovo_moss.safetensors",)),
+               "outpaint": ModeSpec(requires=("Moss\\lenovo_moss.safetensors",))},
         optional=("Moss\\lora_dmd2.safetensors", "Moss\\moss_image_sft_4step_v2.0.safetensors", _TAEF2, DESCRIBE_FALLBACK)),
 }
 
@@ -351,6 +354,8 @@ def describe_line(model_key: str, has) -> str:
 NODE_PACKS = (
     ("AUSBOSS_NODES_", "ComfyUI-AusBoss (version 2.13.0 or newer)", "https://github.com/ausboss/ComfyUI-AusBoss"),
     ("SeedVR2", "ComfyUI itself (SeedVR2 nodes): update ComfyUI", "https://github.com/comfyanonymous/ComfyUI"),
+    ("GrowMaskWithBlur", "ComfyUI-KJNodes", "https://github.com/kijai/ComfyUI-KJNodes"),
+    ("MaskBoundingBox+", "ComfyUI_essentials", "https://github.com/cubiq/ComfyUI_essentials"),
 )
 
 

@@ -19,10 +19,12 @@ from pccomfy import bridge, imaging, models  # noqa: E402
 
 
 def model_checks():
-    for key in ("krea2", "moss"):
-        assert "outpaint" not in models.BY_KEY[key].modes, key          # parked (off since 29.10.)
-        spec = models.PARKED_EXPAND[key]
-        assert spec.describe and spec.prompt_tip == models.EXPAND_DESCRIBE_TIP, key
+    assert "outpaint" not in models.BY_KEY["krea2"].modes                # parked (off since 29.10.)
+    spec = models.PARKED_EXPAND["krea2"]
+    assert spec.describe and spec.prompt_tip == models.EXPAND_DESCRIBE_TIP
+    assert "moss" not in models.PARKED_EXPAND                             # MOSS Expand is back since 1.11. (Inpainting v10), still with Describe
+    moss = models.BY_KEY["moss"].modes["outpaint"]
+    assert moss.describe and moss.prompt_tip == models.EXPAND_DESCRIBE_TIP
     for m in models.MODELS:
         if m.key not in ("krea2", "moss") and "outpaint" in m.modes:
             assert not m.modes["outpaint"].describe and not m.modes["outpaint"].prompt_tip, m.key

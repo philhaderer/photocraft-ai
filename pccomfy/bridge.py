@@ -597,12 +597,15 @@ class Bridge:
                 # it for the model and the layer mask; 28.10.: a band of ~24 px there was painted anew, darker with Krea 2)
                 mask = imaging.outpaint_mask(keep, (W, H), req.overlap)
 
+        full = any(workflows.full_canvas(workflows.load_template(w)) for w in wf_paths if w)
         bbox = None
         if req.mode in ("inpaint", "outpaint"):
             bbox = imaging.mask_bbox(mask)
             if bbox is None:
                 raise BridgeError("The selection is empty.")
             region = imaging.grow_box(bbox, (W, H), req.context)
+            if full:    # MOSS Inpainting v10: the graph crops around the mask itself
+                region = imaging.Box(0, 0, W, H)
         elif has_sel:
             region = imaging.mask_bbox(mask) or imaging.Box(0, 0, W, H)
         else:
@@ -622,6 +625,8 @@ class Bridge:
                 raise BridgeError(f"The result would be {mp:.0f} megapixels ({region.w * factor:.0f}×{region.h * factor:.0f}); "
                                   f"the limit is {MAX_RESULT_MP:.0f}. Select a smaller area or use a smaller factor.")
             p.extra["megapixels"] = mp
+        elif full:
+            gw, gh = region.w, region.h
         else:
             mult = max(workflows.size_multiple(workflows.load_template(w)) for w in wf_paths if w) if wf_paths[0] else 16
             gw, gh = imaging.gen_size(region.w, region.h, req.base_res, multiple=mult)
@@ -648,7 +653,7 @@ class Bridge:
         # a workflow without a pc:mask node (the Flux 2/3 Klein edit ones) gets the instruction only, no mask
         wf_mask_node = (not wf_paths[0]) or any(has_tag(json.loads(Path(w).read_text(encoding="utf-8")), "mask") for w in wf_paths if w)
         if req.mode in ("inpaint", "outpaint") and wf_mask_node:
-            m = imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
+            m = mask.crop(region.pil()).convert("L") if full else imaging.prepare_mask(mask.crop(region.pil()), req.mask_grow, req.mask_blur)
             m = m.resize((gw, gh), Image.BILINEAR)
             mask_name = self.comfy.upload_image(m.convert("RGB"), f"pcc-{tag}-mask.png")
 

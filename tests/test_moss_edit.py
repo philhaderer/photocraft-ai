@@ -35,7 +35,7 @@ def main():
     assert (s["steps"], s["cfg"], s["sampler_name"], s["scheduler"]) == (30, 4.0, "euler", "normal")    # the LoRA author's values
 
     m = models.MOSS
-    assert list(m.modes) == ["txt2img", "edit", "multi_edit", "remove"]
+    assert list(m.modes) == ["txt2img", "edit", "multi_edit", "remove", "inpaint", "outpaint"]
     assert m.modes["edit"].workflow == m.modes["remove"].workflow == m.modes["multi_edit"].workflow == WF.name
     assert m.modes["multi_edit"].run_as == "edit" and m.modes["remove"].remove_text and m.max_refs == 3 and m.tag_style
     for mode in ("edit", "multi_edit", "remove"):
