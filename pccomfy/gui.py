@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from .gui_common import *  # noqa: F401,F403
 from .gui_common import __all__ as _COMMON  # noqa: F401
-from .gui_theme import ThemeMixin, HINT_ICON_PX, ICON_PX
+from .gui_theme import ThemeMixin, HINT_ICON_PX, ICON_PX, SMALL_ICON_PX
 from .gui_prompt import PromptMixin
 from .gui_lora import LoraMixin
 from .gui_modes import ModeMixin
@@ -156,21 +156,21 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.lbl_title[1].pack(side="left")
         self._minimized = False
         if self._frameless:         # far right: closes the plugin (what the title bar's cross did)
-            self.b_close = ttk.Button(self.f_header, image=self._icon("close"), style="Link.TButton", command=self._quit)
+            self.b_close = ttk.Button(self.f_header, image=self._icon("close", px=SMALL_ICON_PX), style="Link.TButton", command=self._quit)
             self.b_close.pack(side="right", padx=(6, 0))
             Tooltip(self.b_close, "Close the plugin.")
             for w in (self.f_header, self.f_logo, *self.lbl_title):     # drag the window by its header
                 w.bind("<ButtonPress-1>", self._drag_start, add="+")
                 w.bind("<B1-Motion>", self._drag_move, add="+")
-        self.b_min = ttk.Button(self.f_header, image=self._icon("minimize"), style="Link.TButton", command=self.toggle_minimize)
+        self.b_min = ttk.Button(self.f_header, image=self._icon("minimize", px=SMALL_ICON_PX), style="Link.TButton", command=self.toggle_minimize)
         self.b_min.pack(side="right")
         self.tt_min = Tooltip(self.b_min, "Minimise: only this header stays. Click again to show the plugin.")
         # left of it: Copy canvas to clipboard (user 29.10., option A): the visible picture as one image
-        self.b_copy_canvas = ttk.Button(self.f_header, image=self._icon("copy"), style="Link.TButton", command=self.copy_canvas)
+        self.b_copy_canvas = ttk.Button(self.f_header, image=self._icon("copy", px=SMALL_ICON_PX), style="Link.TButton", command=self.copy_canvas)
         self.b_copy_canvas.pack(side="right", padx=(0, 6))
         Tooltip(self.b_copy_canvas, "Copy canvas to clipboard: the visible layers of the picture in PhotoCraft as one image.")
         # the last 20 runs (PLAN point 13, user 30.10.): a click on one loads its settings with a new seed, nothing starts
-        self.b_history = ttk.Button(self.f_header, image=self._icon("clock"), style="Link.TButton", command=self._history_menu)
+        self.b_history = ttk.Button(self.f_header, image=self._icon("clock", px=SMALL_ICON_PX), style="Link.TButton", command=self._history_menu)
         self.b_history.pack(side="right", padx=(0, 6))
         Tooltip(self.b_history, "Last runs: click one to load all its settings with a new seed. Nothing starts by itself.")
         self._history_popup = None
@@ -262,9 +262,9 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.cb_enhance = ttk.Checkbutton(self.f_enh, text="LLM prompt enhancement", variable=self.v_enhance, command=self._on_workflow)
         self.cb_enhance.pack(side="left")
         self.tt_enhance = Tooltip(self.cb_enhance, ENHANCE_TIP)
-        self._icons["copy"] = self._icon("copy", px=round(ICON_PX * 0.8))     # 80 % of the usual icon (user 1.11.)
+        self._icons["copy"] = self._icon("copy", px=round(ICON_PX * 0.8))     # 80 % of the usual icon, flat like the other icons: white, blue under the mouse (user 1.11.)
         self._last_vgl = ""             # the prompt the text model wrote in the last run
-        self.b_copy = ttk.Button(self.f_enh, image=self._icons["copy"], style="Icon.TButton", command=self._copy_enhanced, state="disabled")
+        self.b_copy = ttk.Button(self.f_enh, image=self._icons["copy"], style="Link.TButton", command=self._copy_enhanced, state="disabled")
         self.b_copy.pack(side="left", padx=(8, 0))
         self.tt_copy = Tooltip(self.b_copy, "Copy the prompt the text model wrote in the last run.")
         self.cb_turbo = ttk.Checkbutton(mf, text="LoRA", variable=self.v_turbo, command=self._on_turbo)
@@ -340,7 +340,7 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.f_ptop = ttk.Frame(r)      # "Prompt" and, where a mode has ready-made prompts, radio buttons that fill the field
         self.f_ptop.pack(fill="x", padx=10)
         ttk.Label(self.f_ptop, text="Prompt").pack(side="left")
-        self._icons["clear"] = self._icon("trash")
+        self._icons["clear"] = self._icon("trash", px=SMALL_ICON_PX)
         self.b_clear = ttk.Button(self.f_ptop, image=self._icons["clear"], style="Link.TButton", command=self._clear_prompt)   # flat: the row keeps its height
         self.b_clear.pack(side="right")
         Tooltip(self.b_clear, "Delete the prompt (Ctrl+Z in the field brings it back).")
@@ -350,7 +350,7 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.tt_llm = Tooltip(self.b_llm, LLM_TIP)
         # "Styles" left of "LLM" (user 1.11.): style prompts (styles.json) for the modes that have them, now Text to image; shown by
         # _update_styles_button. A click on an entry replaces the prompt
-        self._icons["styles"] = self._icon("palette")
+        self._icons["styles"] = self._icon("palette", px=SMALL_ICON_PX)
         self.b_styles = ttk.Button(self.f_ptop, image=self._icons["styles"], style="Link.TButton", command=self._styles_menu)
         Tooltip(self.b_styles, STYLES_TIP)
         self._styles_shown = False
@@ -651,7 +651,7 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         """The button in the header: minimised, the window shrinks to the header (title bar, header, the button); a second
         click brings everything back as it was."""
         self._minimized = not self._minimized
-        self.b_min.configure(image=self._icon("chevron-down" if self._minimized else "minimize"))
+        self.b_min.configure(image=self._icon("chevron-down" if self._minimized else "minimize", px=SMALL_ICON_PX))
         self.tt_min.text = ("Show the plugin again." if self._minimized else
                             "Minimise: only this header stays. Click again to show the plugin.")
         self.f_header.pack_configure(pady=(8, 8 if self._minimized else 0))     # alone, the header gets room below too

@@ -8,6 +8,7 @@ from PIL import Image
 from . import icons
 
 ICON_PX = 20       # the window's button icons (vector, icons.py) before the display scaling; the slot icons have their own (19, refslots.py)
+SMALL_ICON_PX = round(ICON_PX * 0.85)   # flat header icons, the bin and the Styles button: 85 % of the usual icon (user 1.11.)
 HINT_ICON_PX = 14  # the info icon in front of the tip under the prompt: about one text line high
 FN_GAP = 8         # room between a function symbol and its text (ttk has no gap option: the symbol gets it on its right)
 SPIN_PX = 19       # the chevrons of the spin boxes (90 % of the former 21, user 30.10.): cut flat, so the field keeps its height
