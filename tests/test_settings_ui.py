@@ -94,6 +94,8 @@ def test_start_state():
     assert app.v_model.get() == "" and app.start_state() == "choose"
     app._apply_refresh(det(inventory.Inventory({})))
     assert app.start_state() == "none_linked" and app.v_model.get() == ""
+    # no model linked: no "Live preview" tick and no idle "Ready" (user 2.11.)
+    assert app._live_shown is False and app.v_status.get() == ""
     # a tab that is not available does not open from the empty state either: its settings do
     app.v_model.set("krea2")
     app._on_model()
@@ -104,6 +106,7 @@ def test_start_state():
     app.v_model.set("flux3")
     app._on_model()
     assert app.v_model.get() == "flux3" and app.start_state() == "" and cfgmod.load_state()["model"] == "flux3"
+    assert app._live_shown and app.v_status.get() == "Ready"      # back with a model
 
     # next start: the last model is chosen again (and its mode comes with the saved state)
     cfgmod.save_state({"model": "krea2", "mode": "txt2img", "workflow": "krea2-turbo-t2i.json"})
