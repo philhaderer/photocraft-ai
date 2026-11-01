@@ -44,6 +44,7 @@ class EasyMixin:
         """At start: Easy Mode was left on. The saved window is shown as it was; the model is checked when ComfyUI's files are known."""
         if getattr(self, "_easy", False):
             self._easy_hide()
+            self._status(em.STATUS_ON)
 
     # ---------- the choice of the model ----------
 
@@ -328,6 +329,8 @@ class EasyMixin:
         snap = em.pop_return()
         self._easy = False
         em.set_on(False)
+        if self.v_status.get() == em.STATUS_ON:      # the line belongs to Easy Mode only (user 1.11.)
+            self._status("Ready")
         self._easy_show()
         key = snap.pop("model", "")
         snap.pop("prompt", None)        # one prompt box for both modes: the text stays
