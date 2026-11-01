@@ -666,7 +666,8 @@ def stage_info(graph: dict) -> list[dict]:
             v = graph[nid].get("inputs", {}).get("strength_model")
             strength = float(v) if isinstance(v, (int, float)) else 1.0
         out.append({"id": nid, "label": label, "tip": str(spec.get("tip", "")), "default_on": bool(spec.get("default_on", True)),
-                    "strength": strength, "sampler": dict(spec["sampler"]) if isinstance(spec.get("sampler"), dict) else {}})
+                    "strength": strength, "sampler": dict(spec["sampler"]) if isinstance(spec.get("sampler"), dict) else {},
+                    "excludes": [str(x) for x in spec.get("excludes", [])]})
     return out
 
 
@@ -708,21 +709,32 @@ def stage_default_on(graph: dict, nid: str) -> bool:
 
 def bypass_stage(graph: dict, only=None) -> dict:
     """Stage switched off: the nodes it lists are removed and the inputs it lists are set (a copy is returned).
-    `only` = the node ids of the stages to switch off (None = all of them)."""
+    `only` = the node ids of the stages to switch off (None = all of them). Two passes: first every stage sets its inputs and
+    removes its nodes (inputs that still link to a removed node are dropped), then the `rewire` nodes drop out: whatever
+    read their output reads the `model` they were given, else the `image` (an upscale model node of the Flux 3 Upscale)."""
     g = json.loads(json.dumps(graph))
-    for nid, _ in stage_switches(g):
-        if only is not None and nid not in {str(o) for o in only}:
-            continue
-        spec = g[nid]["_meta"]["pc_stage_off"]
-        g[nid]["inputs"].update(spec.get("set", {}))
-        for r in spec.get("remove", []):
-            g.pop(str(r), None)
-        for r in spec.get("rewire", []):
+    off = [nid for nid, _ in stage_switches(g) if only is None or nid in {str(o) for o in only}]
+    specs = {nid: g[nid]["_meta"]["pc_stage_off"] for nid in off}
+    gone = set()
+    for nid in off:
+        g[nid]["inputs"].update(specs[nid].get("set", {}))
+    for nid in off:
+        for r in specs[nid].get("remove", []):
+            if g.pop(str(r), None) is not None:
+                gone.add(str(r))
+    if gone:
+        for other in g.values():
+            inp = other.get("inputs", {})
+            for k in [k for k, v in inp.items() if isinstance(v, list) and v and str(v[0]) in gone]:
+                del inp[k]
+    for nid in off:
+        for r in specs[nid].get("rewire", []):
             r = str(r)
             node = g.get(r)
             if node is None:
                 continue
-            src = node.get("inputs", {}).get("model")
+            inp = node.get("inputs", {})
+            src = inp.get("model", inp.get("image"))
             for other in g.values():
                 for k, v in other.get("inputs", {}).items():
                     if isinstance(v, list) and v and str(v[0]) == r:

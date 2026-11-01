@@ -27,7 +27,7 @@ def main():
     assert all(ord(c) >= 32 or c in "\n\r\t" for n in g.values() for v in n["inputs"].values() if isinstance(v, str) for c in v), "control character in a name (one backslash before f in JSON is a form feed)"
     assert any(v["inputs"].get("lora_name") == "Flux 3\\flux-3-image-klein-restore.safetensors" for v in g.values())
     assert workflows.has_upscale_slot(g) and workflows.lora_strength(g) == 0.5
-    assert [l for _, l in workflows.stage_switches(g)] == ["SeedVR2 pre-cleaning"]
+    assert [l for _, l in workflows.stage_switches(g)] == ["SeedVR2 pre-cleaning", "4x UltraSharp"]
     assert g["16"]["inputs"]["images"] == ["173", 0] and g["173"]["class_type"] == "ColorMatch"      # colours back to the picture (AusBoss: keep_colors)
     assert g["154"]["inputs"]["tile_width"] == ["170", 1] and "ceil" in g["170"]["inputs"]["expression"]    # equal tiles
     off = workflows.bypass_stage(g)

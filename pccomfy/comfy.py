@@ -210,6 +210,7 @@ class ComfyUI:
             "lora": self._choices("LoraLoaderModelOnly", "lora_name"),
             "preview": self._folder("vae_approx"),      # the live preview decoders (TAESD) have no loader node
             "bg_removal": self._choices("LoadBackgroundRemovalModel", "bg_removal_name"),
+            "upscale_model": self._choices("UpscaleModelLoader", "model_name"),
         }
         try:
             out["nodes"] = set((self._json("/object_info") or {}).keys())
