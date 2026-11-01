@@ -179,6 +179,37 @@ def test_empty_view():
     print("ok empty view")
 
 
+def test_other_settings():
+    """Tab "Other settings" (user 1.11.): "Show all hidden models" and "Reset all modes to default settings"."""
+    cfgmod.save_state({})
+    app = make_app()
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(td.full_lists(), NODES)})
+    cfgmod.set_setting("hidden_tabs", None)
+    app._show_hidden_models()
+    assert "No model is hidden" in app.v_status.get()
+    cfgmod.set_tab_hidden("fibo", True)
+    cfgmod.set_tab_hidden("qwen", True)
+    app._show_hidden_models()
+    assert cfgmod.hidden_tabs() == set() and "2 hidden models shown again" in app.v_status.get(), app.v_status.get()
+
+    cfgmod.set_setting("saved_pages", None)
+    app._reset_all_modes()
+    assert "No page has saved settings" in app.v_status.get()
+    cfgmod.set_saved_page("flux3", "txt2img", {"steps": 5})
+    cfgmod.set_saved_page("fibo", "edit", {"steps": 7})
+    saved_ask = ui_settings.messagebox.askyesno
+    ui_settings.messagebox.askyesno = lambda *a, **k: False            # "No": everything stays
+    app._reset_all_modes()
+    assert cfgmod.saved_page("flux3", "txt2img") == {"steps": 5}
+    ui_settings.messagebox.askyesno = lambda *a, **k: True
+    try:
+        app._reset_all_modes()
+    finally:
+        ui_settings.messagebox.askyesno = saved_ask
+    assert cfgmod.saved_page("flux3", "txt2img") == {} and cfgmod.saved_page("fibo", "edit") == {}
+    assert "standard settings" in app.v_status.get()
+
+
 def main():
     # the gear sits in the footer row, in the same frame as the refresh arrow and "Reset page" (not next to the tabs)
     made = []
@@ -417,6 +448,7 @@ def main():
     assert app.v_conn.get() == "ComfyUI not connected" and app.lbl_dot.cget("style") == "ConnBad.TLabel"
     test_start_state()
     test_empty_view()
+    test_other_settings()
     print("ok")
 
 
