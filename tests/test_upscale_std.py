@@ -28,6 +28,8 @@ def main():
     assert any(v["inputs"].get("lora_name") == "Flux 3\\flux-3-image-klein-restore.safetensors" for v in g.values())
     assert workflows.has_upscale_slot(g) and workflows.lora_strength(g) == 0.5
     assert [l for _, l in workflows.stage_switches(g)] == ["SeedVR2 pre-cleaning"]
+    assert g["16"]["inputs"]["images"] == ["173", 0] and g["173"]["class_type"] == "ColorMatch"      # colours back to the picture (AusBoss: keep_colors)
+    assert g["154"]["inputs"]["tile_width"] == ["170", 1] and "ceil" in g["170"]["inputs"]["expression"]    # equal tiles
     off = workflows.bypass_stage(g)
     assert links_ok(off) and not any("SeedVR2" in n["class_type"] for n in off.values())   # 166 (size) survives the switch
     pc, _, b = T.make(tempfile.mkdtemp(), with_sel=False)
