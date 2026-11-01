@@ -82,7 +82,7 @@ def main():
             assert not diff, (m.key, mode, diff)
 
     # the Context a function starts with does not come from the tab before
-    # (Fibo Fill has its own 0.4 since the test round 28.10.; Fill without one starts at FILL_CONTEXT)
+    # (Fibo Fill has its own 0.1 since 1.11.; Fill without one starts at FILL_CONTEXT)
     fibo_fill = models.BY_KEY["fibo"].modes["inpaint"].settings["context"]
     for before in ("qwen", "flux3"):
         app = make()
@@ -109,7 +109,7 @@ def main():
     app.v_context.set(0.75)
     app._on_context()
     go(app, "fibo", "inpaint")
-    assert app.lbl_context.cget("text") == "40 %"
+    assert app.lbl_context.cget("text") == "10 %"
     app.v_context.set(1.6)                     # an old saved value beyond the slider
     assert app._request().context == 1.0
     # Defaults also works while a run is on (user 30.10.); Generate and Variants stay grey until the run is done
