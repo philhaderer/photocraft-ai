@@ -19,7 +19,7 @@ Tested: Windows 11 · 16 GB VRAM · PhotoCraft 0.18 · ComfyUI version: 0.42.0
 
 1. **Get the parts**: Windows 10/11 with an NVIDIA card (16 GB VRAM), [Python 3.11+](https://www.python.org/downloads/windows/)
    (tick "tcl/tk" and "Add python.exe to PATH"), PhotoCraft 0.18, and ComfyUI 0.42 or newer with
-   [ComfyUI-AusBoss](https://github.com/ausboss/ComfyUI-AusBoss) 2.13 or newer (only needed for modes Upscale and Refine).
+   [ComfyUI-AusBoss](https://github.com/ausboss/ComfyUI-AusBoss) 2.13 or newer (optional: no mode needs its nodes at the moment).
 2. **Install the plugin**: *Code › Download ZIP* and unpack it (or `git clone` the repository), then double-click **`setup-windows.bat`**. It also creates the
    desktop shortcut **PhotoCraft AI** (it looks for `photocraft.exe` itself and asks once if it can't find it).
 3. **Start it**: start ComfyUI, close PhotoCraft, then double-click **PhotoCraft AI** on your desktop. PhotoCraft opens,
@@ -123,7 +123,7 @@ SeedVR2 and the MOSS LoRAs are Apache 2.0, BiRefNet is MIT.
 
 - [PhotoCraft](https://github.com/storytold/photocraft) by the ArtCraft team
 - [ComfyUI](https://github.com/comfyanonymous/ComfyUI) and the Comfy-Org model repositories
-- [ComfyUI-AusBoss](https://github.com/ausboss/ComfyUI-AusBoss) (Upscale and Refine)
+- [ComfyUI-AusBoss](https://github.com/ausboss/ComfyUI-AusBoss) (Restore and Outpaint LoRAs for Flux 3)
 - [photocraft-comfyui-bridge](https://github.com/Peszemeszek/photocraft-comfyui-bridge) by Peszemeszek, the starting
   point of this project (MIT / Apache-2.0)
 - The model authors: Black Forest Labs (Flux 2 / Flux 3 Klein), Qwen (Qwen-Image 2.1), Bria (Fibo 2.0), Krea (Krea 2),
