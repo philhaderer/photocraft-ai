@@ -722,6 +722,14 @@ class ModeMixin:
         self._update_feather_state()
         self._update_availability()
 
+    def _on_scale_pick(self):
+        """A click on an Upscale factor: Flux 3 starts the "Mix source/new image" lower the larger the factor is (1.5x 70 %, 2x 60 %,
+        3x and more 50 %: at 3x the new image was too sharp, user 1.11.). Other models keep the mix as it is."""
+        if self.v_model.get() == "flux3" and self.v_mode.get() == "upscale":
+            f = self._scale()
+            self.v_detail.set(0.7 if f <= 1.5 else 0.6 if f <= 2 else 0.5)
+            self._on_detail()
+
     def _on_turbo(self):
         """The workflow's own LoRA (DMD2, Turbo ...) switched on or off: Steps and CFG take the workflow's values for that
         case (pc_no_lora: e.g. 25 steps instead of 8), and its strength slider follows the checkbox."""

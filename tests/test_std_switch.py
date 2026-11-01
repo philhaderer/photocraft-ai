@@ -41,6 +41,11 @@ def main():
     app.v_std.set(True)
     assert app._request().workflow.endswith(gui.STD_WORKFLOW)
 
+    for f, want in (("3", 0.5), ("2", 0.6), ("1.5", 0.7)):      # the mix starts lower the larger the factor (user 1.11.)
+        app.v_scale.set(gui.scale_text(f))
+        app._on_scale_pick()
+        assert abs(app.v_detail.get() - want) < 1e-9, (f, app.v_detail.get())
+
     app.v_mode.set("edit")
     app._on_model()
     app.root.update()

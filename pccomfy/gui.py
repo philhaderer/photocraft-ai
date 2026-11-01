@@ -485,7 +485,7 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         f_sw.grid(row=0, column=1, sticky="e")
         self.rb_scale = {}
         for i, f in enumerate(("1.5", "2", "3", "4")):
-            rb = ttk.Radiobutton(f_sw, text=f"{f}x", value=scale_text(f), variable=self.v_scale, style="Small.Toolbutton")
+            rb = ttk.Radiobutton(f_sw, text=f"{f}x", value=scale_text(f), variable=self.v_scale, style="Small.Toolbutton", command=self._on_scale_pick)
             rb.pack(side="left", padx=(0 if i == 0 else 4, 0))
             Tooltip(rb, scale_tip)
             self.rb_scale[scale_text(f)] = rb
