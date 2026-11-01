@@ -45,42 +45,13 @@
    "pc_lora_tip": "DMD2 speed LoRA: 8 steps instead of 25. Off = full recipe (25 steps, CFG 2.5)."
   }
  },
- "9": {
-  "class_type": "LoraLoaderModelOnly",
-  "inputs": {
-   "lora_name": "Moss\\moss_image_sft_4step_v2.0.safetensors",
-   "strength_model": 1.0,
-   "model": [
-    "6",
-    0
-   ]
-  },
-  "_meta": {
-   "title": "LoRA: 4-step Turbo (optional)",
-   "pc_stage_off": {
-    "label": "4-step Turbo LoRA",
-    "rewire": [
-     "9"
-    ],
-    "default_on": false,
-    "strength": true,
-    "tip": "Turbo LoRA for 4-step pictures (CFG 1, euler). Replaces the DMD2 LoRA; to test.",
-    "sampler": {
-     "steps": 4,
-     "cfg": 1.0,
-     "sampler": "euler",
-     "scheduler": "simple"
-    }
-   }
-  }
- },
  "5": {
   "class_type": "LoraLoaderModelOnly",
   "inputs": {
    "lora_name": "Moss\\lenovo_moss.safetensors",
    "strength_model": 1.0,
    "model": [
-    "9",
+    "6",
     0
    ]
   },

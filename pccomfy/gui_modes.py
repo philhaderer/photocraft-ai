@@ -733,38 +733,17 @@ class ModeMixin:
     def _on_turbo(self):
         """The workflow's own LoRA (DMD2, Turbo ...) switched on or off: Steps and CFG take the workflow's values for that
         case (pc_no_lora: e.g. 25 steps instead of 8), and its strength slider follows the checkbox."""
-        if self.v_turbo.get():      # a stage that brings its own steps (MOSS 4-step) replaces the speed LoRA: only one of them
-            for var, st in zip(self.stage_vars, self._stages()):
-                if st.get("sampler") and var.get():
-                    var.set(False)
-            self._update_stage_scales()
         self._sync_sampler_fields()
         self.w_lora_str.configure(state="normal" if self._has_lora_switch() and self.v_turbo.get() else "disabled")
 
     def _on_stage(self, i: int):
-        """A stage checkbox was clicked. A stage with its own sampler values (`sampler` in pc_stage_off: MOSS 4-step Turbo)
-        switches the speed LoRA off and puts its steps / CFG / sampler / scheduler in the fields; switching it off gives the
-        fields back what the workflow runs with."""
+        """A stage checkbox was clicked: stages that exclude each other switch the others off, the strength sliders follow."""
         stages = self._stages()
         st = stages[i] if i < len(stages) else None
         if st and st.get("excludes") and self.stage_vars[i].get():     # "excludes": stages that cannot run together with this one
             for j, other in enumerate(stages):
                 if j != i and other["id"] in st["excludes"]:
                     self.stage_vars[j].set(False)
-        if st and st.get("sampler"):
-            if self.stage_vars[i].get():
-                if self.v_turbo.get():
-                    self.v_turbo.set(False)
-                    self._on_turbo()
-                for var, key in ((self.v_steps, "steps"), (self.v_cfg, "cfg"), (self.v_sampler, "sampler"), (self.v_scheduler, "scheduler")):
-                    if key in st["sampler"]:
-                        try:
-                            var.set(st["sampler"][key])
-                        except (tk.TclError, ValueError):
-                            pass
-            else:
-                self._vals_key = None
-                self._sync_sampler_fields()
         self._update_stage_scales()
 
     def _sync_sampler_fields(self):

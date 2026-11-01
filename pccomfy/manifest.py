@@ -128,9 +128,6 @@ _LIST = [
          "licence: Apache 2.0", size=1189176800),
     File("Moss\\lenovo_moss.safetensors", "lora", _HF + "Danrisi/lenovo_moss/resolve/main/lenovo_moss.safetensors",
          "Lenovo UltraReal by Danrisi (also on Civitai, model 1662740)", size=64527960),
-    File("Moss\\moss_image_sft_4step_v2.0.safetensors", "lora",
-         _HF + "akhaliq/MOSS-Image-SFT-4-steps/resolve/main/moss_image_sft_4step_v2.0.safetensors",
-         "MOSS Text to image: 4-step Turbo LoRA (a switch that starts off; to test); licence: Apache 2.0", size=1189176752),
     File("Moss\\moss_image_edit_lora_rank_64_bf16.safetensors", "lora", _MOSS + "loras/moss_image_edit_lora_rank_64_bf16.safetensors",
          "MOSS Edit Canvas, Multi Image Edit and Remove: the edit LoRA (format Moss-Image-Edit); upstream chinoll/Moss-Image-Edit",
          size=297382216),
@@ -181,7 +178,6 @@ _SHA256 = {
     'Flux 3\\flux-3-image-klein-outpaint.safetensors': "25385da7f6bfac0c18513e52729dc29f96cda543f0d086df9e5dda3842dede83",
     'Moss\\lora_dmd2.safetensors': "7683fe1fb51f73f5d690f24dd6b7f46f31ab9a9873729a854ac5c9a420ffe6f2",
     'Moss\\lenovo_moss.safetensors': "f28ab12e33e60146c8740a86730385cf5ba488e9f6eda50b14383d6ddbf300fb",
-    'Moss\\moss_image_sft_4step_v2.0.safetensors': "154c7f1455c3bf9925945c2f1ea2e4f09d0d0c67256081384a094b2b585f913f",
     'Moss\\moss_image_edit_lora_rank_64_bf16.safetensors': "17a48b8c605dcffdedb92a2b887d18cf316505be90802717669fb6556098dcdf",
     '4x-UltraSharpV2.safetensors': "2b5db674aa8f3864a696dccd1d07d7cc0500fbf220f35044cd30eee9a7f971a7",
     'birefnet.safetensors': "9ab37426bf4de0567af6b5d21b16151357149139362e6e8992021b8ce356a154",
@@ -268,7 +264,7 @@ TABS: dict[str, TabSpec] = {
                # Fill and Expand run the edit LoRA too (1.11.)
                "inpaint": ModeSpec(requires=(_MOSS_EDIT_LORA,)),
                "outpaint": ModeSpec(requires=(_MOSS_EDIT_LORA,))},
-        optional=("Moss\\lora_dmd2.safetensors", "Moss\\moss_image_sft_4step_v2.0.safetensors", _TAEF2, DESCRIBE_FALLBACK)),
+        optional=("Moss\\lora_dmd2.safetensors", _TAEF2, DESCRIBE_FALLBACK)),
 }
 
 

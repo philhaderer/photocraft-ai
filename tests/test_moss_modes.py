@@ -32,8 +32,6 @@ def run(mode="txt2img", wf=T2I, prompt="a cat on a sofa", with_sel=True, loras=S
     tmp = tempfile.mkdtemp()
     pc, _, b = T.make(tmp, with_sel=with_sel)
     b.comfy = Comfy(loras)
-    if wf == T2I:
-        kw.setdefault("stage_on", False)      # the first stage of the text-to-image graph is the 4-step LoRA: off in the window by default
     req = Request(mode=mode, workflow=wf, preset="MOSS Image Text", run_no=1, **kw)
     req.params = workflows.GenParams(prompt=prompt, seed=5, width=64, height=64)
     return pc, b, b.run(req)
@@ -76,20 +74,20 @@ def main():
     g = b.comfy.graphs[0]
     assert "6" not in g and "5" not in g and g["7"]["inputs"]["model"] == ["1", 0]
 
-    # the stages of the text-to-image graph: the 4-step LoRA is the first (stage_on, off), UltraReal and SLG follow (stages_off)
+    # the stages of the text-to-image graph: UltraReal and SLG (stages_off)
     _, b, _ = run(stages_off=["7"])
     g = b.comfy.graphs[0]
-    assert "5" in g and "7" not in g and "9" not in g and g["40"]["inputs"]["model"] == ["5", 0]
+    assert "5" in g and "7" not in g and g["40"]["inputs"]["model"] == ["5", 0]
     _, b, _ = run(stages_off=["5"])
     g = b.comfy.graphs[0]
     assert "5" not in g and "7" in g and g["7"]["inputs"]["model"] == ["6", 0]
 
     # the Lenovo LoRA has a strength slider of its own; the DMD2 strength is not touched
     for wf in (T2I, FILL):
-        _, b, _ = run(wf=wf, mode="inpaint" if wf == FILL else "txt2img", stage_on=(wf == FILL), stage_strengths={"5": 0.6})
+        _, b, _ = run(wf=wf, mode="inpaint" if wf == FILL else "txt2img", stage_strengths={"5": 0.6})
         g = b.comfy.graphs[0]
         assert g["5"]["inputs"]["strength_model"] == 0.6 and g["6"]["inputs"]["strength_model"] == 1.0
-    assert [s["strength"] for s in workflows.stage_info(workflows.load_template(T2I))] == [1.0, 1.0, None]
+    assert [s["strength"] for s in workflows.stage_info(workflows.load_template(T2I))] == [1.0, None]
 
     # typed steps / CFG reach the sampler
     _, b, _ = run(sampler_override={"steps": 12, "cfg": 2.0})
