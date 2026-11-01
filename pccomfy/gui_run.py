@@ -35,7 +35,7 @@ class RunMixin:
         m = self._model()
         spec = m.modes.get(self.v_mode.get()) if m else None
         target = p.prompt if (self.v_mode.get() == "remove" and spec is not None and spec.remove_text) else ""
-        return Request(mode=self._run_mode(), params=p, remove_target=target, workflow=wf_path, base_res=int(self.v_res.get()),
+        req = Request(mode=self._run_mode(), params=p, remove_target=target, workflow=wf_path, base_res=int(self.v_res.get()),
                        context=min(1.0, max(0.0, round(float(self.v_context.get()) * 20) / 20)),   # the slider's range and steps (an old saved 2.0 too) mask_grow=int(self.v_grow.get()),
                        mask_blur=int(self.v_blur.get()),
                        overlap=int(self.v_overlap.get()), variants=int(self.v_variants.get()),
@@ -48,6 +48,10 @@ class RunMixin:
                        mask_density=min(100, max(0, int(self.v_density.get()))),
                        seam_fixed=self._seam_mode() == "on" and self._run_mode() in ("inpaint", "remove", "outpaint"),
                        preview=bool(self.v_live.get()))
+        if wf == V10_WORKFLOW:      # v10 has its own recipe: its sampler values, UltraReal on, no skip-layer guidance, no speed LoRA
+            req.sampler_override, req.turbo, req.stage_on, req.stages_off, req.stage_strengths = {}, False, True, ["7"], {}
+            req.params.steps, req.params.cfg, req.params.sampler, req.params.scheduler = 25, 2.5, "er_sde", "simple"
+        return req
 
     def _doc_tag(self) -> str:
         """Model and options for the name of an upscaled document: "Flux3Klein x1.5 SeedVR2 Restore0.8"."""

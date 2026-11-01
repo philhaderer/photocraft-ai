@@ -37,11 +37,12 @@ def graphs():
 
 def models_():
     m = models.MOSS
-    assert m.modes["inpaint"].workflow == m.modes["outpaint"].workflow == A.name and "moss" not in models.PARKED_EXPAND
-    assert A.name not in models.PARKED_WORKFLOWS
-    assert m.modes["outpaint"].describe and m.modes["outpaint"].settings["match"] == 0.5
+    # Fill and Expand run the edit LoRA since 1.11. (the v10 graphs did not fit the selection); both v10 graphs are parked
+    assert m.modes["inpaint"].workflow == m.modes["outpaint"].workflow == "moss-image-edit.json"
+    assert {A.name, B.name} <= models.PARKED_WORKFLOWS and models.PARKED_EXPAND["moss"].workflow == A.name
+    lora = "Moss" + chr(92) + "moss_image_edit_lora_rank_64_bf16.safetensors"
     for mode in ("inpaint", "outpaint"):
-        assert "Moss\\lenovo_moss.safetensors" in manifest.mode_required("moss", mode)     # UltraReal starts on
+        assert lora in manifest.mode_required("moss", mode)
 
 
 def bridge_run(wf, mode="inpaint"):
@@ -87,7 +88,7 @@ def gui_tick():
     app = gui.App(cfg)
     app.root.withdraw()
     app.cb_workflow["values"] = [gui.BUILTIN] + sorted({w for m in models.MODELS for w in m.workflows()}) + [gui.V10_WORKFLOW]
-    for mode, shown in (("inpaint", True), ("outpaint", True), ("edit", False), ("txt2img", False)):
+    for mode, shown in (("inpaint", True), ("outpaint", False), ("edit", False), ("txt2img", False)):
         app.v_model.set("moss")
         app.v_mode.set(mode)
         app._on_model()
@@ -97,7 +98,8 @@ def gui_tick():
     app.v_mode.set("inpaint")
     app._on_model()
     app.v_v10.set(True)
-    assert app._request().workflow.endswith(gui.V10_WORKFLOW)
+    r = app._request()
+    assert r.workflow.endswith(gui.V10_WORKFLOW) and r.sampler_override == {} and r.turbo is False and r.stage_on is True and r.stages_off == ["7"]
     app.v_model.set("qwen")
     app._on_model()
     app.root.update()

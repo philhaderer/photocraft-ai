@@ -261,9 +261,9 @@ TABS: dict[str, TabSpec] = {
                "edit": ModeSpec(requires=(_MOSS_EDIT_LORA,)),
                "multi_edit": ModeSpec(requires=(_MOSS_EDIT_LORA,), optional=_CUT.optional),
                "remove": ModeSpec(requires=(_MOSS_EDIT_LORA,)),
-               # Fill and Expand (Inpainting v10) start with the UltraReal LoRA on, so the file is required (1.11.)
-               "inpaint": ModeSpec(requires=("Moss\\lenovo_moss.safetensors",)),
-               "outpaint": ModeSpec(requires=("Moss\\lenovo_moss.safetensors",))},
+               # Fill and Expand run the edit LoRA too (1.11.)
+               "inpaint": ModeSpec(requires=(_MOSS_EDIT_LORA,)),
+               "outpaint": ModeSpec(requires=(_MOSS_EDIT_LORA,))},
         optional=("Moss\\lora_dmd2.safetensors", "Moss\\moss_image_sft_4step_v2.0.safetensors", _TAEF2, DESCRIBE_FALLBACK)),
 }
 

@@ -681,10 +681,10 @@ LLM_TIP = ("Describes the picture in PhotoCraft (all visible layers) in one or t
            "model, and adds the description to the end of the prompt. Ctrl+Z in the prompt takes it away again.")
 STYLES_TIP = "Style prompts"
 STD_WORKFLOW = "flux3-klein-upscale-std.json"      # Flux 3 Upscale without AusBoss' nodes (test A2)
-V10_WORKFLOW = "moss-image-inpaint-v10.json"      # MOSS Fill / Expand as published (MOSS Inpainting v10), test switch next to Prompt
-V10_TIP = ("Test: runs MOSS Inpainting v10 as published instead of the plugin's own cut-out. Its graph crops around the selection "
+V10_WORKFLOW = "moss-image-inpaint-v10.json"      # MOSS Fill as published (MOSS Inpainting v10), test switch next to Prompt
+V10_TIP = ("Test: runs MOSS Inpainting v10 as published instead of the edit LoRA. Its graph crops around the selection "
            "(256 px of context), softens the mask and pastes the result back; needs the KJNodes and Essentials packs. "
-           "Context and Edge feather do not apply. Off: the plugin cuts out the part. Compare the results.")
+           "Context and Edge feather do not apply; describe the selection (\"a red silk scarf\"), no instruction. Off: the edit LoRA fills. Compare the results.")
 STD_NODES_TIP = "Test: runs Flux 3 Upscale from ComfyUI's standard nodes instead of the AusBoss nodes. Compare the results."
 LIVE_TIP = "Shows the picture while it is being made, under the plugin. It goes away when the result is in PhotoCraft."
 ERROR, ERROR_TEXT = "#e5484d", "#ffc2c2"

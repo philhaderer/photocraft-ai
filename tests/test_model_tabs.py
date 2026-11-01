@@ -251,8 +251,8 @@ def main():
     # Remove (a test) for Flux 2 and 3: the Qwen way, soft mask with 10 % feather
     for k in ("flux2", "flux3"):
         assert mm[k].modes["remove"].settings["feather_pct"] == 10.0 and mm[k].modes["remove"].settings["layer_mask"] == "soft"
-    s = mm["moss"].modes["inpaint"].settings          # Inpainting v10: 25 steps / CFG 2.5 without DMD2, UltraReal on, mask grown 8 and softened 16
-    assert s["turbo"] is False and s["stage_on"] is True and s["stage2_on"] is False and (s["mask_grow"], s["mask_blur"]) == (8, 16)
+    s = mm["moss"].modes["inpaint"]                   # Fill with the edit LoRA, like Qwen (1.11.)
+    assert s.workflow == "moss-image-edit.json" and s.settings["layer_mask"] == "soft" and s.settings["context"] == 0.4
     # one general tooltip per function, the same on every tab, naming no model (user 28.10.); model notes go under the prompt
     names = ("Qwen", "Fibo", "Flux", "MOSS", "Krea", "SeedVR")
     assert set(models.FUNCTION_TIPS) >= {k for m in models.MODELS for k in m.modes}

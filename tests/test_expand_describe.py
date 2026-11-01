@@ -22,9 +22,9 @@ def model_checks():
     assert "outpaint" not in models.BY_KEY["krea2"].modes                # parked (off since 29.10.)
     spec = models.PARKED_EXPAND["krea2"]
     assert spec.describe and spec.prompt_tip == models.EXPAND_DESCRIBE_TIP
-    assert "moss" not in models.PARKED_EXPAND                             # MOSS Expand is back since 1.11. (Inpainting v10), still with Describe
+    assert "outpaint" in models.BY_KEY["moss"].modes and "moss" in models.PARKED_EXPAND     # MOSS Expand runs the edit LoRA since 1.11. (Inpainting v10 is parked)
     moss = models.BY_KEY["moss"].modes["outpaint"]
-    assert moss.describe and moss.prompt_tip == models.EXPAND_DESCRIBE_TIP
+    assert not moss.describe and moss.workflow == "moss-image-edit.json"
     for m in models.MODELS:
         if m.key not in ("krea2", "moss") and "outpaint" in m.modes:
             assert not m.modes["outpaint"].describe and not m.modes["outpaint"].prompt_tip, m.key
