@@ -660,8 +660,26 @@ class ModeMixin:
         on(self.w_adv["Mask grow"], masked and not editor)
         on(self.w_adv["Mask blur"], masked and not editor)
         on(self.cb_lm, mode != "upscale", "readonly")        # Upscale opens a new document: no layer to mask
-        on(self.t_neg, self._wf_has_tag("negative"))
-        self.t_neg.configure(fg=FG if self._wf_has_tag("negative") else DISABLED)
+        self._update_negative_box()
+
+    def _update_negative_box(self):
+        """The "Negative prompt" row shows only where the workflow has a negative prompt (MOSS Text to image): never a greyed-out
+        box (user 2.11.). The frame stays packed, empty and without padding, because other boxes are packed after it."""
+        has = self._wf_has_tag("negative")
+        self.t_neg.configure(state="normal" if has else "disabled", fg=FG if has else DISABLED)
+        shown = bool(self.btn_neg.winfo_manager())
+        if has == shown:
+            return
+        if has:
+            self.btn_neg.pack(anchor="w")
+            self._show_negative()
+        else:
+            self.btn_neg.pack_forget()
+            self.neg_body.pack_forget()
+        if self.f_neg.winfo_manager():
+            self.f_neg.pack_configure(pady=(6, 0) if has else 0)
+        if getattr(self, "_sized", False):
+            self._fit_height()
 
     def _on_workflow(self):
         # a custom workflow carries its own model/steps/CFG/sampler – these fields apply to the built-in one only
