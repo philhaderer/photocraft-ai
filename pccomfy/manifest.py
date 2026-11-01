@@ -213,6 +213,7 @@ TABS: dict[str, TabSpec] = {
             "upscale": ModeSpec(requires=("Flux 3\\flux-3-image-klein-restore.safetensors",),
                                 optional=("seedvr2_3b_int8_convrot.safetensors", "seedvr2_ema_vae_fp16.safetensors"),
                                 nodes=_FLUX3_UP_NODES),
+            "refine": ModeSpec(),   # the edit graph with the picture rescaled to its own size: no files of its own
             "multi_edit": _CUT,
         },
         optional=(_TAEF2, DESCRIBE_FALLBACK)),
