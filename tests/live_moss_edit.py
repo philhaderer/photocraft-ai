@@ -86,7 +86,13 @@ def cmd_run(a):
                 if not slg:       # the skip-layer guidance node (3) drops out: the sampler reads the model of the edit LoRA
                     graph["40"]["inputs"]["model"] = ["2", 0]
                     graph.pop("3", None)
-                hist = b._wait(b.comfy.queue(graph), graph, str(WF), 0, 1, "", lambda *x, **k: None)
+                pid = b.comfy.queue(graph)
+                hist = b._wait(pid, graph, str(WF), 0, 1, "", lambda *x, **k: None)
+                for _ in range(10):       # the history may lag a moment behind the "finished" message
+                    if hist.get("outputs"):
+                        break
+                    time.sleep(1.5)
+                    hist = b.comfy.history(pid) or {}
                 im = b.comfy.output_images(hist, out_node)[0].convert("RGB")
                 dt = time.time() - t0
                 im.save(out / "bilder" / f"{name}-s{seed}-{key}.png")
