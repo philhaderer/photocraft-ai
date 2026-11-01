@@ -32,7 +32,8 @@ def run(mode="txt2img", wf=T2I, prompt="a cat on a sofa", with_sel=True, loras=S
     tmp = tempfile.mkdtemp()
     pc, _, b = T.make(tmp, with_sel=with_sel)
     b.comfy = Comfy(loras)
-    kw.setdefault("stages_off", ["9"])      # the 4-step LoRA stage is off in the window by default
+    if wf == T2I:
+        kw.setdefault("stage_on", False)      # the first stage of the text-to-image graph is the 4-step LoRA: off in the window by default
     req = Request(mode=mode, workflow=wf, preset="MOSS Image Text", run_no=1, **kw)
     req.params = workflows.GenParams(prompt=prompt, seed=5, width=64, height=64)
     return pc, b, b.run(req)
@@ -71,25 +72,24 @@ def main():
     except BridgeError as e:
         assert "lora_dmd2" in str(e)
     # DMD2 off: the file is not needed at all
-    _, b, _ = run(loras=["Moss\\lenovo_moss.safetensors"], turbo=False, stage_on=False)
+    _, b, _ = run(loras=["Moss\\lenovo_moss.safetensors"], turbo=False, stages_off=["5"])
     g = b.comfy.graphs[0]
     assert "6" not in g and "5" not in g and g["7"]["inputs"]["model"] == ["1", 0]
 
-    # the extra stages: Lenovo is the first (stage_on), SLG the second (stages_off)
-    _, b, _ = run(stage_on=True, stages_off=["7", "9"])
+    # the stages of the text-to-image graph: the 4-step LoRA is the first (stage_on, off), UltraReal and SLG follow (stages_off)
+    _, b, _ = run(stages_off=["7"])
     g = b.comfy.graphs[0]
-    assert "5" in g and "7" not in g and g["40"]["inputs"]["model"] == ["5", 0]
-    _, b, _ = run(stage_on=False, stages_off=["9"])
+    assert "5" in g and "7" not in g and "9" not in g and g["40"]["inputs"]["model"] == ["5", 0]
+    _, b, _ = run(stages_off=["5"])
     g = b.comfy.graphs[0]
     assert "5" not in g and "7" in g and g["7"]["inputs"]["model"] == ["6", 0]
 
     # the Lenovo LoRA has a strength slider of its own; the DMD2 strength is not touched
     for wf in (T2I, FILL):
-        _, b, _ = run(wf=wf, mode="inpaint" if wf == FILL else "txt2img", stage_on=True, stage_strengths={"5": 0.6})
+        _, b, _ = run(wf=wf, mode="inpaint" if wf == FILL else "txt2img", stage_on=(wf == FILL), stage_strengths={"5": 0.6})
         g = b.comfy.graphs[0]
         assert g["5"]["inputs"]["strength_model"] == 0.6 and g["6"]["inputs"]["strength_model"] == 1.0
-    assert workflows.stage_info(workflows.load_template(T2I))[0]["strength"] == 1.0
-    assert workflows.stage_info(workflows.load_template(T2I))[1]["strength"] is None
+    assert [s["strength"] for s in workflows.stage_info(workflows.load_template(T2I))] == [1.0, 1.0, None]
 
     # typed steps / CFG reach the sampler
     _, b, _ = run(sampler_override={"steps": 12, "cfg": 2.0})

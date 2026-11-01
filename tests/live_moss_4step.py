@@ -28,7 +28,7 @@ from pccomfy.comfy import ComfyUI  # noqa: E402
 
 BASE = cfgmod.CONFIG_DIR / "moss-4step-test"
 WF = ROOT / "workflows" / "moss-image-t2i.json"
-SLG, FOUR = "7", "9"        # the stage ids of moss-image-t2i.json
+SLG, LENOVO = "7", "5"        # stage ids of moss-image-t2i.json (order in the window: 4-step LoRA = stage_on, UltraReal, SLG)
 
 MOTIVES = [
     ("team-meeting", "A diverse team of four colleagues around a glass meeting table in a bright modern office, laptops and coffee cups, "
@@ -55,10 +55,10 @@ MOTIVES = [
 
 # name, label, request fields, sampler override
 VARIANTS = [
-    ("A", "A 4-step", dict(turbo=False, stage_on=False, stages_off=[SLG]), {"steps": 4, "cfg": 1.0, "sampler": "euler", "scheduler": "simple"}),
+    ("A", "A 4-step", dict(turbo=False, stage_on=True, stages_off=[LENOVO, SLG]), {"steps": 4, "cfg": 1.0, "sampler": "euler", "scheduler": "simple"}),
     ("B", "B 4-step + UltraReal", dict(turbo=False, stage_on=True, stages_off=[SLG]), {"steps": 4, "cfg": 1.0, "sampler": "euler", "scheduler": "simple"}),
-    ("C", "C 35 steps (start)", dict(turbo=False, stage_on=True, stages_off=[SLG, FOUR]), {}),
-    ("D", "D DMD2 8 steps", dict(turbo=True, stage_on=True, stages_off=[SLG, FOUR]), {}),
+    ("C", "C 35 steps (start)", dict(turbo=False, stage_on=False, stages_off=[SLG]), {}),
+    ("D", "D DMD2 8 steps", dict(turbo=True, stage_on=False, stages_off=[SLG]), {}),
 ]
 
 

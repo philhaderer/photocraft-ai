@@ -158,10 +158,10 @@ FLUX3 = Model(
 
 # MOSS: the DMD2 speed LoRA (8 steps, CFG 1.5) is the model's own LoRA; the Lenovo UltraReal LoRA and the skip-layer
 # guidance (SLG) are switches that start on (best result in the live tests); the LLM prompt enhancer starts off.
-_MOSS = dict(turbo=True, stage_on=True, stage2_on=True)
+_MOSS = dict(turbo=True, stage_on=False, stage2_on=True, stage3_on=False)     # the stages of moss-image-t2i.json: 4-step Turbo LoRA (off), UltraReal (on), skip-layer guidance (off)
 MOSS_STEPS_TIP = "Turn up the steps to 35 for best results."     # wording of the user (29.10.), 35 after the CFG test
 _MOSS_EDIT = dict(base_res=1024, layer_mask="none")
-_MOSS_INPAINT = {**_MOSS, "turbo": False, "stage2_on": False, "base_res": 1216, "layer_mask": "soft", "mask_grow": 8, "mask_blur": 16,
+_MOSS_INPAINT = {"turbo": False, "stage_on": True, "stage2_on": False, "base_res": 1216, "layer_mask": "soft", "mask_grow": 8, "mask_blur": 16,
                  "context": 1.0}      # 0.4 gave the model too little surroundings (user test 1.11.: Fill did not fit the picture)
 MOSS_EDIT_TIP = ("Describe the change: “Change only the X to Y. Keep the rest unchanged.”")   # wording of the LoRA's template; proposal, the user decides
 MOSS = Model(
@@ -171,7 +171,7 @@ MOSS = Model(
         # Text to image starts without DMD2 and without SLG, no LLM: the user's live test 29.10. (with DMD2 or SLG the photos
         # looked artificial, with the LLM prompt too). Without DMD2 the workflow runs 35 steps at CFG 3.0 (pc_no_lora; blind
         # test docs/tests/moss-cfg.md)
-        "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "turbo": False, "stage2_on": False, "base_res": 1280,
+        "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "turbo": False, "base_res": 1280,
                                                 "layer_mask": "none", "enhance": False},
                         prompt_tip=T2I_TIP, steps_tip=MOSS_STEPS_TIP),
         # Edit (1.11.): the edit LoRA on the same checkpoint, 30 steps at CFG 4 (euler / normal) as the LoRA's author ships it;
