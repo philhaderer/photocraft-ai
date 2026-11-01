@@ -220,7 +220,8 @@ class SettingsMixin(DownloadMixin):
         else:
             self.f_scrollbox.pack(fill="x", before=below)     # the body sits in its scroll box (gui.py)
         hide_foot = state == "none_linked"
-        if hide_foot != self._foot_hidden:
+        foot_changed = hide_foot != self._foot_hidden
+        if foot_changed:
             self._foot_hidden = hide_foot
             for w in (self.lbl_conn, self.b_refresh, self.b_reset):
                 w.pack_forget()
@@ -228,6 +229,21 @@ class SettingsMixin(DownloadMixin):
                 self.lbl_conn.pack(side="left")
                 self.b_refresh.pack(side="left", padx=FOOT_REFRESH_PADX)
                 self.b_reset.pack(side="left", padx=FOOT_RESET_PADX)
+        # no model chosen or linked: no "Live preview" tick and no idle "Ready" (user 2.11.)
+        show_live = not state
+        if foot_changed or show_live != getattr(self, "_live_shown", True):
+            self._live_shown = show_live
+            self.cb_live.pack_forget()
+            if show_live:
+                self.cb_live.pack(side="left", padx=FOOT_RESET_PADX)
+                easy = getattr(self, "lbl_easy_model", None)
+                if easy is not None and easy.winfo_manager():       # Easy Mode's model line stays right of it
+                    easy.pack_forget()
+                    easy.pack(side="left", padx=FOOT_RESET_PADX)
+        if state and self.v_status.get() == "Ready":
+            self.v_status.set("")
+        elif not state and not self.v_status.get():
+            self.v_status.set("Ready")
         if fit and getattr(self, "_sized", False):
             self._fit_height()
 
