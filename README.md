@@ -19,8 +19,8 @@ Tested: Windows 11 · 16 GB VRAM · PhotoCraft 0.18 · ComfyUI version: 0.42.0
 
 1. **Get the parts**: Windows 10/11 with an NVIDIA card (16 GB VRAM), [Python 3.11+](https://www.python.org/downloads/windows/)
    (tick "tcl/tk" and "Add python.exe to PATH"), PhotoCraft 0.18, and ComfyUI 0.42 or newer with
-   [ComfyUI-AusBoss](https://github.com/ausboss/ComfyUI-AusBoss) 2.13 or newer (only needed for modes Upscale and Refine ).
-2. **Install the plugin**: *Code › Download ZIP*, unpack it, double-click **`setup-windows.bat`**. It also creates the
+   [ComfyUI-AusBoss](https://github.com/ausboss/ComfyUI-AusBoss) 2.13 or newer (only needed for modes Upscale and Refine).
+2. **Install the plugin**: *Code › Download ZIP* and unpack it (or `git clone` the repository), then double-click **`setup-windows.bat`**. It also creates the
    desktop shortcut **PhotoCraft AI** (it looks for `photocraft.exe` itself and asks once if it can't find it).
 3. **Start it**: start ComfyUI, close PhotoCraft, then double-click **PhotoCraft AI** on your desktop. PhotoCraft opens,
    and a few seconds later the plugin window appears.
@@ -40,8 +40,7 @@ You pick a **function** at the top, type a prompt and press **Generate**. The pl
 to ComfyUI and puts the result back into PhotoCraft as a new layer in a group, with a soft layer mask where that makes sense.
 
 More settings in the window: **variants** (generates several results as layers in one group), prompt history, prompt templates,
-LLM prompt enhancement, live preview. Advanced settings: **edge feather, context size, mask density (PhotoCraft 0.17+), 
-**add custom LoRAs, sharpen, match colours.**
+LLM prompt enhancement, live preview. Advanced settings: **edge feather, context size, mask density (PhotoCraft 0.17+), add custom LoRAs, sharpen, match colours.**
 
 
 | Function | What it does |
@@ -70,47 +69,32 @@ Which model offers which function:
 | Text to image | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 
-## Install
+## Update and troubleshooting
 
-You need the plugin, PhotoCraft, ComfyUI and the model files. Details for each step:
+- **Update**: download the new version, or run `git pull` in the plugin folder if you used `git clone`, and restart
+  the plugin. Your settings stay in `data\`.
+- **Recreate the desktop shortcut**: run this in the plugin folder (type `powershell` into Explorer's address bar):
 
-1. **Plugin**: *Code › Download ZIP* and unpack it (e.g. to `C:\programs\photocraft-ai`), or `git clone` it. Install
-   Python, then double-click **`setup-windows.bat`**; it creates `.venv`, installs what the plugin needs and ends with
-   "Setup done".
-2. **ComfyUI** (0.42.0 or newer, running on `http://127.0.0.1:8188`). For Upscale and Refine also install
-   [ComfyUI-AusBoss](https://github.com/ausboss/ComfyUI-AusBoss) 2.13.0 or newer (ComfyUI-Manager). All other nodes
-   are part of ComfyUI.
-3. **Model files**: use the download buttons in the gear window, or see [Models](#models). ComfyUI reads its model
-   folders only at start, so restart it after adding files.
-4. **Desktop shortcut**: `setup-windows.bat` creates it for you. If it could not find `photocraft.exe`, it asks for it
-   once. To redo it later, run this in the plugin folder (type `powershell` into Explorer's address bar):
+  ```
+  .venv\Scripts\python.exe -m pccomfy shortcut
+  ```
 
-   ```
-   .venv\Scripts\python.exe -m pccomfy shortcut
-   ```
-
-   Add `--photocraft "C:\programs\photocraft\photocraft.exe"` to name the file yourself. If `setup-windows.bat` said it uses
-   Python directly, use the path in `data\python.txt` instead of `.venv\Scripts\python.exe`.
-5. **First start**: ComfyUI is running, PhotoCraft is closed. Double-click **PhotoCraft AI** on the desktop. PhotoCraft starts, and a
-   few seconds later the plugin window appears. In the gear window, red entries are model files that are still missing.
-
-The shortcut starts PhotoCraft with its control channel (loopback only, token-protected, file access limited to
-`data\exchange`) and then the plugin, without a console window. To update: download the new version (or `git pull`)
-and restart. Your settings stay in `data\`.
+  Add `--photocraft "C:\programs\photocraft\photocraft.exe"` to name the file yourself. If `setup-windows.bat` said it
+  uses Python directly, use the path in `data\python.txt` instead of `.venv\Scripts\python.exe`.
 
 ## Models
 
 You only need the files for the models you want. The gear window lists the files each model needs, with size, ComfyUI target
 folder and a download button; the plugin enables a model when it finds all the files for its standard settings.
 
-- Release 1 uses the **int8 ConvRot** files, which fit into 16 GB VRAM, some even into 12 GB.
+- Release 1 uses the **int8 ConvRot** files, which fit into 16 GB VRAM.
 - Some files are **gated**: log in to Hugging Face and accept the licence on the model page first. Flux 3 is one of them.
 
 
 ## Known limitations
 
 - Only tested on Windows with a 16 GB NVIDIA card.
-- During a run, PhotoCraft briefly opens a temporary document. PLease don't switch documents or change the
+- During a run, PhotoCraft briefly opens a temporary document. Please don't switch documents or change the
   selection while a run is going.
 - A run consists of several PhotoCraft steps (history entries).
 - CMYK, Lab and 16-bit documents go through 8-bit RGB.
