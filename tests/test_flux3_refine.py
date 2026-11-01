@@ -39,6 +39,13 @@ def main():
         assert out["159"]["inputs"]["text"] == want
         mp = out["3"]["inputs"]["megapixels"]                      # the picture's own size, not a fixed 1 MP
         assert abs(mp - T.W * T.H / 1e6) < 0.01, mp
+    # a selection is ignored: the whole picture goes in (1.11., user: Refine only without a selection)
+    pc, _, b = T.make(tempfile.mkdtemp(), with_sel=True)
+    b.comfy = T.FakeComfy()
+    req = Request(mode="refine", workflow=str(WF), preset="X", run_no=1, scale=1.0)
+    req.params = workflows.GenParams(prompt="", seed=5)
+    res = b.run(req)
+    assert res["region"] == {"x": 0, "y": 0, "w": T.W, "h": T.H}, res["region"]
     print("ALL OK (flux3 refine)")
 
 

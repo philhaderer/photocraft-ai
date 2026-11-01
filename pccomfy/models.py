@@ -93,7 +93,7 @@ FUNCTION_TIPS = {
     "edit": "Changes the whole picture from your text (\"make it night\"). A selection is ignored.",
     "img2img": "Reworks the picture (or selection) from your text.",
     "upscale": "Enlarges the picture (or selection) into a NEW document, up to 24 MP.",
-    "refine": "Cleans up the picture (or selection) at the same size, as a new layer.",
+    "refine": "Cleans up the whole picture at the same size, as a new layer. A selection is ignored.",
     "txt2img": "New picture from text only, as a new layer. A selection is ignored.",
 }
 EDIT_AGAIN = "Nothing happens? Generate again or word it more fully."     # Flux 2 and 3 Edit (was in their tooltip)
