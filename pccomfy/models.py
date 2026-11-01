@@ -160,13 +160,11 @@ FLUX3 = Model(
 # guidance (SLG) are switches that start on (best result in the live tests); the LLM prompt enhancer starts off.
 _MOSS = dict(turbo=True, stage_on=True, stage2_on=False, stage3_on=False)     # the stages of moss-image-t2i.json: UltraReal (on), skip-layer guidance (off)
 MOSS_STEPS_TIP = "Turn up the steps to 35 for best results."     # wording of the user (29.10.), 35 after the CFG test
-_MOSS_EDIT = dict(base_res=1024, layer_mask="none")
 _MOSS_INPAINT = {"turbo": False, "stage_on": True, "stage2_on": False, "base_res": 1216, "layer_mask": "soft", "mask_grow": 8, "mask_blur": 16,
                  "context": 1.0}      # 0.4 gave the model too little surroundings (user test 1.11.: Fill did not fit the picture)
-MOSS_EDIT_TIP = ("Describe the change: “Change only the X to Y. Keep the rest unchanged.”")   # wording of the LoRA's template; proposal, the user decides
 MOSS = Model(
     "moss", "MOSS Image",
-    "MOSS-Image: text to image, Edit Canvas, Multi Image Edit, Remove Selection, Fill and Expand (edit LoRA).",
+    "MOSS-Image: text to image.",
     {
         # Text to image starts without DMD2 and without SLG, no LLM: the user's live test 29.10. (with DMD2 or SLG the photos
         # looked artificial, with the LLM prompt too). Without DMD2 the workflow runs 35 steps at CFG 3.0 (pc_no_lora; blind
@@ -174,17 +172,6 @@ MOSS = Model(
         "txt2img": Mode("moss-image-t2i.json", {**_MOSS, "turbo": False, "base_res": 1280,
                                                 "layer_mask": "none", "enhance": False},
                         prompt_tip=T2I_TIP, steps_tip=MOSS_STEPS_TIP),
-        # Edit (1.11.): the edit LoRA on the same checkpoint, 30 steps at CFG 4 (euler / normal) as the LoRA's author ships it;
-        # no speed LoRA. The workflow takes no mask, so Remove Selection works like Qwen's (red outline + instruction).
-        "edit": Mode("moss-image-edit.json", _MOSS_EDIT, prompt_tip=MOSS_EDIT_TIP),
-        "multi_edit": Mode("moss-image-edit.json", _MOSS_EDIT, prompt_tip=MULTI_TIP, run_as="edit"),
-        "remove": Mode("moss-image-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0),
-                       prompt_tip=REMOVE_NAME_TIP, remove_text=True),
-        # Fill and Expand (1.11., to test): the edit LoRA like Qwen and Fibo (the selection is drawn into the picture as a red
-        # outline and an instruction says what to do; Expand: white margin). The MOSS Inpainting v10 graphs did not fit the
-        # selection in the user's test (docs/tests/moss-edit-inpaint.md); the tick "v10 graph" next to Prompt (Fill only) still runs one.
-        "inpaint": Mode("moss-image-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=4.0), prompt_tip=FILL_TIP),
-        "outpaint": Mode("moss-image-edit.json", dict(base_res=1024, layer_mask="none")),
     },
     requires=(
         "moss_image_sft_int8_convrot.safetensors",

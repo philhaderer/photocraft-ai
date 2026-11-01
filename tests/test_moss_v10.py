@@ -1,4 +1,4 @@
-"""MOSS Fill and Expand after Inpainting v10 (1.11.): the graph of the tick "v10 graph" and what the bridge sends for it.
+"""MOSS Inpainting v10 graphs (parked since 1.11., MOSS Fill and Expand are off): the graph and what the bridge sends for it.
 
     python tests/test_moss_v10.py
 """
@@ -35,16 +35,6 @@ def graphs():
     assert manifest.node_pack("GrowMaskWithBlur") and manifest.node_pack("MaskBoundingBox+")
 
 
-def models_():
-    m = models.MOSS
-    # Fill and Expand run the edit LoRA since 1.11. (the v10 graphs did not fit the selection); both v10 graphs are parked
-    assert m.modes["inpaint"].workflow == m.modes["outpaint"].workflow == "moss-image-edit.json"
-    assert {A.name, B.name} <= models.PARKED_WORKFLOWS and models.PARKED_EXPAND["moss"].workflow == A.name
-    lora = "Moss" + chr(92) + "moss_image_edit_lora_rank_64_bf16.safetensors"
-    for mode in ("inpaint", "outpaint"):
-        assert lora in manifest.mode_required("moss", mode)
-
-
 def bridge_run(wf, mode="inpaint"):
     tmp = tempfile.mkdtemp()
     pc, _, b = T.make(tmp)
@@ -72,45 +62,9 @@ def run_both():
     assert set(m.getdata()) <= {0, 255}, "the selection is sent unsoftened"
 
 
-def gui_tick():
-    try:
-        import tkinter
-        tkinter.Tk().destroy()
-    except Exception as e:
-        print(f"(tick not tested: no Tk window: {e})")
-        return
-    from pccomfy import config as cfgmod
-    from pccomfy import gui
-    gui.winlink.available = lambda: False
-    cfg = cfgmod.load()
-    cfg["comfyui"]["url"] = "http://127.0.0.1:1"
-    cfg["photocraft"]["port"] = 1
-    app = gui.App(cfg)
-    app.root.withdraw()
-    app.cb_workflow["values"] = [gui.BUILTIN] + sorted({w for m in models.MODELS for w in m.workflows()}) + [gui.V10_WORKFLOW]
-    for mode, shown in (("inpaint", True), ("outpaint", False), ("edit", False), ("txt2img", False)):
-        app.v_model.set("moss")
-        app.v_mode.set(mode)
-        app._on_model()
-        app.root.update()
-        assert app._v10_shown is shown and not app.v_v10.get(), mode
-        assert "v10" not in (app._request().workflow or "")
-    app.v_mode.set("inpaint")
-    app._on_model()
-    app.v_v10.set(True)
-    r = app._request()
-    assert r.workflow.endswith(gui.V10_WORKFLOW) and r.sampler_override == {} and r.turbo is False and r.stage_on is True and r.stages_off == ["7"]
-    app.v_model.set("qwen")
-    app._on_model()
-    app.root.update()
-    assert not app._v10_shown and not app.v_v10.get(), "MOSS only; off again outside"
-
-
 def main():
     graphs()
-    models_()
     run_both()
-    gui_tick()
     print("ALL OK (moss v10)")
 
 

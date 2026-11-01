@@ -36,7 +36,7 @@ def main():
     app._on_model()
     assert app.v_workflow.get() == "qwen-image-21-edit.json" and app.v_res.get() == 1024 and app.v_turbo.get() is False    # Qwen: Turbo off by default (27.10.)
     assert app.rb_modes["edit"]["state"] == "normal" and app.rb_modes["upscale"]["state"] == "normal"     # functions: never grey
-    assert [k for k, rb in app.rb_tabs.items() if rb["state"] == "normal"] == ["qwen", "fibo", "moss"]          # models that can fill (MOSS since 1.11.)
+    assert [k for k, rb in app.rb_tabs.items() if rb["state"] == "normal"] == ["qwen", "fibo"]          # models that can fill
     # a function the model cannot do picks a model that can (the fixed order: Flux 3 first); Qwen comes back for Fill
     app.v_mode.set("upscale"); app._on_mode()
     assert app.v_model.get() == "flux3" and app.v_workflow.get() == "flux3-klein-upscale.json"
@@ -57,7 +57,7 @@ def main():
     assert app.v_enhance.get() is False and "Qwen 3.5 9B" in app.tt_enhance.text      # which text model writes the prompt (starts off)
     assert app.cb_enhance["text"] == "LLM prompt enhancement" and "Qwen 3.5 9B" in app.tt_enhance.text   # name only in the tooltip
     assert app.v_turbo.get() is False and app.cb_turbo["text"].startswith("DMD2") and app.v_lora_str.get() == 1.0   # DMD2 starts off (user 29.10.)
-    assert list(models.MOSS.modes) == ["txt2img", "edit", "multi_edit", "remove", "inpaint", "outpaint"]                                                       # Fill off (not good enough), Expand parked 29.10.
+    assert list(models.MOSS.modes) == ["txt2img"]                                                       # Fill off (not good enough), Expand parked 29.10.
     assert [c["text"] for c in app.stage_cbs][:2] == ["UltraReal LoRA", "Skip-layer guidance (SLG)"]
     assert app.v_stage.get() and not app.v_stage2.get()      # Lenovo on, SLG off (user 29.10.)
     r = app._request()
@@ -77,7 +77,7 @@ def main():
     app.v_turbo.set(True)
     app._on_workflow()
     assert app._request().mode == "txt2img" and app._layer_prefix() == "MOSS Image Text"
-    assert "outpaint" in models.BY_KEY["moss"].modes and "outpaint" not in models.BY_KEY["krea2"].modes   # MOSS Expand is back since 1.11. (Inpainting v10), Krea 2 stays parked
+    assert "outpaint" not in models.BY_KEY["moss"].modes and "outpaint" not in models.BY_KEY["krea2"].modes   # MOSS and Krea 2 Expand are parked
 
     # Flux 3: text to image and edit share the settings (base res 1536); Flux 2 edit starts at 1024
     app.v_model.set("flux3")
@@ -234,8 +234,6 @@ def main():
     # Remove (a test) for Flux 2 and 3: the Qwen way, soft mask with 10 % feather
     for k in ("flux2", "flux3"):
         assert mm[k].modes["remove"].settings["feather_pct"] == 10.0 and mm[k].modes["remove"].settings["layer_mask"] == "soft"
-    s = mm["moss"].modes["inpaint"]                   # Fill with the edit LoRA, like Qwen (1.11.)
-    assert s.workflow == "moss-image-edit.json" and s.settings["layer_mask"] == "soft" and s.settings["context"] == 0.4
     # one general tooltip per function, the same on every tab, naming no model (user 28.10.); model notes go under the prompt
     names = ("Qwen", "Fibo", "Flux", "MOSS", "Krea", "SeedVR")
     assert set(models.FUNCTION_TIPS) >= {k for m in models.MODELS for k in m.modes}
@@ -250,9 +248,9 @@ def main():
     assert mm["flux2"].modes["remove"].prompt_tip.endswith(models.REMOVE_AGAIN)
     assert mm["fibo"].modes["refine"].prompt_tip == models.DESCRIBE_TIP + " Change the prompt for other edits."
     # every function's tooltip starts with the ranking (user 28.10.); a function without one says so
-    assert models.ranking_text("inpaint") == "Ranking: 1. Fibo, 2. Qwen (not ranked: MOSS)."
-    assert models.ranking_text("remove") == "Ranking: 1. Fibo, 2. Qwen (not ranked: Flux 3, Flux 2, MOSS)."
-    assert models.ranking_text("outpaint") == "Ranking: 1. Flux 2, 2. Flux 3, 3. Qwen, 4. Fibo (not ranked: MOSS)."      # Krea 2 / MOSS Expand off 29.10.
+    assert models.ranking_text("inpaint") == "Ranking: 1. Fibo, 2. Qwen."
+    assert models.ranking_text("remove") == "Ranking: 1. Fibo, 2. Qwen (not ranked: Flux 3, Flux 2)."
+    assert models.ranking_text("outpaint") == "Ranking: 1. Flux 2, 2. Flux 3, 3. Qwen, 4. Fibo."      # Krea 2 / MOSS Expand off 29.10.
     assert models.ranking_text("edit").startswith("Ranking: 1. Flux 3, 2. Qwen, 3. Flux 2, 4. Fibo") and models.ranking_text("img2img") == ""   # all functions are ranked since 1.11.
     assert app.tt_modes["remove"].text.startswith("Ranking: 1. Fibo, 2. Qwen")
     assert all(k in models.SHORT for k in models.BY_KEY) and all(k in models.BY_KEY for r in models.RANKING.values() for k in r)
