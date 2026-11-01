@@ -70,7 +70,7 @@
       "pc_lora_tip": "Restore LoRA: faces and details stay closer to the picture."
     },
     "inputs": {
-      "lora_name": "Flux 3\flux-3-image-klein-restore.safetensors",
+      "lora_name": "Flux 3\\flux-3-image-klein-restore.safetensors",
       "strength_model": 0.5,
       "model": [
         "8",
