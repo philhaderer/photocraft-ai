@@ -107,10 +107,10 @@ class TipsMixin:
         return max(left, min(x, right - w)), max(top, min(y, bottom - h))
 
     def _tips_setting_row(self, parent):
-        """The same tick in the settings window (bottom of the window; packed before the notebook so it keeps its place)."""
+        """The same tick in the settings window (tab "Other settings")."""
         self._tips_setting_var = tk.BooleanVar(value=tips_hidden())
         cb = ttk.Checkbutton(parent, text=HIDE_TEXT, variable=self._tips_setting_var, style="SetText.TCheckbutton",
                              command=lambda: cfgmod.set_setting(HIDE_KEY, True if self._tips_setting_var.get() else None))
-        cb.pack(side="bottom", anchor="w", padx=10, pady=(0, 8))
+        cb.pack(side="top", anchor="w", padx=14, pady=(12, 4))
         Tooltip(cb, "Tick to stop the tip of the day when the plugin starts; untick to see the tips again.")
         return cb

@@ -457,12 +457,13 @@ class SettingsMixin(DownloadMixin):
 
         # no ComfyUI dot and no Refresh here: the plugin's footer has both
 
-        self._tips_setting_row(win)
         nb = ttk.Notebook(win)              # tab 1: the models; tab 2: credits
         nb.pack(fill="both", expand=True, padx=10, pady=8)
-        tab_models, tab_credits = ttk.Frame(nb), ttk.Frame(nb)
+        tab_models, tab_other, tab_credits = ttk.Frame(nb), ttk.Frame(nb), ttk.Frame(nb)
         nb.add(tab_models, text="All supported models")
+        nb.add(tab_other, text="Other settings")      # general switches (user 1.11.): for now the tip popup
         nb.add(tab_credits, text="Credits")
+        self._tips_setting_row(tab_other)
         self.nb_settings = nb
 
         # which models the plugin shows (user 29.10.): after installing, all are shown; untick to hide one (the right-click
