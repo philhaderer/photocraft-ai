@@ -95,11 +95,29 @@ def main():
     app._style_preview(Active(sub, "none"))
     assert app._style_tip is None
 
-    # Easy Mode hides the button (like the LLM button) and shows it again, still left of LLM
+    # the hover box sits beside the mouse, not at the screen's top left (a native menu reports x = y = 0, width 1)
+    app.root.update()
+    app._style_preview(Active(sub, 1))
+    app.root.update()
+    px, py = app.root.winfo_pointerx(), app.root.winfo_pointery()
+    gx, gy = app._style_tip_pos
+    assert abs(gy - (py - 12)) < 80 and gx > 0, (gx, gy, px, py)
+    app._style_tip_hide()
+
+    # Easy Mode keeps the Styles button (user 1.11.) beside the bin, hides LLM, and LLM comes back between them
     app.v_easy.set(True)
     app.toggle_easy()
     app.root.update()
-    assert not shown(app.b_styles) and not shown(app.b_llm)
+    assert shown(app.b_styles) and not shown(app.b_llm)
+    assert app.b_styles.winfo_x() < app.b_clear.winfo_x()
+    app.v_mode.set("edit")
+    app._on_model()
+    app.root.update()
+    assert not shown(app.b_styles)                                  # other functions have no styles, also in Easy Mode
+    app.v_mode.set("txt2img")
+    app._on_model()
+    app.root.update()
+    assert shown(app.b_styles)
     app.v_easy.set(False)
     app.toggle_easy()
     app.root.update()

@@ -317,14 +317,14 @@ class PromptMixin:
             self.m_styles[mode] = top
 
     def _update_styles_button(self):
-        """The Styles button is there only in a mode that has styles (Text to image) and not in Easy Mode (which hides the LLM
-        button too); it sits left of the LLM button."""
+        """The Styles button is there only in a mode that has styles (Text to image), also in Easy Mode (user 1.11.); it sits left
+        of the LLM button, or left of the bin while Easy Mode hides the LLM button."""
         b = getattr(self, "b_styles", None)
         if b is None:
             return
-        want = self.v_mode.get() in self.m_styles and not getattr(self, "_easy", False)
+        want = self.v_mode.get() in self.m_styles
         if want and not self._styles_shown:
-            b.pack(side="right", padx=(0, 6), after=self.b_llm)
+            b.pack(side="right", padx=(0, 6), after=self.b_llm if self.b_llm.winfo_manager() else self.b_clear)
             self._styles_shown = True
         elif not want and self._styles_shown:
             b.pack_forget()
@@ -375,21 +375,71 @@ class PromptMixin:
             text = self._style_text_at(menu, menu.index("active"))
             if not text:
                 return
-            idx = menu.index("active")
-            x = menu.winfo_rootx() + menu.winfo_width() + 4
-            y = menu.winfo_rooty() + menu.yposition(idx)
+            # a native Windows menu reports no position (x = y = 0, width 1: the box sat at the screen's top left, user 1.11.),
+            # so the box goes level with the mouse and beside the menu's real window (found under the mouse)
+            px, py = self.root.winfo_pointerx(), self.root.winfo_pointery()
+            left, right = self._menu_span(menu, px, py)
+            x, y = right + 4, py - 12
             tip = tk.Toplevel(self.root)
             tip.wm_overrideredirect(True)
             tk.Label(tip, text=text, justify="left", wraplength=340, background="#ffffe0", foreground="#000000",
                      relief="solid", borderwidth=1, padx=6, pady=4, font=font(9)).pack()
             tip.update_idletasks()
-            if x + tip.winfo_reqwidth() > self.root.winfo_screenwidth():
-                x = menu.winfo_rootx() - tip.winfo_reqwidth() - 4
+            vx0, vy0, vx1, vy1 = self._monitor_at(px, py)
+            if x + tip.winfo_reqwidth() > vx1:
+                x = max(vx0, left - tip.winfo_reqwidth() - 4)
+            y = max(vy0, min(y, vy1 - tip.winfo_reqheight()))
             tip.wm_geometry(f"+{x}+{y}")
+            self._style_tip_pos = (x, y)         # (a tip of a hidden window reports +0+0, so the tests read this)
             tip.wm_attributes("-topmost", True)
             self._style_tip = tip
         except tk.TclError:
             self._style_tip_hide()
+
+    def _monitor_at(self, px: int, py: int) -> tuple:
+        """(x0, y0, x1, y1) of the monitor under the point (Windows API); the window may sit on a second monitor, where Tk's
+        screen size (the first monitor) is wrong. Falls back to Tk's screen."""
+        try:
+            import ctypes
+            from ctypes import wintypes
+            u = ctypes.windll.user32
+            u.MonitorFromPoint.argtypes = [wintypes.POINT, wintypes.DWORD]
+            u.MonitorFromPoint.restype = wintypes.HANDLE
+
+            class MI(ctypes.Structure):
+                _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", wintypes.RECT), ("rcWork", wintypes.RECT),
+                            ("dwFlags", wintypes.DWORD)]
+            mi = MI()
+            mi.cbSize = ctypes.sizeof(MI)
+            hm = u.MonitorFromPoint(wintypes.POINT(px, py), 2)       # 2 = the nearest monitor
+            if hm and u.GetMonitorInfoW(hm, ctypes.byref(mi)):
+                r = mi.rcMonitor
+                return r.left, r.top, r.right, r.bottom
+        except Exception:
+            pass
+        return 0, 0, self.root.winfo_screenwidth(), self.root.winfo_screenheight()
+
+    def _menu_span(self, menu, px: int, py: int) -> tuple:
+        """(left, right) screen x of a posted menu: Tk's own numbers when it has some, else the window under the mouse (Windows
+        API), else a guess around the mouse."""
+        try:
+            if menu.winfo_width() > 1 and menu.winfo_rootx() > 0:
+                return menu.winfo_rootx(), menu.winfo_rootx() + menu.winfo_width()
+        except tk.TclError:
+            pass
+        try:
+            import ctypes
+            from ctypes import wintypes
+            u = ctypes.windll.user32
+            u.WindowFromPoint.argtypes = [wintypes.POINT]
+            u.WindowFromPoint.restype = wintypes.HWND
+            hwnd = u.WindowFromPoint(wintypes.POINT(px, py))
+            rc = wintypes.RECT()
+            if hwnd and u.GetWindowRect(hwnd, ctypes.byref(rc)) and rc.left <= px <= rc.right and rc.right - rc.left < 1200:
+                return rc.left, rc.right
+        except Exception:
+            pass
+        return px - 100, px + 100
 
     def _style_tip_hide(self):
         tip, self._style_tip = getattr(self, "_style_tip", None), None

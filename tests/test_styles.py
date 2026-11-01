@@ -81,9 +81,9 @@ def gui_checks():
     assert app._styles_shown
     app._easy = True
     app._easy_hide()
-    assert not app._styles_shown
+    assert app._styles_shown                 # Easy Mode keeps the button (user 1.11.)
     app._on_mode_ui()
-    assert not app._styles_shown
+    assert app._styles_shown
     app._easy = False
     app._update_styles_button()
     assert app._styles_shown
