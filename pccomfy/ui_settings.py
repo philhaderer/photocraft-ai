@@ -39,6 +39,9 @@ def licence_of(note: str) -> str:
     return next((p.strip() for p in note.split(";") if p.strip().startswith("licence")), note)
 
 
+OPTIONAL_HEAD = "These models are only needed for additional features:"
+
+
 def file_path(f) -> str:
     """Where a file lies inside ComfyUI's models folder, as the window shows it: "/loras/Flux 3/flux-3-...safetensors"."""
     return "/" + f.folder + "/" + f.name.replace("\\", "/")
@@ -335,7 +338,7 @@ class SettingsMixin(DownloadMixin):
             rows += [("enable", m.key, m.label, True) for m in models.MODELS]
         else:
             for row in self.inv.rows():
-                miss = [f for f, found, lv in row["files"] if found is None and f.url and lv == "required"]
+                miss = [f for f, found, lv in row["files"] if found is None and f.url and lv == "required" and not self._dl_done(f)]
                 direct = [f for f in miss if not browser_only(f)]
                 rows.append(("model", row["key"], row["label"], row["status"].state, row["key"] == self._settings_focus,
                              {"count": len(direct), "site": len(miss) - len(direct), "size": size_text(sum(f.size for f in direct))}
@@ -344,17 +347,28 @@ class SettingsMixin(DownloadMixin):
                 rows.append(("sep",))
                 rows.append(("modes", row["key"], self._mode_cover(row["key"]), manifest.describe_line(row["key"], self.inv.has)))
                 rows.append(("sep",))
-                rows.append(("head", "Needs these weights:"))
-                for f, found, level in row["files"]:
+                needed = [x for x in row["files"] if x[2] == "required"]
+                extra = [x for x in row["files"] if x[2] != "required"]
+                rows.append(("head", "Standard settings need these weights:"))
+                for f, found, level in needed:
                     rows.append(("file", self._file_data(f, found, level)))
                 for c in row["status"].nodes:
                     pack = manifest.node_pack(c)
                     rows.append(("node", c, pack[0] if pack else "", pack[1] if pack else ""))
+                if extra:       # the files of the extra features, apart from the ones the standard settings need (user 2.11.)
+                    rows.append(("sep",))
+                    rows.append(("head", OPTIONAL_HEAD))
+                    for f, found, level in extra:
+                        rows.append(("file", self._file_data(f, found, level)))
+                rows.append(("stop", [f.name for f, _fd, _lv in row["files"]]))
             rows.append(("head", "Additional models (used by several models)"))
+            add_names = []
             for f, found, use, keys in self.inv.additional_rows():
+                add_names.append(f.name)
                 rows.append(("file", {**self._file_data(f, found, "optional"),
                                       "use": f"{use}: " + ", ".join(models.SHORT[k] for k in keys),
                                       "note": licence_of(f.note) if found is None else ""}))
+            rows.append(("stop", add_names))
         return rows
 
     def _mode_cover(self, key: str) -> list[tuple]:
@@ -837,8 +851,7 @@ class SettingsMixin(DownloadMixin):
                     lb = ttk.Label(box, text=f["size"] if (f["size"] and not ok) else "", style=SET_STYLES["muted"], width=8, anchor="e")
                     lb.pack(side="right")
                 label(box, "\u2713" if ok else "\u2717", "ok" if ok else ("bad" if f["level"] == "required" else "note"), padx=(8, 6))
-                label(box, f["path"] + ("   (optional, not used in standard settings)" if f["level"] == "optional" and not f.get("use") else ""),
-                      "muted" if ok else "", wrap=self._px(130))
+                label(box, f["path"], "muted" if ok else "", wrap=self._px(130))
                 extra = [(f["use"], "muted")] if f.get("use") else []
                 if f["hint"]:
                     extra.append((f["hint"], "note"))               # orange: a website is needed
@@ -859,7 +872,13 @@ class SettingsMixin(DownloadMixin):
                 label(box, f"node {cls}" + (f"   \u2192 {pack}" if pack else ""), "", wrap=self._px(120))
             elif kind == "head":
                 label(line(), row[1], "head", pady=(10, 2))
-            elif kind == "sep":          # a light line before "Covers these modes" and "Needs these weights" (user 1.11.)
+            elif kind == "stop":         # bottom right of every page: stops every running download of this page's files (user 2.11.)
+                names = list(row[1])
+                b = ttk.Button(line(), text="Stop downloads", style="SetSmall.TButton", command=lambda n=names: self.download_cancel_all(n))
+                b.pack(side="right", padx=(4, 6), pady=(10, 8))
+                b.configure(state="normal" if any(n in self._dl for n in names) else "disabled")
+                Tooltip(b, "Stops every download that is running for the files on this page. What is loaded stays, loading it again goes on where it stopped.")
+            elif kind == "sep":          # a light line before "Covers these modes", "Standard settings need these weights" and the optional files (user 1.11., 2.11.)
                 ttk.Frame(line(), style="Sep.TFrame", height=1).pack(fill="x", pady=(8, 0))
             elif kind == "links":          # the head of "Linked files" with its Undo and Reset
                 box = line()

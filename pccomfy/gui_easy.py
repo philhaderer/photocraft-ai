@@ -9,7 +9,7 @@ from PIL import Image
 from . import easymode as em, icons
 from .gui_theme import ICON_PX
 from .ui_downloads import browser_only, size_text
-from .ui_settings import FOOT_RESET_PADX, SET_STYLES
+from .ui_settings import FOOT_RESET_PADX, SET_ICON_PX, SET_STYLES
 
 
 class EasyMixin:
@@ -197,6 +197,8 @@ class EasyMixin:
             self._easy_tab = ttk.Frame(nb)
             nb.insert(0, self._easy_tab, text=em.TAB_TITLE)          # in front of "Models" and "Credits"
             self._easy_tab_draw()
+            if focus is None:
+                nb.select(self._easy_tab)         # the window opens on this tab (user 2.11.); a model's own settings open its tab
         except tk.TclError:
             pass
 
@@ -252,14 +254,16 @@ class EasyMixin:
         missing = self._starter_missing()
         self._dl_widgets_easy = {}
         if missing:
-            busy = any(f.name in self._dl for f in missing)
-            total = size_text(sum(f.size for f in missing))
-            b = ttk.Button(box, text=f"{em.TAB_BUTTON} ({total})", style="SetSmall.TButton",
-                           command=lambda: self.download_missing(em.STARTER_MODELS, required_only=True))
-            b.pack(anchor="w", pady=(0, 6))
-            if busy:
-                b.configure(state="disabled")
-            Tooltip(b, "Downloads the missing files of the starter models. Files that need a website open their page in your browser.")
+            todo = [f for f in missing if f.name not in self._dl and not self._dl_done(f)]      # only what is really missing
+            total = size_text(sum(f.size for f in todo))
+            if todo:
+                b = ttk.Button(box, text=f"{em.TAB_BUTTON} ({total})", style="SetSmall.TButton",
+                               command=lambda: self.download_missing(em.STARTER_MODELS, required_only=True))
+                b.pack(anchor="w", pady=(0, 6))
+                Tooltip(b, "Downloads only the files that are missing for the starter models. Files that need a website open their page in your browser.")
+            else:
+                label("Nothing left to download for now." + (" Restart ComfyUI and click the refresh arrow (⟳) to list what is loaded."
+                                                            if any(f.name in self._dl_restart for f in missing) else ""), "muted", pady=(0, 6))
         else:
             label("All starter models are installed.", "ok", pady=(0, 6))
         for row in self.inv.rows():
@@ -272,6 +276,11 @@ class EasyMixin:
             for f in (f for f in missing if any(f is x for x, _fd, _lv in row["files"])):
                 self._easy_file_row(box, f)
         label(em.TAB_MORE, "muted", pady=(16, 0))
+        names = [f.name for f in missing]
+        stop = ttk.Button(box, text="Stop downloads", style="SetSmall.TButton", command=lambda: self.download_cancel_all(names))
+        stop.pack(anchor="e", pady=(10, 0))
+        stop.configure(state="normal" if any(n in self._dl for n in names) else "disabled")
+        Tooltip(stop, "Stops every download that is running for the starter models. What is loaded stays, loading it again goes on where it stopped.")
 
     def _easy_file_row(self, parent, f):
         """One missing file: its name and size, or (while it loads) a bar, the percent and a cross to stop it."""
@@ -289,6 +298,12 @@ class EasyMixin:
             self._dl_widgets_easy[f.name] = {"bar": bar, "label": lb}
             self._dl_paint(f.name)
         else:
+            if not self._dl_done(f):         # the same disk symbol as in "All supported models": one file at a time
+                b = ttk.Button(line, image=self._icon("save", px=SET_ICON_PX), style="Link.TButton", command=lambda n=f.name: self.download_file(n))
+                b.pack(side="right", padx=(4, 0))
+                Tooltip(b, ("Opens the page in your browser (needs a login or comes from another site)." if browser_only(f)
+                            else f"Download this file ({f.size_text or 'size unknown'}).") + " Right-click: copy the link.")
+                b.bind("<Button-3>", lambda e, u=f.url: self._link_menu(e, u), add="+")
             ttk.Label(line, text=f.size_text, style=SET_STYLES["muted"], width=8, anchor="e").pack(side="right")
         text = f"      {f.name}"
         if f.name in self._dl_restart:
