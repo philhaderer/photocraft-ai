@@ -248,6 +248,12 @@ def add_layout(graph: dict, box: tuple[int, int, int, int], canvas: tuple[int, i
     return graph
 
 
+def full_canvas(graph: dict) -> bool:
+    """True when the workflow cuts out the part to redraw itself (`pc_full_canvas` in the _meta of a node: MOSS Inpainting v10):
+    it gets the whole picture and the selection as they are, at their own size, and no mask softening from the window."""
+    return any(isinstance(n, dict) and n.get("_meta", {}).get("pc_full_canvas") for n in graph.values())
+
+
 def has_upscale_slot(graph: dict) -> bool:
     """True when the workflow can enlarge or refine a picture (a node titled pc:upscale sets the result's size)."""
     return any("upscale" in _tags(n) for n in graph.values() if isinstance(n, dict))

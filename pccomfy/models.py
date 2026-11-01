@@ -161,10 +161,12 @@ FLUX3 = Model(
 _MOSS = dict(turbo=True, stage_on=True, stage2_on=True)
 MOSS_STEPS_TIP = "Turn up the steps to 35 for best results."     # wording of the user (29.10.), 35 after the CFG test
 _MOSS_EDIT = dict(base_res=1024, layer_mask="none")
+_MOSS_INPAINT = {**_MOSS, "turbo": False, "stage2_on": False, "base_res": 1216, "layer_mask": "soft", "mask_grow": 8, "mask_blur": 16,
+                 "context": 0.4}
 MOSS_EDIT_TIP = ("Describe the change: “Change only the X to Y. Keep the rest unchanged.”")   # wording of the LoRA's template; proposal, the user decides
 MOSS = Model(
     "moss", "MOSS Image",
-    "MOSS-Image: text to image, Edit Canvas, Multi Image Edit and Remove Selection (edit LoRA).",
+    "MOSS-Image: text to image, Edit Canvas, Multi Image Edit, Remove Selection (edit LoRA), Fill and Expand (Inpainting v10).",
     {
         # Text to image starts without DMD2 and without SLG, no LLM: the user's live test 29.10. (with DMD2 or SLG the photos
         # looked artificial, with the LLM prompt too). Without DMD2 the workflow runs 35 steps at CFG 3.0 (pc_no_lora; blind
@@ -178,6 +180,10 @@ MOSS = Model(
         "multi_edit": Mode("moss-image-edit.json", _MOSS_EDIT, prompt_tip=MULTI_TIP, run_as="edit"),
         "remove": Mode("moss-image-edit.json", dict(_SOFT, base_res=1024, context=0.4, feather_pct=10.0),
                        prompt_tip=REMOVE_NAME_TIP, remove_text=True),
+        # Fill and Expand (1.11., to test): MOSS Inpainting v10's recipe: 25 steps, CFG 2.5, er_sde / simple, no DMD2, UltraReal on,
+        # mask grown by 8 and softened by 16; the plugin cuts out the part (Context 0.4), the tick "v10 graph" lets the graph do it
+        "inpaint": Mode("moss-image-inpaint.json", _MOSS_INPAINT, prompt_tip=FILL_TIP),
+        "outpaint": Mode("moss-image-inpaint.json", {**_MOSS_INPAINT, "match": 0.5}, prompt_tip=EXPAND_DESCRIBE_TIP, describe=True),
     },
     requires=(
         "moss_image_sft_int8_convrot.safetensors",
@@ -200,15 +206,13 @@ KREA2 = Model(
         "qwen_image_vae.safetensors",
     ))   # the model files this tab needs (details per mode: manifest.py)
 
-# Expand with Krea 2 and MOSS is switched off (user 29.10.): in a blind test with the user's own pictures
+# Expand with Krea 2 and MOSS was switched off (user 29.10.; MOSS came back 1.11. with the Inpainting v10 recipe, see MOSS above): in a blind test with the user's own pictures
 # (docs/tests/expand-seam-testrunde.md) only 2 of 64 Krea 2 and 10 of 64 MOSS results were good, also with a description
 # of the surroundings, a wider overlap, the seam correction or a second run over the border. The modes are kept here,
 # with the Describe button they used, so they can come back when a better recipe exists (idea: Krea 2 AnyPaint LoRA).
 PARKED_EXPAND = {
     "krea2": Mode("krea2-turbo-inpaint.json", dict(base_res=1024, layer_mask="soft"),
                   prompt_tip=EXPAND_DESCRIBE_TIP, describe=True),
-    "moss": Mode("moss-image-inpaint.json", {**_MOSS, "base_res": 1216, "layer_mask": "soft", "match": 0.5},
-                 prompt_tip=EXPAND_DESCRIBE_TIP, describe=True),
 }
 # their graph files stay in the workflows folder but are not offered in the Workflow list: picked there they counted as a
 # workflow of your own ("Image -> image" appeared, user 29.10.)
