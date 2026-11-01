@@ -39,10 +39,10 @@ def settings_checks():
     assert set(manifest.used_by(manifest.DESCRIBE_FALLBACK)) == set(manifest.TABS), manifest.used_by(manifest.DESCRIBE_FALLBACK)
     have = lambda n: n != "qwen3.5_9b_w4a8_gptq.safetensors"  # noqa: E731
     line = manifest.describe_line("qwen", have)
-    assert "Qwen 3.5 9B w4a8 GPTQ (missing)" in line and "Fallback when it is missing: Qwen 3.5 9B int8 ConvRot." in line, line
+    assert "Qwen 3.5 9B w4a8 GPTQ (missing)" in line and "If it is missing, Qwen 3.5 9B int8 ConvRot is used instead." in line, line
     assert "Multi Image Edit" in line
     fibo = manifest.describe_line("fibo", lambda n: True)
-    assert "Qwen 3.5 9B int8 ConvRot." in fibo and "fallback for the other models" in fibo and "missing" not in fibo.replace("is missing", ""), fibo
+    assert "Qwen 3.5 9B int8 ConvRot." in fibo and "used instead when the text model of another model is missing" in fibo and "missing" not in fibo.replace("is missing", ""), fibo
 
 
 def bridge_checks():

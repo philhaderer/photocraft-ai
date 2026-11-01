@@ -326,8 +326,7 @@ class SettingsMixin(DownloadMixin):
                              if miss else None))
                 rows.append(("enable", row["key"], row["label"], row["status"].state != "missing"))
                 rows.append(("sep",))
-                rows.append(("modes", row["key"], self._mode_cover(row["key"])))
-                rows.append(("line", manifest.describe_line(row["key"], self.inv.has), "muted"))
+                rows.append(("modes", row["key"], self._mode_cover(row["key"]), manifest.describe_line(row["key"], self.inv.has)))
                 rows.append(("sep",))
                 rows.append(("head", "Needs these weights:"))
                 for f, found, level in row["files"]:
@@ -778,16 +777,21 @@ class SettingsMixin(DownloadMixin):
                     label(line(), "Not offered in the plugin yet: the files for its standard settings are missing (✗ below). "
                                   "Get them, restart ComfyUI and click the refresh arrow.", "note", padx=(8, 0), pady=(0, 4), wrap=self._px(60))
             elif kind == "modes":
-                box = line()      # one line, the modes separated by commas; it wraps with the window (user 1.11.)
-                lead = label(box, "Covers these modes:", "head9", pady=(4, 2))
+                box = line()      # one text box: the modes, then the text model line (user 1.11.); it wraps with the window
                 offered = [m for m in row[2] if m[2] != "none"]       # what the model offers
-                text = ", ".join(("\u2717 " if st == "missing" else "") + t for _m, t, st, _tip in offered)      # an X on a mode with missing files
-                lb = label(box, text, "ok", padx=(6, 0), pady=(4, 2), wrap=self._px(200))
-                lead.pack_configure(anchor="n")
-                lb.pack_configure(anchor="n")
-                miss = [f"{t}: {tip}" for _m, t, st, tip in offered if st == "missing"]
+                cover = ", ".join(("✗ " if st == "missing" else "") + t for _m, t, st, _tip in offered)      # an X on a mode with missing files
+                t = tk.Text(box, wrap="word", bg=BG, fg="#ffffff", relief="flat", borderwidth=0, highlightthickness=0, padx=0, pady=0,
+                            font=font(9), cursor="arrow", height=1, takefocus=0)
+                t.tag_configure("head", font=font(9, bold=True))
+                t.insert("end", "Covers these modes: ", "head")
+                t.insert("end", cover + "\n" + row[3])
+                t.configure(state="disabled")
+                t.pack(fill="x", pady=(6, 2))
+                t.bind("<Configure>", lambda e, t=t: self._fit_text(t), add="+")
+                made.append(t)
+                miss = [f"{tx}: {tip}" for _m, tx, st, tip in offered if st == "missing"]
                 if miss:
-                    Tooltip(lb, "\n".join(miss))
+                    Tooltip(t, "\n".join(miss))
             elif kind == "file":
                 f = row[1]
                 ok = f["found"] is not None
@@ -853,6 +857,16 @@ class SettingsMixin(DownloadMixin):
                 self._link_buttons()
             elif kind == "line":
                 label(line(), row[1], row[2], padx=(8, 0), wrap=self._px(40))
+
+    def _fit_text(self, t):
+        """A read-only text box is as high as its wrapped text (so it never scrolls on its own)."""
+        try:
+            n = t.count("1.0", "end", "displaylines")
+            n = max(1, int(n[0] if isinstance(n, tuple) else n))
+            if int(t.cget("height")) != n:
+                t.configure(height=n)
+        except (tk.TclError, TypeError, ValueError, AttributeError):
+            pass
 
     def _settings_wrap(self, page: str | None = None, width: int | None = None):
         """Wrapping labels follow their tab: the width of the tab minus what stands beside them."""

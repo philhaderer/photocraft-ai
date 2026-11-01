@@ -327,10 +327,10 @@ def describe_line(model_key: str, has) -> str:
     use, and the fallback. `has(name)` says whether ComfyUI lists the file."""
     short = lambda n: DESCRIBE_NAMES.get(n, n) + ("" if has(n) else " (missing)")  # noqa: E731
     own = DESCRIBE_WRITERS.get(model_key, (DESCRIBE_FALLBACK,))[0]
+    head = f"Text model for the LLM button and for Describe in Multi Image Edit: {short(own)}."
     if own == DESCRIBE_FALLBACK:
-        return (f"LLM button and Describe in Multi Image Edit: {short(own)}. It is also the fallback for the other models "
-                "when their own text model is missing.")
-    return (f"LLM button and Describe in Multi Image Edit: {short(own)}. Fallback when it is missing: {short(DESCRIBE_FALLBACK)}.")
+        return head + " It is also used instead when the text model of another model is missing."
+    return head + f" If it is missing, {short(DESCRIBE_FALLBACK)} is used instead."
 
 
 # node class prefix -> (pack, where to get it). Only what the shipped workflows use.
