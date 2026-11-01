@@ -65,7 +65,7 @@ Which model offers which function:
 | Edit Canvas | ✓ | ✓ | ✓ | ✓ | | |
 | Multi Image Edit | ✓ | ✓ | ✓ | ✓ | | |
 | Upscale (new file) | ✓ | ✓ | ✓ | | | |
-| Refine (same size) | | ✓ | | ✓ | | |
+| Refine (same size) | | ✓ | ✓ | ✓ | | |
 | Text to image | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 
