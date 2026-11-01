@@ -73,7 +73,7 @@ def cmd_run(a):
                 n += 1
                 t0 = time.time()
                 # the plugin's start settings: no LLM, DMD2 off, UltraReal on, SLG off; CFG and steps of the variant
-                req = Request(mode="txt2img", workflow=str(WF), enhance=False, turbo=False, stage_on=True,
+                req = Request(mode="txt2img", workflow=str(WF), enhance=False, turbo=False, stage_on=False,
                               stages_off=[SLG], sampler_override={"cfg": cfg, "steps": steps})
                 p = workflows.GenParams(prompt=prompt, seed=seed, width=a.size, height=a.size)
                 graph, out_node = b._graph(req, p, None, None, str(WF))
