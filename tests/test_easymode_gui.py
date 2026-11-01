@@ -120,7 +120,7 @@ def main():
     app.open_settings()
     app.root.update()
     tabs = [app.nb_settings.tab(i, "text") for i in range(app.nb_settings.index("end"))]
-    assert tabs == [em.TAB_TITLE, "All supported models", "Credits"], tabs
+    assert tabs == [em.TAB_TITLE, "All supported models", "Other settings", "Credits"], tabs
 
     def texts(w):
         out = []
