@@ -86,6 +86,27 @@ class DownloadMixin:
 
     # ---------- the buttons ----------
 
+    def _dl_done(self, f) -> bool:
+        """Is the file already on the disk although ComfyUI does not list it yet (loaded in this session, or copied in; ComfyUI reads
+        its folders only at start)? "Download needed models" and the Easy Mode button leave such files out (user 2.11.)."""
+        if f.name in self._dl_restart:
+            return True
+        base = self.models_dir(ask=False)
+        if base is None:
+            return False
+        try:
+            return downloads.target_for(base, f).exists()
+        except downloads.DownloadError:
+            return False
+
+    def download_cancel_all(self, names):
+        """The "Stop downloads" button of a page: stops every running download among these file names."""
+        stopped = [n for n in names if n in self._dl]
+        for n in stopped:
+            self.download_cancel(n)
+        if stopped:
+            self._status(f"Stopping {len(stopped)} download{'s' if len(stopped) != 1 else ''}. Loading again goes on where it stopped.")
+
     def download_file(self, name: str):
         """The disk symbol of a file."""
         f = manifest.FILES.get(name)
@@ -122,7 +143,7 @@ class DownloadMixin:
         todo = []
         for row in (r for r in self.inv.rows() if r["key"] in keys):
             for f, found, lv in row["files"]:
-                if found is None and f.url and f.name not in self._dl and f not in todo and (lv == "required" or not required_only):
+                if found is None and f.url and f.name not in self._dl and f not in todo and (lv == "required" or not required_only) and not self._dl_done(f):
                     todo.append(f)
         own = [f for f in todo if not browser_only(f)]
         site = [f for f in todo if browser_only(f)]

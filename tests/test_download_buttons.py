@@ -154,7 +154,7 @@ def main():
         top, per, extra = app._settings_sections(app._settings_rows())
         assert [r[0] for r in top] == ["links", "intro"] and set(per) == {m.key for m in ts.models.MODELS}
         assert per["krea2"][0][0] == "model" and per["krea2"][1][0] == "enable" and per["krea2"][2][0] == "sep" and per["krea2"][3][0] == "modes"
-        assert extra[0][0] == "head" and all(r[0] in ("head", "file") for r in extra)
+        assert extra[0][0] == "head" and all(r[0] in ("head", "file", "stop") for r in extra)
         cover = {m: st for m, _l, st, _tip in app._mode_cover("krea2")}
         assert cover["txt2img"] == "ready" and cover["inpaint"] == "none" and "img2img" not in cover
         assert {st for _m, _l, st, _t in app._mode_cover("qwen")} == {"ready", "none"}

@@ -49,7 +49,7 @@ def rows_text(app) -> str:
             out.append(f"node {row[1]}  {row[2]}")
         elif kind == "error":
             out.append(row[1] + "\n" + row[2])
-        elif kind != "sep":                 # the light lines carry no text
+        elif kind not in ("sep", "stop"):   # the light lines and the "Stop downloads" buttons carry no text
             out.append(row[1])
     return "\n".join(out)
 
@@ -211,6 +211,36 @@ def test_other_settings():
         ui_settings.messagebox.askyesno = saved_ask
     assert cfgmod.saved_page("flux3", "txt2img") == {} and cfgmod.saved_page("fibo", "edit") == {}
     assert "standard settings" in app.v_status.get()
+
+
+def test_page_layout_and_stop():
+    """Each model page: the files the standard settings need first, a line, then the extra-feature files under their own heading
+    (user 2.11.); a "Stop downloads" row ends every page; "Download needed models" leaves out what is loaded already."""
+    app = make_app()
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(td.full_lists(), NODES)})
+    rows = app._settings_rows()
+    heads = [r[1] for r in rows if r[0] == "head"]
+    assert "Needs these weights:" not in heads and heads.count("Standard settings need these weights:") == len(models.MODELS)
+    assert ui_settings.OPTIONAL_HEAD == "These models are only needed for additional features:" and ui_settings.OPTIONAL_HEAD in heads
+    i = rows.index(("head", ui_settings.OPTIONAL_HEAD))
+    assert rows[i - 1] == ("sep",)                                    # the line between needed and optional
+    stops = [r for r in rows if r[0] == "stop"]
+    assert len(stops) == len(models.MODELS) + 1 and rows[-1][0] == "stop"       # one per model page and one for "Additional"
+    # within a model page every file before the optional heading is required, every one after it is not
+    flux = [r for r in rows if r[0] == "file"]
+    assert not any("optional, not used" in str(r) for r in rows)
+    # a file loaded in this session (ComfyUI lists it only after a restart) is no longer counted as missing
+    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(vae="qwen_image_vae.safetensors"), NODES)})
+    before = next(r for r in app._settings_rows() if r[0] == "model" and r[1] == "krea2")[5]
+    assert before and before["count"] >= 1
+    app._dl_restart.add("qwen_image_vae.safetensors")
+    after = next(r for r in app._settings_rows() if r[0] == "model" and r[1] == "krea2")[5]
+    assert after is None or after["count"] == before["count"] - 1, (before, after)
+    # "Stop downloads" cancels only the running ones of its page
+    ev = {}
+    app._dl["a.safetensors"] = {"cancel": type("E", (), {"set": lambda self: ev.setdefault("a", True)})()}
+    app.download_cancel_all(["a.safetensors", "b.safetensors"])
+    assert ev == {"a": True}
 
 
 def main():
@@ -452,6 +482,7 @@ def main():
     test_start_state()
     test_empty_view()
     test_other_settings()
+    test_page_layout_and_stop()
     print("ok")
 
 
