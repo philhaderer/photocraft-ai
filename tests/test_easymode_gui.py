@@ -110,6 +110,7 @@ def main():
     assert {k: shown(getattr(app, k)) for k in before_all} == before_all
     assert list(app.f_body.pack_slaves()) == before, "stacking order changed"
     assert not shown(app.lbl_easy_model)
+    assert app.v_status.get() != em.STATUS_ON, "the Easy Mode line stays only in Easy Mode"
     assert all(shown(rb) for rb in app.rb_modes.values() if rb is not app.rb_modes.get("img2img"))
 
     # the settings window has a tab "Easy Mode" between "Models" and "Credits" with the button for the starter models

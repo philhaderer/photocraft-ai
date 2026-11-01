@@ -458,6 +458,7 @@ class SettingsMixin(DownloadMixin):
         self._settings_win = win
         self._own_settings(win)
         self._settings_frame(win)
+        win.after_idle(win.lift)           # without a title bar the window opened far behind the others (z-order 350 against 45)
 
         # no ComfyUI dot and no Refresh here: the plugin's footer has both
 
