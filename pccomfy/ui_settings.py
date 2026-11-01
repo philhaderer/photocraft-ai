@@ -29,7 +29,8 @@ DOT_PAD = 4                            # px of room to the left of the dot (user
 SETTINGS_W, SETTINGS_H = 760, 700      # the settings window at first (before the display scaling); then the size it was closed at
 SET_ICON_PX = 16                       # the download and chain symbols next to a file
 SET_STYLES = {"head": "SetHead.TLabel", "ok": "SetOk.TLabel", "bad": "SetBad.TLabel", "note": "SetNote.TLabel",
-              "muted": "SetMuted.TLabel"}
+              "muted": "SetMuted.TLabel", "green": "SetGreen.TLabel"}
+SET_MIN_W, SET_MIN_H = 480, 300        # the smallest the settings window can be dragged to
 
 
 def licence_of(note: str) -> str:
@@ -442,28 +443,31 @@ class SettingsMixin(DownloadMixin):
                 self._settings_win = None
         win = tk.Toplevel(self.root)
         win.title("Settings")
-        win.configure(bg=BG)
+        win.wm_overrideredirect(True)                  # no Windows title bar, only an X (user 1.11.); a thin frame keeps it visible
+        win.configure(bg=BG, highlightthickness=1, highlightbackground="#5c5c5c")
         try:
             win.transient(self.root)
-            win.minsize(self._px(480), self._px(300))      # narrower than this the model tabs would be cut off
+            win.minsize(self._px(SET_MIN_W), self._px(SET_MIN_H))      # narrower than this the model tabs would be cut off
             x = self.root.winfo_rootx() + self.root.winfo_width() + 8
             w, h = self._settings_size()
             win.geometry(f"{w}x{h}+{x}+{self.root.winfo_rooty()}")
         except (tk.TclError, TypeError):
             pass
         win.protocol("WM_DELETE_WINDOW", self._settings_close)
+        win.bind("<Escape>", lambda e: self._settings_close())
         self._settings_win = win
         self._own_settings(win)
+        self._settings_frame(win)
 
         # no ComfyUI dot and no Refresh here: the plugin's footer has both
 
         nb = ttk.Notebook(win)              # tab 1: the models; tab 2: credits
-        nb.pack(fill="both", expand=True, padx=10, pady=8)
+        nb.pack(fill="both", expand=True, padx=10, pady=(0, 8))
         tab_models, tab_other, tab_credits = ttk.Frame(nb), ttk.Frame(nb), ttk.Frame(nb)
         nb.add(tab_models, text="All supported models")
         nb.add(tab_other, text="Other settings")      # general switches (user 1.11.): for now the tip popup
         nb.add(tab_credits, text="Credits")
-        self._tips_setting_row(tab_other)
+        self._other_settings(tab_other)
         self.nb_settings = nb
 
         # which models the plugin shows (user 29.10.): after installing, all are shown; untick to hide one (the right-click
@@ -475,8 +479,9 @@ class SettingsMixin(DownloadMixin):
         self.f_set_top = ttk.Frame(tab_models)
         self.f_set_top.pack(fill="x", side="top")
         self.f_set_top.bind("<Configure>", lambda e: self._settings_wrap("top", e.width), add="+")
+        ttk.Frame(tab_models, style="SepWhite.TFrame", height=1).pack(fill="x", pady=(6, 0))      # white line above the model tabs (user 1.11.)
         self.nb_models = ttk.Notebook(tab_models, style="Inner.TNotebook")
-        self.nb_models.pack(fill="both", expand=True, pady=(6, 0))
+        self.nb_models.pack(fill="both", expand=True, pady=(0, 0))
         self._set_pages = {m.key: self._scroll_page(m.key, models.SHORT[m.key]) for m in models.MODELS}
         self._set_pages["additional"] = self._scroll_page("additional", "Additional")
         win.bind("<MouseWheel>", self._settings_wheel, add="+")      # only this window: the plugin's body has its own
@@ -487,6 +492,81 @@ class SettingsMixin(DownloadMixin):
         if focus in self._set_pages:
             self._select_model_tab(focus)
         self._detect_async()       # a model copied in since the last reading is listed when the window opens (if ComfyUI sees it)
+
+    def _settings_frame(self, win):
+        """What the missing title bar leaves to us: a thin strip on top with the X (dragging it moves the window) and a grip
+        in the lower right corner (dragging it resizes the window)."""
+        bar = ttk.Frame(win)
+        bar.pack(fill="x", side="top")
+        x = ttk.Button(bar, text="✕", style="Link.TButton", width=2, command=self._settings_close)
+        x.pack(side="right", padx=(0, 6), pady=(2, 0))
+        Tooltip(x, "Close the settings.")
+        drag = {}
+
+        def start(e):
+            drag["pos"] = (e.x_root - win.winfo_x(), e.y_root - win.winfo_y())
+
+        def move(e):
+            if "pos" in drag:
+                win.geometry(f"+{e.x_root - drag['pos'][0]}+{e.y_root - drag['pos'][1]}")
+
+        bar.bind("<ButtonPress-1>", start)
+        bar.bind("<B1-Motion>", move)
+        grip = tk.Frame(win, width=self._px(14), height=self._px(14), bg=BG, cursor="size_nw_se")
+        grip.place(relx=1.0, rely=1.0, anchor="se")
+        size = {}
+
+        def grip_start(e):
+            size["from"] = (e.x_root, e.y_root, win.winfo_width(), win.winfo_height())
+
+        def grip_move(e):
+            if "from" in size:
+                x0, y0, w0, h0 = size["from"]
+                w, h = max(self._px(SET_MIN_W), w0 + e.x_root - x0), max(self._px(SET_MIN_H), h0 + e.y_root - y0)
+                win.geometry(f"{w}x{h}")
+
+        grip.bind("<ButtonPress-1>", grip_start)
+        grip.bind("<B1-Motion>", grip_move)
+        self._set_bar, self._set_grip = bar, grip
+
+    def _other_settings(self, parent):
+        """The tab "Other settings" (user 1.11.): the tip tick, and two buttons that undo things done elsewhere in the plugin."""
+        self._tips_setting_row(parent)
+        for text, tip, command in (
+                ("Show all hidden models", "Brings back every model chip that was hidden (right-click menu of a chip or the tick in the model tab).",
+                 self._show_hidden_models),
+                ("Reset all modes to default settings", "Forgets every page you saved with “Set as my settings” (right-click on a model chip): "
+                 "all models and functions start with their standard settings again. Asks first.", self._reset_all_modes)):
+            b = ttk.Button(parent, text=text, style="SetSmall.TButton", command=command)
+            b.pack(side="top", anchor="w", padx=14, pady=(8, 0))
+            Tooltip(b, tip)
+
+    def _show_hidden_models(self):
+        hidden = cfgmod.hidden_tabs()
+        if not hidden:
+            self._status("No model is hidden.")
+            return
+        for key in hidden:
+            cfgmod.set_tab_hidden(key, False)
+        self._update_mode_radios()
+        self._fit_height()
+        if self._settings_win is not None:
+            self._settings_fill()
+        self._status(f"{len(hidden)} hidden model{'s' if len(hidden) != 1 else ''} shown again.")
+
+    def _reset_all_modes(self):
+        saved = cfgmod.get_setting("saved_pages", {})
+        if not saved:
+            self._status("No page has saved settings, all modes already use the standard ones.")
+            return
+        n = len(saved)
+        if not messagebox.askyesno("Reset all modes", f"Forget the saved settings of {n} page{'s' if n != 1 else ''}?\n\n"      # noqa: F405
+                                   "Every model and function will start with its standard settings again.",
+                                   parent=self._settings_win or self.root):
+            return
+        cfgmod.set_setting("saved_pages", None)
+        self._apply_model_mode()          # the page on screen follows at once (prompt and negative prompt stay)
+        self._status("All saved page settings are gone: every mode starts with its standard settings.")
 
     def _scroll_page(self, key: str, title: str) -> dict:
         """One tab of the model notebook: a canvas that scrolls, its rows in a frame (the rows: one per file, in a frame each)."""
@@ -679,6 +759,8 @@ class SettingsMixin(DownloadMixin):
                 dot = self.state_dot(state)
                 if dot:
                     ttk.Label(box, image=dot).pack(side="left", pady=(6, 2))
+                elif state == "ready":
+                    label(box, "\u2713", "green", padx=(0, 4), pady=(6, 2))        # green tick in front of a ready model (user 1.11.)
                 label(box, name + "   " + STATE_TEXT[state] + ("   \u25C0" if focus else ""), "head", padx=(4 if dot else 0, 0), pady=(6, 2))
             elif kind == "enable":
                 key = row[1]
@@ -697,15 +779,12 @@ class SettingsMixin(DownloadMixin):
                     label(line(), "Not offered in the plugin yet: the files for its standard settings are missing (✗ below). "
                                   "Get them, restart ComfyUI and click the refresh arrow.", "note", padx=(8, 0), pady=(0, 4), wrap=self._px(60))
             elif kind == "modes":
-                label(line(), "Covers these modes:", "head", pady=(4, 2))
-                grid = ttk.Frame(line())
-                grid.pack(fill="x")
-                made.append(grid)
-                for i, (_mode, text, state, tip) in enumerate(m for m in row[2] if m[2] != "none"):     # a list: what the model offers
-                    ttk.Label(grid, text="✗" if state == "missing" else "", width=2, style=SET_STYLES["ok"]).grid(
-                        row=i, column=0, sticky="w", padx=(8, 0), pady=1)       # the one icon: an X on a mode with missing files
-                    lb = ttk.Label(grid, text=text, style=SET_STYLES["ok"])
-                    lb.grid(row=i, column=1, sticky="w", padx=(4, 0), pady=1)
+                box = line()      # one line, the modes separated by commas (user 1.11.)
+                label(box, "Covers these modes:", "head", pady=(4, 2))
+                offered = [m for m in row[2] if m[2] != "none"]       # what the model offers
+                for i, (_mode, text, state, tip) in enumerate(offered):
+                    lb = label(box, ("✗ " if state == "missing" else "") + text + ("," if i < len(offered) - 1 else ""),
+                               "ok", padx=(8 if i == 0 else 4, 0), pady=(4, 2))       # an X on a mode with missing files
                     Tooltip(lb, tip)
             elif kind == "file":
                 f = row[1]
@@ -813,7 +892,7 @@ class SettingsMixin(DownloadMixin):
         t.tag_configure("ok", foreground=DONE_GREEN)           # noqa: F405
         t.tag_configure("bad", foreground=ERROR_TEXT)          # noqa: F405
         t.tag_configure("note", foreground="#ffffff")
-        t.tag_configure("muted", foreground=MUTED)
+        t.tag_configure("muted", foreground="#ffffff")      # white like the rest of the settings (user 1.11.)
         n = 0
         for text, style, url in segments:
             tags = (style,) if style and style != "link" else ()

@@ -48,12 +48,12 @@ class ThemeMixin:
         for name, colour in (("SetOk", "#ffffff"), ("SetBad", "#ffffff"), ("SetNote", "#ffffff"), ("SetMuted", "#ffffff")):      # all text in the settings is white (user 1.11.)
             s.configure(f"{name}.TLabel", foreground=colour, font=font(9))
         s.configure("TNotebook", background=BG, borderwidth=0, tabmargins=(0, 4, 0, 0), bordercolor=BG, lightcolor=BG, darkcolor=BG)     # the tabs of the settings window
-        s.configure("TNotebook.Tab", background=BG, foreground=MUTED, padding=(14, 4), borderwidth=0, expand=(0, 0, 0, 0))
+        s.configure("TNotebook.Tab", background=BG, foreground="#ffffff", padding=(14, 4), borderwidth=0, expand=(0, 0, 0, 0))
         s.map("TNotebook.Tab", background=[("selected", BG), ("active", BG)], foreground=[("selected", "#ffffff"), ("active", "#ffffff")],
               expand=[("selected", (0, 0, 0, 0)), ("!selected", (0, 0, 0, 0))],
               padding=[("selected", (14, 4))])      # the theme moves a chosen tab's text (6 4 6 2): the text must stay put
         s.configure("Inner.TNotebook", background=BG, borderwidth=0, tabmargins=(0, 2, 0, 0), bordercolor=BG, lightcolor=BG, darkcolor=BG)       # the model tabs inside "Models"
-        s.configure("Inner.TNotebook.Tab", background=BG, foreground=MUTED, padding=(8, 3), borderwidth=0, expand=(0, 0, 0, 0), font=font(9))
+        s.configure("Inner.TNotebook.Tab", background=BG, foreground="#ffffff", padding=(8, 3), borderwidth=0, expand=(0, 0, 0, 0), font=font(9))
         s.map("Inner.TNotebook.Tab", background=[("selected", BG), ("active", BG)], foreground=[("selected", "#ffffff"), ("active", "#ffffff")],
               expand=[("selected", (0, 0, 0, 0)), ("!selected", (0, 0, 0, 0))],
               padding=[("selected", (8, 3))])
@@ -108,6 +108,8 @@ class ThemeMixin:
         s.configure("Grip.TFrame", background="#454545")
         s.configure("Hint.TLabel", foreground=ACCENT_TEXT)
         s.configure("Sep.TFrame", background="#9a9a9a")
+        s.configure("SepWhite.TFrame", background="#ffffff")       # the line above the model tabs of the settings window (user 1.11.)
+        s.configure("SetGreen.TLabel", foreground=DONE_GREEN, font=font(10, bold=True))      # the tick in front of a ready model
         s.configure("Done.TLabel", foreground=DONE_GREEN, font=font(10, bold=True))      # the word "Done"
         s.configure("DoneRest.TLabel", foreground=FG, font=font(10, bold=True))        # what follows it (seed, layers, time)
         # greyed out must be visible on the dark theme (clam keeps nearly the normal text colour)
@@ -160,8 +162,8 @@ class ThemeMixin:
             pass
 
     def _flat_tabs(self, s):
-        """The tabs of the settings window (user 1.11.): no fill, grey text; the chosen tab is white with a blue line under it, a
-        tab under the mouse white with a grey line. The line is a picture element (clam has no bottom-only border). Without
+        """The tabs of the settings window (user 1.11.): no fill, white text; the chosen tab has a blue line under it, a
+        tab under the mouse a grey line. The line is a picture element (clam has no bottom-only border). Without
         image support the plain tabs stay."""
         try:
             line = max(1, self._px(2))
