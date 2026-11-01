@@ -407,28 +407,8 @@ def main():
     finally:
         t.tk.Toplevel, gui.winlink.available, gui.winlink.Win32Api = saved
 
-    # a preset that needs a model with missing files says so (the loader uses this; see docs/archiv/entscheidungen-L1.md)
     app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(vae="qwen_image_vae.safetensors"), NODES)})
-    note = app.preset_blocked({"workflow": "krea2-turbo-t2i.json", "mode": "txt2img"})
-    assert note == "Krea 2 Turbo is missing files: qwen_image_vae.safetensors (see settings)", note
-    assert app.preset_blocked({"workflow": "flux3-klein-edit.json", "mode": "edit"}) == ""
-    assert app.preset_blocked({"workflow": gui.BUILTIN}) == "" and app.preset_blocked({}) == "" and app.preset_blocked({"workflow": "my own.json"}) == ""
-    # loading such a preset keeps the current tab and mode and says what is missing (the loader in gui_state.py)
-    import json as _json
-    pp = app._preset_path("blocked")
-    pp.parent.mkdir(parents=True, exist_ok=True)
-    pp.write_text(_json.dumps({"settings": {"workflow": "krea2-turbo-t2i.json", "mode": "txt2img", "model": "krea2"}}), encoding="utf-8")
-    app.v_model.set("flux3"); app.v_mode.set("edit"); app.v_workflow.set("flux3-klein-edit.json")      # a consistent state to come back to
-    before = (app.v_model.get(), app.v_mode.get(), app.v_workflow.get())
-    app.load_preset("blocked")
-    assert (app.v_model.get(), app.v_mode.get(), app.v_workflow.get()) == before, before
-    assert "Not applied: Krea 2 Turbo is missing files: qwen_image_vae.safetensors" in app.v_status.get(), app.v_status.get()
-    pp.unlink()
-    app._apply_refresh({"_detect": True, "_inv": inventory.Inventory(lists_without(lora="Flux 3__flux-3-image-klein-restore.safetensors"), NODES)})
-    assert app.preset_blocked({"workflow": "flux3-klein-upscale.json", "mode": "upscale"}).startswith("Flux 3 Klein Edit is missing files: Flux 3")
-    assert app.preset_blocked({"workflow": "flux3-klein-edit.json", "mode": "edit"}) == ""      # the same tab, another mode: fine
     app._apply_refresh({"_detect": True, "_inv": None, "_inv_error": "x"})
-    assert app.preset_blocked({"workflow": "krea2-turbo-t2i.json", "mode": "txt2img"}) == ""
 
     # a normal PhotoCraft/ComfyUI refresh still goes through the old path
     app._apply_refresh({"comfy": True})

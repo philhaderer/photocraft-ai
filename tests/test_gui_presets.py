@@ -1,4 +1,4 @@
-"""Preset save/load logic of the bridge window, run against a stubbed Tk (no display, no tkinter needed).
+"""Collect/apply logic of the bridge window (and the shared Tk stub), run against a stubbed Tk (no display, no tkinter needed).
 
     python tests/test_gui_presets.py
 """
@@ -116,9 +116,8 @@ sys.modules.update({"tkinter": tk, "tkinter.ttk": ttk, "tkinter.messagebox": mb,
 sys.path.insert(0, str(ROOT))
 from pccomfy import config as cfgmod, gui  # noqa: E402
 
-# On Windows the workflows and presets live in the repo itself; the tests must not copy onto or write into them
+# On Windows the workflows live in the repo itself; the tests must not copy onto or write into them
 cfgmod.WORKFLOWS_DIR = Path(TMP) / "workflows"
-cfgmod.PRESETS_DIR = Path(TMP) / "presets"
 cfgmod.DEFAULTS["comfyui"]["workflows_dir"] = str(cfgmod.WORKFLOWS_DIR)
 
 
@@ -142,16 +141,10 @@ def main():
 
     # save
     setup()
-    sd.askstring = lambda *a, **k: "My Test!"
-    app.save_preset_as()
-    f = Path(TMP) / "presets" / "My Test_.json"
-    assert f.exists(), "preset file missing"
-    data = json.loads(f.read_text(encoding="utf-8"))
-    s = data["settings"]
+    s = app._collect()
     assert s["prompt"] == "make the jacket red" and s["clip"] == "gemma.safetensors" and s["base_res"] == 768, s
     assert s["layer_mask"] == "selection" and s["overlap"] == 96 and s["variants"] == 3
-    assert app.v_preset.get() == "My Test_" and app.cb_preset["values"] == ["My Test_"]
-    print("save OK:", sorted(s))
+    print("collect OK:", sorted(s))
 
     # change everything, then load
     app.v_mode.set("img2img")
@@ -162,37 +155,32 @@ def main():
     app.v_denoise.set(0.3)
     app.v_res.set(512)
     app.v_overlap.set(8)
-    app.load_preset("My Test_")
+    app._apply_settings(s)
     assert app.v_mode.get() == "inpaint" and app.v_workflow.get() == "fibo2-edit-both.group.json"
     assert app.v_clip.get() == "gemma.safetensors" and app.v_res.get() == 768 and app.v_denoise.get() == 0.8
     assert app.t_prompt.get("1.0", "end").strip() == "make the jacket red" and app.v_overlap.get() == 96
     assert app.v_lmask.get() == gui.LAYER_MASKS["selection"]
-    print("load OK:", app.v_status.get())
+    print("apply OK")
 
-    # preset that refers to things this machine does not have
+    # saved settings that refer to things this machine does not have
     s2 = dict(s, workflow="nope.json", clip="missing.safetensors", steps="abc")
-    (Path(TMP) / "presets" / "Odd.json").write_text(json.dumps({"format": 1, "settings": s2}), encoding="utf-8")
-    app.refresh_presets()
-    app.load_preset("Odd")
-    assert "workflow nope.json not found" in app.v_status.get() and "text model missing" in app.v_status.get()
+    notes = " ".join(app._apply_settings(s2))
+    assert "workflow nope.json not found" in notes and "text model missing" in notes, notes
     assert app.v_workflow.get() == "fibo2-edit-both.group.json" and app.v_clip.get() == gui.CLIP_DEFAULT
-    print("missing items OK:", app.v_status.get())
+    print("missing items OK:", notes)
 
-    # a saved preset (the plugin ships none any more: the model tabs bring the settings)
-    (Path(TMP) / "presets" / "Fibo VGL Bionic Gemma12B.json").write_text(json.dumps({"format": 1, "name": "Fibo VGL Bionic Gemma12B", "settings": {
-        "mode": "inpaint", "workflow": "fibo2-edit.json", "clip": "", "denoise": 1.0, "variants": 1, "base_res": 1024,
-        "context": 0.4, "mask_grow": 8, "mask_blur": 8, "overlap": 48, "layer_mask": "auto"}}), encoding="utf-8")
+    # a plain settings dict (as a history entry has it)
     app.cb_workflow["values"] = [gui.BUILTIN, "fibo2-edit.json"]
-    app.refresh_presets()
-    app.load_preset("Fibo VGL Bionic Gemma12B")
+    app._apply_settings({
+        "mode": "inpaint", "workflow": "fibo2-edit.json", "clip": "", "denoise": 1.0, "variants": 1, "base_res": 1024,
+        "context": 0.4, "mask_grow": 8, "mask_blur": 8, "overlap": 48, "layer_mask": "auto"})
     assert app.v_workflow.get() == "fibo2-edit.json" and app.v_denoise.get() == 1.0
-    print("example preset OK")
+    print("plain settings OK")
 
-    # the normal request path still works and remembers the preset name
-    app.v_preset.set("My Test_")
+    # the normal request path still works
     req = app._request()
     app._save_state(req)
-    assert json.loads((Path(TMP) / "state.json").read_text(encoding="utf-8"))["preset"] == "My Test_"
+    assert json.loads((Path(TMP) / "state.json").read_text(encoding="utf-8")).get("preset") is None
     print("request/state OK:", req.mode, Path(req.workflow).name)
 
     # errors get the red badge (no dialog), normal messages clear it
@@ -208,7 +196,7 @@ def main():
     assert shown == ["on", "off", "off"] and app.v_status.get() == "Loaded.", shown
     print("status badge OK")
 
-    # Turbo LoRA: a switch for workflows that ship a speed LoRA; part of the preset, the request and the state
+    # Turbo LoRA: a switch for workflows that ship a speed LoRA; part of the saved settings, the request and the state
     wfdir = Path(TMP) / "wf"
     wfdir.mkdir()
     lora_wf = {"1": {"class_type": "UNETLoader", "inputs": {}},
@@ -223,12 +211,10 @@ def main():
     assert app.cb_turbo["state"] == "normal"
     app.v_turbo.set(False)
     assert app._request().turbo is False
-    sd.askstring = lambda *a, **k: "Turbo Off"
-    app.save_preset_as()
-    t_off = json.loads((Path(TMP) / "presets" / "Turbo Off.json").read_text(encoding="utf-8"))["settings"]
+    t_off = app._collect()
     assert t_off["turbo"] is False and t_off["workflow"] == "turbo.json", t_off
     app.v_turbo.set(True)
-    app.load_preset("Turbo Off")
+    app._apply_settings(t_off)
     assert app.v_turbo.get() is False
     app._save_state(app._request())
     assert json.loads((Path(TMP) / "state.json").read_text(encoding="utf-8"))["turbo"] is False
@@ -236,10 +222,9 @@ def main():
     app.v_workflow.set("plain.json")                      # no speed LoRA there: the switch is greyed out
     app._on_workflow()
     assert app.cb_turbo["state"] == "disabled"
-    app.v_preset.set("My Test_")
     print("turbo switch OK")
 
-    # Upscale: a factor box that only the Upscale mode shows; part of the preset, the request and the state
+    # Upscale: a factor box that only the Upscale mode shows; part of the saved settings, the request and the state
     shown = []
     app.f_scale.pack = lambda *a, **k: shown.append("on")
     app.f_scale.pack_forget = lambda: shown.append("off")
@@ -331,10 +316,6 @@ def main():
     assert gui.word_right("a\n\nb") == 3 and gui.word_right("") == 0 and gui.word_right("  x") == 2
     print("word jumps OK")
 
-    # delete
-    app.delete_preset()
-    assert not f.exists() and app.v_preset.get() == ""
-    print("delete OK")
     print("ALL OK")
 
 

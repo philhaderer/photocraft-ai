@@ -27,7 +27,6 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.comfy = ComfyUI(cc["url"])
         self.bridge = Bridge(self.pc, self.comfy, pcc["exchange_dir"])
         self.workflows_dir = Path(cc["workflows_dir"]).expanduser()
-        self.presets_dir = cfgmod.PRESETS_DIR
         self.events: queue.Queue = queue.Queue()
         self.worker: threading.Thread | None = None
 
@@ -55,7 +54,6 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.v_mode = tk.StringVar(value=g("mode", "inpaint"))
         self.v_workflow = tk.StringVar(value=g("workflow", BUILTIN))
         self.v_ckpt = tk.StringVar(value=g("checkpoint", d["checkpoint"]))
-        self.v_preset = tk.StringVar(value=g("preset", ""))
         self.v_clip = tk.StringVar(value=g("clip", "") or CLIP_DEFAULT)
         self.v_steps = tk.IntVar(value=g("steps", d["steps"]))
         self.v_cfg = tk.DoubleVar(value=g("cfg", d["cfg"]))
@@ -131,7 +129,6 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.root.after(100, self._poll)
         self.root.after(200, self.refresh)
         self._schedule_tip()
-        self.refresh_presets()
         self.root.protocol("WM_DELETE_WINDOW", self._quit)
         self.root.bind("<Destroy>", self._on_destroy, add="+")
         self.root.bind("<Configure>", self._remember_pos, add="+")
@@ -227,33 +224,20 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
 
         mf = ttk.Frame(r)
         mf.columnconfigure(1, weight=1)
-        # Workflow and Text model live under "Advanced" (built below): the presets choose them.
+        # Workflow and Text model live under "Advanced" (built below): the model tabs choose them.
         self.f_adv = ttk.Frame(r)
         self.adv_body = ttk.Frame(self.f_adv)
         self.adv_body.columnconfigure(1, weight=1)
         # the finishing options at the top of "Advanced settings": Sharpen, Match colours, Edge feather, Layer mask
         self.f_post = ttk.Frame(self.adv_body)
         self.f_post.grid(row=0, column=0, columnspan=2, sticky="ew")
-        # Workflow and Preset are not shown: the model tabs choose the workflow and its settings (the widgets stay, the code
+        # Workflow is not shown: the model tabs choose the workflow and its settings (the widgets stay, the code
         # behind them is the same)
         self.cb_workflow = ttk.Combobox(self.adv_body, textvariable=self.v_workflow, state="readonly", width=8)
         self.cb_workflow.bind("<<ComboboxSelected>>", lambda e: self._workflow_picked())
         # the text model is chosen by the workflow / the LLM list under the prompt: no picker (the widget stays, never gridded)
         self.cb_clip = ttk.Combobox(self.adv_body, textvariable=self.v_clip, state="readonly", width=8)
-        pf = ttk.Frame(self.adv_body)    # never gridded: presets are hidden
-        pf.columnconfigure(1, weight=1)
-        ttk.Label(pf, text="Preset").grid(row=0, column=0, sticky="w")
-        self.cb_preset = ttk.Combobox(pf, textvariable=self.v_preset, state="readonly", width=8)
-        self.cb_preset.bind("<<ComboboxSelected>>", lambda e: self.load_preset(self.v_preset.get()))
-        self.cb_preset.grid(row=0, column=1, sticky="ew", padx=6)
-        # icon buttons (drawn here: emoji do not render in Tk on Windows) leave the name list the room it needs
-        self._icons = {"save": self._icon("save"), "saveas": self._icon("saveas"), "delete": self._icon("trash", ERROR_TEXT)}
-        for col, (key, cmd, tip) in enumerate((("save", self.save_preset, "Save the preset under its name"),
-                                               ("saveas", self.save_preset_as, "Save as a new preset…"),
-                                               ("delete", self.delete_preset, "Delete the preset"))):
-            b = ttk.Button(pf, image=self._icons[key], style="Icon.TButton", command=cmd)
-            b.grid(row=0, column=2 + col, padx=(6 if col == 0 else 3, 0))
-            Tooltip(b, tip)
+        self._icons = {}
 
         # "Compare base res / context" (a test series) are not shown; the code behind them stays (the fields are never gridded)
         e1 = ttk.Entry(self.adv_body, textvariable=self.v_cmp_res)
