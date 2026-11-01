@@ -2,19 +2,15 @@
 
 # PhotoCraft AI
 
-**Fill, Remove, Expand, Edit and more — inside PhotoCraft, running locally in ComfyUI.**
+**Text to Image, Fill, Remove, Expand, Edit, Upscale and more — inside PhotoCraft, running locally in ComfyUI.**
 
-Windows · NVIDIA 16 GB · PhotoCraft 0.16 / 0.17 · ComfyUI
+Tested: Windows 11 · 16 GB VRAM · PhotoCraft 0.18 · ComfyUI version: 0.42.0 
 
-<sub>Every result lands as a new layer with an editable mask.</sub>
+<sub>Replace Photoshop's generative AI features with locally running models. Supports: MOSS Image, Krea 2 Turbo, Flux 3 Image Klein, Flux 2 Image Klein, Qwen 2.1 Edit and Fibo 2.0 Edit Turbo  </sub>
 
 </div>
 
 ---
-
-AI functions for [PhotoCraft](https://github.com/storytold/photocraft) on Windows: Fill, Remove, Expand, Edit,
-Multi Image Edit, Upscale, Refine and Text to image. Everything runs locally in
-[ComfyUI](https://github.com/comfyanonymous/ComfyUI) on your own graphics card.
 
 > Unofficial community project, not affiliated with PhotoCraft, ArtCraft or Storyteller. PhotoCraft is in early alpha
 > and so is this plugin. "PhotoCraft AI" is a working title.
@@ -22,36 +18,43 @@ Multi Image Edit, Upscale, Refine and Text to image. Everything runs locally in
 ## Quick start
 
 1. **Get the parts**: Windows 10/11 with an NVIDIA card (16 GB VRAM), [Python 3.11+](https://www.python.org/downloads/windows/)
-   (tick "tcl/tk" and "Add python.exe to PATH"), PhotoCraft 0.16 or 0.17 (portable), and ComfyUI 0.42 or newer with
-   [ComfyUI-AusBoss](https://github.com/ausboss/ComfyUI-AusBoss) 2.13 or newer (needed for Upscale and Refine).
+   (tick "tcl/tk" and "Add python.exe to PATH"), PhotoCraft 0.18, and ComfyUI 0.42 or newer with
+   [ComfyUI-AusBoss](https://github.com/ausboss/ComfyUI-AusBoss) 2.13 or newer (only needed for modes Upscale and Refine ).
 2. **Install the plugin**: *Code › Download ZIP*, unpack it, double-click **`setup-windows.bat`**. It also creates the
    desktop shortcut **PhotoCraft AI** (it looks for `photocraft.exe` itself and asks once if it can't find it).
 3. **Start it**: start ComfyUI, close PhotoCraft, then double-click **PhotoCraft AI** on your desktop. PhotoCraft opens,
    and a few seconds later the plugin window appears.
-4. **Get the models**: open the plugin's gear window. Under **Easy Mode** one button downloads the two starter models
-   (Flux 3 and Fibo, about 20 GB), which cover all six Easy Mode functions. Flux 3 needs a free Hugging Face login
+4. **Get the models**: open the plugin's settings window (gear symbol). Under **Easy Mode** one button downloads the two starter models
+   (Flux 3 Klein Image and Fibo 2.0 Edit Turbo, about 20 GB), which cover all six Easy Mode functions. Flux 3 needs a free Hugging Face login
    once (the button opens its page). Restart ComfyUI afterwards.
 5. In the plugin window switch on **Easy Mode**, pick a function, type a prompt, press **Generate** (Ctrl+Enter).
 
-Easy Mode shows only the function buttons and the prompt; the plugin picks the best installed model and its tested
-settings. Refine and Multi Image Edit are not part of Easy Mode: switch it off to use them and to get all settings.
+Easy Mode shows only the basic function buttons and the prompt; the plugin picks the best installed model and its tested
+settings. Refine and Multi Image Edit are not part of Easy Mode: switch it off to use them and to get all settings. 
+
+Download all models via the settings tabs to get the full experience!
 
 ## What it does
 
-A small window sits next to PhotoCraft. You pick a **function** at the top, a **model** below it (not in Easy Mode),
-type a prompt and press **Generate**. The plugin sends the picture (or the selection) to ComfyUI and puts the result
-back into PhotoCraft as a new layer in a group, with a soft layer mask where that makes sense.
+You pick a **function** at the top, type a prompt and press **Generate**. The plugin sends the picture (or the selection) 
+to ComfyUI and puts the result back into PhotoCraft as a new layer in a group, with a soft layer mask where that makes sense.
+
+More settings in the window: **variants** (generates several results as layers in one group), prompt history, prompt templates,
+LLM prompt enhancement, live preview. Advanced settings: **edge feather, context size, mask density (PhotoCraft 0.17+), 
+**add custom LoRAs, sharpen, match colours.**
+
 
 | Function | What it does |
 |---|---|
+| **Text to image** | A new picture from text only, as a new layer. |
+| **Expand image** | Extend the canvas with the Crop tool, fill the new area white; the plugin paints it. |
 | **Fill Selection** | Select an area, type what should appear there. |
 | **Remove Selection** | Select an object, with a little margin around it; it is removed and the background filled in. |
-| **Expand image** | Extend the canvas with the Crop tool, fill the new area white; the plugin paints it. |
 | **Edit Canvas** | Changes the whole picture from your text ("make it night"). |
-| **Multi Image Edit** | Edits the picture with reference images (drop, paste or add files into the slots). |
+| **Multi Image Edit** | Edits the picture with reference images (drop or paste images into the slots). |
 | **Upscale (new file)** | Enlarges the picture or selection into a new document, up to 24 MP. |
 | **Refine (same size)** | Cleans up the picture or selection at the same size, as a new layer. |
-| **Text to image** | A new picture from text only, as a new layer. |
+
 
 Which model offers which function:
 
@@ -66,11 +69,6 @@ Which model offers which function:
 | Refine (same size) | | ✓ | | ✓ | | |
 | Text to image | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-The tooltip of each function shows which models work best for it.
-
-More in the window: **variants** (several results as layers in one group), **edge feather, context, mask density
-(PhotoCraft 0.17+), sharpen and match colours** in the advanced settings, **Undo / Redo** of a whole run, presets and
-custom LoRAs.
 
 ## Install
 
@@ -102,30 +100,17 @@ and restart. Your settings stay in `data\`.
 
 ## Models
 
-You only need the files for the models you want. The gear window lists the files each model needs, with size, target
+You only need the files for the models you want. The gear window lists the files each model needs, with size, ComfyUI target
 folder and a download button; the plugin enables a model when it finds all the files for its standard settings.
 
-- Release 1 uses the **int8 ConvRot** files, which fit into 16 GB VRAM.
-- Some files are **gated**: log in to Hugging Face and accept the licence on the model page first, otherwise the
-  download answers "401". Flux 3 is one of them.
-- If you keep models outside ComfyUI, set them up in ComfyUI's `extra_model_paths.yaml`.
+- Release 1 uses the **int8 ConvRot** files, which fit into 16 GB VRAM, some even into 12 GB.
+- Some files are **gated**: log in to Hugging Face and accept the licence on the model page first. Flux 3 is one of them.
 
-## Tips
-
-- **Fill Selection**: describe what should appear, e.g. "a wooden bench". Hide the layers of earlier results before
-  running again.
-- **Remove Selection**: select the whole object with a little margin. If the first try didn't work, remove it again.
-- **Expand image**: enlarge the canvas with the Crop tool (Enter) and fill the new area white. An empty prompt often
-  works best. Expand large areas in small steps.
-- **Edit Canvas** and **Multi Image Edit** change the whole picture; a selection is ignored. In Multi Image Edit,
-  name the reference images in your text by the tags shown on their slots.
-- **Upscale / Refine**: add a short description of your image in front of the default text.
-- Ctrl+Z / Ctrl+Y in PhotoCraft work as usual; the plugin's own Undo / Redo buttons undo a whole run.
 
 ## Known limitations
 
 - Only tested on Windows with a 16 GB NVIDIA card.
-- During a run, PhotoCraft briefly opens a temporary document, so tabs flicker. Don't switch documents or change the
+- During a run, PhotoCraft briefly opens a temporary document. PLease don't switch documents or change the
   selection while a run is going.
 - A run consists of several PhotoCraft steps (history entries).
 - CMYK, Lab and 16-bit documents go through 8-bit RGB.
@@ -147,16 +132,6 @@ results commercially.
 
 Other files: the Lenovo UltraReal LoRA for MOSS asks for credit (Danrisi), the Qwen3-VL and Qwen 3.5 text encoders,
 SeedVR2 and the MOSS LoRAs are Apache 2.0, BiRefNet is MIT.
-
-## For developers
-
-- **Your own workflows**: export a ComfyUI workflow in API format into `workflows\` and give the nodes the plugin should
-  fill a title: `pc:image`, `pc:mask`, `pc:prompt`, `pc:negative`, `pc:sampler`, `pc:size` / `pc:latent`, `pc:output`
-  (more in [pccomfy/workflows.py](pccomfy/workflows.py)).
-- **Command line**: `python -m pccomfy check` (tests both connections), `python -m pccomfy run <mode> -p "…"`,
-  `python -m pccomfy --help`.
-- **Tests**: `python tests/run_all.py` (stubbed Tk, fake PhotoCraft and fake ComfyUI; no GPU needed).
-- **Diagnostics**: `data\exchange\last-graph.json` (last graph sent) and `data\exchange\runs.jsonl` (one line per run).
 
 ## Credits
 
