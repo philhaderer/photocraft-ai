@@ -23,13 +23,14 @@ from .ui_downloads import DownloadMixin, browser_only, site_hint, size_text
 
 _LABELS = dict(MODE_LABELS)      # noqa: F405
 EMPTY_TEXT = {"choose": "Choose a model", "none_linked": "Link your model in the settings"}
-STATE_TEXT = {"ready": "ready", "partial": "some functions need files", "missing": "files missing"}
+STATE_TEXT = {"ready": "is ready.", "partial": "is not yet available", "missing": "is not yet available"}      # after the model name (user 1.11.)
 DOT_RED = "#e5484d"                   # the dot in front of a model that is not available (nothing in front of a ready one)
 DOT_PAD = 4                            # px of room to the left of the dot (user 1.11.)
 SETTINGS_W, SETTINGS_H = 760, 700      # the settings window at first (before the display scaling); then the size it was closed at
 SET_ICON_PX = 16                       # the download and chain symbols next to a file
 SET_STYLES = {"head": "SetHead.TLabel", "ok": "SetOk.TLabel", "bad": "SetBad.TLabel", "note": "SetNote.TLabel",
-              "muted": "SetMuted.TLabel", "green": "SetGreen.TLabel"}
+              "muted": "SetMuted.TLabel", "green": "SetGreen.TLabel", "red": "SetRed.TLabel",
+              "head9": "SetHead9.TLabel"}
 SET_MIN_W, SET_MIN_H = 480, 300        # the smallest the settings window can be dragged to
 
 
@@ -757,12 +758,9 @@ class SettingsMixin(DownloadMixin):
                     b.pack(side="right", padx=(4, 0), pady=(6, 2))
                     Tooltip(b, f"Download the missing files this model needs ({allm['count']}, {allm['size']})"
                                + (f"; {allm['site']} open their page in the browser." if allm["site"] else "."))
-                dot = self.state_dot(state)
-                if dot:
-                    ttk.Label(box, image=dot).pack(side="left", pady=(6, 2))
-                elif state == "ready":
-                    label(box, "\u2713", "green", padx=(0, 4), pady=(6, 2))        # green tick in front of a ready model (user 1.11.)
-                label(box, name + "   " + STATE_TEXT[state] + ("   \u25C0" if focus else ""), "head", padx=(4 if dot else 0, 0), pady=(6, 2))
+                # "<model> is ready." + a green tick, "<model> is not yet available" + a red X (user 1.11.)
+                label(box, name + " " + STATE_TEXT[state] + ("   \u25C0" if focus else ""), "head", pady=(6, 2))
+                label(box, "\u2713" if state == "ready" else "\u2717", "green" if state == "ready" else "red", padx=(6, 0), pady=(6, 2))
             elif kind == "enable":
                 key = row[1]
                 usable = row[3] if len(row) > 3 else True
@@ -780,13 +778,16 @@ class SettingsMixin(DownloadMixin):
                     label(line(), "Not offered in the plugin yet: the files for its standard settings are missing (✗ below). "
                                   "Get them, restart ComfyUI and click the refresh arrow.", "note", padx=(8, 0), pady=(0, 4), wrap=self._px(60))
             elif kind == "modes":
-                box = line()      # one line, the modes separated by commas (user 1.11.)
-                label(box, "Covers these modes:", "head", pady=(4, 2))
+                box = line()      # one line, the modes separated by commas; it wraps with the window (user 1.11.)
+                lead = label(box, "Covers these modes:", "head9", pady=(4, 2))
                 offered = [m for m in row[2] if m[2] != "none"]       # what the model offers
-                for i, (_mode, text, state, tip) in enumerate(offered):
-                    lb = label(box, ("✗ " if state == "missing" else "") + text + ("," if i < len(offered) - 1 else ""),
-                               "ok", padx=(8 if i == 0 else 4, 0), pady=(4, 2))       # an X on a mode with missing files
-                    Tooltip(lb, tip)
+                text = ", ".join(("\u2717 " if st == "missing" else "") + t for _m, t, st, _tip in offered)      # an X on a mode with missing files
+                lb = label(box, text, "ok", padx=(6, 0), pady=(4, 2), wrap=self._px(200))
+                lead.pack_configure(anchor="n")
+                lb.pack_configure(anchor="n")
+                miss = [f"{t}: {tip}" for _m, t, st, tip in offered if st == "missing"]
+                if miss:
+                    Tooltip(lb, "\n".join(miss))
             elif kind == "file":
                 f = row[1]
                 ok = f["found"] is not None

@@ -109,7 +109,9 @@ class ThemeMixin:
         s.configure("Hint.TLabel", foreground=ACCENT_TEXT)
         s.configure("Sep.TFrame", background="#9a9a9a")
         s.configure("SepWhite.TFrame", background="#ffffff")       # the line above the model tabs of the settings window (user 1.11.)
-        s.configure("SetGreen.TLabel", foreground=DONE_GREEN, font=font(10, bold=True))      # the tick in front of a ready model
+        s.configure("SetGreen.TLabel", foreground=DONE_GREEN, font=font(10, bold=True))      # the tick behind a ready model
+        s.configure("SetRed.TLabel", foreground=ERROR_TEXT, font=font(10, bold=True))        # the X behind a model that is not yet available
+        s.configure("SetHead9.TLabel", foreground="#ffffff", font=font(9, bold=True))        # "Covers these modes:", the same line height as the list
         s.configure("Done.TLabel", foreground=DONE_GREEN, font=font(10, bold=True))      # the word "Done"
         s.configure("DoneRest.TLabel", foreground=FG, font=font(10, bold=True))        # what follows it (seed, layers, time)
         # greyed out must be visible on the dark theme (clam keeps nearly the normal text colour)

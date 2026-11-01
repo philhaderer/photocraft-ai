@@ -227,10 +227,21 @@ class EasyMixin:
         box = ttk.Frame(frame)
         box.pack(fill="both", expand=True, padx=12, pady=10)
 
+        wrapped = []
+
         def label(text, style="", pady=(0, 4), mark=None):
             lb = ttk.Label(box, text=text, style=SET_STYLES.get(style, "SetText.TLabel"), justify="left", wraplength=self._px(640))
             lb.pack(anchor="w", pady=pady)
+            wrapped.append(lb)
             return lb
+
+        def follow(e):                  # long texts wrap with the window (user 1.11.)
+            for lb in wrapped:
+                try:
+                    lb.configure(wraplength=max(self._px(120), e.width - self._px(40)))
+                except tk.TclError:
+                    pass
+        frame.bind("<Configure>", follow)
 
         label(em.TAB_INFO, pady=(0, 8))
         if self.inv is None:
