@@ -73,6 +73,8 @@ Which model offers which function:
 
 - **Update**: download the new version, or run `git pull` in the plugin folder if you used `git clone`, and restart
   the plugin. Your settings stay in `data\`.
+- **What the shortcut does**: it starts PhotoCraft with a control channel for the plugin (local only, protected by a
+  token, file access limited to `data\exchange`) and then the plugin, without a console window.
 - **Recreate the desktop shortcut**: run this in the plugin folder (type `powershell` into Explorer's address bar):
 
   ```
