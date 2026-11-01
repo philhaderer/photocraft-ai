@@ -128,9 +128,9 @@ class ModeMixin:
         menu.delete(0, "end")
         self.v_chip_fav.set(cfgmod.favorites().get(mode) == key)
         here = self.v_model.get() == key and mode in m.modes          # saving takes the window as it is: only for the chosen model
-        menu.add_command(label="Set as my settings for this mode and model", state="normal" if here else "disabled",
-                         command=lambda: self._save_page(key))
-        menu.add_separator()
+        if here:                      # not offered on any other chip (user 1.11.)
+            menu.add_command(label="Set as my settings for this mode and model", command=lambda: self._save_page(key))
+            menu.add_separator()
         menu.add_checkbutton(label=f"Favourite for {dict(MODE_LABELS).get(mode, mode)}", variable=self.v_chip_fav,
                              state="normal" if mode in m.modes else "disabled",
                              command=lambda: cfgmod.set_favorite(mode, key if self.v_chip_fav.get() else None))

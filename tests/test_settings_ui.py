@@ -286,7 +286,7 @@ def main():
     assert app.v_model.get() == "flux3" and app._last_model == "flux3"
     assert app._settings_win is not None and app._settings_focus == "krea2"
     text = rows_text(app)
-    assert "restart ComfyUI" in text and "Credits" not in text and "Krea 2 Turbo  files missing  \u25C0" in text
+    assert "restart ComfyUI" in text and "Credits" not in text and "Krea 2 Turbo  is not yet available  \u25C0" in text
     assert "Credits" in "".join(p for p, _tags in app.t_credits.parts)          # the second tab of the settings window
     assert "\u2717 /vae/qwen_image_vae.safetensors" in text          # the path with its folder (user 30.10.)
     assert "\u2713 /loras/Flux 3/flux-3-image-klein-restore.safetensors" in text
