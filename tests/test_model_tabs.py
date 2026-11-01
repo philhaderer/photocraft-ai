@@ -57,7 +57,7 @@ def main():
     assert app.v_enhance.get() is False and "Qwen 3.5 9B" in app.tt_enhance.text      # which text model writes the prompt (starts off)
     assert app.cb_enhance["text"] == "LLM prompt enhancement" and "Qwen 3.5 9B" in app.tt_enhance.text   # name only in the tooltip
     assert app.v_turbo.get() is False and app.cb_turbo["text"].startswith("DMD2") and app.v_lora_str.get() == 1.0   # DMD2 starts off (user 29.10.)
-    assert list(models.MOSS.modes) == ["txt2img"]                                                       # Fill off (not good enough), Expand parked 29.10.
+    assert list(models.MOSS.modes) == ["txt2img", "edit", "multi_edit", "remove"]                                                       # Fill off (not good enough), Expand parked 29.10.
     assert [c["text"] for c in app.stage_cbs] == ["UltraReal LoRA", "Skip-layer guidance (SLG)", "Stage"]
     assert app.v_stage.get() and not app.v_stage2.get()                                # Lenovo on, SLG off (user 29.10.)
     r = app._request()
@@ -250,7 +250,7 @@ def main():
     assert mm["fibo"].modes["refine"].prompt_tip == models.DESCRIBE_TIP + " Change the prompt for other edits."
     # every function's tooltip starts with the ranking (user 28.10.); a function without one says so
     assert models.ranking_text("inpaint") == "Ranking: 1. Fibo, 2. Qwen."
-    assert models.ranking_text("remove") == "Ranking: 1. Fibo, 2. Qwen (not ranked: Flux 3, Flux 2)."
+    assert models.ranking_text("remove") == "Ranking: 1. Fibo, 2. Qwen (not ranked: Flux 3, Flux 2, MOSS)."
     assert models.ranking_text("outpaint") == "Ranking: 1. Flux 2, 2. Flux 3, 3. Qwen, 4. Fibo."      # Krea 2 / MOSS Expand off 29.10.
     assert models.ranking_text("edit").startswith("Ranking: 1. Flux 3, 2. Qwen, 3. Flux 2, 4. Fibo") and models.ranking_text("img2img") == ""   # all functions are ranked since 1.11.
     assert app.tt_modes["remove"].text.startswith("Ranking: 1. Fibo, 2. Qwen")

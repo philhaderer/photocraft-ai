@@ -127,6 +127,9 @@ _LIST = [
          "licence: Apache 2.0", size=1189176800),
     File("Moss\\lenovo_moss.safetensors", "lora", _HF + "Danrisi/lenovo_moss/resolve/main/lenovo_moss.safetensors",
          "Lenovo UltraReal by Danrisi (also on Civitai, model 1662740)", size=64527960),
+    File("Moss\\moss_image_edit_lora_rank_64_bf16.safetensors", "lora", _MOSS + "loras/moss_image_edit_lora_rank_64_bf16.safetensors",
+         "MOSS Edit Canvas, Multi Image Edit and Remove: the edit LoRA (format Moss-Image-Edit); upstream chinoll/Moss-Image-Edit",
+         size=297382216),
 ]
 _LIST += [
     # the reference slots' "Cut out" button (ComfyUI's own BiRefNet nodes)
@@ -172,6 +175,7 @@ _SHA256 = {
     'Flux 3\\flux-3-image-klein-outpaint.safetensors': "25385da7f6bfac0c18513e52729dc29f96cda543f0d086df9e5dda3842dede83",
     'Moss\\lora_dmd2.safetensors': "7683fe1fb51f73f5d690f24dd6b7f46f31ab9a9873729a854ac5c9a420ffe6f2",
     'Moss\\lenovo_moss.safetensors': "f28ab12e33e60146c8740a86730385cf5ba488e9f6eda50b14383d6ddbf300fb",
+    'Moss\\moss_image_edit_lora_rank_64_bf16.safetensors': "17a48b8c605dcffdedb92a2b887d18cf316505be90802717669fb6556098dcdf",
     'birefnet.safetensors': "9ab37426bf4de0567af6b5d21b16151357149139362e6e8992021b8ce356a154",
     'lighttaew2_1.safetensors': "8666e769f449f2d955651564bcadb0c5e12461b50480e67b7241f32c15f11a19",
 }
@@ -198,7 +202,8 @@ _FLUX3_UP_NODES = ("AUSBOSS_NODES_TiledUpscale", "AUSBOSS_NODES_TiledUpscaleStit
                    "AUSBOSS_NODES_Seed", "AUSBOSS_NODES_Text", "AUSBOSS_NODES_MathExpression", "AUSBOSS_NODES_ImageResize")
 _ULTRA = ("Flux 2\\ultra_real_v4.safetensors",)
 _UPSAMPLER = "qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors"
-_TAEF2 = "taef2_decoder.pth"            # live preview of the Flux 2 latent: Flux 2, Flux 3, Fibo, MOSS
+_MOSS_EDIT_LORA = "Moss\\moss_image_edit_lora_rank_64_bf16.safetensors"
+_TAEF2 = "taef2_decoder.pth"           # live preview of the Flux 2 latent: Flux 2, Flux 3, Fibo, MOSS
 DESCRIBE_FALLBACK = "qwen3.5_9b_int8_convrot.safetensors"     # the LLM button and "Describe" in the reference slots (user 30.10.)
 _CUT = ModeSpec(optional=("birefnet.safetensors", DESCRIBE_FALLBACK))     # Multi Image Edit: "Cut out" and "Describe" in the reference slots
 
@@ -247,7 +252,11 @@ TABS: dict[str, TabSpec] = {
     "moss": TabSpec(
         required=("moss_image_sft_int8_convrot.safetensors", "qwen3.5_9b_w4a8_gptq.safetensors", "flux2-vae_small.safetensors"),
         # Text to image starts with the UltraReal LoRA on: a file the start values use is required (user 30.10.)
-        modes={"txt2img": ModeSpec(requires=("Moss\\lenovo_moss.safetensors",))},
+        # Edit, Multi Image Edit and Remove run the edit LoRA: a standard file of those functions, so required (1.11.)
+        modes={"txt2img": ModeSpec(requires=("Moss\\lenovo_moss.safetensors",)),
+               "edit": ModeSpec(requires=(_MOSS_EDIT_LORA,)),
+               "multi_edit": ModeSpec(requires=(_MOSS_EDIT_LORA,), optional=_CUT.optional),
+               "remove": ModeSpec(requires=(_MOSS_EDIT_LORA,))},
         optional=("Moss\\lora_dmd2.safetensors", _TAEF2, DESCRIBE_FALLBACK)),
 }
 
