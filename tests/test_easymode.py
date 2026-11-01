@@ -39,7 +39,7 @@ def main():
 
     everything = lambda k: True  # noqa: E731
     assert em.available_modes(everything) == {
-        "txt2img": "flux3", "edit": "flux3", "inpaint": "fibo", "remove": "fibo", "outpaint": "flux2", "upscale": "flux3"}
+        "txt2img": "flux3", "edit": "flux3", "inpaint": "fibo", "remove": "fibo", "outpaint": "flux2", "upscale": "qwen"}
 
     # the starter models Fibo + Flux 3 cover all six functions
     starter = lambda k: k in em.STARTER_MODELS  # noqa: E731

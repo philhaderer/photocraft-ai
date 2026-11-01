@@ -39,9 +39,8 @@ def main():
     assert [k for k, rb in app.rb_tabs.items() if rb["state"] == "normal"] == ["qwen", "fibo"]          # models that can fill
     app.v_mode.set("upscale"); app._on_mode()
     assert app.v_model.get() == "qwen" and app.v_workflow.get() == "qwen-image-21-upscale.json"      # Qwen can upscale: stays
-    # a function the model cannot do picks a model that can (the fixed order: Fibo first for Refine); Qwen comes back for Fill
     app.v_mode.set("refine"); app._on_mode()
-    assert app.v_model.get() in ("fibo", "flux2", "flux3") and app.v_model.get() != "qwen"
+    assert app.v_model.get() == "qwen" and app.v_workflow.get() == "qwen-image-21-upscale.json"      # the same graph at the canvas size (2.11.)
     app.v_mode.set("inpaint"); app._on_mode()
     assert app.v_model.get() == "qwen"                                                                   # the last model of Fill
     app.v_mode.set("txt2img"); app._on_mode()

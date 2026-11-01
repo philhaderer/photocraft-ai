@@ -32,7 +32,7 @@ by = models.BY_KEY
 assert list(by["flux3"].modes) == ["txt2img", "edit", "multi_edit", "remove", "outpaint", "upscale", "refine"]
 assert list(by["krea2"].modes) == ["txt2img"]
 assert list(by["flux2"].modes) == ["txt2img", "edit", "multi_edit", "remove", "outpaint", "upscale", "refine"]
-assert list(by["qwen"].modes) == ["txt2img", "edit", "multi_edit", "inpaint", "outpaint", "remove", "upscale"]
+assert list(by["qwen"].modes) == ["txt2img", "edit", "multi_edit", "inpaint", "outpaint", "remove", "upscale", "refine"]
 assert list(by["moss"].modes) == ["txt2img"]
 assert [m.key for m in models.MODELS] == ["flux3", "flux2", "qwen", "fibo", "krea2", "moss"]
 for m in models.MODELS:
