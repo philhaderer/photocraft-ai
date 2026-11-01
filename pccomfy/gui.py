@@ -268,7 +268,7 @@ class App(EasyMixin, SettingsMixin, RefSlotsMixin, ThemeMixin, PromptMixin, Lora
         self.stage_cbs, self.stage_tips = [], []
         self.stage_scales, self.stage_lbls = [], []     # a stage that is a LoRA (MOSS' Lenovo) also has a strength slider
         for i, var in enumerate(self.stage_vars):
-            cb = ttk.Checkbutton(mf, text="Stage", variable=var, command=self._update_stage_scales)
+            cb = ttk.Checkbutton(mf, text="Stage", variable=var, command=lambda i=i: self._on_stage(i))
             cb.grid(row=3 + i, column=1, sticky="w", padx=(0, 6), pady=(2, 0))
             self.stage_tips.append(Tooltip(cb, STAGE_TIP))
             self.stage_cbs.append(cb)

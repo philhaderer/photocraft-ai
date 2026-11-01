@@ -32,6 +32,7 @@ def run(mode="txt2img", wf=T2I, prompt="a cat on a sofa", with_sel=True, loras=S
     tmp = tempfile.mkdtemp()
     pc, _, b = T.make(tmp, with_sel=with_sel)
     b.comfy = Comfy(loras)
+    kw.setdefault("stages_off", ["9"])      # the 4-step LoRA stage is off in the window by default
     req = Request(mode=mode, workflow=wf, preset="MOSS Image Text", run_no=1, **kw)
     req.params = workflows.GenParams(prompt=prompt, seed=5, width=64, height=64)
     return pc, b, b.run(req)
@@ -75,10 +76,10 @@ def main():
     assert "6" not in g and "5" not in g and g["7"]["inputs"]["model"] == ["1", 0]
 
     # the extra stages: Lenovo is the first (stage_on), SLG the second (stages_off)
-    _, b, _ = run(stage_on=True, stages_off=["7"])
+    _, b, _ = run(stage_on=True, stages_off=["7", "9"])
     g = b.comfy.graphs[0]
     assert "5" in g and "7" not in g and g["40"]["inputs"]["model"] == ["5", 0]
-    _, b, _ = run(stage_on=False, stages_off=[])
+    _, b, _ = run(stage_on=False, stages_off=["9"])
     g = b.comfy.graphs[0]
     assert "5" not in g and "7" in g and g["7"]["inputs"]["model"] == ["6", 0]
 
