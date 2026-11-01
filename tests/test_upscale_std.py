@@ -24,6 +24,8 @@ def links_ok(g):
 def main():
     g = json.loads(WF.read_text(encoding="utf-8"))
     assert not any("AUSBOSS" in n["class_type"] for n in g.values()) and links_ok(g)
+    assert all(ord(c) >= 32 or c in "\n\r\t" for n in g.values() for v in n["inputs"].values() if isinstance(v, str) for c in v), "control character in a name (one backslash before f in JSON is a form feed)"
+    assert any(v["inputs"].get("lora_name") == "Flux 3\\flux-3-image-klein-restore.safetensors" for v in g.values())
     assert workflows.has_upscale_slot(g) and workflows.lora_strength(g) == 0.5
     assert [l for _, l in workflows.stage_switches(g)] == ["SeedVR2 pre-cleaning"]
     off = workflows.bypass_stage(g)
