@@ -557,7 +557,7 @@ class Bridge:
             doc = pc.document()
 
         W, H = doc["width"], doc["height"]
-        has_sel = bool(doc.get("hasSelection")) and req.mode not in ("edit", "txt2img")   # these work on the whole canvas, a selection is ignored
+        has_sel = bool(doc.get("hasSelection")) and req.mode not in ("edit", "txt2img", "refine")   # these work on the whole canvas, a selection is ignored (Refine since 1.11., user)
         if req.mode == "inpaint" and not has_sel:
             raise BridgeError("Select the area to fill first (e.g. Lasso or Rectangular Marquee).")
         wf_paths = workflows.resolve(req.workflow) if req.workflow else [None]
