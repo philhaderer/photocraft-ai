@@ -381,6 +381,7 @@ class PromptMixin:
             left, right = self._menu_span(menu, px, py)
             x, y = right + 4, py - 12
             tip = tk.Toplevel(self.root)
+            tip.withdraw()                       # not shown at 0,0 first: inside the native menu's loop a later move is ignored
             tip.wm_overrideredirect(True)
             tk.Label(tip, text=text, justify="left", wraplength=340, background="#ffffe0", foreground="#000000",
                      relief="solid", borderwidth=1, padx=6, pady=4, font=font(9)).pack()
@@ -392,9 +393,23 @@ class PromptMixin:
             tip.wm_geometry(f"+{x}+{y}")
             self._style_tip_pos = (x, y)         # (a tip of a hidden window reports +0+0, so the tests read this)
             tip.wm_attributes("-topmost", True)
+            tip.deiconify()
+            tip.update_idletasks()
             self._style_tip = tip
+            self._place_native(tip, x, y)
         except tk.TclError:
             self._style_tip_hide()
+
+    def _place_native(self, tip, x: int, y: int):
+        """Moves the box with the Windows API as well (SWP_NOSIZE | SWP_NOACTIVATE, topmost): while a native menu is open Tk's
+        own move does not always reach the window."""
+        try:
+            import ctypes
+            u = ctypes.windll.user32
+            hwnd = u.GetParent(tip.winfo_id()) or tip.winfo_id()
+            u.SetWindowPos(hwnd, -1, int(x), int(y), 0, 0, 0x0001 | 0x0010)
+        except Exception:
+            pass
 
     def _monitor_at(self, px: int, py: int) -> tuple:
         """(x0, y0, x1, y1) of the monitor under the point (Windows API); the window may sit on a second monitor, where Tk's
