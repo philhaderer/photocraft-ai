@@ -58,14 +58,14 @@ def main():
     assert app.cb_enhance["text"] == "LLM prompt enhancement" and "Qwen 3.5 9B" in app.tt_enhance.text   # name only in the tooltip
     assert app.v_turbo.get() is False and app.cb_turbo["text"].startswith("DMD2") and app.v_lora_str.get() == 1.0   # DMD2 starts off (user 29.10.)
     assert list(models.MOSS.modes) == ["txt2img", "edit", "multi_edit", "remove", "inpaint", "outpaint"]                                                       # Fill off (not good enough), Expand parked 29.10.
-    assert [c["text"] for c in app.stage_cbs] == ["4-step Turbo LoRA", "UltraReal LoRA", "Skip-layer guidance (SLG)"]
-    assert app.v_stage2.get() and not app.v_stage.get() and not app.v_stage3.get()      # 4-step off, Lenovo on, SLG off (user 29.10.)
+    assert [c["text"] for c in app.stage_cbs][:2] == ["UltraReal LoRA", "Skip-layer guidance (SLG)"]
+    assert app.v_stage.get() and not app.v_stage2.get()      # Lenovo on, SLG off (user 29.10.)
     r = app._request()
-    assert r.stage_on is False and r.stages_off == ["7"] and r.turbo is False
-    assert r.stage_strengths == {"9": 1.0, "5": 1.0}                                              # the Lenovo LoRA has a strength slider
-    app.v_sstr[1].set(0.6)
-    assert app._request().stage_strengths == {"9": 1.0, "5": 0.6}
-    app.v_sstr[1].set(1.0)
+    assert r.stage_on is True and r.stages_off == ["7"] and r.turbo is False
+    assert r.stage_strengths == {"5": 1.0}                                             # the Lenovo LoRA has a strength slider
+    app.v_sstr[0].set(0.6)
+    assert app._request().stage_strengths == {"5": 0.6}
+    app.v_sstr[0].set(1.0)
     assert r.sampler_override == {} and (app.v_steps.get(), app.v_cfg.get()) == (35, 3.0)  # without DMD2: the full recipe
     app.v_turbo.set(True)
     app._on_workflow()
@@ -74,23 +74,6 @@ def main():
     app._on_workflow()
     app.v_steps.set(30)
     assert app._request().sampler_override == {"steps": 30}
-    # 4-step Turbo LoRA (1.11.): a stage that brings its own steps; it replaces DMD2, and the fields come back when it goes
-    app.v_steps.set(35)
-    app.v_stage.set(True)
-    app._on_stage(0)
-    assert app.v_turbo.get() is False and (app.v_steps.get(), app.v_cfg.get(), app.v_sampler.get()) == (4, 1.0, "euler")
-    r = app._request()
-    assert r.stage_on is True and r.stages_off == ["7"] and r.sampler_override["steps"] == 4 and r.sampler_override["cfg"] == 1.0
-    app.v_turbo.set(True)
-    app._on_turbo()
-    assert app.v_stage.get() is False and (app.v_steps.get(), app.v_cfg.get()) == (8, 1.5)    # DMD2 switches the 4-step LoRA off
-    app.v_turbo.set(False)
-    app._on_turbo()
-    app.v_stage.set(True)
-    app._on_stage(0)
-    app.v_stage.set(False)
-    app._on_stage(0)
-    assert (app.v_steps.get(), app.v_cfg.get(), app.v_sampler.get()) == (35, 3.0, "er_sde") and app._request().sampler_override == {}
     app.v_turbo.set(True)
     app._on_workflow()
     assert app._request().mode == "txt2img" and app._layer_prefix() == "MOSS Image Text"

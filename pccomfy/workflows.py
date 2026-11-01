@@ -655,9 +655,8 @@ def stage_switches(graph: dict) -> list[tuple[str, str]]:
 
 
 def stage_info(graph: dict) -> list[dict]:
-    """The switchable stages of a workflow, in order: {id, label, tip, default_on, strength, sampler} (tip: `tip` in
-    pc_stage_off; sampler: the steps / cfg / sampler / scheduler the stage brings along while it is on, e.g. the 4-step
-    LoRA of MOSS: the window puts them in the fields and switches the speed LoRA off)."""
+    """The switchable stages of a workflow, in order: {id, label, tip, default_on, strength} (tip: `tip` in
+    pc_stage_off)."""
     out = []
     for nid, label in stage_switches(graph):
         spec = graph[nid]["_meta"]["pc_stage_off"]
@@ -666,7 +665,7 @@ def stage_info(graph: dict) -> list[dict]:
             v = graph[nid].get("inputs", {}).get("strength_model")
             strength = float(v) if isinstance(v, (int, float)) else 1.0
         out.append({"id": nid, "label": label, "tip": str(spec.get("tip", "")), "default_on": bool(spec.get("default_on", True)),
-                    "strength": strength, "sampler": dict(spec["sampler"]) if isinstance(spec.get("sampler"), dict) else {},
+                    "strength": strength,
                     "excludes": [str(x) for x in spec.get("excludes", [])]})
     return out
 

@@ -26,8 +26,8 @@ def main():
     app._on_model()
     # the start of MOSS Text to image (user 29.10.): DMD2 off, UltraReal on, SLG off, no LLM, 35 steps
     labels = [st["label"] for st in app._stages()]
-    assert labels[0].startswith("4-step") and "SLG" in labels[2], labels
-    assert (app.v_turbo.get(), app.v_stage.get(), app.v_stage2.get(), app.v_stage3.get(), app.v_enhance.get()) == (False, False, True, False, False)
+    assert labels[0].startswith("UltraReal") and "SLG" in labels[1], labels
+    assert (app.v_turbo.get(), app.v_stage.get(), app.v_stage2.get(), app.v_stage3.get(), app.v_enhance.get()) == (False, True, False, False, False)
     assert (app.v_steps.get(), app.v_cfg.get()) == (35, 3.0), (app.v_steps.get(), app.v_cfg.get())
     app.v_turbo.set(True)
     app._on_turbo()

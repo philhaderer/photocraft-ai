@@ -158,7 +158,7 @@ FLUX3 = Model(
 
 # MOSS: the DMD2 speed LoRA (8 steps, CFG 1.5) is the model's own LoRA; the Lenovo UltraReal LoRA and the skip-layer
 # guidance (SLG) are switches that start on (best result in the live tests); the LLM prompt enhancer starts off.
-_MOSS = dict(turbo=True, stage_on=False, stage2_on=True, stage3_on=False)     # the stages of moss-image-t2i.json: 4-step Turbo LoRA (off), UltraReal (on), skip-layer guidance (off)
+_MOSS = dict(turbo=True, stage_on=True, stage2_on=False, stage3_on=False)     # the stages of moss-image-t2i.json: UltraReal (on), skip-layer guidance (off)
 MOSS_STEPS_TIP = "Turn up the steps to 35 for best results."     # wording of the user (29.10.), 35 after the CFG test
 _MOSS_EDIT = dict(base_res=1024, layer_mask="none")
 _MOSS_INPAINT = {"turbo": False, "stage_on": True, "stage2_on": False, "base_res": 1216, "layer_mask": "soft", "mask_grow": 8, "mask_blur": 16,
